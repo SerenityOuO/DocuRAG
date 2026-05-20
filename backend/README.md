@@ -1,6 +1,6 @@
 # Backend
 
-DocuRAG AgentOps backend MVP v0.1 是最小 FastAPI 服務，提供 healthcheck 與文件上傳 API stub。此階段不接資料庫、OCR、RAG、Qdrant、Redis、NATS、vLLM 或登入權限。
+DocuRAG AgentOps backend MVP v0.2 是最小 FastAPI 服務，提供 healthcheck、文件上傳 API stub，並允許 local frontend 透過 CORS 呼叫。此階段不接資料庫、OCR、RAG、Qdrant、Redis、NATS、vLLM 或登入權限。
 
 ## Install
 
@@ -57,6 +57,14 @@ docker run --rm -p 8000:8000 docurag-backend
 docker compose -f infra/docker-compose.yml up --build
 ```
 
+背景啟動後驗證：
+
+```powershell
+docker compose -f infra/docker-compose.yml up -d
+curl http://127.0.0.1:8000/health
+docker compose -f infra/docker-compose.yml down
+```
+
 ## Environment Check
 
 從 repo root 執行：
@@ -71,4 +79,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1
 
 - v0.1.0: FastAPI backend healthcheck、document upload stub、pytest、本機 `/health` HTTP 驗證已完成。
 - Python: `scripts/test-backend.ps1` 可透過 `pip.exe` 反推實際 `python.exe` 並建立/使用 `.venv`。
-- Docker: `docker` CLI 目前不在 PATH，Docker image / Compose 尚未驗證，不能視為通過。
+- v0.2.0: backend CORS、Docker image build、Compose build 與 Compose healthcheck 已納入驗證。

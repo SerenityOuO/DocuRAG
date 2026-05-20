@@ -1,11 +1,47 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+export type HealthResponse = {
+  service: string;
+  status: string;
+  version: string;
+};
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`);
+export type UploadResponse = {
+  document_id: string;
+  project_id: string | null;
+  filename: string;
+  file_type: string;
+  content_type: string;
+  size: number;
+  status: string;
+  created_at: string;
+};
+
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
+
+export const API_BASE_URL = configuredBaseUrl.replace(/\/$/, "");
+
+async function readJson<T>(response: Response): Promise<T> {
+  const body = (await response.json()) as T;
 
   if (!response.ok) {
     throw new Error(`API request failed: ${response.status}`);
   }
 
-  return response.json() as Promise<T>;
+  return body;
+}
+
+export async function getHealth(): Promise<HealthResponse> {
+  const response = await fetch(`${API_BASE_URL}/health`);
+  return readJson<HealthResponse>(response);
+}
+
+export async function uploadDocument(file: File): Promise<UploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_BASE_URL}/documents/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  return readJson<UploadResponse>(response);
 }

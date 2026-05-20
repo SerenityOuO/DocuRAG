@@ -37,7 +37,18 @@
 - [x] 診斷 Python：`py` launcher 不存在，`python` 目前無法執行。
 - [x] 診斷 Docker：`docker` CLI 不在 PATH。
 - [x] 修復本機 Python 後重跑 `scripts/test-backend.ps1`。
-- [ ] 修復 Docker 後重跑 `docker build` 與 `docker compose build`。
+- [x] 修復 Docker 後重跑 `docker build` 與 `docker compose build`。
+
+## MVP v0.2 Demo UI
+
+- [x] 建立 GitHub Actions `Backend CI` workflow。
+- [x] 建立最小 Vue 3 + Vite + TypeScript frontend。
+- [x] frontend 可呼叫 `GET /health`。
+- [x] frontend 可選擇檔案並呼叫 `POST /documents/upload` stub。
+- [x] backend 加上 local frontend CORS 設定。
+- [x] 建立 `frontend/README.md`。
+- [x] 更新 demo 啟動與驗證文件。
+- [x] 驗證 Docker CLI、Docker build 與 Docker Compose healthcheck。
 
 ## Parking Lot
 
@@ -54,4 +65,5 @@
 - [x] v0.1.0: backend healthcheck、document upload stub、pytest、本機 `/health` HTTP 驗證已完成。
 - [x] Python fallback: `scripts/check-dev-env.ps1` 與 `scripts/test-backend.ps1` 可透過 `pip.exe` 反推實際 `python.exe`。
 - [x] Upload stub: pytest 與本機 HTTP 驗證皆通過。
-- [ ] Docker: `docker` CLI 目前不在 PATH，Docker build / Compose 尚未驗證。
+- [x] Docker: `docker` CLI、Docker build 與 Docker Compose healthcheck 已驗證。
+- [x] v0.2.0: Demo UI、backend CORS、Backend CI 與 Docker 驗證已完成。

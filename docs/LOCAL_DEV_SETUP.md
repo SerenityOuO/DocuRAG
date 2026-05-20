@@ -1,12 +1,13 @@
 # Local Development Setup
 
-本文件說明 DocuRAG AgentOps MVP v0.1 的本機驗證需求，以及目前環境缺 Python 或 Docker 時的修復方式。
+本文件說明 DocuRAG AgentOps MVP v0.2 的本機驗證需求，以及目前環境缺 Python、Node 或 Docker 時的修復方式。
 
 ## Required Tools
 
 - Python 3.11 或更新版本。
 - Python launcher for Windows，也就是 `py` 指令。
 - `pip`。
+- Node.js 與 `npm.cmd`。
 - Docker Desktop，需包含 `docker` 與 `docker compose` CLI。
 
 ## Quick Check
@@ -31,20 +32,22 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1
 - `python --version`
 - `py --version`
 - `pip`
+- `node --version`
+- `npm.cmd --version`
 - `where docker`
 - `docker --version`
 - `docker compose version`
 
 ## Current Observed Issue
 
-目前本機環境觀察到：
+先前本機環境曾觀察到：
 
 - `where python` 找不到可執行 Python。
 - `py` launcher 不存在。
 - `python --version` 命中 WindowsApps Python alias，但無法啟動。
 - `docker` 不在 PATH。
 
-這代表 backend 程式碼已存在；目前 `python` / `py` alias 不可用，但腳本可透過 `pip.exe` 反推實際 Python 並執行 `pytest`、`uvicorn`。Docker CLI 仍不在 PATH，因此 Docker build 尚未驗證。
+目前 v0.2.0 驗證要求 backend pytest、frontend build、Docker build 與 Docker Compose healthcheck 皆通過後，才可以建立 release tag。
 
 ## Fix Python on Windows
 
@@ -109,6 +112,47 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1
 3. 安裝 backend 開發依賴。
 4. 執行 `pytest`。
 
+## Run Frontend
+
+安裝 dependencies：
+
+```powershell
+cd frontend
+npm.cmd install
+```
+
+啟動 dev server：
+
+```powershell
+cd frontend
+npm.cmd run dev
+```
+
+frontend 預設在：
+
+```text
+http://localhost:5173
+```
+
+frontend 預設 API base URL：
+
+```text
+http://127.0.0.1:8000
+```
+
+如需覆寫，建立 `frontend/.env.local`：
+
+```text
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+Build：
+
+```powershell
+cd frontend
+npm.cmd run build
+```
+
 ## Manual Backend Run
 
 ```powershell
@@ -127,7 +171,9 @@ curl http://127.0.0.1:8000/health
 ```powershell
 docker build -t docurag-backend ./backend
 docker compose -f infra/docker-compose.yml build
-docker compose -f infra/docker-compose.yml up
+docker compose -f infra/docker-compose.yml up -d
+curl http://127.0.0.1:8000/health
+docker compose -f infra/docker-compose.yml down
 ```
 
 ## Current Verification Notes
@@ -135,4 +181,4 @@ docker compose -f infra/docker-compose.yml up
 - Python: `python` / `py` 可能指向不可執行的 WindowsApps alias；`scripts/check-dev-env.ps1` 與 `scripts/test-backend.ps1` 會在必要時透過可執行的 `pip.exe --version` 反推實際 `python.exe`。
 - Backend tests: `scripts/test-backend.ps1` 會建立或使用 `backend/.venv`，安裝 backend dev dependencies，並執行 `pytest`。
 - v0.1.0: pytest 與本機 `GET /health` HTTP 驗證已完成。
-- Docker: `docker` CLI 目前不在 PATH，Docker build / Compose 尚未驗證。
+- v0.2.0: frontend build、Docker build 與 Docker Compose healthcheck 已納入 release 驗證。

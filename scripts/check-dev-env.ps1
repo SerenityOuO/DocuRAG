@@ -81,6 +81,12 @@ function Invoke-CheckLine {
     elseif ($CommandLine -eq "where docker") {
         $detail = "docker.exe not found in PATH by where.exe"
     }
+    elseif ($CommandLine -eq "node --version") {
+        $detail = "Node.js is not available"
+    }
+    elseif ($CommandLine -eq "npm.cmd --version") {
+        $detail = "npm.cmd is not available"
+    }
     elseif ($CommandLine -like "docker *") {
         $detail = "Docker CLI is not available"
     }
@@ -180,6 +186,9 @@ else {
         Write-Result "pip" $false "Python is not available"
     }
 }
+
+Invoke-CheckLine "node --version" "node --version" | Out-Null
+Invoke-CheckLine "npm.cmd --version" "npm.cmd --version" | Out-Null
 
 Invoke-CheckLine "where docker" "where docker" | Out-Null
 $dockerOk = Invoke-CheckLine "docker --version" "docker --version"

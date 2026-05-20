@@ -62,8 +62,20 @@ Expected Outcome：
 - Phase 02 只做文件上傳與 metadata foundation。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
+## v0.2.0 Demo UI Milestone
+
+Goal：建立可面試展示的最小 UI，讓使用者能看到 backend health，並把檔案送到既有 `/documents/upload` stub。
+
+Expected Outcome：
+
+- GitHub Actions `Backend CI` 會在 push 與 pull request 執行 backend pytest。
+- Vue 3 + Vite frontend 使用 `VITE_API_BASE_URL` 呼叫 backend。
+- backend CORS 允許 `http://localhost:5173` 與 `http://127.0.0.1:5173`。
+- Docker CLI、backend Docker build、Compose build、Compose up healthcheck 可驗證。
+- 不新增 OCR、RAG、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
+
 ## Release Verification
 
 - v0.0: repo structure、docs、tasks 已完成。
 - v0.1.0: backend healthcheck、document upload stub、pytest、本機 `/health` HTTP 驗證已完成。
-- Docker: `docker` CLI 目前不在 PATH，Docker build / Compose 尚未驗證，後續需在 Docker Desktop 可用後補驗證。
+- v0.2.0: Demo UI、Backend CI、backend CORS、Docker build / Compose healthcheck 已完成。

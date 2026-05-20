@@ -41,11 +41,14 @@ MVP 初期可以使用 fixture 或最小資料結構，不要求真正 AI pipeli
 
 ## Repository Structure
 
-目前 MVP v0.1 使用以下結構：
+目前 MVP v0.2 使用以下結構：
 
 ```text
 DocuRAG/
 ├── README.md
+├── .github/
+│   └── workflows/
+│       └── backend-ci.yml
 ├── AGENTS.md
 ├── TODO.md
 ├── goal.md
@@ -59,6 +62,10 @@ DocuRAG/
 │   ├── tests/
 │   ├── Dockerfile
 │   └── pyproject.toml
+├── frontend/
+│   ├── src/
+│   ├── README.md
+│   └── package.json
 ├── infra/
 │   └── docker-compose.yml
 ├── scripts/
@@ -71,7 +78,7 @@ DocuRAG/
     └── phase-02-document-foundation/
 ```
 
-Frontend、OCR、RAG、Qdrant、Redis、NATS、vLLM、登入權限與資料庫 schema 仍保留為後續 ticket。
+OCR、RAG、Qdrant、Redis、NATS、vLLM、登入權限與資料庫 schema 仍保留為後續 ticket。
 
 ## Local Run
 
@@ -107,11 +114,31 @@ py -3 -m uvicorn app.main:app --reload
 curl http://127.0.0.1:8000/health
 ```
 
+FastAPI docs UI：
+
+```text
+http://127.0.0.1:8000/docs
+```
+
 驗證文件上傳 stub：
 
 ```powershell
 curl -X POST http://127.0.0.1:8000/documents/upload \
   -F "file=@sample.pdf"
+```
+
+啟動 frontend：
+
+```powershell
+cd frontend
+npm.cmd install
+npm.cmd run dev
+```
+
+Frontend UI：
+
+```text
+http://localhost:5173
 ```
 
 執行測試：
@@ -134,6 +161,27 @@ docker build -t docurag-backend ./backend
 docker compose -f infra/docker-compose.yml up --build
 ```
 
+背景啟動並驗證 healthcheck：
+
+```powershell
+docker compose -f infra/docker-compose.yml up -d
+curl http://127.0.0.1:8000/health
+docker compose -f infra/docker-compose.yml down
+```
+
+## v0.2.0 Demo UI
+
+v0.2.0 加入最小 Vue 3 + Vite frontend、backend CORS、GitHub Actions backend CI，並完成 Docker build / Docker Compose 驗證。
+
+Demo 操作流程：
+
+1. 啟動 backend：`cd backend` 後執行 `py -3 -m uvicorn app.main:app --reload`。
+2. 開啟 FastAPI docs：`http://127.0.0.1:8000/docs`。
+3. 啟動 frontend：`cd frontend` 後執行 `npm.cmd run dev`。
+4. 開啟 frontend：`http://localhost:5173`。
+5. 確認頁面顯示 backend health。
+6. 選擇本機檔案並上傳，確認 upload result 與 API response JSON。
+
 ## Documentation
 
 - `goal.md`：完整產品構想與長期目標。
@@ -145,19 +193,22 @@ docker compose -f infra/docker-compose.yml up --build
 
 ## Current Status
 
-目前完成 MVP v0.1 backend bootstrap：
+目前完成 MVP v0.2.0 Demo UI：
 
 - `GET /health` 回傳 service、status、version。
 - `POST /documents/upload` 可接收 `UploadFile`，回傳 document metadata stub。
+- backend 已允許 local frontend CORS origin。
 - backend 可用 pytest 驗證。
 - backend 可用 Dockerfile / Compose 啟動。
+- frontend 可顯示 backend health、選擇檔案並呼叫 upload stub。
+- GitHub Actions Backend CI 已建立。
 
-尚未實作 frontend、OCR、RAG、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
+尚未實作 OCR、RAG、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
 
-本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前 `python` / `py` alias 不可用，但腳本可透過 `pip.exe` 反推實際 Python 並完成 pytest / uvicorn 驗證；Docker CLI 不在 PATH，Docker build 尚未驗證。
+本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前 backend pytest、frontend build、Docker build 與 Docker Compose healthcheck 均已納入 v0.2.0 驗證流程。
 
 ## Release Status
 
 - v0.0: repo structure、docs、tasks 已完成。
 - v0.1.0: backend healthcheck、document upload stub、pytest、本機 `/health` HTTP 驗證已完成。
-- Docker: `docker` CLI 目前不在 PATH，Docker build / Compose 尚未驗證，不能視為通過。
+- v0.2.0: Demo UI、backend CORS、Backend CI、Docker build / Compose 驗證已完成。

@@ -13,3 +13,15 @@ def test_health_check() -> None:
     assert body["status"] == "ok"
     assert body["service"]
     assert body["version"]
+
+
+def test_health_allows_local_frontend_origin() -> None:
+    client = TestClient(app)
+
+    response = client.get(
+        "/health",
+        headers={"Origin": "http://localhost:5173"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
