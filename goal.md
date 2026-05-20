@@ -51,8 +51,9 @@ DocuRAG AgentOps 的目標不是建立一個單純的 RAG Chatbot，而是建立
 8. 使用 Redis 處理 session、cache 與 rate limit。
 9. 使用 NATS 建立非同步任務架構。
 10. 支援 vLLM / Ollama / OpenAI-compatible endpoint 作為推論後端。
-11. 提供 Docker Compose 一鍵啟動與基本 K8s 部署範例。
-12. 產出完整 GitHub README、架構圖、API 文件、評估報告與 Demo 資料。
+11. 採用可替換的 LLM / VLM / Embedding / Reranker / OCR 模型組合，不綁定單一模型供應商。
+12. 提供 Docker Compose 一鍵啟動與基本 K8s 部署範例。
+13. 產出完整 GitHub README、架構圖、API 文件、評估報告與 Demo 資料。
 
 ### 3.2 面試展示目標
 
@@ -582,6 +583,36 @@ Redis 用途：
 | OpenAI-compatible API | 可接雲端或企業內部模型 |
 | llama.cpp | 輕量本地推論，可作 optional |
 
+初始推薦模型配置：
+
+| 角色 | 初始 provider | 初始模型 / 工具 | 用途 |
+|---|---|---|---|
+| LLM | Ollama | `qwen3:8b` | RAG 回答、query rewrite、摘要、Agent planning |
+| VLM | Ollama | `qwen3-vl:8b` | 掃描 PDF、圖片、發票與表格理解、JSON 欄位抽取 |
+| Embedding | FastEmbed | `BAAI/bge-m3` | 文件 chunk 與 query 向量化，寫入 Qdrant |
+| Reranker | FastEmbed | `BAAI/bge-reranker-v2-m3` | 對 retrieval top K 重新排序，支援 Hit Rate / MRR 比較 |
+| OCR | Local engine | `paddleocr` | 先產生文字層與版面基礎，VLM 作為 parser 或補強 |
+
+模型設定範例：
+
+```env
+LLM_PROVIDER=ollama
+LLM_MODEL=qwen3:8b
+VLM_PROVIDER=ollama
+VLM_MODEL=qwen3-vl:8b
+EMBEDDING_PROVIDER=fastembed
+EMBEDDING_MODEL=BAAI/bge-m3
+RERANKER_PROVIDER=fastembed
+RERANKER_MODEL=BAAI/bge-reranker-v2-m3
+OCR_ENGINE=paddleocr
+```
+
+設計原則：
+
+- LLM 與 VLM 概念上分工，但可由同一套 OpenAI-compatible client 抽象呼叫。
+- Embedding 與 Reranker 保持獨立，方便在 eval run 中比較檢索策略。
+- vLLM 保留為後續 LLMOps / serving / latency 展示，第一版優先用 Ollama 降低本地整合成本。
+
 驗收標準：
 
 - `.env` 可設定 LLM provider。
@@ -1105,11 +1136,12 @@ Final Answer
 {
   "strategy_name": "hybrid_rerank",
   "chunking": "semantic",
-  "embedding_model": "bge-m3",
-  "reranker_model": "bge-reranker",
+  "embedding_model": "BAAI/bge-m3",
+  "reranker_model": "BAAI/bge-reranker-v2-m3",
   "retrieval_top_k": 30,
   "rerank_top_k": 5,
-  "llm_model": "qwen2.5"
+  "llm_model": "qwen3:8b",
+  "vlm_model": "qwen3-vl:8b"
 }
 ```
 
@@ -1469,7 +1501,8 @@ docurag-agentops/
 | VLM 成本較高 | Vision model 推論較慢 | MVP 可先用 OCR + LLM parser |
 | Rerank 延遲增加 | Cross-encoder 成本較高 | 提供開關與 top K 限制 |
 | 多租戶資料隔離 | 容易發生跨 project 查詢 | API 與 vector metadata 雙層檢查 |
-| vLLM 本地資源不足 | GPU 記憶體可能不足 | 支援 Ollama / OpenAI-compatible fallback |
+| 本地模型資源有限 | 16GB VRAM 適合優先跑 7B / 8B 級模型 | 第一版使用 Ollama + Qwen3 8B / Qwen3-VL 8B，較大的模型改用 OpenAI-compatible fallback |
+| vLLM 本地資源不足 | GPU 記憶體與部署複雜度可能卡住 MVP | vLLM 保留為後續 LLMOps 展示，先支援 Ollama / OpenAI-compatible fallback |
 | K8s 實作時間較長 | 完整 production 部署複雜 | MVP 僅提供 basic manifests |
 
 ---
