@@ -269,5 +269,7 @@ edge-profile*/
 # Docker / local runtime
 *.log
 logs/
+data/documents.json
+data/*.tmp
 data/uploads/*
 !data/uploads/.gitkeep

@@ -19,6 +19,7 @@ MVP 採用 incremental thin slice，先跑通產品故事與 API 邊界：
 - Phase 00：建立文件、任務票與 repo 開發規範。
 - Phase 01：建立最小 backend healthcheck 與 Docker 啟動邊界。
 - Phase 02：建立文件上傳 API 與文件 metadata schema 的基礎。
+- v0.3.0：把文件上傳升級成本機存檔、local JSON metadata、文件列表與詳情查詢。
 
 MVP 初期可以使用 fixture 或最小資料結構，不要求真正 AI pipeline。以下能力保留為後續階段：
 
@@ -41,7 +42,7 @@ MVP 初期可以使用 fixture 或最小資料結構，不要求真正 AI pipeli
 
 ## Repository Structure
 
-目前 MVP v0.2 使用以下結構：
+目前 MVP v0.3 使用以下結構：
 
 ```text
 DocuRAG/
@@ -57,6 +58,9 @@ DocuRAG/
 │   ├── ARCHITECTURE.md
 │   ├── ROADMAP.md
 │   └── LOCAL_DEV_SETUP.md
+├── data/
+│   └── uploads/
+│       └── .gitkeep
 ├── backend/
 │   ├── app/
 │   ├── tests/
@@ -120,11 +124,23 @@ FastAPI docs UI：
 http://127.0.0.1:8000/docs
 ```
 
-驗證文件上傳 stub：
+驗證文件上傳：
 
 ```powershell
 curl -X POST http://127.0.0.1:8000/documents/upload \
   -F "file=@sample.pdf"
+```
+
+查詢文件列表：
+
+```powershell
+curl http://127.0.0.1:8000/documents
+```
+
+查詢文件詳情：
+
+```powershell
+curl http://127.0.0.1:8000/documents/{document_id}
 ```
 
 啟動 frontend：
@@ -182,6 +198,28 @@ Demo 操作流程：
 5. 確認頁面顯示 backend health。
 6. 選擇本機檔案並上傳，確認 upload result 與 API response JSON。
 
+## v0.3.0 Document Local Storage
+
+v0.3.0 將 `POST /documents/upload` 從 stub 升級為本機儲存 MVP：
+
+- 上傳檔案會存到 `data/uploads/`。
+- 文件 metadata 會寫到 `data/documents.json`。
+- `GET /documents` 依 `created_at` 由新到舊回傳文件列表。
+- `GET /documents/{document_id}` 回傳單一文件詳情，找不到時回傳 404。
+- `GET /documents/{document_id}/download` 可下載已保存的原始檔。
+- 前端會顯示文件列表，點選文件可查看 metadata JSON。
+
+`data/uploads/*` 與 `data/documents.json` 是 runtime files，不會提交到 Git；只保留 `data/uploads/.gitkeep` 讓資料夾存在。
+
+Demo 操作流程：
+
+1. 啟動 backend：`cd backend` 後執行 `py -3 -m uvicorn app.main:app --reload`。
+2. 上傳文件：`curl -X POST http://127.0.0.1:8000/documents/upload -F "file=@sample.pdf"`。
+3. 查詢列表：`curl http://127.0.0.1:8000/documents`。
+4. 查詢詳情：`curl http://127.0.0.1:8000/documents/{document_id}`。
+5. 啟動 frontend：`cd frontend` 後執行 `npm.cmd run dev`。
+6. 開啟 `http://localhost:5173`，確認 health、upload result、文件列表與 metadata JSON。
+
 ## Documentation
 
 - `goal.md`：完整產品構想與長期目標。
@@ -193,22 +231,25 @@ Demo 操作流程：
 
 ## Current Status
 
-目前完成 MVP v0.2.0 Demo UI：
+目前完成 MVP v0.3.0 Document Local Storage：
 
 - `GET /health` 回傳 service、status、version。
-- `POST /documents/upload` 可接收 `UploadFile`，回傳 document metadata stub。
+- `POST /documents/upload` 可接收 `UploadFile`，保存原始檔並回傳 document metadata。
+- `GET /documents` 回傳 local metadata 文件列表。
+- `GET /documents/{document_id}` 回傳文件詳情。
 - backend 已允許 local frontend CORS origin。
 - backend 可用 pytest 驗證。
 - backend 可用 Dockerfile / Compose 啟動。
-- frontend 可顯示 backend health、選擇檔案並呼叫 upload stub。
+- frontend 可顯示 backend health、選擇檔案、呼叫 upload API、刷新文件列表並查看 metadata JSON。
 - GitHub Actions Backend CI 已建立。
 
 尚未實作 OCR、RAG、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
 
-本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前 backend pytest、frontend build、Docker build 與 Docker Compose healthcheck 均已納入 v0.2.0 驗證流程。
+本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前 backend pytest、frontend build、Docker build、Docker Compose healthcheck 與 Compose upload API 均已納入 v0.3.0 驗證流程。
 
 ## Release Status
 
 - v0.0: repo structure、docs、tasks 已完成。
 - v0.1.0: backend healthcheck、document upload stub、pytest、本機 `/health` HTTP 驗證已完成。
 - v0.2.0: Demo UI、backend CORS、Backend CI、Docker build / Compose 驗證已完成。
+- v0.3.0: Document Local Storage、文件列表、文件詳情、frontend list UI、Docker Compose upload 驗證已完成。

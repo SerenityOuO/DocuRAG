@@ -3,8 +3,12 @@ import { computed, onMounted, ref } from "vue";
 
 import {
   API_BASE_URL,
+  getDocument,
   getHealth,
+  listDocuments,
   uploadDocument,
+  type DocumentListResponse,
+  type DocumentMetadata,
   type HealthResponse,
   type UploadResponse,
 } from "./api/client";
@@ -12,13 +16,21 @@ import {
 type RequestState = "idle" | "loading" | "success" | "error";
 
 const healthState = ref<RequestState>("idle");
+const documentsState = ref<RequestState>("idle");
+const detailState = ref<RequestState>("idle");
 const uploadState = ref<RequestState>("idle");
 const health = ref<HealthResponse | null>(null);
+const documents = ref<DocumentMetadata[]>([]);
+const selectedDocument = ref<DocumentMetadata | null>(null);
 const uploadResult = ref<UploadResponse | null>(null);
 const selectedFile = ref<File | null>(null);
 const healthError = ref("");
+const documentsError = ref("");
+const detailError = ref("");
 const uploadError = ref("");
-const latestResponse = ref<HealthResponse | UploadResponse | null>(null);
+const latestResponse = ref<
+  DocumentListResponse | DocumentMetadata | HealthResponse | UploadResponse | null
+>(null);
 
 const healthLabel = computed(() => {
   if (healthState.value === "success" && health.value?.status === "ok") {
@@ -40,6 +52,16 @@ const latestResponseJson = computed(() =>
   latestResponse.value ? JSON.stringify(latestResponse.value, null, 2) : "尚未取得 API response。",
 );
 
+const selectedDocumentJson = computed(() =>
+  selectedDocument.value
+    ? JSON.stringify(selectedDocument.value, null, 2)
+    : "尚未選擇文件。",
+);
+
+function formatBytes(size: number): string {
+  return `${size.toLocaleString()} bytes`;
+}
+
 async function checkHealth(): Promise<void> {
   healthState.value = "loading";
   healthError.value = "";
@@ -53,6 +75,38 @@ async function checkHealth(): Promise<void> {
     health.value = null;
     healthError.value = error instanceof Error ? error.message : "Health check failed";
     healthState.value = "error";
+  }
+}
+
+async function refreshDocuments(): Promise<void> {
+  documentsState.value = "loading";
+  documentsError.value = "";
+
+  try {
+    const response = await listDocuments();
+    documents.value = response.documents;
+    latestResponse.value = response;
+    documentsState.value = "success";
+  } catch (error) {
+    documents.value = [];
+    documentsError.value = error instanceof Error ? error.message : "Load documents failed";
+    documentsState.value = "error";
+  }
+}
+
+async function selectDocument(documentId: string): Promise<void> {
+  detailState.value = "loading";
+  detailError.value = "";
+
+  try {
+    const response = await getDocument(documentId);
+    selectedDocument.value = response;
+    latestResponse.value = response;
+    detailState.value = "success";
+  } catch (error) {
+    selectedDocument.value = null;
+    detailError.value = error instanceof Error ? error.message : "Load document failed";
+    detailState.value = "error";
   }
 }
 
@@ -77,6 +131,8 @@ async function submitUpload(): Promise<void> {
     uploadResult.value = response;
     latestResponse.value = response;
     uploadState.value = "success";
+    await refreshDocuments();
+    await selectDocument(response.document_id);
   } catch (error) {
     uploadResult.value = null;
     uploadError.value = error instanceof Error ? error.message : "Upload failed";
@@ -86,15 +142,16 @@ async function submitUpload(): Promise<void> {
 
 onMounted(() => {
   void checkHealth();
+  void refreshDocuments();
 });
 </script>
 
 <template>
   <main class="page">
     <header class="hero">
-      <p class="eyebrow">v0.2.0 Demo UI</p>
+      <p class="eyebrow">v0.3.0 Local Storage</p>
       <h1>DocuRAG AgentOps</h1>
-      <p class="hero-copy">Backend health 與 document upload stub 驗證。</p>
+      <p class="hero-copy">Backend health、本機文件上傳、metadata 保存與文件列表驗證。</p>
     </header>
 
     <section class="layout" aria-label="Demo controls">
@@ -164,7 +221,7 @@ onMounted(() => {
         <div class="panel-heading">
           <div>
             <h2>Upload result</h2>
-            <p>Backend stub metadata</p>
+            <p>Latest saved metadata</p>
           </div>
           <span v-if="uploadResult" class="status-pill status-success">{{ uploadResult.status }}</span>
         </div>
@@ -184,18 +241,86 @@ onMounted(() => {
           </div>
           <div>
             <dt>Size</dt>
-            <dd>{{ uploadResult.size }} bytes</dd>
+            <dd>{{ formatBytes(uploadResult.size) }}</dd>
           </div>
         </dl>
 
         <p v-else class="muted">尚未上傳檔案。</p>
       </article>
 
+      <article class="panel documents-panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Documents</h2>
+            <p>GET /documents</p>
+          </div>
+          <button
+            type="button"
+            class="button secondary-button"
+            :disabled="documentsState === 'loading'"
+            @click="refreshDocuments"
+          >
+            {{ documentsState === "loading" ? "Loading..." : "Refresh list" }}
+          </button>
+        </div>
+
+        <p v-if="documentsError" class="error">{{ documentsError }}</p>
+
+        <div v-if="documents.length" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Filename</th>
+                <th>Status</th>
+                <th>Size</th>
+                <th>Created at</th>
+                <th>Content type</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="document in documents"
+                :key="document.document_id"
+                :class="{ selected: selectedDocument?.document_id === document.document_id }"
+              >
+                <td>
+                  <button
+                    type="button"
+                    class="link-button"
+                    :disabled="detailState === 'loading'"
+                    @click="selectDocument(document.document_id)"
+                  >
+                    {{ document.filename }}
+                  </button>
+                </td>
+                <td><span class="status-pill status-success">{{ document.status }}</span></td>
+                <td>{{ formatBytes(document.size) }}</td>
+                <td>{{ document.created_at }}</td>
+                <td>{{ document.content_type }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p v-else class="muted">目前沒有文件。</p>
+      </article>
+
+      <article class="panel response-panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Document metadata JSON</h2>
+            <p>GET /documents/{{ "{document_id}" }}</p>
+          </div>
+        </div>
+        <p v-if="detailError" class="error">{{ detailError }}</p>
+        <pre>{{ selectedDocumentJson }}</pre>
+      </article>
+
       <article class="panel response-panel">
         <div class="panel-heading">
           <div>
             <h2>API response JSON</h2>
-            <p>GET /health 或 POST /documents/upload</p>
+            <p>Latest API response</p>
           </div>
         </div>
         <pre>{{ latestResponseJson }}</pre>

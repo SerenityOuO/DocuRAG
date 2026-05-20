@@ -16,6 +16,7 @@ def test_document_response_rejects_invalid_status() -> None:
         DocumentUploadResponse(
             document_id="doc_001",
             filename="invoice.pdf",
+            stored_filename="doc_001-invoice.pdf",
             file_type="pdf",
             content_type="application/pdf",
             size=12,

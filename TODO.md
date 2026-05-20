@@ -12,8 +12,8 @@
 - [x] 建立 `docs/ROADMAP.md`。
 - [x] 建立 `tasks/_TEMPLATE.md`。
 - [x] 建立 Phase 00 到 Phase 02 的初始 ticket。
-- [ ] 執行 `tasks/phase-00-bootstrap/00-01-repo-structure.md`。
-- [ ] 執行 `tasks/phase-00-bootstrap/00-02-project-docs.md`。
+- [x] 執行 `tasks/phase-00-bootstrap/00-01-repo-structure.md`。
+- [x] 執行 `tasks/phase-00-bootstrap/00-02-project-docs.md`。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -50,6 +50,17 @@
 - [x] 更新 demo 啟動與驗證文件。
 - [x] 驗證 Docker CLI、Docker build 與 Docker Compose healthcheck。
 
+## MVP v0.3 Document Local Storage
+
+- [x] 將 `POST /documents/upload` 從 stub 升級為本機存檔。
+- [x] 保存 document metadata 到 local JSON store。
+- [x] 新增 `GET /documents` 文件列表 API。
+- [x] 新增 `GET /documents/{document_id}` 文件詳情 API。
+- [x] 新增安全下載端點 `GET /documents/{document_id}/download`。
+- [x] 測試 unsafe filename 不會 path traversal。
+- [x] frontend 顯示文件列表與 document metadata JSON。
+- [x] Docker Compose 掛載 `data/` 並驗證 upload API。
+
 ## Parking Lot
 
 - [ ] OCR / VLM parser。
@@ -67,3 +78,4 @@
 - [x] Upload stub: pytest 與本機 HTTP 驗證皆通過。
 - [x] Docker: `docker` CLI、Docker build 與 Docker Compose healthcheck 已驗證。
 - [x] v0.2.0: Demo UI、backend CORS、Backend CI 與 Docker 驗證已完成。
+- [x] v0.3.0: Document Local Storage、文件列表、文件詳情、frontend list UI 與 Docker Compose upload 驗證已完成。

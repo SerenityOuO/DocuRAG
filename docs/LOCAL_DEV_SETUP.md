@@ -1,6 +1,6 @@
 # Local Development Setup
 
-本文件說明 DocuRAG AgentOps MVP v0.2 的本機驗證需求，以及目前環境缺 Python、Node 或 Docker 時的修復方式。
+本文件說明 DocuRAG AgentOps MVP v0.3 的本機驗證需求，以及目前環境缺 Python、Node 或 Docker 時的修復方式。
 
 ## Required Tools
 
@@ -47,7 +47,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1
 - `python --version` 命中 WindowsApps Python alias，但無法啟動。
 - `docker` 不在 PATH。
 
-目前 v0.2.0 驗證要求 backend pytest、frontend build、Docker build 與 Docker Compose healthcheck 皆通過後，才可以建立 release tag。
+目前 v0.3.0 驗證要求 backend pytest、local document API、frontend build、Docker build、Docker Compose healthcheck 與 Compose upload API 皆通過後，才可以建立 release tag。
 
 ## Fix Python on Windows
 
@@ -166,6 +166,23 @@ cd backend
 curl http://127.0.0.1:8000/health
 ```
 
+驗證 local storage API：
+
+```powershell
+curl -X POST http://127.0.0.1:8000/documents/upload -F "file=@sample.pdf"
+curl http://127.0.0.1:8000/documents
+curl http://127.0.0.1:8000/documents/{document_id}
+```
+
+預設資料位置：
+
+```text
+data/uploads/
+data/documents.json
+```
+
+也可用 `DOCURAG_DATA_DIR` 覆寫資料根目錄。
+
 ## Docker Validation
 
 ```powershell
@@ -173,6 +190,8 @@ docker build -t docurag-backend ./backend
 docker compose -f infra/docker-compose.yml build
 docker compose -f infra/docker-compose.yml up -d
 curl http://127.0.0.1:8000/health
+curl -X POST http://127.0.0.1:8000/documents/upload -F "file=@sample.pdf"
+curl http://127.0.0.1:8000/documents
 docker compose -f infra/docker-compose.yml down
 ```
 
@@ -182,3 +201,4 @@ docker compose -f infra/docker-compose.yml down
 - Backend tests: `scripts/test-backend.ps1` 會建立或使用 `backend/.venv`，安裝 backend dev dependencies，並執行 `pytest`。
 - v0.1.0: pytest 與本機 `GET /health` HTTP 驗證已完成。
 - v0.2.0: frontend build、Docker build 與 Docker Compose healthcheck 已納入 release 驗證。
+- v0.3.0: local storage upload、document list/detail、frontend list UI、Docker Compose upload API 已納入 release 驗證。

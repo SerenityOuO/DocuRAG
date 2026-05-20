@@ -8,11 +8,18 @@ export type UploadResponse = {
   document_id: string;
   project_id: string | null;
   filename: string;
+  stored_filename: string;
   file_type: string;
   content_type: string;
   size: number;
   status: string;
   created_at: string;
+};
+
+export type DocumentMetadata = UploadResponse;
+
+export type DocumentListResponse = {
+  documents: DocumentMetadata[];
 };
 
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
@@ -44,4 +51,14 @@ export async function uploadDocument(file: File): Promise<UploadResponse> {
   });
 
   return readJson<UploadResponse>(response);
+}
+
+export async function listDocuments(): Promise<DocumentListResponse> {
+  const response = await fetch(`${API_BASE_URL}/documents`);
+  return readJson<DocumentListResponse>(response);
+}
+
+export async function getDocument(documentId: string): Promise<DocumentMetadata> {
+  const response = await fetch(`${API_BASE_URL}/documents/${documentId}`);
+  return readJson<DocumentMetadata>(response);
 }

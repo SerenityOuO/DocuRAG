@@ -1,6 +1,6 @@
 # DocuRAG AgentOps Frontend
 
-最小 Vue 3 + Vite demo UI，用來檢查 backend health 並呼叫文件上傳 stub。
+最小 Vue 3 + Vite demo UI，用來檢查 backend health、上傳文件、顯示文件列表，並查看單一文件 metadata JSON。
 
 ## Install
 
@@ -43,3 +43,13 @@ npm.cmd run dev
 cd frontend
 npm.cmd run build
 ```
+
+## Document List UI
+
+v0.3.0 UI 支援：
+
+- `GET /health` 顯示 backend 狀態。
+- `POST /documents/upload` 上傳本機文件。
+- 上傳成功後自動刷新 `GET /documents` 文件列表。
+- 文件列表顯示 filename、status、size、created_at 與 content_type。
+- 點選 filename 後呼叫 `GET /documents/{document_id}`，並顯示 metadata JSON。

@@ -74,8 +74,28 @@ Expected Outcome：
 - Docker CLI、backend Docker build、Compose build、Compose up healthcheck 可驗證。
 - 不新增 OCR、RAG、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
 
+## v0.3.0 Document Local Storage Milestone
+
+Goal：把文件上傳從 stub 升級為可驗證的本機 storage MVP，讓 demo 可以呈現「上傳後真的保存、可列出、可查詳情」。
+
+Expected Outcome：
+
+- `POST /documents/upload` 會將原始檔保存到 `data/uploads/`。
+- document metadata 會保存到 `data/documents.json`。
+- `GET /documents` 依 `created_at` 由新到舊回傳文件列表。
+- `GET /documents/{document_id}` 回傳指定文件 metadata，找不到時回傳 404。
+- frontend 在上傳成功後刷新文件列表，並可點選文件查看 metadata JSON。
+- Docker Compose 掛載 repo root 的 `data/` 到 container `/app/data`，啟動後可通過 healthcheck 與 upload API 驗證。
+- 不新增 OCR、RAG、Qdrant、Redis、NATS、vLLM、登入、權限、PostgreSQL、embedding、rerank 或 Agent。
+
+Next Candidate Milestone：
+
+- v0.4.0 OCR mock pipeline：只建立可替換的 mock OCR 結果與狀態顯示，不接真正 OCR engine。
+- v0.4.0 RAG baseline spike：只做 fixture-based retrieval baseline，不接 Qdrant 或 embeddings service。
+
 ## Release Verification
 
 - v0.0: repo structure、docs、tasks 已完成。
 - v0.1.0: backend healthcheck、document upload stub、pytest、本機 `/health` HTTP 驗證已完成。
 - v0.2.0: Demo UI、Backend CI、backend CORS、Docker build / Compose healthcheck 已完成。
+- v0.3.0: Document Local Storage、文件列表、文件詳情、frontend list UI、Docker build / Compose healthcheck / Compose upload API 已完成。
