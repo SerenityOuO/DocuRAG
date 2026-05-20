@@ -154,4 +154,10 @@ docker compose -f infra/docker-compose.yml up --build
 
 尚未實作 frontend、OCR、RAG、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
 
-本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前觀察到 Python launcher 與 Docker CLI 不在可用 PATH，需先修復本機工具後才能執行 pytest、uvicorn 與 Docker build。
+本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前 `python` / `py` alias 不可用，但腳本可透過 `pip.exe` 反推實際 Python 並完成 pytest / uvicorn 驗證；Docker CLI 不在 PATH，Docker build 尚未驗證。
+
+## Release Status
+
+- v0.0: repo structure、docs、tasks 已完成。
+- v0.1.0: backend healthcheck、document upload stub、pytest、本機 `/health` HTTP 驗證已完成。
+- Docker: `docker` CLI 目前不在 PATH，Docker build / Compose 尚未驗證，不能視為通過。

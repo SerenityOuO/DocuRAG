@@ -61,3 +61,9 @@ Expected Outcome：
 - Phase 01 只做 backend 啟動與 healthcheck。
 - Phase 02 只做文件上傳與 metadata foundation。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
+
+## Release Verification
+
+- v0.0: repo structure、docs、tasks 已完成。
+- v0.1.0: backend healthcheck、document upload stub、pytest、本機 `/health` HTTP 驗證已完成。
+- Docker: `docker` CLI 目前不在 PATH，Docker build / Compose 尚未驗證，後續需在 Docker Desktop 可用後補驗證。

@@ -44,7 +44,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1
 - `python --version` 命中 WindowsApps Python alias，但無法啟動。
 - `docker` 不在 PATH。
 
-這代表 backend 程式碼已存在，但目前無法在本機執行 `pytest`、`uvicorn` 或 Docker build。
+這代表 backend 程式碼已存在；目前 `python` / `py` alias 不可用，但腳本可透過 `pip.exe` 反推實際 Python 並執行 `pytest`、`uvicorn`。Docker CLI 仍不在 PATH，因此 Docker build 尚未驗證。
 
 ## Fix Python on Windows
 
@@ -129,3 +129,10 @@ docker build -t docurag-backend ./backend
 docker compose -f infra/docker-compose.yml build
 docker compose -f infra/docker-compose.yml up
 ```
+
+## Current Verification Notes
+
+- Python: `python` / `py` 可能指向不可執行的 WindowsApps alias；`scripts/check-dev-env.ps1` 與 `scripts/test-backend.ps1` 會在必要時透過可執行的 `pip.exe --version` 反推實際 `python.exe`。
+- Backend tests: `scripts/test-backend.ps1` 會建立或使用 `backend/.venv`，安裝 backend dev dependencies，並執行 `pytest`。
+- v0.1.0: pytest 與本機 `GET /health` HTTP 驗證已完成。
+- Docker: `docker` CLI 目前不在 PATH，Docker build / Compose 尚未驗證。

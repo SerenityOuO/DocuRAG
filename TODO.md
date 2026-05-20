@@ -36,7 +36,7 @@
 - [x] 建立 `docs/LOCAL_DEV_SETUP.md`。
 - [x] 診斷 Python：`py` launcher 不存在，`python` 目前無法執行。
 - [x] 診斷 Docker：`docker` CLI 不在 PATH。
-- [ ] 修復本機 Python 後重跑 `scripts/test-backend.ps1`。
+- [x] 修復本機 Python 後重跑 `scripts/test-backend.ps1`。
 - [ ] 修復 Docker 後重跑 `docker build` 與 `docker compose build`。
 
 ## Parking Lot
@@ -47,3 +47,11 @@
 - [ ] NATS worker。
 - [ ] RAG chat / rerank / citation trace。
 - [ ] vLLM / Ollama / OpenAI-compatible provider。
+
+## Release Verification Status
+
+- [x] v0.0: repo structure、docs、tasks 已完成。
+- [x] v0.1.0: backend healthcheck、document upload stub、pytest、本機 `/health` HTTP 驗證已完成。
+- [x] Python fallback: `scripts/check-dev-env.ps1` 與 `scripts/test-backend.ps1` 可透過 `pip.exe` 反推實際 `python.exe`。
+- [x] Upload stub: pytest 與本機 HTTP 驗證皆通過。
+- [ ] Docker: `docker` CLI 目前不在 PATH，Docker build / Compose 尚未驗證。
