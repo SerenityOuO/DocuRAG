@@ -41,7 +41,7 @@ MVP 初期可以使用 fixture 或最小資料結構，不要求真正 AI pipeli
 
 ## Repository Structure
 
-目前 Phase 00 文件與任務票使用以下結構：
+目前 MVP v0.1 使用以下結構：
 
 ```text
 DocuRAG/
@@ -52,7 +52,18 @@ DocuRAG/
 ├── docs/
 │   ├── PRD.md
 │   ├── ARCHITECTURE.md
-│   └── ROADMAP.md
+│   ├── ROADMAP.md
+│   └── LOCAL_DEV_SETUP.md
+├── backend/
+│   ├── app/
+│   ├── tests/
+│   ├── Dockerfile
+│   └── pyproject.toml
+├── infra/
+│   └── docker-compose.yml
+├── scripts/
+│   ├── check-dev-env.ps1
+│   └── test-backend.ps1
 └── tasks/
     ├── _TEMPLATE.md
     ├── phase-00-bootstrap/
@@ -60,7 +71,68 @@ DocuRAG/
     └── phase-02-document-foundation/
 ```
 
-後續 ticket 才會建立 backend、frontend、infra 或 package manager 檔案。
+Frontend、OCR、RAG、Qdrant、Redis、NATS、vLLM、登入權限與資料庫 schema 仍保留為後續 ticket。
+
+## Local Run
+
+先檢查本機 Python / Docker 狀態：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1
+```
+
+如果 PowerShell execution policy 已允許本機腳本，也可以直接執行：
+
+```powershell
+.\scripts\check-dev-env.ps1
+```
+
+安裝 backend 依賴：
+
+```powershell
+cd backend
+py -3 -m pip install -e ".[dev]"
+```
+
+啟動 backend：
+
+```powershell
+cd backend
+py -3 -m uvicorn app.main:app --reload
+```
+
+驗證 healthcheck：
+
+```powershell
+curl http://127.0.0.1:8000/health
+```
+
+驗證文件上傳 stub：
+
+```powershell
+curl -X POST http://127.0.0.1:8000/documents/upload \
+  -F "file=@sample.pdf"
+```
+
+執行測試：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1
+```
+
+## Docker
+
+單獨 build backend image：
+
+```powershell
+docker build -t docurag-backend ./backend
+```
+
+使用 Compose 啟動 backend：
+
+```powershell
+docker compose -f infra/docker-compose.yml up --build
+```
 
 ## Documentation
 
@@ -73,4 +145,13 @@ DocuRAG/
 
 ## Current Status
 
-目前停在 Phase 00 文件與任務票建立階段，尚未實作 backend、frontend、OCR、RAG、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
+目前完成 MVP v0.1 backend bootstrap：
+
+- `GET /health` 回傳 service、status、version。
+- `POST /documents/upload` 可接收 `UploadFile`，回傳 document metadata stub。
+- backend 可用 pytest 驗證。
+- backend 可用 Dockerfile / Compose 啟動。
+
+尚未實作 frontend、OCR、RAG、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
+
+本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前觀察到 Python launcher 與 Docker CLI 不在可用 PATH，需先修復本機工具後才能執行 pytest、uvicorn 與 Docker build。

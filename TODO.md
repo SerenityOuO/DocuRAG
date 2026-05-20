@@ -17,17 +17,27 @@
 
 ## Phase 01 - Backend Bootstrap
 
-- [ ] 執行 `tasks/phase-01-backend-bootstrap/01-01-backend-healthcheck.md`。
-- [ ] 執行 `tasks/phase-01-backend-bootstrap/01-02-backend-docker.md`。
-- [ ] 確認 backend healthcheck 可以用 ticket 指定方式驗證。
-- [ ] 確認 Docker 啟動邊界只涵蓋 Phase 01 所需範圍。
+- [x] 執行 `tasks/phase-01-backend-bootstrap/01-01-backend-healthcheck.md`。
+- [x] 執行 `tasks/phase-01-backend-bootstrap/01-02-backend-docker.md`。
+- [x] 確認 backend healthcheck 可以用 ticket 指定方式驗證。
+- [x] 確認 Docker 啟動邊界只涵蓋 Phase 01 所需範圍。
 
 ## Phase 02 - Document Foundation
 
-- [ ] 執行 `tasks/phase-02-document-foundation/02-01-document-upload-api.md`。
-- [ ] 執行 `tasks/phase-02-document-foundation/02-02-document-metadata-schema.md`。
-- [ ] 確認文件上傳 API 不觸發 OCR、RAG 或 async worker。
-- [ ] 確認 document metadata schema 可支援後續 OCR 與 RAG 狀態，但不提前實作資料庫遷移。
+- [x] 執行 `tasks/phase-02-document-foundation/02-01-document-upload-api.md`。
+- [x] 執行 `tasks/phase-02-document-foundation/02-02-document-metadata-schema.md`。
+- [x] 確認文件上傳 API 不觸發 OCR、RAG 或 async worker。
+- [x] 確認 document metadata schema 可支援後續 OCR 與 RAG 狀態，但不提前實作資料庫遷移。
+
+## MVP v0.1 Local Verification
+
+- [x] 建立 `scripts/check-dev-env.ps1`。
+- [x] 建立 `scripts/test-backend.ps1`。
+- [x] 建立 `docs/LOCAL_DEV_SETUP.md`。
+- [x] 診斷 Python：`py` launcher 不存在，`python` 目前無法執行。
+- [x] 診斷 Docker：`docker` CLI 不在 PATH。
+- [ ] 修復本機 Python 後重跑 `scripts/test-backend.ps1`。
+- [ ] 修復 Docker 後重跑 `docker build` 與 `docker compose build`。
 
 ## Parking Lot
 

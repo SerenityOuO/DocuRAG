@@ -1,15 +1,11 @@
 from fastapi import FastAPI
 
-from app.core.config import settings
+from app.api.routes import documents, health
+from app.core.config import get_settings
 
 
-app = FastAPI(title=settings.app_name, version=settings.app_version)
+settings = get_settings()
 
-
-@app.get("/health", tags=["system"])
-async def health_check() -> dict[str, str]:
-    return {
-        "status": "ok",
-        "service": settings.app_name,
-        "version": settings.app_version,
-    }
+app = FastAPI(title=settings.app_name, version=settings.version)
+app.include_router(health.router)
+app.include_router(documents.router)
