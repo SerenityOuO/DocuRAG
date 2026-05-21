@@ -104,6 +104,20 @@
 - [x] frontend package version 更新為 `0.5.1`。
 - [x] 確認仍未接 Qdrant、embedding、rerank、真正 LLM、OpenAI API、Ollama、vLLM、Redis、NATS、PostgreSQL、登入或 RBAC。
 
+## MVP v0.6 Bridge Contracts
+
+- [x] 建立 `tasks/phase-06-bridge/06-01-ocr-provider-interface.md`。
+- [x] 建立 `tasks/phase-06-bridge/06-02-rag-provider-interface.md`。
+- [x] 建立 `tasks/phase-06-bridge/06-03-processing-status-contract.md`。
+- [x] 建立 `tasks/phase-06-bridge/06-04-chunk-citation-schema.md`。
+- [x] 建立 `tasks/phase-06-bridge/06-05-processing-job-contract.md`。
+- [ ] 執行 OCR provider interface bridge，保留 mock provider 並維持 OCR API 相容。
+- [ ] 執行 RAG provider interface bridge，保留 local keyword provider 並維持 `/rag/query` 相容。
+- [ ] 執行 processing status contract，明確定義 upload、OCR、indexing、ready 與 failed 狀態。
+- [ ] 執行 chunk / citation schema bridge，補齊 page、bbox、confidence 與 trace metadata contract。
+- [ ] 執行 processing job contract，建立同步 job metadata，不引入真正 worker 或 queue。
+- [ ] 確認 v0.6 bridge 階段仍未接真正 OCR、embedding、Qdrant、rerank、LLM、Redis、NATS、PostgreSQL、登入或 RBAC。
+
 ## Parking Lot
 
 - [ ] 真正 OCR / VLM parser。
@@ -125,3 +139,4 @@
 - [x] v0.4.0: OCR Mock Pipeline、frontend OCR UI 與 Docker Compose OCR mock API 驗證已完成。
 - [x] v0.5.0: Local RAG Baseline、frontend Chat UI 與 Docker Compose RAG API 驗證已完成。
 - [x] v0.5.1: Demo Hardening、公開 sample data、demo seed script、API smoke test 與 Docker Compose demo 驗證已完成。
+- [ ] v0.6.0: Bridge Contracts、OCR provider interface、RAG provider interface、processing status、chunk citation schema 與 processing job contract。

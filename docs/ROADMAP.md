@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.5.1 的已交付切片。後續真正 OCR、embedding、Qdrant、LLM RAG、AgentOps 與 infra 延伸會再拆成小 ticket。
+本 roadmap 記錄 Phase 00 到 v0.5.1 的已交付切片，並新增 v0.6 bridge contracts 作為接真正 OCR、embedding、Qdrant、LLM RAG、AgentOps 與 infra 前的銜接層。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -63,6 +63,7 @@ Expected Outcome：
 - v0.4.0 只做 OCR mock pipeline，不接真正 OCR engine 或 async worker。
 - v0.5.0 只做 local RAG baseline，不接 LLM、OpenAI API、Ollama、vLLM、embedding、Qdrant 或 rerank。
 - v0.5.1 只做 demo hardening，不新增 Qdrant、embedding、rerank、真正 LLM、OpenAI API、Ollama、vLLM、Redis、NATS、PostgreSQL、登入或 RBAC。
+- v0.6.0 只做 bridge contracts，不接真正 OCR、embedding、Qdrant、rerank、LLM、Redis、NATS、PostgreSQL、登入或 RBAC。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
 ## v0.2.0 Demo UI Milestone
@@ -146,9 +147,32 @@ Expected Outcome：
 - demo 明確標示目前是 local keyword RAG baseline，不是 embedding、Qdrant、rerank 或 LLM。
 - 不新增 Qdrant、embedding、rerank、真正 LLM、OpenAI API、Ollama、vLLM、Redis、NATS、PostgreSQL、登入或 RBAC。
 
+## v0.6.0 Bridge Contracts Milestone
+
+Goal：在真正 OCR / RAG provider 進場前，先把可替換邊界、處理狀態、chunk / citation metadata 與 processing job contract 打穩，避免後續接模型時重寫既有 API 與 frontend demo flow。
+
+Tickets：
+
+- `tasks/phase-06-bridge/06-01-ocr-provider-interface.md`
+- `tasks/phase-06-bridge/06-02-rag-provider-interface.md`
+- `tasks/phase-06-bridge/06-03-processing-status-contract.md`
+- `tasks/phase-06-bridge/06-04-chunk-citation-schema.md`
+- `tasks/phase-06-bridge/06-05-processing-job-contract.md`
+
+Expected Outcome：
+
+- OCR mock 會被整理成最小 OCR provider / service 邊界，仍只保留 mock provider。
+- local keyword RAG 會被整理成最小 RAG provider / service 邊界，仍只保留 keyword provider。
+- document processing status 可清楚描述 upload、OCR、indexing、ready 與 failed 流轉。
+- chunk 與 citation schema 可承接 page、bbox、confidence 與 trace metadata，但不實作真正 OCR bbox 或 citation evaluation。
+- processing job contract 可記錄本機同步 job metadata，但不引入真正 worker、queue、Redis 或 NATS。
+- 既有 upload -> OCR mock -> local RAG -> citations demo flow 保持可用。
+- 不新增真正 OCR engine、embedding、Qdrant、rerank、LLM、OpenAI API、Ollama、vLLM、Redis、NATS、PostgreSQL、登入或 RBAC。
+
 Next Candidate Milestone：
 
-- v0.6.0 Embedding / Qdrant indexing spike：將 local keyword retrieval 後續替換成可驗證的 vector indexing，但仍需先拆 ticket。
+- v0.7.0 Real OCR Provider Spike：在 v0.6 bridge contracts 完成後，挑一個本機 OCR / VLM provider 做可驗證 spike。
+- v0.8.0 Embedding / Qdrant Indexing Spike：在 OCR 與 chunk / citation contract 穩定後，將 local keyword retrieval 替換成可驗證的 vector indexing。
 
 ## Release Verification
 
@@ -159,3 +183,4 @@ Next Candidate Milestone：
 - v0.4.0: OCR Mock Pipeline、OCR result persistence、frontend OCR UI、Docker build / Compose healthcheck / Compose upload / Compose OCR mock API 已完成。
 - v0.5.0: Local RAG Baseline、chunking、keyword retrieval、RAG answer API、frontend Chat UI、Docker build / Compose healthcheck / Compose upload / Compose OCR mock / Compose RAG API 已完成。
 - v0.5.1: Demo Hardening、公開 sample data、demo seed script、API smoke test、5 分鐘 README demo flow、Docker build / Compose demo smoke / seed script 已完成。
+- v0.6.0: Bridge Contracts、OCR provider interface、RAG provider interface、processing status、chunk citation schema 與 processing job contract 待執行。
