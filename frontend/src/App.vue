@@ -5,11 +5,14 @@ import {
   API_BASE_URL,
   getDocument,
   getHealth,
+  getOcrResult,
   listDocuments,
+  runMockOcr,
   uploadDocument,
   type DocumentListResponse,
   type DocumentMetadata,
   type HealthResponse,
+  type OcrResultResponse,
   type UploadResponse,
 } from "./api/client";
 
@@ -18,6 +21,7 @@ type RequestState = "idle" | "loading" | "success" | "error";
 const healthState = ref<RequestState>("idle");
 const documentsState = ref<RequestState>("idle");
 const detailState = ref<RequestState>("idle");
+const ocrState = ref<RequestState>("idle");
 const uploadState = ref<RequestState>("idle");
 const health = ref<HealthResponse | null>(null);
 const documents = ref<DocumentMetadata[]>([]);
@@ -27,9 +31,10 @@ const selectedFile = ref<File | null>(null);
 const healthError = ref("");
 const documentsError = ref("");
 const detailError = ref("");
+const ocrError = ref("");
 const uploadError = ref("");
 const latestResponse = ref<
-  DocumentListResponse | DocumentMetadata | HealthResponse | UploadResponse | null
+  DocumentListResponse | DocumentMetadata | HealthResponse | OcrResultResponse | UploadResponse | null
 >(null);
 
 const healthLabel = computed(() => {
@@ -58,8 +63,20 @@ const selectedDocumentJson = computed(() =>
     : "尚未選擇文件。",
 );
 
+const selectedOcrEntries = computed(() =>
+  selectedDocument.value ? Object.entries(selectedDocument.value.ocr.extracted_fields) : [],
+);
+
+const selectedOcrText = computed(() =>
+  selectedDocument.value?.ocr.text ? selectedDocument.value.ocr.text : "尚未執行 OCR。",
+);
+
 function formatBytes(size: number): string {
   return `${size.toLocaleString()} bytes`;
+}
+
+function statusClass(status: string): string {
+  return `status-${status.replace(/_/g, "-")}`;
 }
 
 async function checkHealth(): Promise<void> {
@@ -100,13 +117,49 @@ async function selectDocument(documentId: string): Promise<void> {
 
   try {
     const response = await getDocument(documentId);
-    selectedDocument.value = response;
-    latestResponse.value = response;
+    const ocrResponse = await getOcrResult(documentId);
+    selectedDocument.value = {
+      ...response,
+      ocr: ocrResponse,
+    };
+    latestResponse.value = ocrResponse;
     detailState.value = "success";
+    ocrState.value = "idle";
+    ocrError.value = "";
   } catch (error) {
     selectedDocument.value = null;
     detailError.value = error instanceof Error ? error.message : "Load document failed";
     detailState.value = "error";
+  }
+}
+
+async function runOcrForSelectedDocument(): Promise<void> {
+  if (!selectedDocument.value) {
+    ocrError.value = "請先選擇文件。";
+    return;
+  }
+
+  const documentId = selectedDocument.value.document_id;
+  ocrState.value = "loading";
+  ocrError.value = "";
+
+  try {
+    const response = await runMockOcr(documentId);
+    selectedDocument.value = {
+      ...selectedDocument.value,
+      status: "ready",
+      ocr: response,
+    };
+    documents.value = documents.value.map((document) =>
+      document.document_id === documentId
+        ? { ...document, status: "ready", ocr: response }
+        : document,
+    );
+    latestResponse.value = response;
+    ocrState.value = "success";
+  } catch (error) {
+    ocrError.value = error instanceof Error ? error.message : "Run OCR failed";
+    ocrState.value = "error";
   }
 }
 
@@ -149,9 +202,9 @@ onMounted(() => {
 <template>
   <main class="page">
     <header class="hero">
-      <p class="eyebrow">v0.3.0 Local Storage</p>
+      <p class="eyebrow">v0.4.0 OCR Mock Pipeline</p>
       <h1>DocuRAG AgentOps</h1>
-      <p class="hero-copy">Backend health、本機文件上傳、metadata 保存與文件列表驗證。</p>
+      <p class="hero-copy">Backend health、本機文件上傳、metadata 保存、文件列表與 mock OCR 驗證。</p>
     </header>
 
     <section class="layout" aria-label="Demo controls">
@@ -272,6 +325,7 @@ onMounted(() => {
               <tr>
                 <th>Filename</th>
                 <th>Status</th>
+                <th>OCR</th>
                 <th>Size</th>
                 <th>Created at</th>
                 <th>Content type</th>
@@ -293,7 +347,8 @@ onMounted(() => {
                     {{ document.filename }}
                   </button>
                 </td>
-                <td><span class="status-pill status-success">{{ document.status }}</span></td>
+                <td><span class="status-pill" :class="statusClass(document.status)">{{ document.status }}</span></td>
+                <td><span class="status-pill" :class="statusClass(document.ocr.status)">{{ document.ocr.status }}</span></td>
                 <td>{{ formatBytes(document.size) }}</td>
                 <td>{{ document.created_at }}</td>
                 <td>{{ document.content_type }}</td>
@@ -303,6 +358,60 @@ onMounted(() => {
         </div>
 
         <p v-else class="muted">目前沒有文件。</p>
+      </article>
+
+      <article class="panel ocr-panel">
+        <div class="panel-heading">
+          <div>
+            <h2>OCR result</h2>
+            <p>POST /documents/{{ "{document_id}" }}/ocr/mock</p>
+          </div>
+          <button
+            type="button"
+            class="button secondary-button"
+            :disabled="!selectedDocument || ocrState === 'loading'"
+            @click="runOcrForSelectedDocument"
+          >
+            {{ ocrState === "loading" ? "Running..." : "Run Mock OCR" }}
+          </button>
+        </div>
+
+        <p v-if="ocrError" class="error">{{ ocrError }}</p>
+
+        <dl v-if="selectedDocument" class="facts">
+          <div>
+            <dt>OCR status</dt>
+            <dd>
+              <span class="status-pill" :class="statusClass(selectedDocument.ocr.status)">
+                {{ selectedDocument.ocr.status }}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt>Updated at</dt>
+            <dd>{{ selectedDocument.ocr.updated_at ?? "Not run" }}</dd>
+          </div>
+        </dl>
+
+        <div v-if="selectedDocument" class="ocr-grid">
+          <section>
+            <h3>OCR text</h3>
+            <pre class="ocr-text">{{ selectedOcrText }}</pre>
+          </section>
+
+          <section>
+            <h3>Extracted fields</h3>
+            <dl v-if="selectedOcrEntries.length" class="field-list">
+              <div v-for="[field, value] in selectedOcrEntries" :key="field">
+                <dt>{{ field }}</dt>
+                <dd>{{ value }}</dd>
+              </div>
+            </dl>
+            <p v-else class="muted">尚未擷取欄位。</p>
+          </section>
+        </div>
+
+        <p v-else class="muted">尚未選擇文件。</p>
       </article>
 
       <article class="panel response-panel">

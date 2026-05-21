@@ -144,6 +144,24 @@ td {
   color: #166534;
 }
 
+.status-uploaded,
+.status-ready,
+.status-completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-pending,
+.status-processing {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.status-failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .status-error {
   background: #fee2e2;
   color: #991b1b;
@@ -237,6 +255,58 @@ td {
   grid-column: 1 / -1;
 }
 
+.ocr-panel {
+  grid-column: 1 / -1;
+}
+
+.ocr-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+}
+
+.ocr-grid h3 {
+  font-size: 14px;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+}
+
+.ocr-text {
+  min-height: 150px;
+}
+
+.field-list {
+  border: 1px solid #e5eaf2;
+  border-radius: 8px;
+  margin: 0;
+  overflow: hidden;
+}
+
+.field-list div {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(110px, 0.4fr) minmax(0, 0.6fr);
+  padding: 12px;
+}
+
+.field-list div + div {
+  border-top: 1px solid #e5eaf2;
+}
+
+.field-list dt {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.field-list dd {
+  color: #172033;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .documents-panel {
   grid-column: 1 / -1;
 }
@@ -290,6 +360,14 @@ pre {
 
   .panel-heading {
     display: block;
+  }
+
+  .ocr-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .field-list div {
+    grid-template-columns: 1fr;
   }
 
   .status-pill {

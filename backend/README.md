@@ -1,6 +1,6 @@
 # Backend
 
-DocuRAG AgentOps backend MVP v0.3 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表與文件詳情 API，並允許 local frontend 透過 CORS 呼叫。此階段不接資料庫、OCR、RAG、Qdrant、Redis、NATS、vLLM 或登入權限。
+DocuRAG AgentOps backend MVP v0.4 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情與 OCR mock API，並允許 local frontend 透過 CORS 呼叫。此階段不接資料庫、真正 OCR engine、RAG、Qdrant、Redis、NATS、vLLM 或登入權限。
 
 ## Install
 
@@ -47,9 +47,23 @@ Document download：
 curl -OJ http://127.0.0.1:8000/documents/{document_id}/download
 ```
 
+Run mock OCR：
+
+```powershell
+curl -X POST http://127.0.0.1:8000/documents/{document_id}/ocr/mock
+```
+
+OCR result：
+
+```powershell
+curl http://127.0.0.1:8000/documents/{document_id}/ocr
+```
+
 ## Local Storage
 
 上傳 API 會將原始檔案保存到 repo root 的 `data/uploads/`，並將 metadata 寫入 `data/documents.json`。`filename` 會先安全化，避免 `../` 或 Windows path separator 造成 path traversal。
+
+OCR mock API 會將 OCR status、text、extracted fields 與 updated timestamp 寫回同一份 `data/documents.json`。未執行 OCR 的文件會回傳 `pending` OCR status。
 
 可用環境變數覆寫資料目錄：
 
@@ -97,6 +111,9 @@ docker compose -f infra/docker-compose.yml up --build
 ```powershell
 docker compose -f infra/docker-compose.yml up -d
 curl http://127.0.0.1:8000/health
+curl -X POST http://127.0.0.1:8000/documents/upload -F "file=@sample.txt"
+curl -X POST http://127.0.0.1:8000/documents/{document_id}/ocr/mock
+curl http://127.0.0.1:8000/documents/{document_id}/ocr
 docker compose -f infra/docker-compose.yml down
 ```
 
@@ -116,3 +133,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1
 - Python: `scripts/test-backend.ps1` 可透過 `pip.exe` 反推實際 `python.exe` 並建立/使用 `.venv`。
 - v0.2.0: backend CORS、Docker image build、Compose build 與 Compose healthcheck 已納入驗證。
 - v0.3.0: document local storage、metadata JSON、list/detail/download API 與 Compose upload 驗證已完成。
+- v0.4.0: OCR mock API、OCR result persistence、pytest、Docker build 與 Compose OCR mock API 驗證已完成。

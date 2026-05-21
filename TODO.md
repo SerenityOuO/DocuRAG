@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 Phase 02。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.4.0。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -61,9 +61,21 @@
 - [x] frontend 顯示文件列表與 document metadata JSON。
 - [x] Docker Compose 掛載 `data/` 並驗證 upload API。
 
+## MVP v0.4 OCR Mock Pipeline
+
+- [x] 建立 `tasks/phase-03-ocr-mock/03-01-ocr-mock-pipeline.md`。
+- [x] 新增 `POST /documents/{document_id}/ocr/mock`。
+- [x] 新增 `GET /documents/{document_id}/ocr`。
+- [x] 保存 OCR mock result 到 local JSON metadata store。
+- [x] 未執行 OCR 的文件回傳 `pending` OCR status。
+- [x] OCR result 包含 status、text、extracted fields 與 updated timestamp。
+- [x] frontend 可對文件執行 Run Mock OCR。
+- [x] frontend 顯示 OCR status、OCR text 與 extracted fields。
+- [x] 確認未接 PaddleOCR、Tesseract、VLM、RAG、Qdrant、Redis、NATS、vLLM、登入或 PostgreSQL。
+
 ## Parking Lot
 
-- [ ] OCR / VLM parser。
+- [ ] 真正 OCR / VLM parser。
 - [ ] Qdrant indexing。
 - [ ] Redis session / cache / rate limit。
 - [ ] NATS worker。
@@ -79,3 +91,4 @@
 - [x] Docker: `docker` CLI、Docker build 與 Docker Compose healthcheck 已驗證。
 - [x] v0.2.0: Demo UI、backend CORS、Backend CI 與 Docker 驗證已完成。
 - [x] v0.3.0: Document Local Storage、文件列表、文件詳情、frontend list UI 與 Docker Compose upload 驗證已完成。
+- [x] v0.4.0: OCR Mock Pipeline、frontend OCR UI 與 Docker Compose OCR mock API 驗證已完成。

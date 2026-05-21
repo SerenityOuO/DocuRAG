@@ -11,6 +11,19 @@ class DocumentStatus(StrEnum):
     FAILED = "failed"
 
 
+class OcrStatus(StrEnum):
+    PENDING = "pending"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class OcrResult(BaseModel):
+    status: OcrStatus = OcrStatus.PENDING
+    text: str = ""
+    extracted_fields: dict[str, str] = Field(default_factory=dict)
+    updated_at: datetime | None = None
+
+
 class DocumentMetadata(BaseModel):
     document_id: str = Field(..., min_length=1)
     project_id: str | None = None
@@ -21,6 +34,7 @@ class DocumentMetadata(BaseModel):
     size: int = Field(..., ge=0)
     status: DocumentStatus
     created_at: datetime
+    ocr: OcrResult = Field(default_factory=OcrResult)
 
 
 class DocumentUploadResponse(DocumentMetadata):
@@ -33,3 +47,7 @@ class DocumentListResponse(BaseModel):
 
 class DocumentDetailResponse(DocumentMetadata):
     pass
+
+
+class OcrResultResponse(OcrResult):
+    document_id: str = Field(..., min_length=1)

@@ -20,6 +20,7 @@ MVP 採用 incremental thin slice，先跑通產品故事與 API 邊界：
 - Phase 01：建立最小 backend healthcheck 與 Docker 啟動邊界。
 - Phase 02：建立文件上傳 API 與文件 metadata schema 的基礎。
 - v0.3.0：把文件上傳升級成本機存檔、local JSON metadata、文件列表與詳情查詢。
+- v0.4.0：建立 OCR mock pipeline，保存 mock OCR 結果並在 UI 顯示 status、text 與 extracted fields。
 
 MVP 初期可以使用 fixture 或最小資料結構，不要求真正 AI pipeline。以下能力保留為後續階段：
 
@@ -42,7 +43,7 @@ MVP 初期可以使用 fixture 或最小資料結構，不要求真正 AI pipeli
 
 ## Repository Structure
 
-目前 MVP v0.3 使用以下結構：
+目前 MVP v0.4 使用以下結構：
 
 ```text
 DocuRAG/
@@ -79,10 +80,11 @@ DocuRAG/
     ├── _TEMPLATE.md
     ├── phase-00-bootstrap/
     ├── phase-01-backend-bootstrap/
-    └── phase-02-document-foundation/
+    ├── phase-02-document-foundation/
+    └── phase-03-ocr-mock/
 ```
 
-OCR、RAG、Qdrant、Redis、NATS、vLLM、登入權限與資料庫 schema 仍保留為後續 ticket。
+真正 OCR engine、RAG、Qdrant、Redis、NATS、vLLM、登入權限與資料庫 schema 仍保留為後續 ticket。v0.4.0 只提供 deterministic mock OCR text 與 extracted fields。
 
 ## Local Run
 
@@ -141,6 +143,18 @@ curl http://127.0.0.1:8000/documents
 
 ```powershell
 curl http://127.0.0.1:8000/documents/{document_id}
+```
+
+執行 mock OCR：
+
+```powershell
+curl -X POST http://127.0.0.1:8000/documents/{document_id}/ocr/mock
+```
+
+查詢 OCR 結果：
+
+```powershell
+curl http://127.0.0.1:8000/documents/{document_id}/ocr
 ```
 
 啟動 frontend：
@@ -220,32 +234,53 @@ Demo 操作流程：
 5. 啟動 frontend：`cd frontend` 後執行 `npm.cmd run dev`。
 6. 開啟 `http://localhost:5173`，確認 health、upload result、文件列表與 metadata JSON。
 
+## v0.4.0 OCR Mock Pipeline
+
+v0.4.0 加入可驗證的 mock OCR pipeline，不接 PaddleOCR、Tesseract、VLM 或任何真正 OCR engine：
+
+- `POST /documents/{document_id}/ocr/mock` 會對既有文件產生 deterministic mock OCR text 與 extracted fields。
+- `GET /documents/{document_id}/ocr` 可讀取 OCR result；未執行 OCR 的文件會回傳 `pending`。
+- OCR result 會寫入 `data/documents.json` 內對應 document metadata。
+- OCR result 包含 status、text、extracted fields 與 updated timestamp。
+- frontend 可對選中文件按 `Run Mock OCR`，並顯示 OCR status、OCR text 與 extracted fields。
+
+Demo 操作流程：
+
+1. 啟動 backend：`cd backend` 後執行 `py -3 -m uvicorn app.main:app --reload`。
+2. 上傳文件：`curl -X POST http://127.0.0.1:8000/documents/upload -F "file=@sample.pdf"`。
+3. 執行 mock OCR：`curl -X POST http://127.0.0.1:8000/documents/{document_id}/ocr/mock`。
+4. 查詢 OCR 結果：`curl http://127.0.0.1:8000/documents/{document_id}/ocr`。
+5. 啟動 frontend：`cd frontend` 後執行 `npm.cmd run dev`。
+6. 開啟 `http://localhost:5173`，選擇文件後按 `Run Mock OCR`，確認 OCR status、text 與 extracted fields。
+
 ## Documentation
 
 - `goal.md`：完整產品構想與長期目標。
 - `docs/PRD.md`：依 `goal.md` 收斂後的 MVP 產品需求。
 - `docs/ARCHITECTURE.md`：MVP 架構與明確延後的元件。
-- `docs/ROADMAP.md`：Phase 00 到 Phase 02 的開發路線。
+- `docs/ROADMAP.md`：Phase 00 到 v0.4.0 的開發路線。
 - `TODO.md`：目前階段 checklist。
 - `tasks/`：可單次完成、可單獨 commit 的任務票。
 
 ## Current Status
 
-目前完成 MVP v0.3.0 Document Local Storage：
+目前完成 MVP v0.4.0 OCR Mock Pipeline：
 
 - `GET /health` 回傳 service、status、version。
 - `POST /documents/upload` 可接收 `UploadFile`，保存原始檔並回傳 document metadata。
 - `GET /documents` 回傳 local metadata 文件列表。
 - `GET /documents/{document_id}` 回傳文件詳情。
+- `POST /documents/{document_id}/ocr/mock` 會產生並保存 mock OCR result。
+- `GET /documents/{document_id}/ocr` 會回傳 OCR status、text、extracted fields 與 updated timestamp。
 - backend 已允許 local frontend CORS origin。
 - backend 可用 pytest 驗證。
 - backend 可用 Dockerfile / Compose 啟動。
-- frontend 可顯示 backend health、選擇檔案、呼叫 upload API、刷新文件列表並查看 metadata JSON。
+- frontend 可顯示 backend health、選擇檔案、呼叫 upload API、刷新文件列表、執行 Run Mock OCR 並查看 OCR 結果。
 - GitHub Actions Backend CI 已建立。
 
-尚未實作 OCR、RAG、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
+尚未實作真正 OCR engine、RAG、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
 
-本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前 backend pytest、frontend build、Docker build、Docker Compose healthcheck 與 Compose upload API 均已納入 v0.3.0 驗證流程。
+本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前 backend pytest、frontend build、Docker build、Docker Compose healthcheck、Compose upload API 與 Compose OCR mock API 均已納入 v0.4.0 驗證流程。
 
 ## Release Status
 
@@ -253,3 +288,4 @@ Demo 操作流程：
 - v0.1.0: backend healthcheck、document upload stub、pytest、本機 `/health` HTTP 驗證已完成。
 - v0.2.0: Demo UI、backend CORS、Backend CI、Docker build / Compose 驗證已完成。
 - v0.3.0: Document Local Storage、文件列表、文件詳情、frontend list UI、Docker Compose upload 驗證已完成。
+- v0.4.0: OCR Mock Pipeline、OCR result persistence、frontend OCR UI、Docker Compose OCR mock API 驗證已完成。

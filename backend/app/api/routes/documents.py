@@ -8,6 +8,7 @@ from app.schemas.documents import (
     DocumentDetailResponse,
     DocumentListResponse,
     DocumentUploadResponse,
+    OcrResultResponse,
 )
 from app.services.document_storage import DocumentStorage
 
@@ -50,6 +51,32 @@ async def get_document(
         raise HTTPException(status_code=404, detail="Document not found")
 
     return DocumentDetailResponse.model_validate(document.model_dump())
+
+
+@router.post("/{document_id}/ocr/mock", response_model=OcrResultResponse)
+async def run_mock_ocr(
+    document_id: str,
+    storage: DocumentStorageDep,
+) -> OcrResultResponse:
+    ocr_result = storage.run_mock_ocr(document_id)
+
+    if ocr_result is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    return OcrResultResponse(document_id=document_id, **ocr_result.model_dump())
+
+
+@router.get("/{document_id}/ocr", response_model=OcrResultResponse)
+async def get_ocr_result(
+    document_id: str,
+    storage: DocumentStorageDep,
+) -> OcrResultResponse:
+    ocr_result = storage.get_ocr_result(document_id)
+
+    if ocr_result is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    return OcrResultResponse(document_id=document_id, **ocr_result.model_dump())
 
 
 @router.get("/{document_id}/download")

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.documents import DocumentStatus, DocumentUploadResponse
+from app.schemas.documents import DocumentStatus, DocumentUploadResponse, OcrResult, OcrStatus
 
 
 def test_document_status_values() -> None:
@@ -9,6 +9,12 @@ def test_document_status_values() -> None:
     assert DocumentStatus.PROCESSING == "processing"
     assert DocumentStatus.READY == "ready"
     assert DocumentStatus.FAILED == "failed"
+
+
+def test_ocr_status_values() -> None:
+    assert OcrStatus.PENDING == "pending"
+    assert OcrStatus.COMPLETED == "completed"
+    assert OcrStatus.FAILED == "failed"
 
 
 def test_document_response_rejects_invalid_status() -> None:
@@ -23,3 +29,8 @@ def test_document_response_rejects_invalid_status() -> None:
             status="ocr_processing",
             created_at="2026-05-20T00:00:00Z",
         )
+
+
+def test_ocr_result_rejects_invalid_status() -> None:
+    with pytest.raises(ValidationError):
+        OcrResult(status="ocr_processing")

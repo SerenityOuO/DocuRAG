@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from fastapi import UploadFile
 
-from app.schemas.documents import DocumentMetadata, DocumentStatus
+from app.schemas.documents import DocumentMetadata, DocumentStatus, OcrResult, OcrStatus
 
 
 class DocumentStorage:
@@ -25,6 +25,14 @@ class DocumentStorage:
                 return document
 
         return None
+
+    def get_ocr_result(self, document_id: str) -> OcrResult | None:
+        document = self.get_document(document_id)
+
+        if document is None:
+            return None
+
+        return document.ocr or OcrResult(status=OcrStatus.PENDING)
 
     def get_file_path(self, document: DocumentMetadata) -> Path | None:
         upload_root = self.upload_dir.resolve()
@@ -69,6 +77,41 @@ class DocumentStorage:
         self._write_documents(documents)
 
         return document
+
+    def run_mock_ocr(self, document_id: str) -> OcrResult | None:
+        documents = self._read_documents()
+
+        for index, document in enumerate(documents):
+            if document.document_id != document_id:
+                continue
+
+            ocr_result = OcrResult(
+                status=OcrStatus.COMPLETED,
+                text="\n".join(
+                    [
+                        f"Mock OCR result for {document.filename}",
+                        f"Document ID: {document.document_id}",
+                        f"File type: {document.file_type}",
+                        f"Content type: {document.content_type}",
+                        f"Size: {document.size} bytes",
+                    ]
+                ),
+                extracted_fields={
+                    "filename": document.filename,
+                    "file_type": document.file_type,
+                    "content_type": document.content_type,
+                    "size_bytes": str(document.size),
+                },
+                updated_at=datetime.now(UTC),
+            )
+            document.ocr = ocr_result
+            document.status = DocumentStatus.READY
+            documents[index] = document
+            self._write_documents(documents)
+
+            return ocr_result
+
+        return None
 
     def _ensure_storage(self) -> None:
         self.upload_dir.mkdir(parents=True, exist_ok=True)

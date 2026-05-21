@@ -14,12 +14,24 @@ export type UploadResponse = {
   size: number;
   status: string;
   created_at: string;
+  ocr: OcrResult;
 };
 
 export type DocumentMetadata = UploadResponse;
 
 export type DocumentListResponse = {
   documents: DocumentMetadata[];
+};
+
+export type OcrResult = {
+  status: string;
+  text: string;
+  extracted_fields: Record<string, string>;
+  updated_at: string | null;
+};
+
+export type OcrResultResponse = OcrResult & {
+  document_id: string;
 };
 
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
@@ -61,4 +73,17 @@ export async function listDocuments(): Promise<DocumentListResponse> {
 export async function getDocument(documentId: string): Promise<DocumentMetadata> {
   const response = await fetch(`${API_BASE_URL}/documents/${documentId}`);
   return readJson<DocumentMetadata>(response);
+}
+
+export async function runMockOcr(documentId: string): Promise<OcrResultResponse> {
+  const response = await fetch(`${API_BASE_URL}/documents/${documentId}/ocr/mock`, {
+    method: "POST",
+  });
+
+  return readJson<OcrResultResponse>(response);
+}
+
+export async function getOcrResult(documentId: string): Promise<OcrResultResponse> {
+  const response = await fetch(`${API_BASE_URL}/documents/${documentId}/ocr`);
+  return readJson<OcrResultResponse>(response);
 }

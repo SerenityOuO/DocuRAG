@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 只列出 Phase 00、Phase 01 與 Phase 02，對應目前任務票。後續 OCR、RAG、AgentOps 與 infra 延伸會在完成這三個 phase 後再拆票。
+本 roadmap 記錄 Phase 00 到 v0.4.0 的已交付切片。後續真正 OCR、RAG、AgentOps 與 infra 延伸會再拆成小 ticket。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 Phase 02 checklist。
+- TODO 包含 Phase 00 到 v0.4.0 checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -60,6 +60,7 @@ Expected Outcome：
 - Phase 00 只做文件與票券。
 - Phase 01 只做 backend 啟動與 healthcheck。
 - Phase 02 只做文件上傳與 metadata foundation。
+- v0.4.0 只做 OCR mock pipeline，不接真正 OCR engine 或 async worker。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
 ## v0.2.0 Demo UI Milestone
@@ -88,10 +89,27 @@ Expected Outcome：
 - Docker Compose 掛載 repo root 的 `data/` 到 container `/app/data`，啟動後可通過 healthcheck 與 upload API 驗證。
 - 不新增 OCR、RAG、Qdrant、Redis、NATS、vLLM、登入、權限、PostgreSQL、embedding、rerank 或 Agent。
 
+## v0.4.0 OCR Mock Pipeline Milestone
+
+Goal：建立可替換的 OCR mock pipeline，讓 demo 可以呈現「文件上傳後可執行 OCR、保存結果、前端顯示文字與欄位」。
+
+Ticket：
+
+- `tasks/phase-03-ocr-mock/03-01-ocr-mock-pipeline.md`
+
+Expected Outcome：
+
+- `POST /documents/{document_id}/ocr/mock` 對既有文件產生 deterministic mock OCR text 與 extracted fields。
+- `GET /documents/{document_id}/ocr` 回傳 OCR status、text、extracted fields 與 updated timestamp。
+- 未執行 OCR 的文件回傳 `pending` OCR status。
+- OCR result 保存到 `data/documents.json` 的對應 document metadata。
+- frontend 可在文件詳情執行 Run Mock OCR。
+- frontend 顯示 OCR status、OCR text 與 extracted fields。
+- 不新增 PaddleOCR、Tesseract、VLM、RAG、Qdrant、Redis、NATS、vLLM、登入、RBAC 或 PostgreSQL。
+
 Next Candidate Milestone：
 
-- v0.4.0 OCR mock pipeline：只建立可替換的 mock OCR 結果與狀態顯示，不接真正 OCR engine。
-- v0.4.0 RAG baseline spike：只做 fixture-based retrieval baseline，不接 Qdrant 或 embeddings service。
+- v0.5.0 RAG baseline spike：只做 fixture-based retrieval baseline，不接 Qdrant 或 embeddings service。
 
 ## Release Verification
 
@@ -99,3 +117,4 @@ Next Candidate Milestone：
 - v0.1.0: backend healthcheck、document upload stub、pytest、本機 `/health` HTTP 驗證已完成。
 - v0.2.0: Demo UI、Backend CI、backend CORS、Docker build / Compose healthcheck 已完成。
 - v0.3.0: Document Local Storage、文件列表、文件詳情、frontend list UI、Docker build / Compose healthcheck / Compose upload API 已完成。
+- v0.4.0: OCR Mock Pipeline、OCR result persistence、frontend OCR UI、Docker build / Compose healthcheck / Compose upload / Compose OCR mock API 已完成。
