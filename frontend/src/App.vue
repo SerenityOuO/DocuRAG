@@ -7,12 +7,14 @@ import {
   getHealth,
   getOcrResult,
   listDocuments,
+  queryRag,
   runMockOcr,
   uploadDocument,
   type DocumentListResponse,
   type DocumentMetadata,
   type HealthResponse,
   type OcrResultResponse,
+  type RagQueryResponse,
   type UploadResponse,
 } from "./api/client";
 
@@ -22,19 +24,30 @@ const healthState = ref<RequestState>("idle");
 const documentsState = ref<RequestState>("idle");
 const detailState = ref<RequestState>("idle");
 const ocrState = ref<RequestState>("idle");
+const chatState = ref<RequestState>("idle");
 const uploadState = ref<RequestState>("idle");
 const health = ref<HealthResponse | null>(null);
 const documents = ref<DocumentMetadata[]>([]);
 const selectedDocument = ref<DocumentMetadata | null>(null);
 const uploadResult = ref<UploadResponse | null>(null);
+const ragResult = ref<RagQueryResponse | null>(null);
 const selectedFile = ref<File | null>(null);
+const ragQuery = ref("");
+const ragTopK = ref(3);
 const healthError = ref("");
 const documentsError = ref("");
 const detailError = ref("");
 const ocrError = ref("");
+const ragError = ref("");
 const uploadError = ref("");
 const latestResponse = ref<
-  DocumentListResponse | DocumentMetadata | HealthResponse | OcrResultResponse | UploadResponse | null
+  | DocumentListResponse
+  | DocumentMetadata
+  | HealthResponse
+  | OcrResultResponse
+  | RagQueryResponse
+  | UploadResponse
+  | null
 >(null);
 
 const healthLabel = computed(() => {
@@ -163,6 +176,29 @@ async function runOcrForSelectedDocument(): Promise<void> {
   }
 }
 
+async function submitRagQuery(): Promise<void> {
+  const query = ragQuery.value.trim();
+
+  if (!query) {
+    ragError.value = "請先輸入問題。";
+    return;
+  }
+
+  chatState.value = "loading";
+  ragError.value = "";
+
+  try {
+    const response = await queryRag(query, ragTopK.value);
+    ragResult.value = response;
+    latestResponse.value = response;
+    chatState.value = "success";
+  } catch (error) {
+    ragResult.value = null;
+    ragError.value = error instanceof Error ? error.message : "RAG query failed";
+    chatState.value = "error";
+  }
+}
+
 function handleFileChange(event: Event): void {
   const input = event.target as HTMLInputElement;
   selectedFile.value = input.files?.[0] ?? null;
@@ -202,9 +238,9 @@ onMounted(() => {
 <template>
   <main class="page">
     <header class="hero">
-      <p class="eyebrow">v0.4.0 OCR Mock Pipeline</p>
+      <p class="eyebrow">v0.5.0 Local RAG Baseline</p>
       <h1>DocuRAG AgentOps</h1>
-      <p class="hero-copy">Backend health、本機文件上傳、metadata 保存、文件列表與 mock OCR 驗證。</p>
+      <p class="hero-copy">Backend health、本機文件上傳、metadata 保存、OCR mock 與本機 RAG 問答驗證。</p>
     </header>
 
     <section class="layout" aria-label="Demo controls">
@@ -412,6 +448,64 @@ onMounted(() => {
         </div>
 
         <p v-else class="muted">尚未選擇文件。</p>
+      </article>
+
+      <article class="panel chat-panel">
+        <div class="panel-heading">
+          <div>
+            <h2>RAG chat</h2>
+            <p>POST /rag/query</p>
+          </div>
+          <span class="status-pill" :class="`status-${chatState}`">{{ chatState }}</span>
+        </div>
+
+        <form class="chat-form" @submit.prevent="submitRagQuery">
+          <label>
+            <span>Query</span>
+            <textarea v-model="ragQuery" rows="3" placeholder="例如：invoice 的 content type 是什麼？" />
+          </label>
+
+          <label>
+            <span>Top K</span>
+            <input v-model.number="ragTopK" type="number" min="1" max="10" />
+          </label>
+
+          <button type="submit" class="button" :disabled="chatState === 'loading'">
+            {{ chatState === "loading" ? "Querying..." : "Ask RAG" }}
+          </button>
+        </form>
+
+        <p v-if="ragError" class="error">{{ ragError }}</p>
+
+        <section v-if="ragResult" class="rag-result">
+          <h3>Answer</h3>
+          <pre class="answer-text">{{ ragResult.answer }}</pre>
+
+          <h3>Citations</h3>
+          <ul v-if="ragResult.citations.length" class="citation-list">
+            <li v-for="citation in ragResult.citations" :key="`${citation.document_id}-${citation.chunk_id}`">
+              <span>{{ citation.filename }}</span>
+              <code>{{ citation.document_id }}</code>
+              <code>{{ citation.chunk_id }}</code>
+            </li>
+          </ul>
+          <p v-else class="muted">沒有 citation。</p>
+
+          <h3>Retrieved chunks</h3>
+          <div v-if="ragResult.retrieved_chunks.length" class="chunk-list">
+            <article v-for="chunk in ragResult.retrieved_chunks" :key="chunk.chunk_id" class="chunk-item">
+              <div class="chunk-meta">
+                <span>{{ chunk.filename }}</span>
+                <code>{{ chunk.chunk_id }}</code>
+                <span>score {{ chunk.score }}</span>
+              </div>
+              <pre>{{ chunk.text }}</pre>
+            </article>
+          </div>
+          <p v-else class="muted">沒有 retrieved chunk。</p>
+        </section>
+
+        <p v-else class="muted">請先上傳文件並執行 Mock OCR，再輸入問題。</p>
       </article>
 
       <article class="panel response-panel">

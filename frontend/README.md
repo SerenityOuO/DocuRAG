@@ -1,6 +1,6 @@
 # DocuRAG AgentOps Frontend
 
-最小 Vue 3 + Vite demo UI，用來檢查 backend health、上傳文件、顯示文件列表、執行 mock OCR，並查看單一文件 metadata JSON 與 OCR result。
+最小 Vue 3 + Vite demo UI，用來檢查 backend health、上傳文件、顯示文件列表、執行 mock OCR，並用 local RAG chat 查看 deterministic answer、citations 與 retrieved chunks。
 
 ## Install
 
@@ -44,9 +44,9 @@ cd frontend
 npm.cmd run build
 ```
 
-## Document List UI
+## Demo UI
 
-v0.4.0 UI 支援：
+v0.5.0 UI 支援：
 
 - `GET /health` 顯示 backend 狀態。
 - `POST /documents/upload` 上傳本機文件。
@@ -56,3 +56,5 @@ v0.4.0 UI 支援：
 - 選中文件後可按 `Run Mock OCR` 呼叫 `POST /documents/{document_id}/ocr/mock`。
 - OCR client 支援 `GET /documents/{document_id}/ocr` 查詢目前 OCR result。
 - OCR result 面板顯示 OCR status、OCR text 與 extracted fields。
+- RAG chat 可輸入 query 與 top_k，呼叫 `POST /rag/query`。
+- RAG result 面板顯示 deterministic answer、citations 與 retrieved chunks。

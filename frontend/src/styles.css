@@ -25,6 +25,7 @@ a {
 
 button,
 input,
+textarea,
 pre {
   font: inherit;
 }
@@ -259,6 +260,10 @@ td {
   grid-column: 1 / -1;
 }
 
+.chat-panel {
+  grid-column: 1 / -1;
+}
+
 .ocr-grid {
   display: grid;
   gap: 18px;
@@ -305,6 +310,108 @@ td {
   color: #172033;
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+.chat-form {
+  align-items: end;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) 110px auto;
+  margin-bottom: 18px;
+}
+
+.chat-form label {
+  display: grid;
+  gap: 8px;
+}
+
+.chat-form span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.chat-form textarea,
+.chat-form input {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #172033;
+  min-height: 42px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.chat-form textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.rag-result {
+  display: grid;
+  gap: 12px;
+}
+
+.rag-result h3 {
+  font-size: 14px;
+  margin: 8px 0 0;
+  text-transform: uppercase;
+}
+
+.answer-text {
+  min-height: 120px;
+}
+
+.citation-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.citation-list li,
+.chunk-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.citation-list li {
+  border: 1px solid #e5eaf2;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.citation-list span,
+.chunk-meta span {
+  color: #172033;
+  font-weight: 800;
+}
+
+code {
+  background: #eef2f7;
+  border-radius: 6px;
+  color: #334155;
+  font-size: 12px;
+  padding: 4px 6px;
+}
+
+.chunk-list {
+  display: grid;
+  gap: 12px;
+}
+
+.chunk-item {
+  border: 1px solid #e5eaf2;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.chunk-item pre {
+  margin-top: 10px;
+  min-height: 90px;
 }
 
 .documents-panel {
@@ -363,6 +470,10 @@ pre {
   }
 
   .ocr-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-form {
     grid-template-columns: 1fr;
   }
 

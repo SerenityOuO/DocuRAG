@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.4.0。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.5.0。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -73,13 +73,30 @@
 - [x] frontend 顯示 OCR status、OCR text 與 extracted fields。
 - [x] 確認未接 PaddleOCR、Tesseract、VLM、RAG、Qdrant、Redis、NATS、vLLM、登入或 PostgreSQL。
 
+## MVP v0.5 Local RAG Baseline
+
+- [x] 建立 `tasks/phase-05-rag-baseline/05-01-local-rag-baseline.md`。
+- [x] 從 OCR mock text 產生 chunks。
+- [x] 每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。
+- [x] chunks 保存到 local JSON metadata store，不新增 DB。
+- [x] 新增 local keyword retrieval，依 query 回傳 `top_k` matched chunks。
+- [x] retrieval result 包含 score、`document_id` 與 `chunk_id`。
+- [x] 新增 `POST /rag/query`。
+- [x] RAG response 包含 deterministic answer、citations 與 retrieved chunks。
+- [x] citations 包含 `document_id`、`filename` 與 `chunk_id`。
+- [x] frontend 新增 RAG chat，可顯示 answer、citations 與 retrieved chunks。
+- [x] 保留既有 health、upload、document list 與 OCR mock UI。
+- [x] backend version 更新為 `0.5.0`。
+- [x] frontend package version 更新為 `0.5.0`。
+- [x] 確認未接真正 LLM、OpenAI API、Ollama、vLLM、embedding、Qdrant、rerank、Redis、NATS、PostgreSQL、登入或 RBAC。
+
 ## Parking Lot
 
 - [ ] 真正 OCR / VLM parser。
-- [ ] Qdrant indexing。
+- [ ] Embedding 與 Qdrant indexing。
 - [ ] Redis session / cache / rate limit。
 - [ ] NATS worker。
-- [ ] RAG chat / rerank / citation trace。
+- [ ] LLM-based RAG generation / rerank / citation trace evaluation。
 - [ ] vLLM / Ollama / OpenAI-compatible provider。
 
 ## Release Verification Status
@@ -92,3 +109,4 @@
 - [x] v0.2.0: Demo UI、backend CORS、Backend CI 與 Docker 驗證已完成。
 - [x] v0.3.0: Document Local Storage、文件列表、文件詳情、frontend list UI 與 Docker Compose upload 驗證已完成。
 - [x] v0.4.0: OCR Mock Pipeline、frontend OCR UI 與 Docker Compose OCR mock API 驗證已完成。
+- [x] v0.5.0: Local RAG Baseline、frontend Chat UI 與 Docker Compose RAG API 驗證已完成。

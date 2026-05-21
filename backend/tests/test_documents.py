@@ -148,6 +148,11 @@ def test_run_mock_ocr_saves_result_to_metadata(
     assert metadata[0]["status"] == "ready"
     assert metadata[0]["ocr"]["status"] == "completed"
     assert metadata[0]["ocr"]["text"] == body["text"]
+    assert metadata[0]["chunks"][0]["chunk_id"] == f"{document_id}-chunk-001"
+    assert metadata[0]["chunks"][0]["document_id"] == document_id
+    assert metadata[0]["chunks"][0]["source"] == "ocr_mock"
+    assert "Mock OCR result for invoice.pdf" in metadata[0]["chunks"][0]["text"]
+    assert metadata[0]["chunks"][0]["created_at"]
 
 
 def test_get_ocr_result_returns_saved_mock_result(client: TestClient) -> None:
@@ -179,6 +184,7 @@ def test_get_document_includes_saved_ocr_result(client: TestClient) -> None:
     assert body["status"] == "ready"
     assert body["ocr"]["status"] == "completed"
     assert body["ocr"]["extracted_fields"]["filename"] == "receipt.txt"
+    assert body["chunks"][0]["source"] == "ocr_mock"
 
 
 def test_run_mock_ocr_returns_404_for_unknown_document(client: TestClient) -> None:

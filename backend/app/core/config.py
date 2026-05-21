@@ -19,7 +19,7 @@ def default_data_dir() -> Path:
 
 class Settings(BaseSettings):
     app_name: str = "DocuRAG AgentOps Backend"
-    version: str = "0.4.0"
+    version: str = "0.5.0"
     environment: str = "local"
     data_dir: Path = Field(default_factory=default_data_dir)
     cors_origins: list[str] = [

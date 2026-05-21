@@ -21,13 +21,14 @@ MVP 採用 incremental thin slice，先跑通產品故事與 API 邊界：
 - Phase 02：建立文件上傳 API 與文件 metadata schema 的基礎。
 - v0.3.0：把文件上傳升級成本機存檔、local JSON metadata、文件列表與詳情查詢。
 - v0.4.0：建立 OCR mock pipeline，保存 mock OCR 結果並在 UI 顯示 status、text 與 extracted fields。
+- v0.5.0：使用 OCR mock text 建立 local RAG baseline，提供 chunking、keyword retrieval、deterministic answer API 與簡易 Chat UI。
 
 MVP 初期可以使用 fixture 或最小資料結構，不要求真正 AI pipeline。以下能力保留為後續階段：
 
 - 真正 OCR / VLM parser。
 - 真正 embeddings / Qdrant indexing。
 - 真正 Redis session / NATS worker。
-- 真正 rerank / RAG generation。
+- 真正 rerank / LLM-based RAG generation。
 - vLLM / Ollama serving。
 - production-grade K8s deployment。
 
@@ -43,7 +44,7 @@ MVP 初期可以使用 fixture 或最小資料結構，不要求真正 AI pipeli
 
 ## Repository Structure
 
-目前 MVP v0.4 使用以下結構：
+目前 MVP v0.5 使用以下結構：
 
 ```text
 DocuRAG/
@@ -81,10 +82,11 @@ DocuRAG/
     ├── phase-00-bootstrap/
     ├── phase-01-backend-bootstrap/
     ├── phase-02-document-foundation/
-    └── phase-03-ocr-mock/
+    ├── phase-03-ocr-mock/
+    └── phase-05-rag-baseline/
 ```
 
-真正 OCR engine、RAG、Qdrant、Redis、NATS、vLLM、登入權限與資料庫 schema 仍保留為後續 ticket。v0.4.0 只提供 deterministic mock OCR text 與 extracted fields。
+真正 OCR engine、embedding、Qdrant、Redis、NATS、vLLM、登入權限與資料庫 schema 仍保留為後續 ticket。v0.5.0 只提供 deterministic mock OCR text、local keyword retrieval 與 template answer。
 
 ## Local Run
 
@@ -155,6 +157,14 @@ curl -X POST http://127.0.0.1:8000/documents/{document_id}/ocr/mock
 
 ```powershell
 curl http://127.0.0.1:8000/documents/{document_id}/ocr
+```
+
+執行 local RAG 查詢：
+
+```powershell
+curl -X POST http://127.0.0.1:8000/rag/query `
+  -H "Content-Type: application/json" `
+  -d "{\"query\":\"invoice\",\"top_k\":3}"
 ```
 
 啟動 frontend：
@@ -253,18 +263,37 @@ Demo 操作流程：
 5. 啟動 frontend：`cd frontend` 後執行 `npm.cmd run dev`。
 6. 開啟 `http://localhost:5173`，選擇文件後按 `Run Mock OCR`，確認 OCR status、text 與 extracted fields。
 
+## v0.5.0 Local RAG Baseline
+
+v0.5.0 使用 v0.4.0 的 OCR mock text 作為知識來源，建立第一版本機 RAG baseline，不接真正 LLM、OpenAI API、Ollama、vLLM、embedding、Qdrant 或 rerank：
+
+- `POST /documents/{document_id}/ocr/mock` 完成後會從 OCR text 產生 chunks，並寫入 `data/documents.json`。
+- 每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。
+- `POST /rag/query` 接收 `query` 與 `top_k`，以 local keyword retrieval 從 chunks 找出 matched chunks。
+- RAG response 包含 deterministic `answer`、`citations` 與 `retrieved_chunks`。
+- citations 會指出 `document_id`、`filename` 與 `chunk_id`。
+- frontend 新增 RAG chat 區，可輸入 query 並顯示 answer、citations 與 retrieved chunks。
+
+Demo 操作流程：
+
+1. 啟動 backend：`cd backend` 後執行 `py -3 -m uvicorn app.main:app --reload`。
+2. 上傳文件並執行 mock OCR。
+3. 查詢 RAG：`curl -X POST http://127.0.0.1:8000/rag/query -H "Content-Type: application/json" -d "{\"query\":\"invoice\",\"top_k\":3}"`。
+4. 啟動 frontend：`cd frontend` 後執行 `npm.cmd run dev`。
+5. 開啟 `http://localhost:5173`，在 RAG chat 輸入問題，確認 answer、citations 與 retrieved chunks。
+
 ## Documentation
 
 - `goal.md`：完整產品構想與長期目標。
 - `docs/PRD.md`：依 `goal.md` 收斂後的 MVP 產品需求。
 - `docs/ARCHITECTURE.md`：MVP 架構與明確延後的元件。
-- `docs/ROADMAP.md`：Phase 00 到 v0.4.0 的開發路線。
+- `docs/ROADMAP.md`：Phase 00 到 v0.5.0 的開發路線。
 - `TODO.md`：目前階段 checklist。
 - `tasks/`：可單次完成、可單獨 commit 的任務票。
 
 ## Current Status
 
-目前完成 MVP v0.4.0 OCR Mock Pipeline：
+目前完成 MVP v0.5.0 Local RAG Baseline：
 
 - `GET /health` 回傳 service、status、version。
 - `POST /documents/upload` 可接收 `UploadFile`，保存原始檔並回傳 document metadata。
@@ -272,15 +301,17 @@ Demo 操作流程：
 - `GET /documents/{document_id}` 回傳文件詳情。
 - `POST /documents/{document_id}/ocr/mock` 會產生並保存 mock OCR result。
 - `GET /documents/{document_id}/ocr` 會回傳 OCR status、text、extracted fields 與 updated timestamp。
+- OCR mock 完成後會產生並保存 local chunks。
+- `POST /rag/query` 會用 local keyword retrieval 回傳 deterministic answer、citations 與 retrieved chunks。
 - backend 已允許 local frontend CORS origin。
 - backend 可用 pytest 驗證。
 - backend 可用 Dockerfile / Compose 啟動。
-- frontend 可顯示 backend health、選擇檔案、呼叫 upload API、刷新文件列表、執行 Run Mock OCR 並查看 OCR 結果。
+- frontend 可顯示 backend health、選擇檔案、呼叫 upload API、刷新文件列表、執行 Run Mock OCR、查看 OCR 結果，並用 RAG chat 查詢 answer 與 citations。
 - GitHub Actions Backend CI 已建立。
 
-尚未實作真正 OCR engine、RAG、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
+尚未實作真正 OCR engine、embedding、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
 
-本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前 backend pytest、frontend build、Docker build、Docker Compose healthcheck、Compose upload API 與 Compose OCR mock API 均已納入 v0.4.0 驗證流程。
+本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前 backend pytest、frontend build、Docker build、Docker Compose healthcheck、Compose upload API、Compose OCR mock API 與 Compose RAG API 均已納入 v0.5.0 驗證流程。
 
 ## Release Status
 
@@ -289,3 +320,4 @@ Demo 操作流程：
 - v0.2.0: Demo UI、backend CORS、Backend CI、Docker build / Compose 驗證已完成。
 - v0.3.0: Document Local Storage、文件列表、文件詳情、frontend list UI、Docker Compose upload 驗證已完成。
 - v0.4.0: OCR Mock Pipeline、OCR result persistence、frontend OCR UI、Docker Compose OCR mock API 驗證已完成。
+- v0.5.0: Local RAG Baseline、chunking、keyword retrieval、RAG answer API、frontend Chat UI 與 Docker Compose RAG API 驗證已完成。

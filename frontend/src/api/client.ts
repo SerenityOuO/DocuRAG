@@ -15,6 +15,7 @@ export type UploadResponse = {
   status: string;
   created_at: string;
   ocr: OcrResult;
+  chunks: DocumentChunk[];
 };
 
 export type DocumentMetadata = UploadResponse;
@@ -32,6 +33,31 @@ export type OcrResult = {
 
 export type OcrResultResponse = OcrResult & {
   document_id: string;
+};
+
+export type DocumentChunk = {
+  chunk_id: string;
+  document_id: string;
+  text: string;
+  source: string;
+  created_at: string;
+};
+
+export type RagCitation = {
+  document_id: string;
+  filename: string;
+  chunk_id: string;
+};
+
+export type RetrievedChunk = DocumentChunk & {
+  filename: string;
+  score: number;
+};
+
+export type RagQueryResponse = {
+  answer: string;
+  citations: RagCitation[];
+  retrieved_chunks: RetrievedChunk[];
 };
 
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
@@ -86,4 +112,19 @@ export async function runMockOcr(documentId: string): Promise<OcrResultResponse>
 export async function getOcrResult(documentId: string): Promise<OcrResultResponse> {
   const response = await fetch(`${API_BASE_URL}/documents/${documentId}/ocr`);
   return readJson<OcrResultResponse>(response);
+}
+
+export async function queryRag(query: string, topK: number): Promise<RagQueryResponse> {
+  const response = await fetch(`${API_BASE_URL}/rag/query`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      query,
+      top_k: topK,
+    }),
+  });
+
+  return readJson<RagQueryResponse>(response);
 }

@@ -24,6 +24,14 @@ class OcrResult(BaseModel):
     updated_at: datetime | None = None
 
 
+class DocumentChunk(BaseModel):
+    chunk_id: str = Field(..., min_length=1)
+    document_id: str = Field(..., min_length=1)
+    text: str = Field(..., min_length=1)
+    source: str = Field(..., min_length=1)
+    created_at: datetime
+
+
 class DocumentMetadata(BaseModel):
     document_id: str = Field(..., min_length=1)
     project_id: str | None = None
@@ -35,6 +43,7 @@ class DocumentMetadata(BaseModel):
     status: DocumentStatus
     created_at: datetime
     ocr: OcrResult = Field(default_factory=OcrResult)
+    chunks: list[DocumentChunk] = Field(default_factory=list)
 
 
 class DocumentUploadResponse(DocumentMetadata):

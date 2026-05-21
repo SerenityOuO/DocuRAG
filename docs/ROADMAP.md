@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.4.0 的已交付切片。後續真正 OCR、RAG、AgentOps 與 infra 延伸會再拆成小 ticket。
+本 roadmap 記錄 Phase 00 到 v0.5.0 的已交付切片。後續真正 OCR、embedding、Qdrant、LLM RAG、AgentOps 與 infra 延伸會再拆成小 ticket。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.4.0 checklist。
+- TODO 包含 Phase 00 到 v0.5.0 checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -61,6 +61,7 @@ Expected Outcome：
 - Phase 01 只做 backend 啟動與 healthcheck。
 - Phase 02 只做文件上傳與 metadata foundation。
 - v0.4.0 只做 OCR mock pipeline，不接真正 OCR engine 或 async worker。
+- v0.5.0 只做 local RAG baseline，不接 LLM、OpenAI API、Ollama、vLLM、embedding、Qdrant 或 rerank。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
 ## v0.2.0 Demo UI Milestone
@@ -107,9 +108,28 @@ Expected Outcome：
 - frontend 顯示 OCR status、OCR text 與 extracted fields。
 - 不新增 PaddleOCR、Tesseract、VLM、RAG、Qdrant、Redis、NATS、vLLM、登入、RBAC 或 PostgreSQL。
 
+## v0.5.0 Local RAG Baseline Milestone
+
+Goal：使用 v0.4.0 的 OCR mock text 作為知識來源，建立第一版可驗證的 local RAG baseline。
+
+Ticket：
+
+- `tasks/phase-05-rag-baseline/05-01-local-rag-baseline.md`
+
+Expected Outcome：
+
+- OCR mock 完成後會從 OCR text 產生 chunks，並保存到 local JSON metadata store。
+- 每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。
+- `POST /rag/query` 接收 `query` 與 `top_k`。
+- local keyword retrieval 從 chunks 回傳 matched chunks、score、`document_id` 與 `chunk_id`。
+- RAG response 包含 deterministic answer、citations 與 retrieved chunks。
+- citations 指出 `document_id`、`filename` 與 `chunk_id`。
+- frontend 新增 RAG chat，顯示 answer、citations 與 retrieved chunks。
+- 不新增真正 LLM、OpenAI API、Ollama、vLLM、embedding、Qdrant、rerank、Redis、NATS、PostgreSQL、登入或 RBAC。
+
 Next Candidate Milestone：
 
-- v0.5.0 RAG baseline spike：只做 fixture-based retrieval baseline，不接 Qdrant 或 embeddings service。
+- v0.6.0 Embedding / Qdrant indexing spike：將 local keyword retrieval 後續替換成可驗證的 vector indexing，但仍需先拆 ticket。
 
 ## Release Verification
 
@@ -118,3 +138,4 @@ Next Candidate Milestone：
 - v0.2.0: Demo UI、Backend CI、backend CORS、Docker build / Compose healthcheck 已完成。
 - v0.3.0: Document Local Storage、文件列表、文件詳情、frontend list UI、Docker build / Compose healthcheck / Compose upload API 已完成。
 - v0.4.0: OCR Mock Pipeline、OCR result persistence、frontend OCR UI、Docker build / Compose healthcheck / Compose upload / Compose OCR mock API 已完成。
+- v0.5.0: Local RAG Baseline、chunking、keyword retrieval、RAG answer API、frontend Chat UI、Docker build / Compose healthcheck / Compose upload / Compose OCR mock / Compose RAG API 已完成。
