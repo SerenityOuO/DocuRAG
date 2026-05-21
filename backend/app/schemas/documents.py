@@ -41,12 +41,32 @@ class OcrResult(BaseModel):
     updated_at: datetime | None = None
 
 
+class BoundingBox(BaseModel):
+    x_min: float = Field(..., ge=0)
+    y_min: float = Field(..., ge=0)
+    x_max: float = Field(..., ge=0)
+    y_max: float = Field(..., ge=0)
+
+    @model_validator(mode="after")
+    def validate_edges(self):
+        if self.x_max < self.x_min:
+            raise ValueError("x_max must be greater than or equal to x_min")
+        if self.y_max < self.y_min:
+            raise ValueError("y_max must be greater than or equal to y_min")
+        return self
+
+
 class DocumentChunk(BaseModel):
     chunk_id: str = Field(..., min_length=1)
     document_id: str = Field(..., min_length=1)
     text: str = Field(..., min_length=1)
     source: str = Field(..., min_length=1)
     created_at: datetime
+    page_number: int | None = Field(default=None, ge=1)
+    bbox: BoundingBox | None = None
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    source_type: str = Field(default="ocr_mock", min_length=1)
+    metadata: dict[str, str] = Field(default_factory=dict)
 
 
 class DocumentMetadata(BaseModel):

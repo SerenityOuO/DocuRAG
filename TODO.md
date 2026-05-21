@@ -114,7 +114,7 @@
 - [x] 執行 OCR provider interface bridge，保留 mock provider 並維持 OCR API 相容。
 - [x] 執行 RAG provider interface bridge，保留 local keyword provider 並維持 `/rag/query` 相容。
 - [x] 執行 processing status contract，明確定義 upload、OCR、indexing、ready 與 failed 狀態。
-- [ ] 執行 chunk / citation schema bridge，補齊 page、bbox、confidence 與 trace metadata contract。
+- [x] 執行 chunk / citation schema bridge，補齊 page、bbox、confidence 與 trace metadata contract。
 - [ ] 執行 processing job contract，建立同步 job metadata，不引入真正 worker 或 queue。
 - [ ] 確認 v0.6 bridge 階段仍未接真正 OCR、embedding、Qdrant、rerank、LLM、Redis、NATS、PostgreSQL、登入或 RBAC。
 

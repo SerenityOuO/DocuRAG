@@ -2,6 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.schemas.documents import (
+    BoundingBox,
     DocumentChunk,
     DocumentMetadata,
     DocumentStatus,
@@ -86,6 +87,11 @@ def test_legacy_ready_metadata_infers_processing_status() -> None:
     assert document.processing.ocr == ProcessingStepStatus.COMPLETED
     assert document.processing.indexing == ProcessingStepStatus.COMPLETED
     assert document.processing.ready is True
+    assert document.chunks[0].page_number is None
+    assert document.chunks[0].bbox is None
+    assert document.chunks[0].confidence is None
+    assert document.chunks[0].source_type == "ocr_mock"
+    assert document.chunks[0].metadata == {}
 
 
 def test_document_response_rejects_invalid_status() -> None:
@@ -116,6 +122,43 @@ def test_document_chunk_rejects_empty_text() -> None:
             source="ocr_mock",
             created_at="2026-05-20T00:00:00Z",
         )
+
+
+def test_document_chunk_accepts_optional_trace_metadata() -> None:
+    chunk = DocumentChunk(
+        chunk_id="chunk-001",
+        document_id="doc-001",
+        text="Mock OCR result",
+        source="ocr_mock",
+        created_at="2026-05-20T00:00:00Z",
+        page_number=1,
+        bbox=BoundingBox(x_min=0, y_min=0, x_max=100, y_max=40),
+        confidence=0.98,
+        source_type="ocr_mock",
+        metadata={"provider": "ocr_mock"},
+    )
+
+    assert chunk.page_number == 1
+    assert chunk.bbox is not None
+    assert chunk.confidence == 0.98
+    assert chunk.source_type == "ocr_mock"
+    assert chunk.metadata == {"provider": "ocr_mock"}
+
+
+def test_document_chunk_rejects_invalid_trace_metadata() -> None:
+    with pytest.raises(ValidationError):
+        DocumentChunk(
+            chunk_id="chunk-001",
+            document_id="doc-001",
+            text="Mock OCR result",
+            source="ocr_mock",
+            created_at="2026-05-20T00:00:00Z",
+            page_number=0,
+            confidence=1.5,
+        )
+
+    with pytest.raises(ValidationError):
+        BoundingBox(x_min=100, y_min=0, x_max=10, y_max=40)
 
 
 def test_rag_query_rejects_invalid_top_k() -> None:

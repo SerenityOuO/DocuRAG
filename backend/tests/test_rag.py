@@ -43,18 +43,32 @@ def test_rag_query_returns_answer_citations_and_retrieved_chunks(client: TestCli
     assert response.status_code == 200
     body = response.json()
     assert "Local OCR mock chunks matched the query" in body["answer"]
-    assert body["citations"] == [
-        {
-            "document_id": document_id,
-            "filename": "invoice.pdf",
-            "chunk_id": f"{document_id}-chunk-001",
-        }
-    ]
+    assert len(body["citations"]) == 1
+    citation = body["citations"][0]
+    assert citation["document_id"] == document_id
+    assert citation["filename"] == "invoice.pdf"
+    assert citation["chunk_id"] == f"{document_id}-chunk-001"
+    assert citation["page_number"] is None
+    assert citation["bbox"] is None
+    assert citation["confidence"] is None
+    assert citation["source_type"] == "ocr_mock"
+    assert citation["trace_metadata"] == {
+        "origin": "ocr_text",
+        "provider": "ocr_mock",
+        "source": "ocr_mock",
+    }
     assert body["retrieved_chunks"][0]["document_id"] == document_id
     assert body["retrieved_chunks"][0]["chunk_id"] == f"{document_id}-chunk-001"
     assert body["retrieved_chunks"][0]["filename"] == "invoice.pdf"
     assert body["retrieved_chunks"][0]["score"] > 0
     assert "Mock OCR result for invoice.pdf" in body["retrieved_chunks"][0]["text"]
+    assert body["retrieved_chunks"][0]["page_number"] is None
+    assert body["retrieved_chunks"][0]["confidence"] is None
+    assert body["retrieved_chunks"][0]["source_type"] == "ocr_mock"
+    assert body["retrieved_chunks"][0]["metadata"] == {
+        "origin": "ocr_text",
+        "provider": "ocr_mock",
+    }
 
 
 def test_rag_query_returns_empty_result_before_ocr(client: TestClient) -> None:
@@ -139,6 +153,11 @@ def test_keyword_rag_provider_scores_sorts_and_limits_results() -> None:
             document_id="doc-001",
             filename="invoice-a.txt",
             chunk_id="doc-001-chunk-001",
+            page_number=None,
+            bbox=None,
+            confidence=None,
+            source_type="ocr_mock",
+            trace_metadata={"source": "ocr_mock"},
         )
     ]
     assert len(response.retrieved_chunks) == 1

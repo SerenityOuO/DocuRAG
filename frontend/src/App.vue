@@ -512,6 +512,9 @@ onMounted(() => {
               <span>{{ citation.filename }}</span>
               <code>{{ citation.document_id }}</code>
               <code>{{ citation.chunk_id }}</code>
+              <code v-if="citation.source_type">{{ citation.source_type }}</code>
+              <code v-if="citation.page_number">page {{ citation.page_number }}</code>
+              <code v-if="citation.confidence != null">conf {{ citation.confidence }}</code>
             </li>
           </ul>
           <p v-else class="muted">沒有 citation。</p>
@@ -522,6 +525,9 @@ onMounted(() => {
               <div class="chunk-meta">
                 <span>{{ chunk.filename }}</span>
                 <code>{{ chunk.chunk_id }}</code>
+                <span v-if="chunk.source_type">{{ chunk.source_type }}</span>
+                <span v-if="chunk.page_number">page {{ chunk.page_number }}</span>
+                <span v-if="chunk.confidence != null">confidence {{ chunk.confidence }}</span>
                 <span>score {{ chunk.score }}</span>
               </div>
               <pre>{{ chunk.text }}</pre>

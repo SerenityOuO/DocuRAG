@@ -240,6 +240,8 @@ class DocumentStorage:
                         text=chunk_text,
                         source=source,
                         created_at=created_at,
+                        source_type=source,
+                        metadata={"origin": "ocr_text", "provider": source},
                     )
                 )
                 current_lines = []
@@ -257,6 +259,8 @@ class DocumentStorage:
                     text=chunk_text,
                     source=source,
                     created_at=created_at,
+                    source_type=source,
+                    metadata={"origin": "ocr_text", "provider": source},
                 )
             )
 

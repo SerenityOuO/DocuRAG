@@ -45,18 +45,35 @@ export type OcrResultResponse = OcrResult & {
   document_id: string;
 };
 
+export type BoundingBox = {
+  x_min: number;
+  y_min: number;
+  x_max: number;
+  y_max: number;
+};
+
 export type DocumentChunk = {
   chunk_id: string;
   document_id: string;
   text: string;
   source: string;
   created_at: string;
+  page_number: number | null;
+  bbox: BoundingBox | null;
+  confidence: number | null;
+  source_type: string;
+  metadata: Record<string, string>;
 };
 
 export type RagCitation = {
   document_id: string;
   filename: string;
   chunk_id: string;
+  page_number: number | null;
+  bbox: BoundingBox | null;
+  confidence: number | null;
+  source_type: string | null;
+  trace_metadata: Record<string, string>;
 };
 
 export type RetrievedChunk = DocumentChunk & {

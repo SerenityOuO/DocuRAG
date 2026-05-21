@@ -32,6 +32,11 @@ class KeywordRagProvider:
                 document_id=chunk.document_id,
                 filename=chunk.filename,
                 chunk_id=chunk.chunk_id,
+                page_number=chunk.page_number,
+                bbox=chunk.bbox,
+                confidence=chunk.confidence,
+                source_type=chunk.source_type,
+                trace_metadata={"source": chunk.source, **chunk.metadata},
             )
             for chunk in retrieved_chunks
         ]

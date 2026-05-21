@@ -163,6 +163,14 @@ def test_run_mock_ocr_saves_result_to_metadata(
     assert metadata[0]["chunks"][0]["chunk_id"] == f"{document_id}-chunk-001"
     assert metadata[0]["chunks"][0]["document_id"] == document_id
     assert metadata[0]["chunks"][0]["source"] == "ocr_mock"
+    assert metadata[0]["chunks"][0]["page_number"] is None
+    assert metadata[0]["chunks"][0]["bbox"] is None
+    assert metadata[0]["chunks"][0]["confidence"] is None
+    assert metadata[0]["chunks"][0]["source_type"] == "ocr_mock"
+    assert metadata[0]["chunks"][0]["metadata"] == {
+        "origin": "ocr_text",
+        "provider": "ocr_mock",
+    }
     assert "Mock OCR result for invoice.pdf" in metadata[0]["chunks"][0]["text"]
     assert metadata[0]["chunks"][0]["created_at"]
 
