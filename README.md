@@ -23,6 +23,8 @@ MVP 採用 incremental thin slice，先跑通產品故事與 API 邊界：
 - v0.4.0：建立 OCR mock pipeline，保存 mock OCR 結果並在 UI 顯示 status、text 與 extracted fields。
 - v0.5.0：使用 OCR mock text 建立 local RAG baseline，提供 chunking、keyword retrieval、deterministic answer API 與簡易 Chat UI。
 - v0.5.1：補強 GitHub / 面試展示流程，加入公開 sample data、demo seed script、API smoke test 與 5 分鐘 demo 指令。
+- v0.6.0：整理 OCR / RAG provider bridge、processing status、chunk / citation trace schema 與 processing job contract。
+- v0.7.0（tickets 已建立，尚未實作）：規劃單一 local OCR provider spike，預設仍保留 mock demo。
 
 MVP 初期可以使用 fixture 或最小資料結構，不要求真正 AI pipeline。以下能力保留為後續階段：
 
@@ -45,7 +47,7 @@ MVP 初期可以使用 fixture 或最小資料結構，不要求真正 AI pipeli
 
 ## Repository Structure
 
-目前 MVP v0.5.1 使用以下結構：
+目前 MVP v0.6 已完成，並建立 v0.7 ticket backlog：
 
 ```text
 DocuRAG/
@@ -90,10 +92,12 @@ DocuRAG/
     ├── phase-01-backend-bootstrap/
     ├── phase-02-document-foundation/
     ├── phase-03-ocr-mock/
-    └── phase-05-rag-baseline/
+    ├── phase-05-rag-baseline/
+    ├── phase-06-bridge/
+    └── phase-07-real-ocr-provider/
 ```
 
-真正 OCR engine、embedding、Qdrant、Redis、NATS、vLLM、登入權限與資料庫 schema 仍保留為後續 ticket。v0.5.1 只提供 deterministic mock OCR text、local keyword retrieval 與 template answer；不是 embedding/Qdrant/LLM RAG。v0.6 bridge 會先整理 provider contract，目前 OCR 只接 `MockOcrProvider`，RAG 只接 `KeywordRagProvider`，不接真正 OCR engine、embedding、Qdrant、rerank 或 LLM。
+真正 OCR engine、embedding、Qdrant、Redis、NATS、vLLM、登入權限與資料庫 schema 仍保留為後續 ticket。v0.6 目前 OCR 只接 `MockOcrProvider`，RAG 只接 `KeywordRagProvider`，不接真正 OCR engine、embedding、Qdrant、rerank 或 LLM。v0.7 tickets 只規劃單一 local OCR provider spike，預設 mock demo 必須保持可用。
 
 ## 5-Minute Demo v0.5.1
 
@@ -358,13 +362,13 @@ v0.5.1 補強 demo 可重跑性與 GitHub 可讀性，不新增 Qdrant、embeddi
 - `goal.md`：完整產品構想與長期目標。
 - `docs/PRD.md`：依 `goal.md` 收斂後的 MVP 產品需求。
 - `docs/ARCHITECTURE.md`：MVP 架構與明確延後的元件。
-- `docs/ROADMAP.md`：Phase 00 到 v0.5.1 的開發路線。
+- `docs/ROADMAP.md`：Phase 00 到 v0.7 ticket backlog 的開發路線。
 - `TODO.md`：目前階段 checklist。
 - `tasks/`：可單次完成、可單獨 commit 的任務票。
 
 ## Current Status
 
-目前完成 MVP v0.5.1 Demo Hardening：
+目前完成 MVP v0.6 Bridge Contracts：
 
 - `GET /health` 回傳 service、status、version。
 - `POST /documents/upload` 可接收 `UploadFile`，保存原始檔並回傳 document metadata。
@@ -390,6 +394,13 @@ v0.6 bridge completed：
 - chunk 與 citation schema 新增 optional page、bbox、confidence、source_type、chunk metadata 與 citation `trace_metadata`，mock OCR 不產生真正 OCR bbox 或 confidence。
 - document metadata 新增 `processing_jobs` 與 `latest_job`，記錄同步 upload、mock OCR 與 local indexing job metadata，不引入 worker 或 queue。
 
+Phase 07 ticket backlog 已建立：
+
+- `tasks/phase-07-real-ocr-provider/07-01-ocr-provider-decision.md`
+- `tasks/phase-07-real-ocr-provider/07-02-ocr-provider-adapter.md`
+- `tasks/phase-07-real-ocr-provider/07-03-ocr-output-normalization.md`
+- `tasks/phase-07-real-ocr-provider/07-04-real-ocr-demo-hardening.md`
+
 尚未實作真正 OCR engine、embedding、Qdrant、async worker、queue、Redis、NATS、vLLM、登入、權限或資料庫 schema。
 
 本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前 backend pytest、frontend build、Docker build、Docker Compose healthcheck、Compose upload API、Compose OCR mock API、Compose RAG API、demo smoke test 與 demo seed script 均已納入 v0.6 驗證流程。
@@ -404,3 +415,4 @@ v0.6 bridge completed：
 - v0.5.0: Local RAG Baseline、chunking、keyword retrieval、RAG answer API、frontend Chat UI 與 Docker Compose RAG API 驗證已完成。
 - v0.5.1: Demo Hardening、公開 sample data、demo seed script、API smoke test、5 分鐘 demo flow 與 Docker Compose demo 驗證已完成。
 - v0.6.0: Bridge Contracts、OCR provider interface、RAG provider interface、processing status、chunk citation schema 與 processing job contract 已完成。
+- v0.7.0: Real OCR Provider Spike tickets 已建立，尚未實作。

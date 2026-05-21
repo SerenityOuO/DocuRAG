@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.5.1。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.7 ticket backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -118,9 +118,21 @@
 - [x] 執行 processing job contract，建立同步 job metadata，不引入真正 worker 或 queue。
 - [x] 確認 v0.6 bridge 階段仍未接真正 OCR、embedding、Qdrant、rerank、LLM、Redis、NATS、PostgreSQL、登入或 RBAC。
 
+## MVP v0.7 Real OCR Provider Spike
+
+- [x] 建立 `tasks/phase-07-real-ocr-provider/07-01-ocr-provider-decision.md`。
+- [x] 建立 `tasks/phase-07-real-ocr-provider/07-02-ocr-provider-adapter.md`。
+- [x] 建立 `tasks/phase-07-real-ocr-provider/07-03-ocr-output-normalization.md`。
+- [x] 建立 `tasks/phase-07-real-ocr-provider/07-04-real-ocr-demo-hardening.md`。
+- [ ] 執行 OCR provider decision spike，先選定本機可驗證 provider 與 fallback 行為。
+- [ ] 執行 local OCR provider adapter，預設仍保留 mock provider。
+- [ ] 執行 OCR output normalization，映射 page、bbox、confidence 與 trace metadata。
+- [ ] 執行 real OCR demo hardening，讓缺少 real OCR dependency 時 mock demo 仍可重跑。
+- [ ] 確認 Phase 07 仍未接 queue、Redis、NATS、Qdrant、embedding、rerank、LLM、PostgreSQL、登入或 RBAC。
+
 ## Parking Lot
 
-- [ ] 真正 OCR / VLM parser。
+- [ ] Production-grade OCR / VLM parser（v0.7 只先做單一 provider spike）。
 - [ ] Embedding 與 Qdrant indexing。
 - [ ] Redis session / cache / rate limit。
 - [ ] NATS worker。
@@ -140,3 +152,4 @@
 - [x] v0.5.0: Local RAG Baseline、frontend Chat UI 與 Docker Compose RAG API 驗證已完成。
 - [x] v0.5.1: Demo Hardening、公開 sample data、demo seed script、API smoke test 與 Docker Compose demo 驗證已完成。
 - [x] v0.6.0: Bridge Contracts、OCR provider interface、RAG provider interface、processing status、chunk citation schema 與 processing job contract。
+- [ ] v0.7.0: Real OCR Provider Spike 尚未執行；Phase 07 tickets 已建立。

@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.5.1 的已交付切片，並新增 v0.6 bridge contracts 作為接真正 OCR、embedding、Qdrant、LLM RAG、AgentOps 與 infra 前的銜接層。
+本 roadmap 記錄 Phase 00 到 v0.6 的已交付切片，並新增 v0.7 Real OCR Provider Spike ticket backlog，作為接真正 OCR 前的第一個受控實驗階段。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -64,6 +64,7 @@ Expected Outcome：
 - v0.5.0 只做 local RAG baseline，不接 LLM、OpenAI API、Ollama、vLLM、embedding、Qdrant 或 rerank。
 - v0.5.1 只做 demo hardening，不新增 Qdrant、embedding、rerank、真正 LLM、OpenAI API、Ollama、vLLM、Redis、NATS、PostgreSQL、登入或 RBAC。
 - v0.6.0 只做 bridge contracts，不接真正 OCR、embedding、Qdrant、rerank、LLM、Redis、NATS、PostgreSQL、登入或 RBAC。
+- v0.7.0 只做單一 local OCR provider spike，預設仍保留 mock provider，不接 queue、DB、Qdrant、embedding、rerank、LLM、Redis、NATS、登入或 RBAC。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
 ## v0.2.0 Demo UI Milestone
@@ -169,9 +170,27 @@ Expected Outcome：
 - 既有 upload -> OCR mock -> local RAG -> citations demo flow 保持可用。
 - 不新增真正 OCR engine、embedding、Qdrant、rerank、LLM、OpenAI API、Ollama、vLLM、Redis、NATS、PostgreSQL、登入或 RBAC。
 
+## v0.7.0 Real OCR Provider Spike Milestone
+
+Goal：在 v0.6 bridge contracts 穩定後，挑選一個本機可驗證 OCR provider 做 spike；實作必須保留 mock fallback，並避免把 queue、DB、embedding 或 LLM 範圍提前拉進來。
+
+Tickets：
+
+- `tasks/phase-07-real-ocr-provider/07-01-ocr-provider-decision.md`
+- `tasks/phase-07-real-ocr-provider/07-02-ocr-provider-adapter.md`
+- `tasks/phase-07-real-ocr-provider/07-03-ocr-output-normalization.md`
+- `tasks/phase-07-real-ocr-provider/07-04-real-ocr-demo-hardening.md`
+
+Expected Outcome：
+
+- 選定單一 Phase 07 OCR provider，並記錄安裝條件、fallback 與 demo 風險。
+- backend 可透過設定選擇 mock 或 real OCR provider，預設仍保持 mock demo 可用。
+- real OCR output 可映射到既有 `OcrResult`、`DocumentChunk`、processing status、processing job 與 citation trace contract。
+- demo / smoke flow 在沒有 real OCR dependency 的環境仍可用 mock path 重跑。
+- 不新增 queue、Redis、NATS、Qdrant、embedding、rerank、LLM、PostgreSQL、登入或 RBAC。
+
 Next Candidate Milestone：
 
-- v0.7.0 Real OCR Provider Spike：在 v0.6 bridge contracts 完成後，挑一個本機 OCR / VLM provider 做可驗證 spike。
 - v0.8.0 Embedding / Qdrant Indexing Spike：在 OCR 與 chunk / citation contract 穩定後，將 local keyword retrieval 替換成可驗證的 vector indexing。
 
 ## Release Verification
@@ -184,3 +203,4 @@ Next Candidate Milestone：
 - v0.5.0: Local RAG Baseline、chunking、keyword retrieval、RAG answer API、frontend Chat UI、Docker build / Compose healthcheck / Compose upload / Compose OCR mock / Compose RAG API 已完成。
 - v0.5.1: Demo Hardening、公開 sample data、demo seed script、API smoke test、5 分鐘 README demo flow、Docker build / Compose demo smoke / seed script 已完成。
 - v0.6.0: Bridge Contracts、OCR provider interface、RAG provider interface、processing status、chunk citation schema 與 processing job contract 已完成。
+- v0.7.0 ticket backlog: Real OCR Provider Spike tickets 已建立，implementation 待逐張 ticket 執行。
