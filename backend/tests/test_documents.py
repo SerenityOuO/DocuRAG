@@ -5,9 +5,9 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.routes.documents import get_document_storage, get_mock_ocr_provider
+from app.api.routes.documents import get_document_storage, get_mock_ocr_provider, get_selected_ocr_provider
 from app.main import app
-from app.schemas.documents import DocumentMetadata, OcrResult, OcrStatus
+from app.schemas.documents import DocumentMetadata, OcrResult, OcrStatus, ProcessingJobType
 from app.services.document_storage import DocumentStorage
 
 
@@ -201,6 +201,147 @@ def test_get_ocr_result_returns_saved_mock_result(client: TestClient) -> None:
     assert response.json() == mock_response.json()
 
 
+def test_run_selected_ocr_uses_default_mock_provider(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("default-provider.txt", b"sample document", "text/plain")},
+    )
+    document_id = upload_response.json()["document_id"]
+
+    response = client.post(f"/documents/{document_id}/ocr")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "completed"
+    assert "Mock OCR result for default-provider.txt" in body["text"]
+
+    metadata_path = tmp_path / "data" / "documents.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert [job["job_type"] for job in metadata[0]["processing_jobs"]] == [
+        "upload",
+        "ocr_mock",
+        "local_indexing",
+    ]
+    assert metadata[0]["chunks"][0]["source"] == "ocr_mock"
+
+
+def test_run_selected_ocr_uses_real_provider_adapter(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    class StubRealOcrProvider:
+        provider_name = "paddleocr"
+        chunk_source = "ocr_paddleocr"
+        job_type = ProcessingJobType.OCR_REAL
+
+        def extract(
+            self,
+            document: DocumentMetadata,
+            file_path: Path | None,
+            extracted_at: datetime,
+        ) -> OcrResult:
+            assert file_path is not None
+            return OcrResult(
+                status=OcrStatus.COMPLETED,
+                text=f"Real OCR text for {document.filename}",
+                extracted_fields={"provider": "paddleocr"},
+                updated_at=extracted_at,
+            )
+
+    app.dependency_overrides[get_selected_ocr_provider] = StubRealOcrProvider
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("real-provider.png", b"fake image", "image/png")},
+    )
+    document_id = upload_response.json()["document_id"]
+
+    response = client.post(f"/documents/{document_id}/ocr")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["text"] == "Real OCR text for real-provider.png"
+    assert body["extracted_fields"] == {"provider": "paddleocr"}
+
+    metadata_path = tmp_path / "data" / "documents.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata[0]["status"] == "ready"
+    assert metadata[0]["processing"]["ocr"] == "completed"
+    assert metadata[0]["processing"]["indexing"] == "completed"
+    assert [job["job_type"] for job in metadata[0]["processing_jobs"]] == [
+        "upload",
+        "ocr_real",
+        "local_indexing",
+    ]
+    assert metadata[0]["chunks"][0]["source"] == "ocr_paddleocr"
+    assert metadata[0]["chunks"][0]["source_type"] == "ocr_paddleocr"
+    assert metadata[0]["chunks"][0]["metadata"] == {
+        "origin": "ocr_text",
+        "provider": "ocr_paddleocr",
+    }
+
+
+def test_run_selected_ocr_returns_503_and_persists_real_failure(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    class FailingRealOcrProvider:
+        provider_name = "paddleocr"
+        chunk_source = "ocr_paddleocr"
+        job_type = ProcessingJobType.OCR_REAL
+
+        def extract(
+            self,
+            document: DocumentMetadata,
+            file_path: Path | None,
+            extracted_at: datetime,
+        ) -> OcrResult:
+            return OcrResult(
+                status=OcrStatus.FAILED,
+                text="",
+                extracted_fields={
+                    "provider": "paddleocr",
+                    "error_code": "paddleocr_dependency_missing",
+                    "error": "PaddleOCR dependency is not installed.",
+                },
+                updated_at=extracted_at,
+            )
+
+    app.dependency_overrides[get_selected_ocr_provider] = FailingRealOcrProvider
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("real-provider-failed.png", b"fake image", "image/png")},
+    )
+    document_id = upload_response.json()["document_id"]
+
+    response = client.post(f"/documents/{document_id}/ocr")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == {
+        "provider": "paddleocr",
+        "error_code": "paddleocr_dependency_missing",
+        "error": "PaddleOCR dependency is not installed.",
+        "document_id": document_id,
+    }
+
+    metadata_path = tmp_path / "data" / "documents.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata[0]["status"] == "failed"
+    assert metadata[0]["processing"]["ocr"] == "failed"
+    assert metadata[0]["processing"]["indexing"] == "pending"
+    assert metadata[0]["processing"]["ready"] is False
+    assert metadata[0]["processing"]["failed_reason"] == "PaddleOCR dependency is not installed."
+    assert [job["job_type"] for job in metadata[0]["processing_jobs"]] == [
+        "upload",
+        "ocr_real",
+    ]
+    assert metadata[0]["latest_job"]["status"] == "failed"
+    assert metadata[0]["latest_job"]["error_message"] == "PaddleOCR dependency is not installed."
+    assert metadata[0]["chunks"] == []
+
+
 def test_get_document_includes_saved_ocr_result(client: TestClient) -> None:
     upload_response = client.post(
         "/documents/upload",
@@ -241,6 +382,7 @@ def test_run_mock_ocr_includes_uploaded_text_sample(client: TestClient) -> None:
 def test_run_mock_ocr_uses_provider_output(client: TestClient, tmp_path: Path) -> None:
     class StubOcrProvider:
         chunk_source = "ocr_mock"
+        job_type = ProcessingJobType.OCR_MOCK
 
         def extract(
             self,
@@ -282,6 +424,7 @@ def test_run_mock_ocr_persists_failed_processing_status(
 ) -> None:
     class FailingOcrProvider:
         chunk_source = "ocr_mock"
+        job_type = ProcessingJobType.OCR_MOCK
 
         def extract(
             self,

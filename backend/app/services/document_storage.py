@@ -144,6 +144,7 @@ class DocumentStorage:
             now = datetime.now(UTC)
             ocr_result = provider.extract(document, self.get_file_path(document), now)
             document.ocr = ocr_result
+            ocr_job_type = provider.job_type
 
             if ocr_result.status == OcrStatus.COMPLETED:
                 document.chunks = self._build_chunks(
@@ -162,7 +163,7 @@ class DocumentStorage:
                 )
                 self._record_job(
                     document,
-                    ProcessingJobType.OCR_MOCK,
+                    ocr_job_type,
                     ProcessingStepStatus.COMPLETED,
                     now,
                 )
@@ -185,7 +186,7 @@ class DocumentStorage:
                 )
                 self._record_job(
                     document,
-                    ProcessingJobType.OCR_MOCK,
+                    ocr_job_type,
                     ProcessingStepStatus.FAILED,
                     now,
                     error_message=ocr_result.extracted_fields.get("error", "OCR failed"),
@@ -207,7 +208,7 @@ class DocumentStorage:
                 )
                 self._record_job(
                     document,
-                    ProcessingJobType.OCR_MOCK,
+                    ocr_job_type,
                     ocr_step_status,
                     now,
                 )

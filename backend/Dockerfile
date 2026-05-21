@@ -7,7 +7,12 @@ WORKDIR /app
 
 COPY pyproject.toml .
 COPY app ./app
-RUN pip install --no-cache-dir ".[dev]"
+ARG DOCURAG_INSTALL_REAL_OCR=false
+RUN if [ "$DOCURAG_INSTALL_REAL_OCR" = "true" ]; then \
+      pip install --no-cache-dir ".[dev,real-ocr]"; \
+    else \
+      pip install --no-cache-dir ".[dev]"; \
+    fi
 
 COPY tests ./tests
 

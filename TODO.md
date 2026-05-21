@@ -125,7 +125,7 @@
 - [x] 建立 `tasks/phase-07-real-ocr-provider/07-03-ocr-output-normalization.md`。
 - [x] 建立 `tasks/phase-07-real-ocr-provider/07-04-real-ocr-demo-hardening.md`。
 - [x] 執行 OCR provider decision spike，選定 PaddleOCR，並定義 real provider 不可用時明確失敗、mock path 保持可用。
-- [ ] 執行 local OCR provider adapter，預設仍保留 mock provider。
+- [x] 執行 local OCR provider adapter，新增 provider-selected `/documents/{document_id}/ocr`，預設仍保留 mock provider。
 - [ ] 執行 OCR output normalization，映射 page、bbox、confidence 與 trace metadata。
 - [ ] 執行 real OCR demo hardening，讓缺少 real OCR dependency 時 mock demo 仍可重跑。
 - [ ] 確認 Phase 07 仍未接 queue、Redis、NATS、Qdrant、embedding、rerank、LLM、PostgreSQL、登入或 RBAC。
@@ -152,4 +152,4 @@
 - [x] v0.5.0: Local RAG Baseline、frontend Chat UI 與 Docker Compose RAG API 驗證已完成。
 - [x] v0.5.1: Demo Hardening、公開 sample data、demo seed script、API smoke test 與 Docker Compose demo 驗證已完成。
 - [x] v0.6.0: Bridge Contracts、OCR provider interface、RAG provider interface、processing status、chunk citation schema 與 processing job contract。
-- [ ] v0.7.0: Real OCR Provider Spike 進行中；07-01 已選定 PaddleOCR，07-02 到 07-04 待執行。
+- [ ] v0.7.0: Real OCR Provider Spike 進行中；07-01 已選定 PaddleOCR，07-02 已新增 provider adapter（Docker validation 需待 Docker Desktop daemon 可用後重跑），07-03 到 07-04 待執行。

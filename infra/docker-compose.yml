@@ -4,11 +4,14 @@ services:
   backend:
     build:
       context: ../backend
+      args:
+        DOCURAG_INSTALL_REAL_OCR: ${DOCURAG_INSTALL_REAL_OCR:-false}
     environment:
       DOCURAG_APP_NAME: DocuRAG AgentOps Backend
       DOCURAG_VERSION: 0.5.1
       DOCURAG_ENVIRONMENT: docker
       DOCURAG_DATA_DIR: /app/data
+      DOCURAG_OCR_PROVIDER: ${DOCURAG_OCR_PROVIDER:-mock}
     volumes:
       - ../data:/app/data
     ports:

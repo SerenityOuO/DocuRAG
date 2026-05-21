@@ -21,6 +21,7 @@ class ProcessingStepStatus(StrEnum):
 class ProcessingJobType(StrEnum):
     UPLOAD = "upload"
     OCR_MOCK = "ocr_mock"
+    OCR_REAL = "ocr_real"
     LOCAL_INDEXING = "local_indexing"
 
 

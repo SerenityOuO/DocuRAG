@@ -40,6 +40,7 @@ def test_processing_step_status_values() -> None:
 def test_processing_job_type_values() -> None:
     assert ProcessingJobType.UPLOAD == "upload"
     assert ProcessingJobType.OCR_MOCK == "ocr_mock"
+    assert ProcessingJobType.OCR_REAL == "ocr_real"
     assert ProcessingJobType.LOCAL_INDEXING == "local_indexing"
 
 

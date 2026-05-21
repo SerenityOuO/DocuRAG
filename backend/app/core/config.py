@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     version: str = "0.5.1"
     environment: str = "local"
     data_dir: Path = Field(default_factory=default_data_dir)
+    ocr_provider: str = "mock"
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
