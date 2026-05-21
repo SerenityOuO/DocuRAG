@@ -39,6 +39,10 @@ def test_upload_document_returns_uploaded_metadata(client: TestClient) -> None:
     assert body["content_type"] == "application/pdf"
     assert body["size"] == len(b"sample document")
     assert body["status"] == "uploaded"
+    assert body["processing"]["upload"] == "completed"
+    assert body["processing"]["ocr"] == "pending"
+    assert body["processing"]["indexing"] == "pending"
+    assert body["processing"]["ready"] is False
 
 
 def test_upload_document_saves_file_and_metadata(client: TestClient, tmp_path: Path) -> None:
@@ -58,6 +62,9 @@ def test_upload_document_saves_file_and_metadata(client: TestClient, tmp_path: P
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     assert metadata[0]["document_id"] == body["document_id"]
     assert metadata[0]["filename"] == "invoice.pdf"
+    assert metadata[0]["processing"]["upload"] == "completed"
+    assert metadata[0]["processing"]["ocr"] == "pending"
+    assert metadata[0]["processing"]["indexing"] == "pending"
 
 
 def test_list_documents_returns_uploaded_documents_newest_first(client: TestClient) -> None:
@@ -148,6 +155,9 @@ def test_run_mock_ocr_saves_result_to_metadata(
     metadata_path = tmp_path / "data" / "documents.json"
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     assert metadata[0]["status"] == "ready"
+    assert metadata[0]["processing"]["ocr"] == "completed"
+    assert metadata[0]["processing"]["indexing"] == "completed"
+    assert metadata[0]["processing"]["ready"] is True
     assert metadata[0]["ocr"]["status"] == "completed"
     assert metadata[0]["ocr"]["text"] == body["text"]
     assert metadata[0]["chunks"][0]["chunk_id"] == f"{document_id}-chunk-001"
@@ -242,6 +252,49 @@ def test_run_mock_ocr_uses_provider_output(client: TestClient, tmp_path: Path) -
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     assert metadata[0]["ocr"]["text"] == body["text"]
     assert metadata[0]["chunks"][0]["text"] == body["text"]
+
+
+def test_run_mock_ocr_persists_failed_processing_status(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    class FailingOcrProvider:
+        chunk_source = "ocr_mock"
+
+        def extract(
+            self,
+            document: DocumentMetadata,
+            file_path: Path | None,
+            extracted_at: datetime,
+        ) -> OcrResult:
+            return OcrResult(
+                status=OcrStatus.FAILED,
+                text="",
+                extracted_fields={"error": "provider failed"},
+                updated_at=extracted_at,
+            )
+
+    app.dependency_overrides[get_mock_ocr_provider] = FailingOcrProvider
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("failed-ocr.txt", b"sample document", "text/plain")},
+    )
+    document_id = upload_response.json()["document_id"]
+
+    response = client.post(f"/documents/{document_id}/ocr/mock")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "failed"
+
+    metadata_path = tmp_path / "data" / "documents.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata[0]["status"] == "failed"
+    assert metadata[0]["processing"]["ocr"] == "failed"
+    assert metadata[0]["processing"]["indexing"] == "pending"
+    assert metadata[0]["processing"]["ready"] is False
+    assert metadata[0]["processing"]["failed_reason"] == "provider failed"
+    assert metadata[0]["chunks"] == []
 
 
 def test_run_mock_ocr_returns_404_for_unknown_document(client: TestClient) -> None:

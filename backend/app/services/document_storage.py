@@ -12,6 +12,8 @@ from app.schemas.documents import (
     DocumentStatus,
     OcrResult,
     OcrStatus,
+    ProcessingStatus,
+    ProcessingStepStatus,
 )
 from app.services.ocr import OcrProvider
 
@@ -56,6 +58,14 @@ class DocumentStorage:
                     document.ocr.text,
                     document.ocr.updated_at or datetime.now(UTC),
                 )
+                document.status = DocumentStatus.READY
+                document.processing = ProcessingStatus(
+                    upload=ProcessingStepStatus.COMPLETED,
+                    ocr=ProcessingStepStatus.COMPLETED,
+                    indexing=ProcessingStepStatus.COMPLETED,
+                    ready=True,
+                    updated_at=document.ocr.updated_at or datetime.now(UTC),
+                )
                 documents[index] = document
                 documents_changed = True
 
@@ -90,6 +100,7 @@ class DocumentStorage:
         upload_path.relative_to(upload_root)
         upload_path.write_bytes(content)
 
+        created_at = datetime.now(UTC)
         document = DocumentMetadata(
             document_id=document_id,
             project_id=None,
@@ -99,7 +110,8 @@ class DocumentStorage:
             content_type=file.content_type or "application/octet-stream",
             size=len(content),
             status=DocumentStatus.UPLOADED,
-            created_at=datetime.now(UTC),
+            created_at=created_at,
+            processing=ProcessingStatus(updated_at=created_at),
         )
 
         documents = self._read_documents()
@@ -118,13 +130,46 @@ class DocumentStorage:
             now = datetime.now(UTC)
             ocr_result = provider.extract(document, self.get_file_path(document), now)
             document.ocr = ocr_result
-            document.chunks = self._build_chunks(
-                document.document_id,
-                ocr_result.text,
-                now,
-                source=provider.chunk_source,
-            )
-            document.status = DocumentStatus.READY
+
+            if ocr_result.status == OcrStatus.COMPLETED:
+                document.chunks = self._build_chunks(
+                    document.document_id,
+                    ocr_result.text,
+                    now,
+                    source=provider.chunk_source,
+                )
+                document.status = DocumentStatus.READY
+                document.processing = ProcessingStatus(
+                    upload=ProcessingStepStatus.COMPLETED,
+                    ocr=ProcessingStepStatus.COMPLETED,
+                    indexing=ProcessingStepStatus.COMPLETED,
+                    ready=True,
+                    updated_at=now,
+                )
+            elif ocr_result.status == OcrStatus.FAILED:
+                document.chunks = []
+                document.status = DocumentStatus.FAILED
+                document.processing = ProcessingStatus(
+                    upload=ProcessingStepStatus.COMPLETED,
+                    ocr=ProcessingStepStatus.FAILED,
+                    indexing=ProcessingStepStatus.PENDING,
+                    ready=False,
+                    failed_reason=ocr_result.extracted_fields.get("error", "OCR failed"),
+                    updated_at=now,
+                )
+            else:
+                document.chunks = []
+                document.status = DocumentStatus.PROCESSING
+                document.processing = ProcessingStatus(
+                    upload=ProcessingStepStatus.COMPLETED,
+                    ocr=ProcessingStepStatus.RUNNING
+                    if ocr_result.status == OcrStatus.RUNNING
+                    else ProcessingStepStatus.PENDING,
+                    indexing=ProcessingStepStatus.PENDING,
+                    ready=False,
+                    updated_at=now,
+                )
+
             documents[index] = document
             self._write_documents(documents)
 

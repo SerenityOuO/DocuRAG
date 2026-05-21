@@ -158,15 +158,10 @@ async function runOcrForSelectedDocument(): Promise<void> {
 
   try {
     const response = await runMockOcr(documentId);
-    selectedDocument.value = {
-      ...selectedDocument.value,
-      status: "ready",
-      ocr: response,
-    };
+    const updatedDocument = await getDocument(documentId);
+    selectedDocument.value = updatedDocument;
     documents.value = documents.value.map((document) =>
-      document.document_id === documentId
-        ? { ...document, status: "ready", ocr: response }
-        : document,
+      document.document_id === documentId ? updatedDocument : document,
     );
     latestResponse.value = response;
     ocrState.value = "success";
@@ -362,6 +357,7 @@ onMounted(() => {
                 <th>Filename</th>
                 <th>Status</th>
                 <th>OCR</th>
+                <th>Indexing</th>
                 <th>Size</th>
                 <th>Created at</th>
                 <th>Content type</th>
@@ -385,6 +381,11 @@ onMounted(() => {
                 </td>
                 <td><span class="status-pill" :class="statusClass(document.status)">{{ document.status }}</span></td>
                 <td><span class="status-pill" :class="statusClass(document.ocr.status)">{{ document.ocr.status }}</span></td>
+                <td>
+                  <span class="status-pill" :class="statusClass(document.processing.indexing)">
+                    {{ document.processing.indexing }}
+                  </span>
+                </td>
                 <td>{{ formatBytes(document.size) }}</td>
                 <td>{{ document.created_at }}</td>
                 <td>{{ document.content_type }}</td>
@@ -416,6 +417,14 @@ onMounted(() => {
 
         <dl v-if="selectedDocument" class="facts">
           <div>
+            <dt>Document status</dt>
+            <dd>
+              <span class="status-pill" :class="statusClass(selectedDocument.status)">
+                {{ selectedDocument.status }}
+              </span>
+            </dd>
+          </div>
+          <div>
             <dt>OCR status</dt>
             <dd>
               <span class="status-pill" :class="statusClass(selectedDocument.ocr.status)">
@@ -424,8 +433,24 @@ onMounted(() => {
             </dd>
           </div>
           <div>
+            <dt>Indexing status</dt>
+            <dd>
+              <span class="status-pill" :class="statusClass(selectedDocument.processing.indexing)">
+                {{ selectedDocument.processing.indexing }}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt>Ready</dt>
+            <dd>{{ selectedDocument.processing.ready ? "yes" : "no" }}</dd>
+          </div>
+          <div v-if="selectedDocument.processing.failed_reason">
+            <dt>Failed reason</dt>
+            <dd>{{ selectedDocument.processing.failed_reason }}</dd>
+          </div>
+          <div>
             <dt>Updated at</dt>
-            <dd>{{ selectedDocument.ocr.updated_at ?? "Not run" }}</dd>
+            <dd>{{ selectedDocument.processing.updated_at ?? selectedDocument.ocr.updated_at ?? "Not run" }}</dd>
           </div>
         </dl>
 

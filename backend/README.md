@@ -73,6 +73,8 @@ curl -X POST http://127.0.0.1:8000/rag/query `
 
 OCR mock API 會透過 `MockOcrProvider` 產生 deterministic OCR result，再由 `DocumentStorage` 將 OCR status、text、extracted fields、updated timestamp 與 local chunks 寫回同一份 `data/documents.json`。未執行 OCR 的文件會回傳 `pending` OCR status。
 
+document metadata 會包含 `processing` contract，明確記錄 `upload`、`ocr`、`indexing`、`ready`、`failed_reason` 與 `updated_at`。upload 完成後 OCR / indexing 會保持 pending；mock OCR 成功後 OCR 與 indexing 會標記 completed 並進入 ready；provider 回傳 failed 時會保存 failed_reason，但不啟動 background worker 或 queue。
+
 v0.5.1 chunks 由 OCR mock text 產生，每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。`POST /rag/query` 透過 `KeywordRagProvider` 做本機 keyword retrieval，並用 deterministic template 回傳 answer、citations 與 retrieved chunks。對 `text/plain`、`.txt`、`.md`、`.csv` sample，OCR mock 會把上傳文字納入 deterministic OCR mock text，方便 demo query 引用具體欄位；這不是真正 OCR、embedding、Qdrant、rerank 或 LLM。
 
 可用環境變數覆寫資料目錄：
@@ -156,4 +158,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1
 - v0.4.0: OCR mock API、OCR result persistence、pytest、Docker build 與 Compose OCR mock API 驗證已完成。
 - v0.5.0: local chunking、keyword retrieval、RAG answer API、pytest、Docker build 與 Compose RAG API 驗證已完成。
 - v0.5.1: demo sample data、seed script、API smoke test、pytest、Docker build 與 Compose demo 驗證已完成。
-- v0.6.0: 06-01 OCR provider interface bridge 與 06-02 RAG provider interface bridge 已完成；其餘 bridge tickets 待執行。
+- v0.6.0: 06-01 OCR provider interface bridge、06-02 RAG provider interface bridge 與 06-03 processing status contract 已完成；其餘 bridge tickets 待執行。

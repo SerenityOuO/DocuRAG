@@ -163,7 +163,7 @@ Expected Outcome：
 
 - OCR mock 已整理成最小 OCR provider / service 邊界，仍只保留 mock provider。
 - local keyword RAG 已整理成最小 RAG provider / service 邊界，仍只保留 keyword provider。
-- document processing status 可清楚描述 upload、OCR、indexing、ready 與 failed 流轉。
+- document processing status 已可清楚描述 upload、OCR、indexing、ready 與 failed 流轉。
 - chunk 與 citation schema 可承接 page、bbox、confidence 與 trace metadata，但不實作真正 OCR bbox 或 citation evaluation。
 - processing job contract 可記錄本機同步 job metadata，但不引入真正 worker、queue、Redis 或 NATS。
 - 既有 upload -> OCR mock -> local RAG -> citations demo flow 保持可用。
@@ -183,4 +183,4 @@ Next Candidate Milestone：
 - v0.4.0: OCR Mock Pipeline、OCR result persistence、frontend OCR UI、Docker build / Compose healthcheck / Compose upload / Compose OCR mock API 已完成。
 - v0.5.0: Local RAG Baseline、chunking、keyword retrieval、RAG answer API、frontend Chat UI、Docker build / Compose healthcheck / Compose upload / Compose OCR mock / Compose RAG API 已完成。
 - v0.5.1: Demo Hardening、公開 sample data、demo seed script、API smoke test、5 分鐘 README demo flow、Docker build / Compose demo smoke / seed script 已完成。
-- v0.6.0: 06-01 OCR provider interface 與 06-02 RAG provider interface 已完成；processing status、chunk citation schema 與 processing job contract 待執行。
+- v0.6.0: 06-01 OCR provider interface、06-02 RAG provider interface 與 06-03 processing status 已完成；chunk citation schema 與 processing job contract 待執行。

@@ -14,6 +14,7 @@ export type UploadResponse = {
   size: number;
   status: string;
   created_at: string;
+  processing: DocumentProcessingStatus;
   ocr: OcrResult;
   chunks: DocumentChunk[];
 };
@@ -28,6 +29,15 @@ export type OcrResult = {
   status: string;
   text: string;
   extracted_fields: Record<string, string>;
+  updated_at: string | null;
+};
+
+export type DocumentProcessingStatus = {
+  upload: string;
+  ocr: string;
+  indexing: string;
+  ready: boolean;
+  failed_reason: string | null;
   updated_at: string | null;
 };
 

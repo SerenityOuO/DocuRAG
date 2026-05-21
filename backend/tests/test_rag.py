@@ -182,6 +182,8 @@ def test_rag_query_backfills_chunks_from_existing_ocr_text(
 
     saved_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     assert saved_metadata[0]["chunks"][0]["chunk_id"] == f"{document_id}-chunk-001"
+    assert saved_metadata[0]["processing"]["indexing"] == "completed"
+    assert saved_metadata[0]["processing"]["ready"] is True
 
 
 def test_rag_query_uses_provider_response(client: TestClient) -> None:
