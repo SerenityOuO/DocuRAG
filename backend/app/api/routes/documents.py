@@ -11,6 +11,7 @@ from app.schemas.documents import (
     OcrResultResponse,
 )
 from app.services.document_storage import DocumentStorage
+from app.services.ocr import MockOcrProvider
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -21,7 +22,12 @@ def get_document_storage() -> DocumentStorage:
     return DocumentStorage(settings.data_dir)
 
 
+def get_mock_ocr_provider() -> MockOcrProvider:
+    return MockOcrProvider()
+
+
 DocumentStorageDep = Annotated[DocumentStorage, Depends(get_document_storage)]
+MockOcrProviderDep = Annotated[MockOcrProvider, Depends(get_mock_ocr_provider)]
 
 
 @router.post("/upload", response_model=DocumentUploadResponse)
@@ -57,8 +63,9 @@ async def get_document(
 async def run_mock_ocr(
     document_id: str,
     storage: DocumentStorageDep,
+    provider: MockOcrProviderDep,
 ) -> OcrResultResponse:
-    ocr_result = storage.run_mock_ocr(document_id)
+    ocr_result = storage.run_ocr(document_id, provider)
 
     if ocr_result is None:
         raise HTTPException(status_code=404, detail="Document not found")

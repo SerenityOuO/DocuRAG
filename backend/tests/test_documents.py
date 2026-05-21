@@ -1,11 +1,13 @@
+from datetime import datetime
 import json
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.routes.documents import get_document_storage
+from app.api.routes.documents import get_document_storage, get_mock_ocr_provider
 from app.main import app
+from app.schemas.documents import DocumentMetadata, OcrResult, OcrStatus
 from app.services.document_storage import DocumentStorage
 
 
@@ -202,6 +204,44 @@ def test_run_mock_ocr_includes_uploaded_text_sample(client: TestClient) -> None:
     assert "Uploaded text content:" in body["text"]
     assert "Invoice number: AUR-2026-051" in body["text"]
     assert "Payment terms: Net 15" in body["text"]
+
+
+def test_run_mock_ocr_uses_provider_output(client: TestClient, tmp_path: Path) -> None:
+    class StubOcrProvider:
+        chunk_source = "ocr_mock"
+
+        def extract(
+            self,
+            document: DocumentMetadata,
+            file_path: Path | None,
+            extracted_at: datetime,
+        ) -> OcrResult:
+            assert file_path is not None
+            return OcrResult(
+                status=OcrStatus.COMPLETED,
+                text=f"Provider OCR text for {document.filename}",
+                extracted_fields={"provider": "stub"},
+                updated_at=extracted_at,
+            )
+
+    app.dependency_overrides[get_mock_ocr_provider] = StubOcrProvider
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("provider-check.txt", b"sample document", "text/plain")},
+    )
+    document_id = upload_response.json()["document_id"]
+
+    response = client.post(f"/documents/{document_id}/ocr/mock")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["text"] == "Provider OCR text for provider-check.txt"
+    assert body["extracted_fields"] == {"provider": "stub"}
+
+    metadata_path = tmp_path / "data" / "documents.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata[0]["ocr"]["text"] == body["text"]
+    assert metadata[0]["chunks"][0]["text"] == body["text"]
 
 
 def test_run_mock_ocr_returns_404_for_unknown_document(client: TestClient) -> None:

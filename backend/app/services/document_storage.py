@@ -14,6 +14,7 @@ from app.schemas.documents import (
     OcrStatus,
 )
 from app.schemas.rag import RetrievedChunk
+from app.services.ocr import OcrProvider
 
 
 class DocumentStorage:
@@ -132,7 +133,7 @@ class DocumentStorage:
 
         return document
 
-    def run_mock_ocr(self, document_id: str) -> OcrResult | None:
+    def run_ocr(self, document_id: str, provider: OcrProvider) -> OcrResult | None:
         documents = self._read_documents()
 
         for index, document in enumerate(documents):
@@ -140,41 +141,14 @@ class DocumentStorage:
                 continue
 
             now = datetime.now(UTC)
-            ocr_lines = [
-                f"Mock OCR result for {document.filename}",
-                f"Document ID: {document.document_id}",
-                f"File type: {document.file_type}",
-                f"Content type: {document.content_type}",
-                f"Size: {document.size} bytes",
-            ]
-            text_file_types = {"csv", "md", "txt"}
-            file_path = self.get_file_path(document)
-
-            if (
-                file_path is not None
-                and (document.content_type.startswith("text/") or document.file_type in text_file_types)
-            ):
-                try:
-                    uploaded_text = file_path.read_text(encoding="utf-8").strip()
-                except UnicodeDecodeError:
-                    uploaded_text = ""
-
-                if uploaded_text:
-                    ocr_lines.extend(["Uploaded text content:", uploaded_text[:4000]])
-
-            ocr_result = OcrResult(
-                status=OcrStatus.COMPLETED,
-                text="\n".join(ocr_lines),
-                extracted_fields={
-                    "filename": document.filename,
-                    "file_type": document.file_type,
-                    "content_type": document.content_type,
-                    "size_bytes": str(document.size),
-                },
-                updated_at=now,
-            )
+            ocr_result = provider.extract(document, self.get_file_path(document), now)
             document.ocr = ocr_result
-            document.chunks = self._build_chunks(document.document_id, ocr_result.text, now)
+            document.chunks = self._build_chunks(
+                document.document_id,
+                ocr_result.text,
+                now,
+                source=provider.chunk_source,
+            )
             document.status = DocumentStatus.READY
             documents[index] = document
             self._write_documents(documents)
@@ -222,6 +196,7 @@ class DocumentStorage:
         document_id: str,
         text: str,
         created_at: datetime,
+        source: str = "ocr_mock",
     ) -> list[DocumentChunk]:
         chunks: list[DocumentChunk] = []
         current_lines: list[str] = []
@@ -243,7 +218,7 @@ class DocumentStorage:
                         chunk_id=f"{document_id}-chunk-{len(chunks) + 1:03d}",
                         document_id=document_id,
                         text=chunk_text,
-                        source="ocr_mock",
+                        source=source,
                         created_at=created_at,
                     )
                 )
@@ -260,7 +235,7 @@ class DocumentStorage:
                     chunk_id=f"{document_id}-chunk-{len(chunks) + 1:03d}",
                     document_id=document_id,
                     text=chunk_text,
-                    source="ocr_mock",
+                    source=source,
                     created_at=created_at,
                 )
             )

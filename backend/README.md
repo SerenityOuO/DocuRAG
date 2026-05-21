@@ -1,6 +1,6 @@
 # Backend
 
-DocuRAG AgentOps backend MVP v0.5.1 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、local RAG query API、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。此階段不接資料庫、真正 OCR engine、OpenAI API、Ollama、vLLM、embedding、Qdrant、Redis、NATS 或登入權限。
+DocuRAG AgentOps backend MVP v0.5.1 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、local RAG query API、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 OCR provider contract，目前只接 `MockOcrProvider`。此階段不接資料庫、真正 OCR engine、OpenAI API、Ollama、vLLM、embedding、Qdrant、Redis、NATS 或登入權限。
 
 ## Install
 
@@ -71,7 +71,7 @@ curl -X POST http://127.0.0.1:8000/rag/query `
 
 上傳 API 會將原始檔案保存到 repo root 的 `data/uploads/`，並將 metadata 寫入 `data/documents.json`。`filename` 會先安全化，避免 `../` 或 Windows path separator 造成 path traversal。
 
-OCR mock API 會將 OCR status、text、extracted fields、updated timestamp 與 local chunks 寫回同一份 `data/documents.json`。未執行 OCR 的文件會回傳 `pending` OCR status。
+OCR mock API 會透過 `MockOcrProvider` 產生 deterministic OCR result，再由 `DocumentStorage` 將 OCR status、text、extracted fields、updated timestamp 與 local chunks 寫回同一份 `data/documents.json`。未執行 OCR 的文件會回傳 `pending` OCR status。
 
 v0.5.1 chunks 由 OCR mock text 產生，每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。`POST /rag/query` 只做本機 keyword retrieval，並用 deterministic template 回傳 answer、citations 與 retrieved chunks。對 `text/plain`、`.txt`、`.md`、`.csv` sample，OCR mock 會把上傳文字納入 deterministic OCR mock text，方便 demo query 引用具體欄位；這不是真正 OCR、embedding 或 LLM。
 
@@ -156,3 +156,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1
 - v0.4.0: OCR mock API、OCR result persistence、pytest、Docker build 與 Compose OCR mock API 驗證已完成。
 - v0.5.0: local chunking、keyword retrieval、RAG answer API、pytest、Docker build 與 Compose RAG API 驗證已完成。
 - v0.5.1: demo sample data、seed script、API smoke test、pytest、Docker build 與 Compose demo 驗證已完成。
+- v0.6.0: 06-01 OCR provider interface bridge 已完成；其餘 bridge tickets 待執行。
