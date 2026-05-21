@@ -22,6 +22,7 @@ MVP 採用 incremental thin slice，先跑通產品故事與 API 邊界：
 - v0.3.0：把文件上傳升級成本機存檔、local JSON metadata、文件列表與詳情查詢。
 - v0.4.0：建立 OCR mock pipeline，保存 mock OCR 結果並在 UI 顯示 status、text 與 extracted fields。
 - v0.5.0：使用 OCR mock text 建立 local RAG baseline，提供 chunking、keyword retrieval、deterministic answer API 與簡易 Chat UI。
+- v0.5.1：補強 GitHub / 面試展示流程，加入公開 sample data、demo seed script、API smoke test 與 5 分鐘 demo 指令。
 
 MVP 初期可以使用 fixture 或最小資料結構，不要求真正 AI pipeline。以下能力保留為後續階段：
 
@@ -44,7 +45,7 @@ MVP 初期可以使用 fixture 或最小資料結構，不要求真正 AI pipeli
 
 ## Repository Structure
 
-目前 MVP v0.5 使用以下結構：
+目前 MVP v0.5.1 使用以下結構：
 
 ```text
 DocuRAG/
@@ -63,6 +64,10 @@ DocuRAG/
 ├── data/
 │   └── uploads/
 │       └── .gitkeep
+├── sample-data/
+│   └── documents/
+│       ├── mock-invoice-aurora.txt
+│       └── mock-contract-support.txt
 ├── backend/
 │   ├── app/
 │   ├── tests/
@@ -76,6 +81,8 @@ DocuRAG/
 │   └── docker-compose.yml
 ├── scripts/
 │   ├── check-dev-env.ps1
+│   ├── demo-smoke-test.ps1
+│   ├── seed-demo-data.ps1
 │   └── test-backend.ps1
 └── tasks/
     ├── _TEMPLATE.md
@@ -86,7 +93,61 @@ DocuRAG/
     └── phase-05-rag-baseline/
 ```
 
-真正 OCR engine、embedding、Qdrant、Redis、NATS、vLLM、登入權限與資料庫 schema 仍保留為後續 ticket。v0.5.0 只提供 deterministic mock OCR text、local keyword retrieval 與 template answer。
+真正 OCR engine、embedding、Qdrant、Redis、NATS、vLLM、登入權限與資料庫 schema 仍保留為後續 ticket。v0.5.1 只提供 deterministic mock OCR text、local keyword retrieval 與 template answer；不是 embedding/Qdrant/LLM RAG。
+
+## 5-Minute Demo v0.5.1
+
+這段流程適合 GitHub README 或面試現場快速展示 upload -> OCR mock -> local RAG -> citations。範例資料位於 `sample-data/documents/`，內容皆為虛構公開資料。
+
+Terminal 1 啟動 backend：
+
+```powershell
+cd backend
+py -3 -m pip install -e ".[dev]"
+py -3 -m uvicorn app.main:app --reload
+```
+
+Terminal 2 執行 API smoke test 與 demo seed：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1
+```
+
+`seed-demo-data.ps1` 會自動上傳 `sample-data/documents/mock-invoice-aurora.txt`、執行 OCR mock、查詢 local RAG，並輸出 `answer`、`citations` 與 `retrieved_chunks`。
+
+範例問題：
+
+```text
+payment due date Net 15
+```
+
+預期結果會引用 `mock-invoice-aurora.txt` 的 OCR mock chunk，並在 retrieved chunks 看到 `Invoice number: AUR-2026-051`、`Due date: 2026-06-15`、`Payment terms: Net 15` 等公開 demo 文字。
+
+啟動 frontend：
+
+```powershell
+cd frontend
+npm.cmd install
+npm.cmd run dev
+```
+
+Frontend UI：
+
+```text
+http://localhost:5173
+```
+
+Docker demo：
+
+```powershell
+docker compose -f infra/docker-compose.yml up -d --build
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1
+docker compose -f infra/docker-compose.yml down
+```
+
+目前 retrieval 是 local keyword RAG baseline：只用 OCR mock text 產生 chunks 並做關鍵字比對，不使用 embedding、Qdrant、rerank、OpenAI API、Ollama、vLLM 或真正 LLM。
 
 ## Local Run
 
@@ -132,7 +193,7 @@ http://127.0.0.1:8000/docs
 
 ```powershell
 curl -X POST http://127.0.0.1:8000/documents/upload \
-  -F "file=@sample.pdf"
+  -F "file=@sample-data/documents/mock-invoice-aurora.txt"
 ```
 
 查詢文件列表：
@@ -282,18 +343,28 @@ Demo 操作流程：
 4. 啟動 frontend：`cd frontend` 後執行 `npm.cmd run dev`。
 5. 開啟 `http://localhost:5173`，在 RAG chat 輸入問題，確認 answer、citations 與 retrieved chunks。
 
+## v0.5.1 Demo Hardening
+
+v0.5.1 補強 demo 可重跑性與 GitHub 可讀性，不新增 Qdrant、embedding、rerank 或真正 LLM：
+
+- `sample-data/documents/` 提供 2 份公開虛構文字樣本。
+- `scripts/demo-smoke-test.ps1` 可重跑驗證 `/health`、upload、OCR mock 與 `/rag/query`。
+- `scripts/seed-demo-data.ps1` 可上傳 invoice sample、執行 OCR mock、執行範例 RAG query，並輸出 answer、citations、retrieved chunks。
+- OCR mock 對 text sample 會把上傳文字納入 deterministic mock OCR text，讓 local keyword RAG 能引用具體 demo 欄位。
+- `/health` 回傳 version `0.5.1`。
+
 ## Documentation
 
 - `goal.md`：完整產品構想與長期目標。
 - `docs/PRD.md`：依 `goal.md` 收斂後的 MVP 產品需求。
 - `docs/ARCHITECTURE.md`：MVP 架構與明確延後的元件。
-- `docs/ROADMAP.md`：Phase 00 到 v0.5.0 的開發路線。
+- `docs/ROADMAP.md`：Phase 00 到 v0.5.1 的開發路線。
 - `TODO.md`：目前階段 checklist。
 - `tasks/`：可單次完成、可單獨 commit 的任務票。
 
 ## Current Status
 
-目前完成 MVP v0.5.0 Local RAG Baseline：
+目前完成 MVP v0.5.1 Demo Hardening：
 
 - `GET /health` 回傳 service、status、version。
 - `POST /documents/upload` 可接收 `UploadFile`，保存原始檔並回傳 document metadata。
@@ -308,10 +379,11 @@ Demo 操作流程：
 - backend 可用 Dockerfile / Compose 啟動。
 - frontend 可顯示 backend health、選擇檔案、呼叫 upload API、刷新文件列表、執行 Run Mock OCR、查看 OCR 結果，並用 RAG chat 查詢 answer 與 citations。
 - GitHub Actions Backend CI 已建立。
+- demo seed script 與 API smoke test 已建立，可用公開 sample data 重跑 demo。
 
 尚未實作真正 OCR engine、embedding、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
 
-本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前 backend pytest、frontend build、Docker build、Docker Compose healthcheck、Compose upload API、Compose OCR mock API 與 Compose RAG API 均已納入 v0.5.0 驗證流程。
+本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前 backend pytest、frontend build、Docker build、Docker Compose healthcheck、Compose upload API、Compose OCR mock API、Compose RAG API、demo smoke test 與 demo seed script 均已納入 v0.5.1 驗證流程。
 
 ## Release Status
 
@@ -321,3 +393,4 @@ Demo 操作流程：
 - v0.3.0: Document Local Storage、文件列表、文件詳情、frontend list UI、Docker Compose upload 驗證已完成。
 - v0.4.0: OCR Mock Pipeline、OCR result persistence、frontend OCR UI、Docker Compose OCR mock API 驗證已完成。
 - v0.5.0: Local RAG Baseline、chunking、keyword retrieval、RAG answer API、frontend Chat UI 與 Docker Compose RAG API 驗證已完成。
+- v0.5.1: Demo Hardening、公開 sample data、demo seed script、API smoke test、5 分鐘 demo flow 與 Docker Compose demo 驗證已完成。

@@ -1,0 +1,17 @@
+Fictitious Demo Invoice
+
+Invoice number: AUR-2026-051
+Vendor: Aurora Office Supplies Demo LLC
+Customer: Northstar Analytics Demo Team
+Issue date: 2026-05-31
+Due date: 2026-06-15
+Payment terms: Net 15
+Amount due: USD 1,248.50
+
+Line items:
+- 6 ergonomic chair kits at USD 149.00 each
+- 2 monitor arm bundles at USD 137.25 each
+- Demo handling fee at USD 80.00
+
+Notes:
+This is public demo data for DocuRAG AgentOps. It is fictional and does not identify a real customer, employee, or supplier.

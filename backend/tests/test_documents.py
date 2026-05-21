@@ -187,6 +187,23 @@ def test_get_document_includes_saved_ocr_result(client: TestClient) -> None:
     assert body["chunks"][0]["source"] == "ocr_mock"
 
 
+def test_run_mock_ocr_includes_uploaded_text_sample(client: TestClient) -> None:
+    sample_text = b"Invoice number: AUR-2026-051\nPayment terms: Net 15"
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("demo-invoice.txt", sample_text, "text/plain")},
+    )
+    document_id = upload_response.json()["document_id"]
+
+    response = client.post(f"/documents/{document_id}/ocr/mock")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "Uploaded text content:" in body["text"]
+    assert "Invoice number: AUR-2026-051" in body["text"]
+    assert "Payment terms: Net 15" in body["text"]
+
+
 def test_run_mock_ocr_returns_404_for_unknown_document(client: TestClient) -> None:
     response = client.post("/documents/not-found/ocr/mock")
 

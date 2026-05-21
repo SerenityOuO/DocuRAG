@@ -35,15 +35,15 @@ async def query_rag(
 
     if not retrieved_chunks:
         answer = (
-            f"找不到與「{request.query}」相關的 OCR mock chunk。"
-            "請先上傳文件、執行 Mock OCR，再重新查詢。"
+            f"No OCR mock chunks matched query: {request.query}. "
+            "Upload a document, run Mock OCR, then query again."
         )
     else:
         evidence_lines = [
             f"{index}. [{chunk.filename} / {chunk.chunk_id}] {chunk.text}"
             for index, chunk in enumerate(retrieved_chunks, start=1)
         ]
-        answer = "根據本機 OCR mock chunks，找到以下相關內容：\n" + "\n".join(evidence_lines)
+        answer = "Local OCR mock chunks matched the query:\n" + "\n".join(evidence_lines)
 
     return RagQueryResponse(
         answer=answer,

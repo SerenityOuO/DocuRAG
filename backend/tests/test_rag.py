@@ -38,7 +38,7 @@ def test_rag_query_returns_answer_citations_and_retrieved_chunks(client: TestCli
 
     assert response.status_code == 200
     body = response.json()
-    assert "根據本機 OCR mock chunks" in body["answer"]
+    assert "Local OCR mock chunks matched the query" in body["answer"]
     assert body["citations"] == [
         {
             "document_id": document_id,
@@ -66,9 +66,35 @@ def test_rag_query_returns_empty_result_before_ocr(client: TestClient) -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert "找不到與「invoice」相關" in body["answer"]
+    assert "No OCR mock chunks matched query: invoice" in body["answer"]
     assert body["citations"] == []
     assert body["retrieved_chunks"] == []
+
+
+def test_rag_query_retrieves_uploaded_text_sample_content(client: TestClient) -> None:
+    upload_response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "mock-invoice-aurora.txt",
+                b"Invoice number: AUR-2026-051\nDue date: 2026-06-15\nPayment terms: Net 15",
+                "text/plain",
+            )
+        },
+    )
+    document_id = upload_response.json()["document_id"]
+    client.post(f"/documents/{document_id}/ocr/mock")
+
+    response = client.post(
+        "/rag/query",
+        json={"query": "payment due date Net 15", "top_k": 3},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["citations"][0]["filename"] == "mock-invoice-aurora.txt"
+    assert "AUR-2026-051" in body["retrieved_chunks"][0]["text"]
+    assert "Payment terms: Net 15" in body["retrieved_chunks"][0]["text"]
 
 
 def test_rag_query_backfills_chunks_from_existing_ocr_text(

@@ -6,7 +6,7 @@ services:
       context: ../backend
     environment:
       DOCURAG_APP_NAME: DocuRAG AgentOps Backend
-      DOCURAG_VERSION: 0.5.0
+      DOCURAG_VERSION: 0.5.1
       DOCURAG_ENVIRONMENT: docker
       DOCURAG_DATA_DIR: /app/data
     volumes:

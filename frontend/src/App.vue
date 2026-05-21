@@ -238,9 +238,9 @@ onMounted(() => {
 <template>
   <main class="page">
     <header class="hero">
-      <p class="eyebrow">v0.5.0 Local RAG Baseline</p>
+      <p class="eyebrow">v0.5.1 Demo Hardening</p>
       <h1>DocuRAG AgentOps</h1>
-      <p class="hero-copy">Backend health、本機文件上傳、metadata 保存、OCR mock 與本機 RAG 問答驗證。</p>
+      <p class="hero-copy">Backend health、本機文件上傳、metadata 保存、OCR mock、local keyword RAG 與 citations 驗證。</p>
     </header>
 
     <section class="layout" aria-label="Demo controls">
@@ -462,7 +462,7 @@ onMounted(() => {
         <form class="chat-form" @submit.prevent="submitRagQuery">
           <label>
             <span>Query</span>
-            <textarea v-model="ragQuery" rows="3" placeholder="例如：invoice 的 content type 是什麼？" />
+            <textarea v-model="ragQuery" rows="3" placeholder="例如：payment due date Net 15" />
           </label>
 
           <label>

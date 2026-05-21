@@ -85,7 +85,7 @@ class DocumentStorage:
 
         return sorted(
             matches,
-            key=lambda chunk: (-chunk.score, chunk.created_at, chunk.chunk_id),
+            key=lambda chunk: (-chunk.score, -chunk.created_at.timestamp(), chunk.chunk_id),
         )[:top_k]
 
     def get_file_path(self, document: DocumentMetadata) -> Path | None:
@@ -140,17 +140,31 @@ class DocumentStorage:
                 continue
 
             now = datetime.now(UTC)
+            ocr_lines = [
+                f"Mock OCR result for {document.filename}",
+                f"Document ID: {document.document_id}",
+                f"File type: {document.file_type}",
+                f"Content type: {document.content_type}",
+                f"Size: {document.size} bytes",
+            ]
+            text_file_types = {"csv", "md", "txt"}
+            file_path = self.get_file_path(document)
+
+            if (
+                file_path is not None
+                and (document.content_type.startswith("text/") or document.file_type in text_file_types)
+            ):
+                try:
+                    uploaded_text = file_path.read_text(encoding="utf-8").strip()
+                except UnicodeDecodeError:
+                    uploaded_text = ""
+
+                if uploaded_text:
+                    ocr_lines.extend(["Uploaded text content:", uploaded_text[:4000]])
+
             ocr_result = OcrResult(
                 status=OcrStatus.COMPLETED,
-                text="\n".join(
-                    [
-                        f"Mock OCR result for {document.filename}",
-                        f"Document ID: {document.document_id}",
-                        f"File type: {document.file_type}",
-                        f"Content type: {document.content_type}",
-                        f"Size: {document.size} bytes",
-                    ]
-                ),
+                text="\n".join(ocr_lines),
                 extracted_fields={
                     "filename": document.filename,
                     "file_type": document.file_type,
@@ -192,7 +206,10 @@ class DocumentStorage:
         except OSError:
             # Docker Desktop bind mounts on Windows can reject atomic replace.
             self.metadata_path.write_text(content, encoding="utf-8")
-            temp_path.unlink(missing_ok=True)
+            try:
+                temp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
 
     def _safe_filename(self, filename: str) -> str:
         name = Path(filename.replace("\\", "/")).name

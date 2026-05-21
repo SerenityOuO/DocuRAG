@@ -1,6 +1,6 @@
 # DocuRAG AgentOps Frontend
 
-最小 Vue 3 + Vite demo UI，用來檢查 backend health、上傳文件、顯示文件列表、執行 mock OCR，並用 local RAG chat 查看 deterministic answer、citations 與 retrieved chunks。
+最小 Vue 3 + Vite demo UI，用來檢查 backend health、上傳文件、顯示文件列表、執行 mock OCR，並用 local RAG chat 查看 deterministic answer、citations 與 retrieved chunks。v0.5.1 搭配公開 sample data、demo seed script 與 API smoke test，讓 GitHub / 面試展示可以快速重跑。
 
 ## Install
 
@@ -46,7 +46,7 @@ npm.cmd run build
 
 ## Demo UI
 
-v0.5.0 UI 支援：
+v0.5.1 UI 支援：
 
 - `GET /health` 顯示 backend 狀態。
 - `POST /documents/upload` 上傳本機文件。
@@ -58,3 +58,13 @@ v0.5.0 UI 支援：
 - OCR result 面板顯示 OCR status、OCR text 與 extracted fields。
 - RAG chat 可輸入 query 與 top_k，呼叫 `POST /rag/query`。
 - RAG result 面板顯示 deterministic answer、citations 與 retrieved chunks。
+
+建議 demo query：
+
+```text
+payment due date Net 15
+```
+
+在 backend 已執行 `scripts/seed-demo-data.ps1` 後，RAG result 預期會引用 `mock-invoice-aurora.txt`，retrieved chunks 會包含 `Invoice number: AUR-2026-051`、`Due date: 2026-06-15` 或 `Payment terms: Net 15` 等公開 demo 文字。
+
+目前 frontend 展示的是 local keyword RAG baseline，不是 embedding、Qdrant、rerank 或真正 LLM。真正 OCR / embedding / LLM provider 會留給後續 ticket。

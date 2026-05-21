@@ -1,0 +1,16 @@
+Fictitious Demo Support Contract Excerpt
+
+Agreement ID: SUP-2026-ALPHA
+Provider: Meridian Platform Demo Services
+Customer: Atlas Ops Demo Workspace
+Effective date: 2026-04-01
+Renewal date: 2026-09-30
+
+Service summary:
+The provider offers weekday support coverage from 09:00 to 18:00 local time. Critical incidents target a first response within 4 business hours.
+
+SLA and credits:
+If monthly uptime falls below 99.5 percent, the customer may request a 5 percent service credit for the affected month. Credits are the exclusive remedy for this demo agreement.
+
+Notes:
+This sample is fictional and safe for public GitHub demos.

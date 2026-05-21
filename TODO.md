@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.5.0。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.5.1。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -90,6 +90,20 @@
 - [x] frontend package version 更新為 `0.5.0`。
 - [x] 確認未接真正 LLM、OpenAI API、Ollama、vLLM、embedding、Qdrant、rerank、Redis、NATS、PostgreSQL、登入或 RBAC。
 
+## MVP v0.5.1 Demo Hardening
+
+- [x] 建立 `tasks/phase-05-rag-baseline/05-02-demo-hardening.md`。
+- [x] 建立公開 sample documents，不包含真實個資或公司敏感資料。
+- [x] 建立 `scripts/seed-demo-data.ps1`，可自動 upload、OCR mock、RAG query。
+- [x] seed script 輸出 answer、citations 與 retrieved chunks。
+- [x] 建立 `scripts/demo-smoke-test.ps1`，可驗證 `/health`、upload、OCR mock 與 `/rag/query`。
+- [x] README 加入 5 分鐘 demo 指令、backend/frontend/Docker 啟動方式、範例問題與預期結果。
+- [x] backend README 與 frontend README 加入 v0.5.1 demo flow。
+- [x] OCR mock 對 text sample 納入公開 sample 文字，方便 local keyword RAG demo。
+- [x] backend version 更新為 `0.5.1`。
+- [x] frontend package version 更新為 `0.5.1`。
+- [x] 確認仍未接 Qdrant、embedding、rerank、真正 LLM、OpenAI API、Ollama、vLLM、Redis、NATS、PostgreSQL、登入或 RBAC。
+
 ## Parking Lot
 
 - [ ] 真正 OCR / VLM parser。
@@ -110,3 +124,4 @@
 - [x] v0.3.0: Document Local Storage、文件列表、文件詳情、frontend list UI 與 Docker Compose upload 驗證已完成。
 - [x] v0.4.0: OCR Mock Pipeline、frontend OCR UI 與 Docker Compose OCR mock API 驗證已完成。
 - [x] v0.5.0: Local RAG Baseline、frontend Chat UI 與 Docker Compose RAG API 驗證已完成。
+- [x] v0.5.1: Demo Hardening、公開 sample data、demo seed script、API smoke test 與 Docker Compose demo 驗證已完成。
