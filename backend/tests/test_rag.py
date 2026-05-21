@@ -6,8 +6,12 @@ from fastapi.testclient import TestClient
 
 from app.api.routes.documents import get_document_storage as get_documents_storage
 from app.api.routes.rag import get_document_storage as get_rag_storage
+from app.api.routes.rag import get_rag_provider
 from app.main import app
+from app.schemas.documents import DocumentChunk, DocumentMetadata, DocumentStatus
+from app.schemas.rag import RagCitation, RagQueryResponse
 from app.services.document_storage import DocumentStorage
+from app.services.rag import KeywordRagProvider
 
 
 @pytest.fixture
@@ -97,6 +101,59 @@ def test_rag_query_retrieves_uploaded_text_sample_content(client: TestClient) ->
     assert "Payment terms: Net 15" in body["retrieved_chunks"][0]["text"]
 
 
+def test_keyword_rag_provider_scores_sorts_and_limits_results() -> None:
+    documents = [
+        DocumentMetadata(
+            document_id="doc-001",
+            filename="invoice-a.txt",
+            stored_filename="doc-001-invoice-a.txt",
+            file_type="txt",
+            content_type="text/plain",
+            size=100,
+            status=DocumentStatus.READY,
+            created_at="2026-05-20T00:00:00Z",
+            chunks=[
+                DocumentChunk(
+                    chunk_id="doc-001-chunk-001",
+                    document_id="doc-001",
+                    text="invoice invoice payment terms net 15",
+                    source="ocr_mock",
+                    created_at="2026-05-20T00:00:00Z",
+                ),
+                DocumentChunk(
+                    chunk_id="doc-001-chunk-002",
+                    document_id="doc-001",
+                    text="invoice support contract",
+                    source="ocr_mock",
+                    created_at="2026-05-21T00:00:00Z",
+                ),
+            ],
+        )
+    ]
+
+    response = KeywordRagProvider().query("invoice payment", 1, documents)
+
+    assert response.answer.startswith("Local OCR mock chunks matched the query")
+    assert response.citations == [
+        RagCitation(
+            document_id="doc-001",
+            filename="invoice-a.txt",
+            chunk_id="doc-001-chunk-001",
+        )
+    ]
+    assert len(response.retrieved_chunks) == 1
+    assert response.retrieved_chunks[0].chunk_id == "doc-001-chunk-001"
+    assert response.retrieved_chunks[0].score == 3
+
+
+def test_keyword_rag_provider_returns_empty_result() -> None:
+    response = KeywordRagProvider().query("missing", 3, [])
+
+    assert "No OCR mock chunks matched query: missing" in response.answer
+    assert response.citations == []
+    assert response.retrieved_chunks == []
+
+
 def test_rag_query_backfills_chunks_from_existing_ocr_text(
     client: TestClient,
     tmp_path: Path,
@@ -125,6 +182,42 @@ def test_rag_query_backfills_chunks_from_existing_ocr_text(
 
     saved_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     assert saved_metadata[0]["chunks"][0]["chunk_id"] == f"{document_id}-chunk-001"
+
+
+def test_rag_query_uses_provider_response(client: TestClient) -> None:
+    class StubRagProvider:
+        def query(
+            self,
+            query: str,
+            top_k: int,
+            documents: list[DocumentMetadata],
+        ) -> RagQueryResponse:
+            assert query == "invoice"
+            assert top_k == 2
+            assert len(documents) == 1
+            return RagQueryResponse(
+                answer="Provider answer",
+                citations=[],
+                retrieved_chunks=[],
+            )
+
+    app.dependency_overrides[get_rag_provider] = StubRagProvider
+    client.post(
+        "/documents/upload",
+        files={"file": ("invoice.pdf", b"sample invoice", "application/pdf")},
+    )
+
+    response = client.post(
+        "/rag/query",
+        json={"query": "invoice", "top_k": 2},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "answer": "Provider answer",
+        "citations": [],
+        "retrieved_chunks": [],
+    }
 
 
 def test_rag_query_validates_request(client: TestClient) -> None:

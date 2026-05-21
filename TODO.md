@@ -112,7 +112,7 @@
 - [x] 建立 `tasks/phase-06-bridge/06-04-chunk-citation-schema.md`。
 - [x] 建立 `tasks/phase-06-bridge/06-05-processing-job-contract.md`。
 - [x] 執行 OCR provider interface bridge，保留 mock provider 並維持 OCR API 相容。
-- [ ] 執行 RAG provider interface bridge，保留 local keyword provider 並維持 `/rag/query` 相容。
+- [x] 執行 RAG provider interface bridge，保留 local keyword provider 並維持 `/rag/query` 相容。
 - [ ] 執行 processing status contract，明確定義 upload、OCR、indexing、ready 與 failed 狀態。
 - [ ] 執行 chunk / citation schema bridge，補齊 page、bbox、confidence 與 trace metadata contract。
 - [ ] 執行 processing job contract，建立同步 job metadata，不引入真正 worker 或 queue。

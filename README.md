@@ -93,7 +93,7 @@ DocuRAG/
     └── phase-05-rag-baseline/
 ```
 
-真正 OCR engine、embedding、Qdrant、Redis、NATS、vLLM、登入權限與資料庫 schema 仍保留為後續 ticket。v0.5.1 只提供 deterministic mock OCR text、local keyword retrieval 與 template answer；不是 embedding/Qdrant/LLM RAG。v0.6 bridge 會先整理 provider contract，目前 OCR 只接 `MockOcrProvider`，不接真正 OCR engine。
+真正 OCR engine、embedding、Qdrant、Redis、NATS、vLLM、登入權限與資料庫 schema 仍保留為後續 ticket。v0.5.1 只提供 deterministic mock OCR text、local keyword retrieval 與 template answer；不是 embedding/Qdrant/LLM RAG。v0.6 bridge 會先整理 provider contract，目前 OCR 只接 `MockOcrProvider`，RAG 只接 `KeywordRagProvider`，不接真正 OCR engine、embedding、Qdrant、rerank 或 LLM。
 
 ## 5-Minute Demo v0.5.1
 
@@ -385,6 +385,7 @@ v0.6 bridge in progress：
 
 - OCR mock 已整理到 `MockOcrProvider`，`DocumentStorage` 只負責呼叫 provider 並保存 OCR result / chunks。
 - `POST /documents/{document_id}/ocr/mock` 與 `GET /documents/{document_id}/ocr` response contract 保持 v0.5.1 相容。
+- local keyword RAG 已整理到 `KeywordRagProvider`，`POST /rag/query` 的 answer、citations 與 retrieved_chunks contract 保持 v0.5.1 相容。
 
 尚未實作真正 OCR engine、embedding、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
 
@@ -399,4 +400,4 @@ v0.6 bridge in progress：
 - v0.4.0: OCR Mock Pipeline、OCR result persistence、frontend OCR UI、Docker Compose OCR mock API 驗證已完成。
 - v0.5.0: Local RAG Baseline、chunking、keyword retrieval、RAG answer API、frontend Chat UI 與 Docker Compose RAG API 驗證已完成。
 - v0.5.1: Demo Hardening、公開 sample data、demo seed script、API smoke test、5 分鐘 demo flow 與 Docker Compose demo 驗證已完成。
-- v0.6.0: 06-01 OCR provider interface bridge 已完成；其餘 bridge tickets 待執行。
+- v0.6.0: 06-01 OCR provider interface bridge 與 06-02 RAG provider interface bridge 已完成；其餘 bridge tickets 待執行。

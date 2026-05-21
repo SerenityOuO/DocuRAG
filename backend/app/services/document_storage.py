@@ -13,7 +13,6 @@ from app.schemas.documents import (
     OcrResult,
     OcrStatus,
 )
-from app.schemas.rag import RetrievedChunk
 from app.services.ocr import OcrProvider
 
 
@@ -42,13 +41,7 @@ class DocumentStorage:
 
         return document.ocr or OcrResult(status=OcrStatus.PENDING)
 
-    def search_chunks(self, query: str, top_k: int) -> list[RetrievedChunk]:
-        query_terms = self._tokenize(query)
-
-        if not query_terms:
-            return []
-
-        matches: list[RetrievedChunk] = []
+    def list_documents_for_rag(self) -> list[DocumentMetadata]:
         documents = self._read_documents()
         documents_changed = False
 
@@ -66,28 +59,10 @@ class DocumentStorage:
                 documents[index] = document
                 documents_changed = True
 
-            for chunk in document.chunks:
-                chunk_terms = self._tokenize(chunk.text)
-                score = sum(chunk_terms.count(term) for term in query_terms)
-
-                if score <= 0:
-                    continue
-
-                matches.append(
-                    RetrievedChunk(
-                        **chunk.model_dump(),
-                        filename=document.filename,
-                        score=float(score),
-                    )
-                )
-
         if documents_changed:
             self._write_documents(documents)
 
-        return sorted(
-            matches,
-            key=lambda chunk: (-chunk.score, -chunk.created_at.timestamp(), chunk.chunk_id),
-        )[:top_k]
+        return documents
 
     def get_file_path(self, document: DocumentMetadata) -> Path | None:
         upload_root = self.upload_dir.resolve()
@@ -241,6 +216,3 @@ class DocumentStorage:
             )
 
         return chunks
-
-    def _tokenize(self, text: str) -> list[str]:
-        return re.findall(r"[a-z0-9]+", text.lower())
