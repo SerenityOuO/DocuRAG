@@ -2,7 +2,9 @@ param(
     [string]$ApiBaseUrl = "http://127.0.0.1:8000",
     [string]$SamplePath = "",
     [string]$Query = "payment due date Net 15",
-    [int]$TopK = 3
+    [int]$TopK = 3,
+    [switch]$RunRealOcr,
+    [string]$RealOcrSamplePath = ""
 )
 
 Set-StrictMode -Version Latest
@@ -14,7 +16,12 @@ if ([string]::IsNullOrWhiteSpace($SamplePath)) {
     $SamplePath = Join-Path $repoRoot "sample-data/documents/mock-invoice-aurora.txt"
 }
 
+if ([string]::IsNullOrWhiteSpace($RealOcrSamplePath)) {
+    $RealOcrSamplePath = Join-Path $repoRoot "sample-data/documents/sample-ocr-invoice.png"
+}
+
 $resolvedSamplePath = (Resolve-Path -LiteralPath $SamplePath).Path
+$resolvedRealOcrSamplePath = (Resolve-Path -LiteralPath $RealOcrSamplePath).Path
 
 Write-Host "DocuRAG demo seed"
 Write-Host "API: $ApiBaseUrl"
@@ -53,3 +60,28 @@ $rag.citations | ConvertTo-Json -Depth 8
 Write-Host ""
 Write-Host "Retrieved chunks:"
 $rag.retrieved_chunks | ConvertTo-Json -Depth 8
+
+if ($RunRealOcr) {
+    Write-Host ""
+    Write-Host "Optional provider-selected OCR:"
+    Write-Host "Sample: $resolvedRealOcrSamplePath"
+
+    $realUploadRaw = & curl.exe -sS -X POST "$ApiBaseUrl/documents/upload" -F "file=@$resolvedRealOcrSamplePath;type=image/png"
+    if ($LASTEXITCODE -ne 0) {
+        throw "Real OCR sample upload failed with exit code $LASTEXITCODE"
+    }
+
+    $realUpload = $realUploadRaw | ConvertFrom-Json
+
+    try {
+        $realOcr = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($realUpload.document_id)/ocr"
+        Write-Host "Provider-selected OCR status: $($realOcr.status)"
+        Write-Host "Provider-selected OCR text:"
+        Write-Host $realOcr.text
+        Write-Host "Provider-selected OCR fields:"
+        $realOcr.extracted_fields | ConvertTo-Json -Depth 8
+    }
+    catch {
+        Write-Warning "Optional real OCR did not complete. Mock seed flow remains valid. $($_.Exception.Message)"
+    }
+}

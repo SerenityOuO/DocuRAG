@@ -183,6 +183,33 @@ data/documents.json
 
 也可用 `DOCURAG_DATA_DIR` 覆寫資料根目錄。
 
+## Phase 07 Real OCR Optional Spike
+
+預設 OCR provider 仍是 `mock`，不需要 PaddleOCR dependency：
+
+```powershell
+cd backend
+py -3 -m pip install -e ".[dev]"
+py -3 -m uvicorn app.main:app --reload
+```
+
+若要手動嘗試 provider-selected real OCR，先安裝 optional extra，再用 `DOCURAG_OCR_PROVIDER=paddleocr` 啟動 backend：
+
+```powershell
+cd backend
+py -3 -m pip install -e ".[dev,real-ocr]"
+$env:DOCURAG_OCR_PROVIDER="paddleocr"
+py -3 -m uvicorn app.main:app --reload
+```
+
+optional smoke check：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunRealOcr
+```
+
+若 PaddleOCR dependency、模型下載或 Docker 環境不可用，mock flow 仍應可用；real OCR 是 Phase 07 spike，不是 production OCR pipeline。
+
 ## Docker Validation
 
 ```powershell
@@ -192,6 +219,16 @@ docker compose -f infra/docker-compose.yml up -d
 curl http://127.0.0.1:8000/health
 curl -X POST http://127.0.0.1:8000/documents/upload -F "file=@sample.pdf"
 curl http://127.0.0.1:8000/documents
+docker compose -f infra/docker-compose.yml down
+```
+
+Real OCR Docker dependency 可用 build arg 開啟，預設關閉：
+
+```powershell
+$env:DOCURAG_INSTALL_REAL_OCR="true"
+$env:DOCURAG_OCR_PROVIDER="paddleocr"
+docker compose -f infra/docker-compose.yml up -d --build
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunRealOcr
 docker compose -f infra/docker-compose.yml down
 ```
 

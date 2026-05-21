@@ -19,6 +19,14 @@
 - 不建立 production OCR quality benchmark。
 - 不新增 job dashboard。
 
+## Implementation Notes
+
+- 新增自造 sample image `sample-data/documents/sample-ocr-invoice.png`，內容是虛構 invoice，不含真實個資、真實客戶資料或公司敏感內容。
+- `demo-smoke-test.ps1` 與 `seed-demo-data.ps1` 預設仍只驗證 mock flow。
+- 兩支 demo script 新增 `-RunRealOcr` 與 `-RealOcrSamplePath`，讓 real OCR validation 成為 optional。
+- optional real OCR check 若因 PaddleOCR dependency、模型或 provider 設定不可用而失敗，會輸出 warning，不會讓預設 mock demo 失效。
+- README、backend README、frontend README、LOCAL_DEV_SETUP、ROADMAP、TODO 與 sample-data README 均補上 mock flow / optional real OCR flow 邊界。
+
 ## Files likely to change
 
 - `README.md`
@@ -33,11 +41,11 @@
 
 ## Acceptance Criteria
 
-- [ ] README 清楚說明 mock flow 與 optional real OCR flow。
-- [ ] 缺少 real OCR dependency 時 mock demo 仍可重跑。
-- [ ] smoke test 不因 real OCR dependency 缺失而失敗。
-- [ ] sample data 不包含真實個資或公司敏感資料。
-- [ ] 文件明確標示 Phase 07 不包含 queue、DB、Qdrant、embedding、LLM 或權限系統。
+- [x] README 清楚說明 mock flow 與 optional real OCR flow。
+- [x] 缺少 real OCR dependency 時 mock demo 仍可重跑。
+- [x] smoke test 不因 real OCR dependency 缺失而失敗。
+- [x] sample data 不包含真實個資或公司敏感資料。
+- [x] 文件明確標示 Phase 07 不包含 queue、DB、Qdrant、embedding、LLM 或權限系統。
 
 ## Validation
 
@@ -48,3 +56,13 @@
 - `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
 - `docker compose -f infra/docker-compose.yml down`
 - `git status --short --branch`
+
+## Validation Notes
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` passed: 46 tests passed.
+- `cd frontend; npm.cmd run build` passed outside the sandbox; sandbox file permissions block Vite config resolution.
+- `docker build -t docurag-backend ./backend` blocked because Docker Desktop daemon was not running (`dockerDesktopLinuxEngine` pipe not found).
+- `docker compose -f infra/docker-compose.yml up -d --build` and `docker compose -f infra/docker-compose.yml down` were also blocked by the same Docker daemon issue.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1` could not run immediately after Compose because the Compose backend was not started.
+- Local uvicorn fallback validation passed: `demo-smoke-test.ps1`, `seed-demo-data.ps1`, and `demo-smoke-test.ps1 -RunRealOcr` all completed against a temp-data backend. The `-RunRealOcr` path warned when the provider-selected endpoint was still using default mock provider, as expected.
+- Mock OCR path remains the default provider path and remains validated without real OCR dependency.

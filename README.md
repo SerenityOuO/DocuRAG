@@ -24,7 +24,7 @@ MVP 採用 incremental thin slice，先跑通產品故事與 API 邊界：
 - v0.5.0：使用 OCR mock text 建立 local RAG baseline，提供 chunking、keyword retrieval、deterministic answer API 與簡易 Chat UI。
 - v0.5.1：補強 GitHub / 面試展示流程，加入公開 sample data、demo seed script、API smoke test 與 5 分鐘 demo 指令。
 - v0.6.0：整理 OCR / RAG provider bridge、processing status、chunk / citation trace schema 與 processing job contract。
-- v0.7.0（tickets 已建立，07-01 到 07-03 已完成）：選定 PaddleOCR 作為單一 local OCR provider spike，新增 provider-selected OCR endpoint，並正規化 OCR trace metadata；預設仍保留 mock demo。
+- v0.7.0（tickets 已完成）：選定 PaddleOCR 作為單一 local OCR provider spike，新增 provider-selected OCR endpoint，正規化 OCR trace metadata，並補齊 optional real OCR demo；預設仍保留 mock demo。
 
 MVP 初期可以使用 fixture 或最小資料結構，不要求真正 AI pipeline。以下能力保留為後續階段：
 
@@ -119,6 +119,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1
 ```
 
 `seed-demo-data.ps1` 會自動上傳 `sample-data/documents/mock-invoice-aurora.txt`、執行 OCR mock、查詢 local RAG，並輸出 `answer`、`citations` 與 `retrieved_chunks`。
+
+Optional real OCR smoke check 只在本機已安裝 real OCR extra、backend 以 `DOCURAG_OCR_PROVIDER=paddleocr` 啟動時使用；缺少 PaddleOCR dependency 時，預設 mock demo 不受影響：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunRealOcr
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1 -RunRealOcr
+```
+
+real OCR optional sample 位於 `sample-data/documents/sample-ocr-invoice.png`，內容是自造虛構 invoice，不包含真實個資或公司敏感資料。
 
 範例問題：
 
@@ -407,7 +416,7 @@ Phase 07 ticket backlog 已建立：
 - `tasks/phase-07-real-ocr-provider/07-03-ocr-output-normalization.md`
 - `tasks/phase-07-real-ocr-provider/07-04-real-ocr-demo-hardening.md`
 
-07-01 已選定 PaddleOCR 作為 Phase 07 的 real OCR spike provider。07-02 已新增 provider-selected `POST /documents/{document_id}/ocr`，既有 `POST /documents/{document_id}/ocr/mock` 保持相容。07-03 已新增 `OcrResult.lines` normalization，將 real OCR line-level page、bbox、confidence 與 metadata 映射到 chunks、citations 與 retrieved_chunks。PaddleOCR 以 lazy import 接入，避免未安裝 real OCR dependency 時破壞既有 mock demo；若 real provider 不可用，real endpoint 會回傳清楚錯誤並更新 processing metadata。
+07-01 已選定 PaddleOCR 作為 Phase 07 的 real OCR spike provider。07-02 已新增 provider-selected `POST /documents/{document_id}/ocr`，既有 `POST /documents/{document_id}/ocr/mock` 保持相容。07-03 已新增 `OcrResult.lines` normalization，將 real OCR line-level page、bbox、confidence 與 metadata 映射到 chunks、citations 與 retrieved_chunks。07-04 已補齊 optional real OCR demo 說明、sample image 與 `-RunRealOcr` smoke/seed script 參數。PaddleOCR 以 lazy import 接入，避免未安裝 real OCR dependency 時破壞既有 mock demo；若 real provider 不可用，real endpoint 會回傳清楚錯誤並更新 processing metadata。
 
 PaddleOCR 目前只作為 Phase 07 controlled spike，不代表已完成 production OCR pipeline；尚未實作 PDF rendering、image preprocessing、embedding、Qdrant、async worker、queue、Redis、NATS、vLLM、登入、權限或資料庫 schema。
 
@@ -423,4 +432,4 @@ PaddleOCR 目前只作為 Phase 07 controlled spike，不代表已完成 product
 - v0.5.0: Local RAG Baseline、chunking、keyword retrieval、RAG answer API、frontend Chat UI 與 Docker Compose RAG API 驗證已完成。
 - v0.5.1: Demo Hardening、公開 sample data、demo seed script、API smoke test、5 分鐘 demo flow 與 Docker Compose demo 驗證已完成。
 - v0.6.0: Bridge Contracts、OCR provider interface、RAG provider interface、processing status、chunk citation schema 與 processing job contract 已完成。
-- v0.7.0: Real OCR Provider Spike tickets 已建立；07-01 已選定 PaddleOCR，07-02 已新增 provider adapter，07-03 已完成 output normalization，07-04 待實作。
+- v0.7.0: Real OCR Provider Spike tickets 已建立；07-01 已選定 PaddleOCR，07-02 已新增 provider adapter，07-03 已完成 output normalization，07-04 已完成 demo hardening。

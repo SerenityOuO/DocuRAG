@@ -147,6 +147,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1
 
 `demo-smoke-test.ps1` 會驗證 `/health`、upload、OCR mock 與 `/rag/query`。`seed-demo-data.ps1` 會上傳 `sample-data/documents/mock-invoice-aurora.txt`、執行 OCR mock、查詢 `payment due date Net 15`，並輸出 answer、citations、retrieved chunks。
 
+Optional real OCR demo 只在 backend 以 `DOCURAG_OCR_PROVIDER=paddleocr` 啟動、且已安裝 `.[dev,real-ocr]` 時使用。缺少 PaddleOCR dependency 時，mock smoke / seed flow 仍是預設可重跑路徑：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunRealOcr
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1 -RunRealOcr
+```
+
+optional sample image 是 `sample-data/documents/sample-ocr-invoice.png`，內容為自造虛構 invoice。
+
 ## Docker
 
 ```powershell
