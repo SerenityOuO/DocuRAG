@@ -43,6 +43,9 @@ def test_upload_document_returns_uploaded_metadata(client: TestClient) -> None:
     assert body["processing"]["ocr"] == "pending"
     assert body["processing"]["indexing"] == "pending"
     assert body["processing"]["ready"] is False
+    assert body["latest_job"]["job_type"] == "upload"
+    assert body["latest_job"]["status"] == "completed"
+    assert body["processing_jobs"][0]["job_type"] == "upload"
 
 
 def test_upload_document_saves_file_and_metadata(client: TestClient, tmp_path: Path) -> None:
@@ -65,6 +68,8 @@ def test_upload_document_saves_file_and_metadata(client: TestClient, tmp_path: P
     assert metadata[0]["processing"]["upload"] == "completed"
     assert metadata[0]["processing"]["ocr"] == "pending"
     assert metadata[0]["processing"]["indexing"] == "pending"
+    assert metadata[0]["latest_job"]["job_type"] == "upload"
+    assert metadata[0]["processing_jobs"][0]["document_id"] == body["document_id"]
 
 
 def test_list_documents_returns_uploaded_documents_newest_first(client: TestClient) -> None:
@@ -158,6 +163,13 @@ def test_run_mock_ocr_saves_result_to_metadata(
     assert metadata[0]["processing"]["ocr"] == "completed"
     assert metadata[0]["processing"]["indexing"] == "completed"
     assert metadata[0]["processing"]["ready"] is True
+    assert [job["job_type"] for job in metadata[0]["processing_jobs"]] == [
+        "upload",
+        "ocr_mock",
+        "local_indexing",
+    ]
+    assert metadata[0]["latest_job"]["job_type"] == "local_indexing"
+    assert metadata[0]["latest_job"]["status"] == "completed"
     assert metadata[0]["ocr"]["status"] == "completed"
     assert metadata[0]["ocr"]["text"] == body["text"]
     assert metadata[0]["chunks"][0]["chunk_id"] == f"{document_id}-chunk-001"
@@ -202,6 +214,8 @@ def test_get_document_includes_saved_ocr_result(client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "ready"
+    assert body["latest_job"]["job_type"] == "local_indexing"
+    assert body["latest_job"]["status"] == "completed"
     assert body["ocr"]["status"] == "completed"
     assert body["ocr"]["extracted_fields"]["filename"] == "receipt.txt"
     assert body["chunks"][0]["source"] == "ocr_mock"
@@ -302,6 +316,12 @@ def test_run_mock_ocr_persists_failed_processing_status(
     assert metadata[0]["processing"]["indexing"] == "pending"
     assert metadata[0]["processing"]["ready"] is False
     assert metadata[0]["processing"]["failed_reason"] == "provider failed"
+    assert [job["job_type"] for job in metadata[0]["processing_jobs"]] == [
+        "upload",
+        "ocr_mock",
+    ]
+    assert metadata[0]["latest_job"]["status"] == "failed"
+    assert metadata[0]["latest_job"]["error_message"] == "provider failed"
     assert metadata[0]["chunks"] == []
 
 

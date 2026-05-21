@@ -18,6 +18,12 @@ class ProcessingStepStatus(StrEnum):
     FAILED = "failed"
 
 
+class ProcessingJobType(StrEnum):
+    UPLOAD = "upload"
+    OCR_MOCK = "ocr_mock"
+    LOCAL_INDEXING = "local_indexing"
+
+
 class OcrStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
@@ -32,6 +38,22 @@ class ProcessingStatus(BaseModel):
     ready: bool = False
     failed_reason: str | None = None
     updated_at: datetime | None = None
+
+
+class ProcessingJob(BaseModel):
+    job_id: str = Field(..., min_length=1)
+    document_id: str = Field(..., min_length=1)
+    job_type: ProcessingJobType
+    status: ProcessingStepStatus
+    created_at: datetime
+    updated_at: datetime
+    error_message: str | None = None
+
+    @model_validator(mode="after")
+    def validate_updated_at(self):
+        if self.updated_at < self.created_at:
+            raise ValueError("updated_at must be greater than or equal to created_at")
+        return self
 
 
 class OcrResult(BaseModel):
@@ -82,6 +104,8 @@ class DocumentMetadata(BaseModel):
     processing: ProcessingStatus = Field(default_factory=ProcessingStatus)
     ocr: OcrResult = Field(default_factory=OcrResult)
     chunks: list[DocumentChunk] = Field(default_factory=list)
+    processing_jobs: list[ProcessingJob] = Field(default_factory=list)
+    latest_job: ProcessingJob | None = None
 
     @model_validator(mode="before")
     @classmethod

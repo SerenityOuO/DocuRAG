@@ -381,17 +381,18 @@ v0.5.1 補強 demo 可重跑性與 GitHub 可讀性，不新增 Qdrant、embeddi
 - GitHub Actions Backend CI 已建立。
 - demo seed script 與 API smoke test 已建立，可用公開 sample data 重跑 demo。
 
-v0.6 bridge in progress：
+v0.6 bridge completed：
 
 - OCR mock 已整理到 `MockOcrProvider`，`DocumentStorage` 只負責呼叫 provider 並保存 OCR result / chunks。
 - `POST /documents/{document_id}/ocr/mock` 與 `GET /documents/{document_id}/ocr` response contract 保持 v0.5.1 相容。
 - local keyword RAG 已整理到 `KeywordRagProvider`，`POST /rag/query` 的 answer、citations 與 retrieved_chunks contract 保持 v0.5.1 相容。
 - document metadata 新增 `processing` contract，可描述 upload、OCR、indexing、ready 與 failed_reason 狀態。
 - chunk 與 citation schema 新增 optional page、bbox、confidence、source_type、chunk metadata 與 citation `trace_metadata`，mock OCR 不產生真正 OCR bbox 或 confidence。
+- document metadata 新增 `processing_jobs` 與 `latest_job`，記錄同步 upload、mock OCR 與 local indexing job metadata，不引入 worker 或 queue。
 
 尚未實作真正 OCR engine、embedding、Qdrant、async worker、queue、Redis、NATS、vLLM、登入、權限或資料庫 schema。
 
-本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前 backend pytest、frontend build、Docker build、Docker Compose healthcheck、Compose upload API、Compose OCR mock API、Compose RAG API、demo smoke test 與 demo seed script 均已納入 v0.5.1 驗證流程。
+本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前 backend pytest、frontend build、Docker build、Docker Compose healthcheck、Compose upload API、Compose OCR mock API、Compose RAG API、demo smoke test 與 demo seed script 均已納入 v0.6 驗證流程。
 
 ## Release Status
 
@@ -402,4 +403,4 @@ v0.6 bridge in progress：
 - v0.4.0: OCR Mock Pipeline、OCR result persistence、frontend OCR UI、Docker Compose OCR mock API 驗證已完成。
 - v0.5.0: Local RAG Baseline、chunking、keyword retrieval、RAG answer API、frontend Chat UI 與 Docker Compose RAG API 驗證已完成。
 - v0.5.1: Demo Hardening、公開 sample data、demo seed script、API smoke test、5 分鐘 demo flow 與 Docker Compose demo 驗證已完成。
-- v0.6.0: 06-01 OCR provider interface bridge、06-02 RAG provider interface bridge、06-03 processing status contract 與 06-04 chunk citation schema 已完成；其餘 bridge tickets 待執行。
+- v0.6.0: Bridge Contracts、OCR provider interface、RAG provider interface、processing status、chunk citation schema 與 processing job contract 已完成。

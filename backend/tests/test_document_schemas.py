@@ -9,6 +9,8 @@ from app.schemas.documents import (
     DocumentUploadResponse,
     OcrResult,
     OcrStatus,
+    ProcessingJob,
+    ProcessingJobType,
     ProcessingStepStatus,
 )
 from app.schemas.rag import RagQueryRequest
@@ -35,6 +37,49 @@ def test_processing_step_status_values() -> None:
     assert ProcessingStepStatus.FAILED == "failed"
 
 
+def test_processing_job_type_values() -> None:
+    assert ProcessingJobType.UPLOAD == "upload"
+    assert ProcessingJobType.OCR_MOCK == "ocr_mock"
+    assert ProcessingJobType.LOCAL_INDEXING == "local_indexing"
+
+
+def test_processing_job_validates_required_fields() -> None:
+    job = ProcessingJob(
+        job_id="job-001",
+        document_id="doc-001",
+        job_type=ProcessingJobType.OCR_MOCK,
+        status=ProcessingStepStatus.COMPLETED,
+        created_at="2026-05-20T00:00:00Z",
+        updated_at="2026-05-20T00:00:01Z",
+    )
+
+    assert job.job_id == "job-001"
+    assert job.job_type == ProcessingJobType.OCR_MOCK
+    assert job.status == ProcessingStepStatus.COMPLETED
+
+
+def test_processing_job_rejects_invalid_status() -> None:
+    with pytest.raises(ValidationError):
+        ProcessingJob(
+            job_id="job-001",
+            document_id="doc-001",
+            job_type=ProcessingJobType.OCR_MOCK,
+            status="queued",
+            created_at="2026-05-20T00:00:00Z",
+            updated_at="2026-05-20T00:00:01Z",
+        )
+
+    with pytest.raises(ValidationError):
+        ProcessingJob(
+            job_id="job-001",
+            document_id="doc-001",
+            job_type=ProcessingJobType.OCR_MOCK,
+            status=ProcessingStepStatus.COMPLETED,
+            created_at="2026-05-20T00:00:01Z",
+            updated_at="2026-05-20T00:00:00Z",
+        )
+
+
 def test_document_processing_status_defaults() -> None:
     document = DocumentUploadResponse(
         document_id="doc_001",
@@ -52,6 +97,8 @@ def test_document_processing_status_defaults() -> None:
     assert document.processing.indexing == ProcessingStepStatus.PENDING
     assert document.processing.ready is False
     assert document.processing.failed_reason is None
+    assert document.processing_jobs == []
+    assert document.latest_job is None
 
 
 def test_legacy_ready_metadata_infers_processing_status() -> None:
@@ -92,6 +139,8 @@ def test_legacy_ready_metadata_infers_processing_status() -> None:
     assert document.chunks[0].confidence is None
     assert document.chunks[0].source_type == "ocr_mock"
     assert document.chunks[0].metadata == {}
+    assert document.processing_jobs == []
+    assert document.latest_job is None
 
 
 def test_document_response_rejects_invalid_status() -> None:

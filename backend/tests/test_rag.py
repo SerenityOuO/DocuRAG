@@ -203,6 +203,8 @@ def test_rag_query_backfills_chunks_from_existing_ocr_text(
     assert saved_metadata[0]["chunks"][0]["chunk_id"] == f"{document_id}-chunk-001"
     assert saved_metadata[0]["processing"]["indexing"] == "completed"
     assert saved_metadata[0]["processing"]["ready"] is True
+    assert saved_metadata[0]["latest_job"]["job_type"] == "local_indexing"
+    assert saved_metadata[0]["latest_job"]["status"] == "completed"
 
 
 def test_rag_query_uses_provider_response(client: TestClient) -> None:

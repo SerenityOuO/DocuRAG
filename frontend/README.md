@@ -56,7 +56,7 @@ v0.5.1 UI 支援：
 - 選中文件後可按 `Run Mock OCR` 呼叫 `POST /documents/{document_id}/ocr/mock`。
 - OCR client 支援 `GET /documents/{document_id}/ocr` 查詢目前 OCR result。
 - OCR result 面板顯示 OCR status、OCR text 與 extracted fields。
-- 文件列表與 OCR result 面板顯示 backend `processing` contract 的 indexing 與 ready 狀態。
+- 文件列表與 OCR result 面板顯示 backend `processing` contract 的 indexing、ready 與 latest job 狀態。
 - RAG chat 可輸入 query 與 top_k，呼叫 `POST /rag/query`。
 - RAG result 面板顯示 deterministic answer、citations、retrieved chunks 與 optional trace metadata，例如 source_type、page_number 與 confidence；缺值時前端會保持相容不顯示。
 
@@ -68,4 +68,4 @@ payment due date Net 15
 
 在 backend 已執行 `scripts/seed-demo-data.ps1` 後，RAG result 預期會引用 `mock-invoice-aurora.txt`，retrieved chunks 會包含 `Invoice number: AUR-2026-051`、`Due date: 2026-06-15` 或 `Payment terms: Net 15` 等公開 demo 文字。
 
-目前 frontend 展示的是 local keyword RAG baseline，不是 embedding、Qdrant、rerank 或真正 LLM。backend v0.6 bridge 只把 `/rag/query` 整理到 `KeywordRagProvider`，並用 `processing` 與 chunk / citation trace contract 顯示 upload / OCR / indexing / citation metadata；真正 OCR / embedding / LLM provider 會留給後續 ticket。
+目前 frontend 展示的是 local keyword RAG baseline，不是 embedding、Qdrant、rerank 或真正 LLM。backend v0.6 bridge 只把 `/rag/query` 整理到 `KeywordRagProvider`，並用 `processing`、`processing_jobs` 與 chunk / citation trace contract 顯示 upload / OCR / indexing / job / citation metadata；真正 OCR / embedding / LLM provider 會留給後續 ticket。

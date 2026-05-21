@@ -358,6 +358,7 @@ onMounted(() => {
                 <th>Status</th>
                 <th>OCR</th>
                 <th>Indexing</th>
+                <th>Latest job</th>
                 <th>Size</th>
                 <th>Created at</th>
                 <th>Content type</th>
@@ -385,6 +386,12 @@ onMounted(() => {
                   <span class="status-pill" :class="statusClass(document.processing.indexing)">
                     {{ document.processing.indexing }}
                   </span>
+                </td>
+                <td>
+                  <span v-if="document.latest_job" class="status-pill" :class="statusClass(document.latest_job.status)">
+                    {{ document.latest_job.job_type }} / {{ document.latest_job.status }}
+                  </span>
+                  <span v-else class="muted">none</span>
                 </td>
                 <td>{{ formatBytes(document.size) }}</td>
                 <td>{{ document.created_at }}</td>
@@ -447,6 +454,12 @@ onMounted(() => {
           <div v-if="selectedDocument.processing.failed_reason">
             <dt>Failed reason</dt>
             <dd>{{ selectedDocument.processing.failed_reason }}</dd>
+          </div>
+          <div v-if="selectedDocument.latest_job">
+            <dt>Latest job</dt>
+            <dd>
+              {{ selectedDocument.latest_job.job_type }} / {{ selectedDocument.latest_job.status }}
+            </dd>
           </div>
           <div>
             <dt>Updated at</dt>

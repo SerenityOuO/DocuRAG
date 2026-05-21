@@ -115,8 +115,8 @@
 - [x] 執行 RAG provider interface bridge，保留 local keyword provider 並維持 `/rag/query` 相容。
 - [x] 執行 processing status contract，明確定義 upload、OCR、indexing、ready 與 failed 狀態。
 - [x] 執行 chunk / citation schema bridge，補齊 page、bbox、confidence 與 trace metadata contract。
-- [ ] 執行 processing job contract，建立同步 job metadata，不引入真正 worker 或 queue。
-- [ ] 確認 v0.6 bridge 階段仍未接真正 OCR、embedding、Qdrant、rerank、LLM、Redis、NATS、PostgreSQL、登入或 RBAC。
+- [x] 執行 processing job contract，建立同步 job metadata，不引入真正 worker 或 queue。
+- [x] 確認 v0.6 bridge 階段仍未接真正 OCR、embedding、Qdrant、rerank、LLM、Redis、NATS、PostgreSQL、登入或 RBAC。
 
 ## Parking Lot
 
@@ -139,4 +139,4 @@
 - [x] v0.4.0: OCR Mock Pipeline、frontend OCR UI 與 Docker Compose OCR mock API 驗證已完成。
 - [x] v0.5.0: Local RAG Baseline、frontend Chat UI 與 Docker Compose RAG API 驗證已完成。
 - [x] v0.5.1: Demo Hardening、公開 sample data、demo seed script、API smoke test 與 Docker Compose demo 驗證已完成。
-- [ ] v0.6.0: Bridge Contracts、OCR provider interface、RAG provider interface、processing status、chunk citation schema 與 processing job contract。
+- [x] v0.6.0: Bridge Contracts、OCR provider interface、RAG provider interface、processing status、chunk citation schema 與 processing job contract。

@@ -12,6 +12,8 @@ from app.schemas.documents import (
     DocumentStatus,
     OcrResult,
     OcrStatus,
+    ProcessingJob,
+    ProcessingJobType,
     ProcessingStatus,
     ProcessingStepStatus,
 )
@@ -66,6 +68,12 @@ class DocumentStorage:
                     ready=True,
                     updated_at=document.ocr.updated_at or datetime.now(UTC),
                 )
+                self._record_job(
+                    document,
+                    ProcessingJobType.LOCAL_INDEXING,
+                    ProcessingStepStatus.COMPLETED,
+                    document.ocr.updated_at or datetime.now(UTC),
+                )
                 documents[index] = document
                 documents_changed = True
 
@@ -113,6 +121,12 @@ class DocumentStorage:
             created_at=created_at,
             processing=ProcessingStatus(updated_at=created_at),
         )
+        self._record_job(
+            document,
+            ProcessingJobType.UPLOAD,
+            ProcessingStepStatus.COMPLETED,
+            created_at,
+        )
 
         documents = self._read_documents()
         documents.append(document)
@@ -146,6 +160,18 @@ class DocumentStorage:
                     ready=True,
                     updated_at=now,
                 )
+                self._record_job(
+                    document,
+                    ProcessingJobType.OCR_MOCK,
+                    ProcessingStepStatus.COMPLETED,
+                    now,
+                )
+                self._record_job(
+                    document,
+                    ProcessingJobType.LOCAL_INDEXING,
+                    ProcessingStepStatus.COMPLETED,
+                    now,
+                )
             elif ocr_result.status == OcrStatus.FAILED:
                 document.chunks = []
                 document.status = DocumentStatus.FAILED
@@ -157,17 +183,33 @@ class DocumentStorage:
                     failed_reason=ocr_result.extracted_fields.get("error", "OCR failed"),
                     updated_at=now,
                 )
+                self._record_job(
+                    document,
+                    ProcessingJobType.OCR_MOCK,
+                    ProcessingStepStatus.FAILED,
+                    now,
+                    error_message=ocr_result.extracted_fields.get("error", "OCR failed"),
+                )
             else:
                 document.chunks = []
                 document.status = DocumentStatus.PROCESSING
+                ocr_step_status = (
+                    ProcessingStepStatus.RUNNING
+                    if ocr_result.status == OcrStatus.RUNNING
+                    else ProcessingStepStatus.PENDING
+                )
                 document.processing = ProcessingStatus(
                     upload=ProcessingStepStatus.COMPLETED,
-                    ocr=ProcessingStepStatus.RUNNING
-                    if ocr_result.status == OcrStatus.RUNNING
-                    else ProcessingStepStatus.PENDING,
+                    ocr=ocr_step_status,
                     indexing=ProcessingStepStatus.PENDING,
                     ready=False,
                     updated_at=now,
+                )
+                self._record_job(
+                    document,
+                    ProcessingJobType.OCR_MOCK,
+                    ocr_step_status,
+                    now,
                 )
 
             documents[index] = document
@@ -265,3 +307,23 @@ class DocumentStorage:
             )
 
         return chunks
+
+    def _record_job(
+        self,
+        document: DocumentMetadata,
+        job_type: ProcessingJobType,
+        status: ProcessingStepStatus,
+        timestamp: datetime,
+        error_message: str | None = None,
+    ) -> None:
+        job = ProcessingJob(
+            job_id=f"job-{uuid4()}",
+            document_id=document.document_id,
+            job_type=job_type,
+            status=status,
+            created_at=timestamp,
+            updated_at=timestamp,
+            error_message=error_message,
+        )
+        document.processing_jobs.append(job)
+        document.latest_job = job

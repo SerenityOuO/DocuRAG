@@ -17,6 +17,8 @@ export type UploadResponse = {
   processing: DocumentProcessingStatus;
   ocr: OcrResult;
   chunks: DocumentChunk[];
+  processing_jobs: ProcessingJob[];
+  latest_job: ProcessingJob | null;
 };
 
 export type DocumentMetadata = UploadResponse;
@@ -39,6 +41,16 @@ export type DocumentProcessingStatus = {
   ready: boolean;
   failed_reason: string | null;
   updated_at: string | null;
+};
+
+export type ProcessingJob = {
+  job_id: string;
+  document_id: string;
+  job_type: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  error_message: string | null;
 };
 
 export type OcrResultResponse = OcrResult & {
