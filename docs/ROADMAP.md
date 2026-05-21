@@ -185,7 +185,7 @@ Expected Outcome：
 
 - 07-01 已選定 PaddleOCR 作為單一 Phase 07 OCR provider，並記錄安裝條件、明確失敗行為與 demo 風險。
 - 07-02 已新增 `DOCURAG_OCR_PROVIDER` 設定與 provider-selected `POST /documents/{document_id}/ocr`，預設仍保持 mock demo 可用。
-- real OCR output 可映射到既有 `OcrResult`、`DocumentChunk`、processing status、processing job 與 citation trace contract。
+- 07-03 已新增 `OcrResult.lines` normalization，real OCR output 可映射到既有 `DocumentChunk`、processing status、processing job 與 citation trace contract。
 - demo / smoke flow 在沒有 real OCR dependency 的環境仍可用 mock path 重跑。
 - 不新增 queue、Redis、NATS、Qdrant、embedding、rerank、LLM、PostgreSQL、登入或 RBAC。
 
@@ -196,6 +196,7 @@ Phase 07 provider decision：
 - 主要風險：依賴較重，首次 real OCR 可能需要模型下載；Docker 與 Windows 本機環境都需要在 07-04 清楚標記驗證條件。
 - unavailable 行為：real provider endpoint 必須清楚失敗並更新 processing status / processing job metadata；不得靜默改跑 mock。既有 `POST /documents/{document_id}/ocr/mock` 繼續可用。
 - adapter 狀態：07-02 已接入 lazy-import `PaddleOcrProvider`、`backend[real-ocr]` optional extra、`DOCURAG_INSTALL_REAL_OCR` Docker build arg 與 Compose `DOCURAG_OCR_PROVIDER` env；預設不安裝 real OCR dependency。
+- normalization 狀態：07-03 已把 PaddleOCR line text、page、bbox、confidence 與 metadata 正規化到 `OcrTextLine`，並由 chunks、citations 與 retrieved_chunks 一致帶出 trace metadata。
 
 Next Candidate Milestone：
 

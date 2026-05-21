@@ -379,6 +379,10 @@ td {
   gap: 8px;
 }
 
+.trace-meta {
+  margin-top: 8px;
+}
+
 .citation-list li {
   border: 1px solid #e5eaf2;
   border-radius: 8px;

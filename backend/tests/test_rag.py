@@ -8,7 +8,7 @@ from app.api.routes.documents import get_document_storage as get_documents_stora
 from app.api.routes.rag import get_document_storage as get_rag_storage
 from app.api.routes.rag import get_rag_provider
 from app.main import app
-from app.schemas.documents import DocumentChunk, DocumentMetadata, DocumentStatus
+from app.schemas.documents import BoundingBox, DocumentChunk, DocumentMetadata, DocumentStatus
 from app.schemas.rag import RagCitation, RagQueryResponse
 from app.services.document_storage import DocumentStorage
 from app.services.rag import KeywordRagProvider
@@ -42,7 +42,7 @@ def test_rag_query_returns_answer_citations_and_retrieved_chunks(client: TestCli
 
     assert response.status_code == 200
     body = response.json()
-    assert "Local OCR mock chunks matched the query" in body["answer"]
+    assert "Local OCR chunks matched the query" in body["answer"]
     assert len(body["citations"]) == 1
     citation = body["citations"][0]
     assert citation["document_id"] == document_id
@@ -84,7 +84,7 @@ def test_rag_query_returns_empty_result_before_ocr(client: TestClient) -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert "No OCR mock chunks matched query: invoice" in body["answer"]
+    assert "No OCR chunks matched query: invoice" in body["answer"]
     assert body["citations"] == []
     assert body["retrieved_chunks"] == []
 
@@ -131,8 +131,17 @@ def test_keyword_rag_provider_scores_sorts_and_limits_results() -> None:
                     chunk_id="doc-001-chunk-001",
                     document_id="doc-001",
                     text="invoice invoice payment terms net 15",
-                    source="ocr_mock",
+                    source="ocr_paddleocr",
                     created_at="2026-05-20T00:00:00Z",
+                    page_number=1,
+                    bbox=BoundingBox(x_min=10, y_min=20, x_max=200, y_max=44),
+                    confidence=0.97,
+                    source_type="ocr_paddleocr",
+                    metadata={
+                        "origin": "ocr_line",
+                        "provider": "ocr_paddleocr",
+                        "line_index": "1",
+                    },
                 ),
                 DocumentChunk(
                     chunk_id="doc-001-chunk-002",
@@ -147,17 +156,22 @@ def test_keyword_rag_provider_scores_sorts_and_limits_results() -> None:
 
     response = KeywordRagProvider().query("invoice payment", 1, documents)
 
-    assert response.answer.startswith("Local OCR mock chunks matched the query")
+    assert response.answer.startswith("Local OCR chunks matched the query")
     assert response.citations == [
         RagCitation(
             document_id="doc-001",
             filename="invoice-a.txt",
             chunk_id="doc-001-chunk-001",
-            page_number=None,
-            bbox=None,
-            confidence=None,
-            source_type="ocr_mock",
-            trace_metadata={"source": "ocr_mock"},
+            page_number=1,
+            bbox=BoundingBox(x_min=10, y_min=20, x_max=200, y_max=44),
+            confidence=0.97,
+            source_type="ocr_paddleocr",
+            trace_metadata={
+                "source": "ocr_paddleocr",
+                "origin": "ocr_line",
+                "provider": "ocr_paddleocr",
+                "line_index": "1",
+            },
         )
     ]
     assert len(response.retrieved_chunks) == 1
@@ -168,7 +182,7 @@ def test_keyword_rag_provider_scores_sorts_and_limits_results() -> None:
 def test_keyword_rag_provider_returns_empty_result() -> None:
     response = KeywordRagProvider().query("missing", 3, [])
 
-    assert "No OCR mock chunks matched query: missing" in response.answer
+    assert "No OCR chunks matched query: missing" in response.answer
     assert response.citations == []
     assert response.retrieved_chunks == []
 

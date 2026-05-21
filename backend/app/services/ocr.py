@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Protocol
 
-from app.schemas.documents import DocumentMetadata, OcrResult, OcrStatus, ProcessingJobType
+from app.schemas.documents import BoundingBox, DocumentMetadata, OcrResult, OcrStatus, OcrTextLine, ProcessingJobType
 
 
 class OcrProvider(Protocol):
@@ -121,21 +121,19 @@ class PaddleOcrProvider:
                 extracted_at,
             )
 
-        lines: list[str] = []
+        ocr_lines: list[OcrTextLine] = []
         confidences: list[float] = []
 
-        for page_result in raw_result or []:
+        raw_pages = raw_result or []
+        direct_line_items = all(self._is_line_item(item) for item in raw_pages)
+
+        for page_index, page_result in enumerate(raw_pages, start=1):
             if not page_result:
                 continue
 
             line_items = page_result
-            if (
-                isinstance(page_result, (list, tuple))
-                and len(page_result) >= 2
-                and isinstance(page_result[1], (list, tuple))
-                and page_result[1]
-                and isinstance(page_result[1][0], str)
-            ):
+            page_number = 1 if direct_line_items else page_index
+            if self._is_line_item(page_result):
                 line_items = [page_result]
 
             for item in line_items:
@@ -151,14 +149,47 @@ class PaddleOcrProvider:
                 if not text:
                     continue
 
-                lines.append(text)
+                confidence = None
                 if len(item[1]) > 1:
                     try:
-                        confidences.append(float(item[1][1]))
+                        confidence = float(item[1][1])
                     except (TypeError, ValueError):
-                        pass
+                        confidence = None
 
-        if not lines:
+                if confidence is not None and 0 <= confidence <= 1:
+                    confidences.append(confidence)
+                else:
+                    confidence = None
+
+                bbox = None
+                if isinstance(item[0], (list, tuple)):
+                    try:
+                        xs = [float(point[0]) for point in item[0] if isinstance(point, (list, tuple)) and len(point) >= 2]
+                        ys = [float(point[1]) for point in item[0] if isinstance(point, (list, tuple)) and len(point) >= 2]
+                        if xs and ys:
+                            bbox = BoundingBox(
+                                x_min=min(xs),
+                                y_min=min(ys),
+                                x_max=max(xs),
+                                y_max=max(ys),
+                            )
+                    except (TypeError, ValueError):
+                        bbox = None
+
+                ocr_lines.append(
+                    OcrTextLine(
+                        text=text,
+                        page_number=page_number,
+                        bbox=bbox,
+                        confidence=confidence,
+                        metadata={
+                            "ocr_provider": "paddleocr",
+                            "line_index": str(len(ocr_lines) + 1),
+                        },
+                    )
+                )
+
+        if not ocr_lines:
             return self._failed_result(
                 "paddleocr_empty_result",
                 "PaddleOCR returned no recognized text.",
@@ -167,8 +198,9 @@ class PaddleOcrProvider:
 
         extracted_fields = {
             "provider": "paddleocr",
+            "chunk_source": self.chunk_source,
             "filename": document.filename,
-            "line_count": str(len(lines)),
+            "line_count": str(len(ocr_lines)),
         }
 
         if confidences:
@@ -176,8 +208,9 @@ class PaddleOcrProvider:
 
         return OcrResult(
             status=OcrStatus.COMPLETED,
-            text="\n".join(lines),
+            text="\n".join(line.text for line in ocr_lines),
             extracted_fields=extracted_fields,
+            lines=ocr_lines,
             updated_at=extracted_at,
         )
 
@@ -188,6 +221,15 @@ class PaddleOcrProvider:
             self._engine = PaddleOCR(use_angle_cls=True, lang=self.language)
 
         return self._engine
+
+    def _is_line_item(self, value: object) -> bool:
+        return (
+            isinstance(value, (list, tuple))
+            and len(value) >= 2
+            and isinstance(value[1], (list, tuple))
+            and bool(value[1])
+            and isinstance(value[1][0], str)
+        )
 
     def _failed_result(self, error_code: str, message: str, extracted_at: datetime) -> OcrResult:
         return OcrResult(

@@ -10,6 +10,7 @@ import {
   queryRag,
   runMockOcr,
   uploadDocument,
+  type BoundingBox,
   type DocumentListResponse,
   type DocumentMetadata,
   type HealthResponse,
@@ -90,6 +91,14 @@ function formatBytes(size: number): string {
 
 function statusClass(status: string): string {
   return `status-${status.replace(/_/g, "-")}`;
+}
+
+function formatBbox(bbox: BoundingBox): string {
+  return `bbox ${bbox.x_min},${bbox.y_min},${bbox.x_max},${bbox.y_max}`;
+}
+
+function metadataEntries(metadata: Record<string, string>): [string, string][] {
+  return Object.entries(metadata);
 }
 
 async function checkHealth(): Promise<void> {
@@ -528,6 +537,10 @@ onMounted(() => {
               <code v-if="citation.source_type">{{ citation.source_type }}</code>
               <code v-if="citation.page_number">page {{ citation.page_number }}</code>
               <code v-if="citation.confidence != null">conf {{ citation.confidence }}</code>
+              <code v-if="citation.bbox">{{ formatBbox(citation.bbox) }}</code>
+              <code v-for="[key, value] in metadataEntries(citation.trace_metadata)" :key="`${citation.chunk_id}-${key}`">
+                {{ key }}={{ value }}
+              </code>
             </li>
           </ul>
           <p v-else class="muted">沒有 citation。</p>
@@ -541,7 +554,13 @@ onMounted(() => {
                 <span v-if="chunk.source_type">{{ chunk.source_type }}</span>
                 <span v-if="chunk.page_number">page {{ chunk.page_number }}</span>
                 <span v-if="chunk.confidence != null">confidence {{ chunk.confidence }}</span>
+                <span v-if="chunk.bbox">{{ formatBbox(chunk.bbox) }}</span>
                 <span>score {{ chunk.score }}</span>
+              </div>
+              <div v-if="metadataEntries(chunk.metadata).length" class="chunk-meta trace-meta">
+                <code v-for="[key, value] in metadataEntries(chunk.metadata)" :key="`${chunk.chunk_id}-${key}`">
+                  {{ key }}={{ value }}
+                </code>
               </div>
               <pre>{{ chunk.text }}</pre>
             </article>

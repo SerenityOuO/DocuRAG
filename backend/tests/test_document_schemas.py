@@ -9,6 +9,7 @@ from app.schemas.documents import (
     DocumentUploadResponse,
     OcrResult,
     OcrStatus,
+    OcrTextLine,
     ProcessingJob,
     ProcessingJobType,
     ProcessingStepStatus,
@@ -161,6 +162,36 @@ def test_document_response_rejects_invalid_status() -> None:
 def test_ocr_result_rejects_invalid_status() -> None:
     with pytest.raises(ValidationError):
         OcrResult(status="ocr_processing")
+
+
+def test_ocr_result_accepts_line_trace_metadata() -> None:
+    result = OcrResult(
+        status=OcrStatus.COMPLETED,
+        text="Invoice number AUR-2026-051",
+        lines=[
+            OcrTextLine(
+                text="Invoice number AUR-2026-051",
+                page_number=1,
+                bbox=BoundingBox(x_min=10, y_min=20, x_max=180, y_max=44),
+                confidence=0.96,
+                metadata={"ocr_provider": "paddleocr", "line_index": "1"},
+            )
+        ],
+    )
+
+    assert result.lines[0].page_number == 1
+    assert result.lines[0].bbox is not None
+    assert result.lines[0].confidence == 0.96
+    assert result.lines[0].metadata == {"ocr_provider": "paddleocr", "line_index": "1"}
+
+
+def test_ocr_text_line_rejects_invalid_trace_metadata() -> None:
+    with pytest.raises(ValidationError):
+        OcrTextLine(
+            text="Invoice number AUR-2026-051",
+            page_number=0,
+            confidence=1.5,
+        )
 
 
 def test_document_chunk_rejects_empty_text() -> None:

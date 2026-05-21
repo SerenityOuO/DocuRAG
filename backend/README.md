@@ -72,6 +72,7 @@ Phase 07 provider decision：
 - 使用 `DOCURAG_OCR_PROVIDER=mock|paddleocr` 選擇 provider，預設為 `mock`。
 - PaddleOCR adapter 採 lazy import，讓未安裝 real OCR dependency 的環境仍可跑 mock demo。
 - real provider 不可用時不靜默 fallback 到 mock；real endpoint 應回傳清楚錯誤，並更新 processing status 與 processing job metadata。
+- real OCR trace output 會正規化到 `OcrResult.lines`，再映射到 chunk page、bbox、confidence、metadata 與 RAG citation trace metadata。
 - mock path 仍是預設與 demo-safe path。
 
 安裝 real OCR optional dependency：
@@ -105,7 +106,7 @@ document metadata 會包含 `processing` contract，明確記錄 `upload`、`ocr
 
 document metadata 也會保存 `processing_jobs` history 與 `latest_job` summary。同步 upload 會記錄 completed upload job；mock OCR 成功會記錄 completed OCR 與 local indexing job；provider failed 會記錄 failed OCR job。這些 job metadata 只是 contract，不代表已引入 worker、queue、Redis 或 NATS。
 
-v0.5.1 chunks 由 OCR mock text 產生，每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。v0.6 chunk / citation schema 另外補齊 optional `page_number`、`bbox`、`confidence`、`source_type`、chunk `metadata` 與 citation `trace_metadata` 欄位；mock OCR chunk 只填 `source_type=ocr_mock` 與 metadata safe default，不產生真正 OCR bbox 或 confidence。`POST /rag/query` 透過 `KeywordRagProvider` 做本機 keyword retrieval，並用 deterministic template 回傳 answer、citations 與 retrieved chunks。對 `text/plain`、`.txt`、`.md`、`.csv` sample，OCR mock 會把上傳文字納入 deterministic OCR mock text，方便 demo query 引用具體欄位；這不是真正 OCR、embedding、Qdrant、rerank 或 LLM。
+v0.5.1 chunks 由 OCR mock text 產生，每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。v0.6 chunk / citation schema 另外補齊 optional `page_number`、`bbox`、`confidence`、`source_type`、chunk `metadata` 與 citation `trace_metadata` 欄位；mock OCR chunk 只填 `source_type=ocr_mock` 與 metadata safe default，不產生真正 OCR bbox 或 confidence。v0.7 real OCR output 先正規化到 `OcrResult.lines`，再將 line-level page、bbox、confidence 與 metadata 寫入 `DocumentChunk`，讓 citations 與 retrieved chunks 不依賴 PaddleOCR 私有格式。`POST /rag/query` 透過 `KeywordRagProvider` 做本機 keyword retrieval，並用 deterministic template 回傳 answer、citations 與 retrieved chunks。對 `text/plain`、`.txt`、`.md`、`.csv` sample，OCR mock 會把上傳文字納入 deterministic mock OCR text，方便 demo query 引用具體欄位；這不是 embedding、Qdrant、rerank 或 LLM。
 
 可用環境變數覆寫資料目錄：
 

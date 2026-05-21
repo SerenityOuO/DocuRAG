@@ -39,14 +39,22 @@
 - `TODO.md`
 - `docs/ROADMAP.md`
 
+## Implementation Notes
+
+- 新增 `OcrTextLine`，讓 provider 可把 OCR line text、page、bbox、confidence 與 metadata 放進 `OcrResult.lines`。
+- `DocumentStorage` 會優先用 `OcrResult.lines` 建立 `DocumentChunk`，缺少 page、bbox 或 confidence 時維持 `null` default。
+- `PaddleOcrProvider` 會把 PaddleOCR raw line output 正規化成 `OcrTextLine`，包含 line-level bbox、confidence 與 `ocr_provider` / `line_index` metadata。
+- RAG citations 與 retrieved chunks 都保留 `source_type`、page、bbox、confidence 與 trace metadata；answer wording 改為通用 OCR chunks，避免只綁 mock。
+- frontend citations / retrieved chunks 會顯示 bbox 與 trace metadata；optional 欄位缺值時不顯示。
+
 ## Acceptance Criteria
 
-- [ ] real OCR output 可以穩定映射到 `DocumentChunk` trace 欄位。
-- [ ] 缺少 page / bbox / confidence 時 API response 仍相容。
-- [ ] citations 與 retrieved_chunks 都帶出一致 trace metadata。
-- [ ] frontend 可顯示 optional trace metadata，缺值時不破版。
-- [ ] 測試覆蓋 provider 有 metadata 與缺 metadata 的兩種情境。
-- [ ] 沒有新增 embedding、Qdrant、rerank、LLM、queue 或 DB。
+- [x] real OCR output 可以穩定映射到 `DocumentChunk` trace 欄位。
+- [x] 缺少 page / bbox / confidence 時 API response 仍相容。
+- [x] citations 與 retrieved_chunks 都帶出一致 trace metadata。
+- [x] frontend 可顯示 optional trace metadata，缺值時不破版。
+- [x] 測試覆蓋 provider 有 metadata 與缺 metadata 的兩種情境。
+- [x] 沒有新增 embedding、Qdrant、rerank、LLM、queue 或 DB。
 
 ## Validation
 
@@ -57,3 +65,12 @@
 - `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
 - `docker compose -f infra/docker-compose.yml down`
 - `git status --short --branch`
+
+## Validation Notes
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` passed: 45 tests passed.
+- `cd frontend; npm.cmd run build` passed outside the sandbox; sandbox file permissions block Vite config resolution.
+- `docker build -t docurag-backend ./backend` blocked because Docker Desktop daemon was not running (`dockerDesktopLinuxEngine` pipe not found).
+- `docker compose -f infra/docker-compose.yml up -d --build` and `docker compose -f infra/docker-compose.yml down` were also blocked by the same Docker daemon issue.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1` could not run because the Compose backend was not started.
+- Mock OCR path remains covered by backend tests and remains the default provider path.

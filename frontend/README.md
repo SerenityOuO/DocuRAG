@@ -58,7 +58,7 @@ v0.5.1 UI 支援：
 - OCR result 面板顯示 OCR status、OCR text 與 extracted fields。
 - 文件列表與 OCR result 面板顯示 backend `processing` contract 的 indexing、ready 與 latest job 狀態。
 - RAG chat 可輸入 query 與 top_k，呼叫 `POST /rag/query`。
-- RAG result 面板顯示 deterministic answer、citations、retrieved chunks 與 optional trace metadata，例如 source_type、page_number 與 confidence；缺值時前端會保持相容不顯示。
+- RAG result 面板顯示 deterministic answer、citations、retrieved chunks 與 optional trace metadata，例如 source_type、page_number、bbox、confidence 與 metadata；缺值時前端會保持相容不顯示。
 
 建議 demo query：
 

@@ -43,7 +43,7 @@ class KeywordRagProvider:
 
         if not retrieved_chunks:
             answer = (
-                f"No OCR mock chunks matched query: {query}. "
+                f"No OCR chunks matched query: {query}. "
                 "Upload a document, run Mock OCR, then query again."
             )
         else:
@@ -51,7 +51,7 @@ class KeywordRagProvider:
                 f"{index}. [{chunk.filename} / {chunk.chunk_id}] {chunk.text}"
                 for index, chunk in enumerate(retrieved_chunks, start=1)
             ]
-            answer = "Local OCR mock chunks matched the query:\n" + "\n".join(evidence_lines)
+            answer = "Local OCR chunks matched the query:\n" + "\n".join(evidence_lines)
 
         return RagQueryResponse(
             answer=answer,

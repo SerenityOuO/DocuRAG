@@ -31,6 +31,7 @@ export type OcrResult = {
   status: string;
   text: string;
   extracted_fields: Record<string, string>;
+  lines: OcrTextLine[];
   updated_at: string | null;
 };
 
@@ -62,6 +63,14 @@ export type BoundingBox = {
   y_min: number;
   x_max: number;
   y_max: number;
+};
+
+export type OcrTextLine = {
+  text: string;
+  page_number: number | null;
+  bbox: BoundingBox | null;
+  confidence: number | null;
+  metadata: Record<string, string>;
 };
 
 export type DocumentChunk = {

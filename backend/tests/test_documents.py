@@ -7,8 +7,9 @@ from fastapi.testclient import TestClient
 
 from app.api.routes.documents import get_document_storage, get_mock_ocr_provider, get_selected_ocr_provider
 from app.main import app
-from app.schemas.documents import DocumentMetadata, OcrResult, OcrStatus, ProcessingJobType
+from app.schemas.documents import BoundingBox, DocumentMetadata, OcrResult, OcrStatus, OcrTextLine, ProcessingJobType
 from app.services.document_storage import DocumentStorage
+from app.services.ocr import PaddleOcrProvider
 
 
 @pytest.fixture
@@ -248,6 +249,7 @@ def test_run_selected_ocr_uses_real_provider_adapter(
                 status=OcrStatus.COMPLETED,
                 text=f"Real OCR text for {document.filename}",
                 extracted_fields={"provider": "paddleocr"},
+                lines=[OcrTextLine(text=f"Real OCR text for {document.filename}")],
                 updated_at=extracted_at,
             )
 
@@ -276,11 +278,121 @@ def test_run_selected_ocr_uses_real_provider_adapter(
         "local_indexing",
     ]
     assert metadata[0]["chunks"][0]["source"] == "ocr_paddleocr"
+    assert metadata[0]["chunks"][0]["page_number"] is None
+    assert metadata[0]["chunks"][0]["bbox"] is None
+    assert metadata[0]["chunks"][0]["confidence"] is None
     assert metadata[0]["chunks"][0]["source_type"] == "ocr_paddleocr"
     assert metadata[0]["chunks"][0]["metadata"] == {
-        "origin": "ocr_text",
+        "origin": "ocr_line",
         "provider": "ocr_paddleocr",
     }
+
+
+def test_run_selected_ocr_maps_real_trace_metadata_to_chunks(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    class TraceRealOcrProvider:
+        provider_name = "paddleocr"
+        chunk_source = "ocr_paddleocr"
+        job_type = ProcessingJobType.OCR_REAL
+
+        def extract(
+            self,
+            document: DocumentMetadata,
+            file_path: Path | None,
+            extracted_at: datetime,
+        ) -> OcrResult:
+            return OcrResult(
+                status=OcrStatus.COMPLETED,
+                text="Invoice total USD 120.00",
+                extracted_fields={"provider": "paddleocr", "chunk_source": "ocr_paddleocr"},
+                lines=[
+                    OcrTextLine(
+                        text="Invoice total USD 120.00",
+                        page_number=2,
+                        bbox=BoundingBox(x_min=12, y_min=24, x_max=220, y_max=48),
+                        confidence=0.93,
+                        metadata={"ocr_provider": "paddleocr", "line_index": "1"},
+                    )
+                ],
+                updated_at=extracted_at,
+            )
+
+    app.dependency_overrides[get_selected_ocr_provider] = TraceRealOcrProvider
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("real-trace.png", b"fake image", "image/png")},
+    )
+    document_id = upload_response.json()["document_id"]
+
+    response = client.post(f"/documents/{document_id}/ocr")
+
+    assert response.status_code == 200
+
+    metadata_path = tmp_path / "data" / "documents.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    chunk = metadata[0]["chunks"][0]
+    assert chunk["text"] == "Invoice total USD 120.00"
+    assert chunk["source"] == "ocr_paddleocr"
+    assert chunk["page_number"] == 2
+    assert chunk["bbox"] == {
+        "x_min": 12.0,
+        "y_min": 24.0,
+        "x_max": 220.0,
+        "y_max": 48.0,
+    }
+    assert chunk["confidence"] == 0.93
+    assert chunk["source_type"] == "ocr_paddleocr"
+    assert chunk["metadata"] == {
+        "origin": "ocr_line",
+        "provider": "ocr_paddleocr",
+        "ocr_provider": "paddleocr",
+        "line_index": "1",
+    }
+
+
+def test_paddleocr_provider_normalizes_raw_line_trace_metadata(tmp_path: Path) -> None:
+    class StubPaddleEngine:
+        def ocr(self, file_path: str, cls: bool = True):
+            assert file_path.endswith("invoice.png")
+            assert cls is True
+            return [
+                (
+                    [[10, 20], [180, 20], [180, 44], [10, 44]],
+                    ("Invoice number AUR-2026-051", 0.96),
+                ),
+                (
+                    [[12, 60], [140, 60], [140, 82], [12, 82]],
+                    ("Total USD 120.00", 0.91),
+                ),
+            ]
+
+    file_path = tmp_path / "invoice.png"
+    file_path.write_bytes(b"fake image")
+    provider = PaddleOcrProvider()
+    provider._engine = StubPaddleEngine()
+    document = DocumentMetadata(
+        document_id="doc-001",
+        filename="invoice.png",
+        stored_filename="doc-001-invoice.png",
+        file_type="png",
+        content_type="image/png",
+        size=10,
+        status="uploaded",
+        created_at="2026-05-20T00:00:00Z",
+    )
+
+    result = provider.extract(document, file_path, datetime.fromisoformat("2026-05-20T00:00:01+00:00"))
+
+    assert result.status == OcrStatus.COMPLETED
+    assert result.text == "Invoice number AUR-2026-051\nTotal USD 120.00"
+    assert result.extracted_fields["line_count"] == "2"
+    assert result.extracted_fields["average_confidence"] == "0.9350"
+    assert [line.page_number for line in result.lines] == [1, 1]
+    assert result.lines[0].bbox == BoundingBox(x_min=10, y_min=20, x_max=180, y_max=44)
+    assert result.lines[0].confidence == 0.96
+    assert result.lines[0].metadata == {"ocr_provider": "paddleocr", "line_index": "1"}
 
 
 def test_run_selected_ocr_returns_503_and_persists_real_failure(

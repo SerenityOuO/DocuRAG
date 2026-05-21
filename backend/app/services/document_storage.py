@@ -12,6 +12,7 @@ from app.schemas.documents import (
     DocumentStatus,
     OcrResult,
     OcrStatus,
+    OcrTextLine,
     ProcessingJob,
     ProcessingJobType,
     ProcessingStatus,
@@ -59,6 +60,8 @@ class DocumentStorage:
                     document.document_id,
                     document.ocr.text,
                     document.ocr.updated_at or datetime.now(UTC),
+                    source=document.ocr.extracted_fields.get("chunk_source", "ocr_mock"),
+                    ocr_lines=document.ocr.lines,
                 )
                 document.status = DocumentStatus.READY
                 document.processing = ProcessingStatus(
@@ -152,6 +155,7 @@ class DocumentStorage:
                     ocr_result.text,
                     now,
                     source=provider.chunk_source,
+                    ocr_lines=ocr_result.lines,
                 )
                 document.status = DocumentStatus.READY
                 document.processing = ProcessingStatus(
@@ -260,7 +264,39 @@ class DocumentStorage:
         text: str,
         created_at: datetime,
         source: str = "ocr_mock",
+        ocr_lines: list[OcrTextLine] | None = None,
     ) -> list[DocumentChunk]:
+        if ocr_lines:
+            chunks = []
+
+            for line in ocr_lines:
+                clean_text = line.text.strip()
+
+                if not clean_text:
+                    continue
+
+                chunks.append(
+                    DocumentChunk(
+                        chunk_id=f"{document_id}-chunk-{len(chunks) + 1:03d}",
+                        document_id=document_id,
+                        text=clean_text,
+                        source=source,
+                        created_at=created_at,
+                        page_number=line.page_number,
+                        bbox=line.bbox,
+                        confidence=line.confidence,
+                        source_type=source,
+                        metadata={
+                            **line.metadata,
+                            "origin": "ocr_line",
+                            "provider": source,
+                        },
+                    )
+                )
+
+            if chunks:
+                return chunks
+
         chunks: list[DocumentChunk] = []
         current_lines: list[str] = []
         current_size = 0

@@ -57,13 +57,6 @@ class ProcessingJob(BaseModel):
         return self
 
 
-class OcrResult(BaseModel):
-    status: OcrStatus = OcrStatus.PENDING
-    text: str = ""
-    extracted_fields: dict[str, str] = Field(default_factory=dict)
-    updated_at: datetime | None = None
-
-
 class BoundingBox(BaseModel):
     x_min: float = Field(..., ge=0)
     y_min: float = Field(..., ge=0)
@@ -77,6 +70,22 @@ class BoundingBox(BaseModel):
         if self.y_max < self.y_min:
             raise ValueError("y_max must be greater than or equal to y_min")
         return self
+
+
+class OcrTextLine(BaseModel):
+    text: str = Field(..., min_length=1)
+    page_number: int | None = Field(default=None, ge=1)
+    bbox: BoundingBox | None = None
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    metadata: dict[str, str] = Field(default_factory=dict)
+
+
+class OcrResult(BaseModel):
+    status: OcrStatus = OcrStatus.PENDING
+    text: str = ""
+    extracted_fields: dict[str, str] = Field(default_factory=dict)
+    lines: list[OcrTextLine] = Field(default_factory=list)
+    updated_at: datetime | None = None
 
 
 class DocumentChunk(BaseModel):
