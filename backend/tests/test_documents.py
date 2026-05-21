@@ -6,10 +6,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.routes.documents import get_document_storage, get_mock_ocr_provider, get_selected_ocr_provider
+from app.core.config import get_settings
 from app.main import app
 from app.schemas.documents import BoundingBox, DocumentMetadata, OcrResult, OcrStatus, OcrTextLine, ProcessingJobType
 from app.services.document_storage import DocumentStorage
-from app.services.ocr import PaddleOcrProvider
+from app.services import ocr as ocr_module
+from app.services.ocr import MockOcrProvider, PaddleOcrProvider
 
 
 @pytest.fixture
@@ -202,31 +204,27 @@ def test_get_ocr_result_returns_saved_mock_result(client: TestClient) -> None:
     assert response.json() == mock_response.json()
 
 
-def test_run_selected_ocr_uses_default_mock_provider(
-    client: TestClient,
-    tmp_path: Path,
-) -> None:
-    upload_response = client.post(
-        "/documents/upload",
-        files={"file": ("default-provider.txt", b"sample document", "text/plain")},
-    )
-    document_id = upload_response.json()["document_id"]
+def test_selected_ocr_default_provider_is_paddleocr() -> None:
+    get_settings.cache_clear()
 
-    response = client.post(f"/documents/{document_id}/ocr")
+    try:
+        provider = get_selected_ocr_provider()
+    finally:
+        get_settings.cache_clear()
 
-    assert response.status_code == 200
-    body = response.json()
-    assert body["status"] == "completed"
-    assert "Mock OCR result for default-provider.txt" in body["text"]
+    assert isinstance(provider, PaddleOcrProvider)
 
-    metadata_path = tmp_path / "data" / "documents.json"
-    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-    assert [job["job_type"] for job in metadata[0]["processing_jobs"]] == [
-        "upload",
-        "ocr_mock",
-        "local_indexing",
-    ]
-    assert metadata[0]["chunks"][0]["source"] == "ocr_mock"
+
+def test_selected_ocr_provider_can_be_overridden_to_mock(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DOCURAG_OCR_PROVIDER", "mock")
+    get_settings.cache_clear()
+
+    try:
+        provider = get_selected_ocr_provider()
+    finally:
+        get_settings.cache_clear()
+
+    assert isinstance(provider, MockOcrProvider)
 
 
 def test_run_selected_ocr_uses_real_provider_adapter(
@@ -393,6 +391,43 @@ def test_paddleocr_provider_normalizes_raw_line_trace_metadata(tmp_path: Path) -
     assert result.lines[0].bbox == BoundingBox(x_min=10, y_min=20, x_max=180, y_max=44)
     assert result.lines[0].confidence == 0.96
     assert result.lines[0].metadata == {"ocr_provider": "paddleocr", "line_index": "1"}
+
+
+def test_paddleocr_provider_reports_unsupported_python(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    class UnsupportedVersionInfo:
+        major = 3
+        minor = 13
+        micro = 0
+
+        def __ge__(self, other: tuple[int, int]) -> bool:
+            return (self.major, self.minor) >= other
+
+    monkeypatch.setattr(ocr_module.sys, "version_info", UnsupportedVersionInfo())
+
+    file_path = tmp_path / "invoice.png"
+    file_path.write_bytes(b"fake image")
+    provider = PaddleOcrProvider()
+    document = DocumentMetadata(
+        document_id="doc-001",
+        filename="invoice.png",
+        stored_filename="doc-001-invoice.png",
+        file_type="png",
+        content_type="image/png",
+        size=10,
+        status="uploaded",
+        created_at="2026-05-20T00:00:00Z",
+    )
+
+    result = provider.extract(document, file_path, datetime.fromisoformat("2026-05-20T00:00:01+00:00"))
+
+    assert result.status == OcrStatus.FAILED
+    assert result.extracted_fields["provider"] == "paddleocr"
+    assert result.extracted_fields["error_code"] == "paddleocr_python_unsupported"
+    assert "Python 3.11 or 3.12" in result.extracted_fields["error"]
+    assert 'py -3.12 -m pip install -e ".[dev,real-ocr]"' in result.extracted_fields["error"]
 
 
 def test_run_selected_ocr_returns_503_and_persists_real_failure(

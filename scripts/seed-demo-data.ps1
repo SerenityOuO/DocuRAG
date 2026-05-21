@@ -63,7 +63,7 @@ $rag.retrieved_chunks | ConvertTo-Json -Depth 8
 
 if ($RunRealOcr) {
     Write-Host ""
-    Write-Host "Optional provider-selected OCR:"
+    Write-Host "Provider-selected real OCR:"
     Write-Host "Sample: $resolvedRealOcrSamplePath"
 
     $realUploadRaw = & curl.exe -sS -X POST "$ApiBaseUrl/documents/upload" -F "file=@$resolvedRealOcrSamplePath;type=image/png"
@@ -82,6 +82,6 @@ if ($RunRealOcr) {
         $realOcr.extracted_fields | ConvertTo-Json -Depth 8
     }
     catch {
-        Write-Warning "Optional real OCR did not complete. Mock seed flow remains valid. $($_.Exception.Message)"
+        throw "Provider-selected real OCR did not complete. $($_.Exception.Message)"
     }
 }

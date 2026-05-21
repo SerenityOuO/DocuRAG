@@ -32,20 +32,73 @@ function Assert-Condition {
     }
 }
 
+function Get-ErrorResponseBody {
+    param([object]$ErrorRecord)
+
+    $response = $ErrorRecord.Exception.Response
+    if ($null -ne $ErrorRecord.ErrorDetails -and -not [string]::IsNullOrWhiteSpace($ErrorRecord.ErrorDetails.Message)) {
+        return $ErrorRecord.ErrorDetails.Message
+    }
+
+    if ($null -eq $response) {
+        return ""
+    }
+
+    try {
+        $stream = $response.GetResponseStream()
+        if ($null -eq $stream) {
+            return ""
+        }
+
+        $reader = New-Object System.IO.StreamReader($stream)
+        return $reader.ReadToEnd()
+    }
+    catch {
+        return ""
+    }
+}
+
+function Invoke-FileUpload {
+    param(
+        [string]$Url,
+        [string]$FilePath,
+        [string]$ContentType
+    )
+
+    $tempBody = [System.IO.Path]::GetTempFileName()
+    try {
+        $httpStatus = & curl.exe -sS -o $tempBody -w "%{http_code}" -X POST $Url -F "file=@$FilePath;type=$ContentType"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Upload failed with curl exit code $LASTEXITCODE"
+        }
+
+        $body = ""
+        if (Test-Path -LiteralPath $tempBody) {
+            $body = Get-Content -Raw -LiteralPath $tempBody
+        }
+
+        if ($httpStatus -notmatch "^2") {
+            throw "Upload failed with HTTP $httpStatus. Response body: $body"
+        }
+
+        return $body | ConvertFrom-Json
+    }
+    finally {
+        if (Test-Path -LiteralPath $tempBody) {
+            Remove-Item -LiteralPath $tempBody -Force
+        }
+    }
+}
+
 Write-Host "Demo smoke test"
 Write-Host "API: $ApiBaseUrl"
 
 $health = Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/health"
 Assert-Condition ($health.status -eq "ok") "Expected /health status ok."
-Assert-Condition ($health.version -eq "0.5.1") "Expected /health version 0.5.1."
+Assert-Condition (-not [string]::IsNullOrWhiteSpace($health.version)) "Expected /health version."
 Write-Host "Health OK: version $($health.version)"
 
-$uploadRaw = & curl.exe -sS -X POST "$ApiBaseUrl/documents/upload" -F "file=@$resolvedSamplePath;type=text/plain"
-if ($LASTEXITCODE -ne 0) {
-    throw "Upload failed with exit code $LASTEXITCODE"
-}
-
-$upload = $uploadRaw | ConvertFrom-Json
+$upload = Invoke-FileUpload "$ApiBaseUrl/documents/upload" $resolvedSamplePath "text/plain"
 Assert-Condition (-not [string]::IsNullOrWhiteSpace($upload.document_id)) "Upload did not return document_id."
 Assert-Condition ($upload.filename -eq "mock-invoice-aurora.txt") "Upload returned unexpected filename."
 Write-Host "Upload OK: $($upload.document_id)"
@@ -68,15 +121,10 @@ Assert-Condition (($rag.retrieved_chunks | ConvertTo-Json -Depth 8) -match "AUR-
 Write-Host "RAG query OK"
 
 if ($RunRealOcr) {
-    Write-Host "Optional real OCR check"
+    Write-Host "Real OCR check"
     Write-Host "Real OCR sample: $resolvedRealOcrSamplePath"
 
-    $realUploadRaw = & curl.exe -sS -X POST "$ApiBaseUrl/documents/upload" -F "file=@$resolvedRealOcrSamplePath;type=image/png"
-    if ($LASTEXITCODE -ne 0) {
-        throw "Real OCR sample upload failed with exit code $LASTEXITCODE"
-    }
-
-    $realUpload = $realUploadRaw | ConvertFrom-Json
+    $realUpload = Invoke-FileUpload "$ApiBaseUrl/documents/upload" $resolvedRealOcrSamplePath "image/png"
 
     try {
         $realOcr = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($realUpload.document_id)/ocr"
@@ -89,12 +137,25 @@ if ($RunRealOcr) {
             $providerField = $realOcr.extracted_fields.provider
         }
 
-        if ($providerField -ne "paddleocr") {
-            Write-Warning "Provider-selected OCR did not report provider=paddleocr. Check DOCURAG_OCR_PROVIDER if you expected real OCR."
-        }
+        Assert-Condition ($providerField -eq "paddleocr") "Provider-selected OCR did not report provider=paddleocr."
+
+        $realDocument = Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/documents/$($realUpload.document_id)"
+        Assert-Condition ($realDocument.ocr.status -eq "completed") "Saved real OCR result did not complete."
+        Assert-Condition ($realDocument.processing.ocr -eq "completed") "Real OCR processing status was not completed."
+        Assert-Condition ($realDocument.processing.indexing -eq "completed") "Real OCR indexing status was not completed."
+        Assert-Condition ($realDocument.processing.ready -eq $true) "Real OCR document was not marked ready."
+        Assert-Condition ($realDocument.latest_job.status -eq "completed") "Latest real OCR job was not completed."
+        Assert-Condition ($realDocument.chunks.Count -gt 0) "Real OCR did not create chunks."
+        Write-Host "Provider-selected OCR metadata OK"
     }
     catch {
-        Write-Warning "Optional real OCR check did not complete. Mock demo remains valid. $($_.Exception.Message)"
+        $errorBody = Get-ErrorResponseBody $_
+        $detail = $_.Exception.Message
+        if (-not [string]::IsNullOrWhiteSpace($errorBody)) {
+            $detail = "$detail Response body: $errorBody"
+        }
+
+        throw "Real OCR check did not complete. $detail"
     }
 }
 

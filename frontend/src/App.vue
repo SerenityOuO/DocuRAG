@@ -283,7 +283,7 @@ onMounted(() => {
       <p class="eyebrow">{{ currentVersionLabel }}</p>
       <h1>DocuRAG AgentOps</h1>
       <p class="hero-copy">
-        Backend health、本機文件上傳、metadata 保存、OCR provider bridge、provider-selected OCR、local keyword RAG
+        Backend health、本機文件上傳、metadata 保存、PaddleOCR default provider、mock override、local keyword RAG
         與 citation trace 驗證。
       </p>
     </header>
@@ -458,7 +458,7 @@ onMounted(() => {
         <div class="panel-heading">
           <div>
             <h2>OCR result</h2>
-            <p>POST /documents/{{ "{document_id}" }}/ocr/mock 或 /ocr</p>
+            <p>Default /ocr provider: PaddleOCR；mock override: /ocr/mock</p>
           </div>
           <div class="button-row">
             <button
@@ -467,7 +467,7 @@ onMounted(() => {
               :disabled="!selectedDocument || ocrState === 'loading'"
               @click="runOcrForSelectedDocument"
             >
-              {{ ocrState === "loading" ? "Running..." : "Run Mock OCR" }}
+              {{ ocrState === "loading" ? "Running..." : "Run Mock Override" }}
             </button>
             <button
               type="button"
@@ -619,7 +619,7 @@ onMounted(() => {
           <p v-else class="muted">沒有 retrieved chunk。</p>
         </section>
 
-        <p v-else class="muted">請先上傳文件並執行 Mock OCR，再輸入問題。</p>
+        <p v-else class="muted">請先上傳文件並執行 OCR，再輸入問題。</p>
       </article>
 
       <article class="panel response-panel">

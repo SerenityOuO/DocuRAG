@@ -215,6 +215,7 @@ Expected Outcome：
 - `backend[real-ocr]` dependency 與安裝文件能支援受控初始化 PaddleOCR。
 - provider-selected OCR 在預設 PaddleOCR flow 下可用 sample image 完成驗證。
 - `DOCURAG_OCR_PROVIDER=mock` 仍可保留 demo-safe mock path。
+- Phase 08 決策：provider-selected `/ocr` 預設走 PaddleOCR，mock 需透過 `/ocr/mock` 或 `DOCURAG_OCR_PROVIDER=mock` 明確 override。
 - 不新增 PDF rendering、image preprocessing、Qdrant、embedding、rerank、LLM、Redis、NATS、worker、資料庫 schema、登入或權限。
 
 Next Candidate Milestone：

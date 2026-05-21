@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+import sys
 from typing import Protocol
 
 from app.schemas.documents import BoundingBox, DocumentMetadata, OcrResult, OcrStatus, OcrTextLine, ProcessingJobType
@@ -17,6 +18,10 @@ class OcrProvider(Protocol):
         extracted_at: datetime,
     ) -> OcrResult:
         pass
+
+
+class PaddleOcrUnsupportedPythonError(RuntimeError):
+    pass
 
 
 class MockOcrProvider:
@@ -96,6 +101,12 @@ class PaddleOcrProvider:
 
         try:
             engine = self._load_engine()
+        except PaddleOcrUnsupportedPythonError as exc:
+            return self._failed_result(
+                "paddleocr_python_unsupported",
+                str(exc),
+                extracted_at,
+            )
         except ImportError:
             return self._failed_result(
                 "paddleocr_dependency_missing",
@@ -216,6 +227,14 @@ class PaddleOcrProvider:
 
     def _load_engine(self):
         if self._engine is None:
+            if sys.version_info >= (3, 13):
+                version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+                raise PaddleOcrUnsupportedPythonError(
+                    "PaddleOCR local runtime is supported only on Python 3.11 or 3.12 in this project. "
+                    f"Current Python is {version}. Install Python 3.12, then run "
+                    'py -3.12 -m pip install -e ".[dev,real-ocr]" from the backend directory.'
+                )
+
             from paddleocr import PaddleOCR
 
             self._engine = PaddleOCR(use_angle_cls=True, lang=self.language)

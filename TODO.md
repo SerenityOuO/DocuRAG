@@ -134,12 +134,13 @@
 
 ## Phase 08 - PaddleOCR Runtime Stabilization
 
-- [ ] 執行 `tasks/phase-08-paddleocr-runtime/08-01-paddleocr-environment-baseline.md`。
-- [ ] 執行 `tasks/phase-08-paddleocr-runtime/08-02-paddleocr-dependency-fix.md`。
-- [ ] 執行 `tasks/phase-08-paddleocr-runtime/08-03-paddleocr-default-flow-validation.md`。
-- [ ] 確認預設 PaddleOCR flow 可驗證，且 mock override 仍可重跑。
-- [ ] 確認 Phase 08 不新增 PDF rendering、Qdrant、embedding、rerank、LLM、Redis、NATS、worker、資料庫 schema、登入或權限。
+- [x] 執行 `tasks/phase-08-paddleocr-runtime/08-01-paddleocr-environment-baseline.md`。
+- [x] 執行 `tasks/phase-08-paddleocr-runtime/08-02-paddleocr-dependency-fix.md`。
+- [x] 執行 `tasks/phase-08-paddleocr-runtime/08-03-paddleocr-default-flow-validation.md`。
+- [x] 確認預設 PaddleOCR flow 可驗證，且 mock override 仍可重跑。
+- [x] 確認 Phase 08 不新增 PDF rendering、Qdrant、embedding、rerank、LLM、Redis、NATS、worker、資料庫 schema、登入或權限。
 
+- [x] 以 Python 3.12、PaddleOCR 2.10.0 與 PaddlePaddle 3.0.0 驗證 real OCR sample，可完成 provider-selected OCR 與 chunks 產生。
 ## Parking Lot
 
 - [ ] Production-grade OCR / VLM parser（v0.7 只先做單一 provider spike）。

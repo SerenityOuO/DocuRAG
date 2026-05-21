@@ -69,18 +69,28 @@ Phase 07 provider decision：
 
 - 07-01 選定 `PaddleOCR` 作為第一個 real OCR spike provider。
 - 07-02 已新增 provider-selected `POST /documents/{document_id}/ocr`；既有 `POST /documents/{document_id}/ocr/mock` 保持相容。
-- 使用 `DOCURAG_OCR_PROVIDER=mock|paddleocr` 選擇 provider，預設為 `mock`。
+- 使用 `DOCURAG_OCR_PROVIDER=mock|paddleocr` 選擇 provider；Phase 08 起預設為 `paddleocr`，`mock` 是明確 override。
 - PaddleOCR adapter 採 lazy import，讓未安裝 real OCR dependency 的環境仍可跑 mock demo。
 - real provider 不可用時不靜默 fallback 到 mock；real endpoint 應回傳清楚錯誤，並更新 processing status 與 processing job metadata。
 - real OCR trace output 會正規化到 `OcrResult.lines`，再映射到 chunk page、bbox、confidence、metadata 與 RAG citation trace metadata。
-- mock path 仍是預設與 demo-safe path。
+- mock path 仍是 demo-safe path，可用 `/ocr/mock` 或 `DOCURAG_OCR_PROVIDER=mock` 明確啟用。
 
 安裝 real OCR optional dependency：
 
 ```powershell
 cd backend
-py -3 -m pip install -e ".[dev,real-ocr]"
+py -3.12 -m pip install -e ".[dev,real-ocr]"
 ```
+
+Phase 08 將 `backend[real-ocr]` 固定在 Python 3.11 或 3.12 的受控範圍。Windows CPU 環境若需要先安裝 PaddlePaddle wheel，使用：
+
+```powershell
+py -3.12 -m pip install "paddlepaddle>=3.0,<3.1" -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+py -3.12 -m pip install -e ".[dev,real-ocr]"
+py -3.12 -c "import paddle, paddleocr; paddle.utils.run_check(); print(paddle.__version__, paddleocr.__version__)"
+```
+
+若使用 Python 3.13+ 啟動 `PaddleOcrProvider`，backend 會回傳 `paddleocr_python_unsupported`，提示改用 Python 3.12；不會改跑 mock。
 
 Docker real OCR build 可用 build arg 開啟，預設不安裝 PaddleOCR：
 
@@ -147,7 +157,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1
 
 `demo-smoke-test.ps1` 會驗證 `/health`、upload、OCR mock 與 `/rag/query`。`seed-demo-data.ps1` 會上傳 `sample-data/documents/mock-invoice-aurora.txt`、執行 OCR mock、查詢 `payment due date Net 15`，並輸出 answer、citations、retrieved chunks。
 
-Optional real OCR demo 只在 backend 以 `DOCURAG_OCR_PROVIDER=paddleocr` 啟動、且已安裝 `.[dev,real-ocr]` 時使用。缺少 PaddleOCR dependency 時，mock smoke / seed flow 仍是預設可重跑路徑：
+Real OCR demo 只在 backend 已用 Python 3.12 安裝 `.[dev,real-ocr]` 時使用。Phase 08 起 provider-selected `/ocr` 預設走 PaddleOCR；缺少 PaddleOCR dependency 時，`-RunRealOcr` smoke 會明確失敗，mock smoke / seed flow 可透過 `/ocr/mock` 或 `DOCURAG_OCR_PROVIDER=mock` 重跑：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunRealOcr
@@ -188,6 +198,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1
 ```
 
 如果 Python 或 Docker 不可用，依 `docs/LOCAL_DEV_SETUP.md` 修復本機工具後再重跑測試。
+
+Phase 08 PaddleOCR baseline 可用同一支腳本分段檢查 dependency import、model cache / engine initialization 與 sample image OCR：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 -CheckPaddleOcr
+```
+
+2026-05-21 Windows 本機以 Python 3.12.10、PaddleOCR 2.10.0 與 PaddlePaddle 3.0.0 完成 baseline；sample image OCR 認出 4 行文字，preview 包含 `DocuRAG OCR Demo Invoice`、`Invoice: OCR-2026-001` 與 `Total: USD 42.00`。
 
 ## Release Status
 
