@@ -113,13 +113,24 @@ const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1
 export const API_BASE_URL = configuredBaseUrl.replace(/\/$/, "");
 
 async function readJson<T>(response: Response): Promise<T> {
-  const body = (await response.json()) as T;
+  const body = (await response.json()) as unknown;
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    const detail =
+      body && typeof body === "object" && "detail" in body
+        ? (body as { detail?: unknown }).detail
+        : null;
+    const message =
+      typeof detail === "string"
+        ? detail
+        : detail && typeof detail === "object"
+          ? JSON.stringify(detail)
+          : `API request failed: ${response.status}`;
+
+    throw new Error(message);
   }
 
-  return body;
+  return body as T;
 }
 
 export async function getHealth(): Promise<HealthResponse> {
@@ -151,6 +162,14 @@ export async function getDocument(documentId: string): Promise<DocumentMetadata>
 
 export async function runMockOcr(documentId: string): Promise<OcrResultResponse> {
   const response = await fetch(`${API_BASE_URL}/documents/${documentId}/ocr/mock`, {
+    method: "POST",
+  });
+
+  return readJson<OcrResultResponse>(response);
+}
+
+export async function runSelectedOcr(documentId: string): Promise<OcrResultResponse> {
+  const response = await fetch(`${API_BASE_URL}/documents/${documentId}/ocr`, {
     method: "POST",
   });
 

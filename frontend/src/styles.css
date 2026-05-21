@@ -214,6 +214,13 @@ td {
   background: #334155;
 }
 
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .file-picker {
   align-items: center;
   border: 1px dashed #9aa8bb;
@@ -472,6 +479,15 @@ pre {
 
   .panel-heading {
     display: block;
+  }
+
+  .button-row {
+    justify-content: stretch;
+    margin-top: 12px;
+  }
+
+  .button-row .button {
+    width: 100%;
   }
 
   .ocr-grid {

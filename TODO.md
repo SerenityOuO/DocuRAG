@@ -128,7 +128,17 @@
 - [x] 執行 local OCR provider adapter，新增 provider-selected `/documents/{document_id}/ocr`，預設仍保留 mock provider。
 - [x] 執行 OCR output normalization，將 PaddleOCR lines 映射到 page、bbox、confidence 與 trace metadata。
 - [x] 執行 real OCR demo hardening，讓缺少 real OCR dependency 時 mock demo 仍可重跑。
+- [x] frontend UI 只顯示目前版本號，並提供 provider-selected OCR 操作。
+- [x] backend 與 frontend 版本更新為 `0.7.0`。
 - [x] 確認 Phase 07 仍未接 queue、Redis、NATS、Qdrant、embedding、rerank、LLM、PostgreSQL、登入或 RBAC。
+
+## Phase 08 - PaddleOCR Runtime Stabilization
+
+- [ ] 執行 `tasks/phase-08-paddleocr-runtime/08-01-paddleocr-environment-baseline.md`。
+- [ ] 執行 `tasks/phase-08-paddleocr-runtime/08-02-paddleocr-dependency-fix.md`。
+- [ ] 執行 `tasks/phase-08-paddleocr-runtime/08-03-paddleocr-default-flow-validation.md`。
+- [ ] 確認預設 PaddleOCR flow 可驗證，且 mock override 仍可重跑。
+- [ ] 確認 Phase 08 不新增 PDF rendering、Qdrant、embedding、rerank、LLM、Redis、NATS、worker、資料庫 schema、登入或權限。
 
 ## Parking Lot
 

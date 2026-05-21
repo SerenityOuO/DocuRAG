@@ -199,9 +199,27 @@ Phase 07 provider decision：
 - normalization 狀態：07-03 已把 PaddleOCR line text、page、bbox、confidence 與 metadata 正規化到 `OcrTextLine`，並由 chunks、citations 與 retrieved_chunks 一致帶出 trace metadata。
 - demo 狀態：07-04 已加入 `sample-ocr-invoice.png` 與 `-RunRealOcr` optional smoke / seed script；預設 validation 仍只要求 mock flow 可用。
 
+## Phase 08 PaddleOCR Runtime Stabilization
+
+Goal：在 v0.7 real OCR spike 後，針對 PaddleOCR 環境問題建立可重現 baseline、修復 dependency / runtime 相容性，並驗證預設 PaddleOCR flow。
+
+Tickets：
+
+- `tasks/phase-08-paddleocr-runtime/08-01-paddleocr-environment-baseline.md`
+- `tasks/phase-08-paddleocr-runtime/08-02-paddleocr-dependency-fix.md`
+- `tasks/phase-08-paddleocr-runtime/08-03-paddleocr-default-flow-validation.md`
+
+Expected Outcome：
+
+- Windows 本機與 Docker 的 PaddleOCR 失敗點可被明確重現。
+- `backend[real-ocr]` dependency 與安裝文件能支援受控初始化 PaddleOCR。
+- provider-selected OCR 在預設 PaddleOCR flow 下可用 sample image 完成驗證。
+- `DOCURAG_OCR_PROVIDER=mock` 仍可保留 demo-safe mock path。
+- 不新增 PDF rendering、image preprocessing、Qdrant、embedding、rerank、LLM、Redis、NATS、worker、資料庫 schema、登入或權限。
+
 Next Candidate Milestone：
 
-- v0.8.0 Embedding / Qdrant Indexing Spike：在 OCR 與 chunk / citation contract 穩定後，將 local keyword retrieval 替換成可驗證的 vector indexing。
+- v0.9.0 Embedding / Qdrant Indexing Spike：在 OCR 與 chunk / citation contract 穩定後，將 local keyword retrieval 替換成可驗證的 vector indexing。
 
 ## Release Verification
 

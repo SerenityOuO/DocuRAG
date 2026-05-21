@@ -38,6 +38,16 @@
 
 ---
 
+## Git 與 GitHub 文字格式規範
+
+- Git commit message、commit body、PR title、PR description、release note、tag annotation、issue / ticket 標題與說明，預設都使用繁體中文。
+- 可保留必要專有名詞與固定技術 token 的原文，例如 `PaddleOCR`、`FastAPI`、`Vue`、`Docker`、`OCR`、`RAG`、`API`、`frontend`、`backend`、endpoint、環境變數、檔案路徑、套件名與程式碼識別符。
+- 若沿用 Conventional Commits，`feat:`、`fix:`、`docs:`、`test:` 等 type 可維持英文；冒號後的摘要要使用繁體中文，例如 `docs: 更新 Git 中文格式規範`。
+- 分支名稱可使用既有英文 prefix 或 kebab-case token；分支描述、PR 內容與提交說明仍使用繁體中文。
+- 引用原始錯誤訊息、log、命令輸出或第三方 API 欄位時保持原文，不硬翻技術內容。
+
+---
+
 ## 通用交互規範
 
 - 用中文回答，優先解決核心問題

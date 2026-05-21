@@ -9,6 +9,7 @@ import {
   listDocuments,
   queryRag,
   runMockOcr,
+  runSelectedOcr,
   uploadDocument,
   type BoundingBox,
   type DocumentListResponse,
@@ -50,6 +51,8 @@ const latestResponse = ref<
   | UploadResponse
   | null
 >(null);
+
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.7.0"));
 
 const healthLabel = computed(() => {
   if (healthState.value === "success" && health.value?.status === "ok") {
@@ -180,6 +183,41 @@ async function runOcrForSelectedDocument(): Promise<void> {
   }
 }
 
+async function runSelectedOcrForSelectedDocument(): Promise<void> {
+  if (!selectedDocument.value) {
+    ocrError.value = "請先選擇文件。";
+    return;
+  }
+
+  const documentId = selectedDocument.value.document_id;
+  ocrState.value = "loading";
+  ocrError.value = "";
+
+  try {
+    const response = await runSelectedOcr(documentId);
+    const updatedDocument = await getDocument(documentId);
+    selectedDocument.value = updatedDocument;
+    documents.value = documents.value.map((document) =>
+      document.document_id === documentId ? updatedDocument : document,
+    );
+    latestResponse.value = response;
+    ocrState.value = "success";
+  } catch (error) {
+    try {
+      const updatedDocument = await getDocument(documentId);
+      selectedDocument.value = updatedDocument;
+      documents.value = documents.value.map((document) =>
+        document.document_id === documentId ? updatedDocument : document,
+      );
+    } catch {
+      // Keep the original API error visible when refreshing failed metadata is unavailable.
+    }
+
+    ocrError.value = error instanceof Error ? error.message : "Run selected OCR failed";
+    ocrState.value = "error";
+  }
+}
+
 async function submitRagQuery(): Promise<void> {
   const query = ragQuery.value.trim();
 
@@ -242,9 +280,12 @@ onMounted(() => {
 <template>
   <main class="page">
     <header class="hero">
-      <p class="eyebrow">v0.5.1 Demo Hardening</p>
+      <p class="eyebrow">{{ currentVersionLabel }}</p>
       <h1>DocuRAG AgentOps</h1>
-      <p class="hero-copy">Backend health、本機文件上傳、metadata 保存、OCR mock、local keyword RAG 與 citations 驗證。</p>
+      <p class="hero-copy">
+        Backend health、本機文件上傳、metadata 保存、OCR provider bridge、provider-selected OCR、local keyword RAG
+        與 citation trace 驗證。
+      </p>
     </header>
 
     <section class="layout" aria-label="Demo controls">
@@ -417,16 +458,26 @@ onMounted(() => {
         <div class="panel-heading">
           <div>
             <h2>OCR result</h2>
-            <p>POST /documents/{{ "{document_id}" }}/ocr/mock</p>
+            <p>POST /documents/{{ "{document_id}" }}/ocr/mock 或 /ocr</p>
           </div>
-          <button
-            type="button"
-            class="button secondary-button"
-            :disabled="!selectedDocument || ocrState === 'loading'"
-            @click="runOcrForSelectedDocument"
-          >
-            {{ ocrState === "loading" ? "Running..." : "Run Mock OCR" }}
-          </button>
+          <div class="button-row">
+            <button
+              type="button"
+              class="button secondary-button"
+              :disabled="!selectedDocument || ocrState === 'loading'"
+              @click="runOcrForSelectedDocument"
+            >
+              {{ ocrState === "loading" ? "Running..." : "Run Mock OCR" }}
+            </button>
+            <button
+              type="button"
+              class="button"
+              :disabled="!selectedDocument || ocrState === 'loading'"
+              @click="runSelectedOcrForSelectedDocument"
+            >
+              {{ ocrState === "loading" ? "Running..." : "Run Selected OCR" }}
+            </button>
+          </div>
         </div>
 
         <p v-if="ocrError" class="error">{{ ocrError }}</p>

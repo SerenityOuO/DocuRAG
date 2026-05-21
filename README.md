@@ -383,7 +383,7 @@ v0.5.1 補強 demo 可重跑性與 GitHub 可讀性，不新增 Qdrant、embeddi
 
 ## Current Status
 
-目前完成 MVP v0.6 Bridge Contracts：
+目前完成 MVP v0.7 Real OCR Provider Spike：
 
 - `GET /health` 回傳 service、status、version。
 - `POST /documents/upload` 可接收 `UploadFile`，保存原始檔並回傳 document metadata。
@@ -396,7 +396,7 @@ v0.5.1 補強 demo 可重跑性與 GitHub 可讀性，不新增 Qdrant、embeddi
 - backend 已允許 local frontend CORS origin。
 - backend 可用 pytest 驗證。
 - backend 可用 Dockerfile / Compose 啟動。
-- frontend 可顯示 backend health、選擇檔案、呼叫 upload API、刷新文件列表、執行 Run Mock OCR、查看 OCR 結果，並用 RAG chat 查詢 answer 與 citations。
+- frontend 可顯示目前版本號、backend health、選擇檔案、呼叫 upload API、刷新文件列表、執行 Run Mock OCR 或 Run Selected OCR、查看 OCR 結果，並用 RAG chat 查詢 answer 與 citations。
 - GitHub Actions Backend CI 已建立。
 - demo seed script 與 API smoke test 已建立，可用公開 sample data 重跑 demo。
 
@@ -420,7 +420,7 @@ Phase 07 ticket backlog 已建立：
 
 PaddleOCR 目前只作為 Phase 07 controlled spike，不代表已完成 production OCR pipeline；尚未實作 PDF rendering、image preprocessing、embedding、Qdrant、async worker、queue、Redis、NATS、vLLM、登入、權限或資料庫 schema。
 
-本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前 backend pytest、frontend build、Docker build、Docker Compose healthcheck、Compose upload API、Compose OCR mock API、Compose RAG API、demo smoke test 與 demo seed script 均已納入 v0.6 驗證流程。
+本機驗證狀態請見 `docs/LOCAL_DEV_SETUP.md`。目前 backend pytest、frontend build、Docker build、Docker Compose healthcheck、Compose upload API、Compose OCR mock API、Compose RAG API、demo smoke test 與 demo seed script 均已納入 v0.6 / v0.7 驗證流程。
 
 ## Release Status
 
@@ -432,4 +432,4 @@ PaddleOCR 目前只作為 Phase 07 controlled spike，不代表已完成 product
 - v0.5.0: Local RAG Baseline、chunking、keyword retrieval、RAG answer API、frontend Chat UI 與 Docker Compose RAG API 驗證已完成。
 - v0.5.1: Demo Hardening、公開 sample data、demo seed script、API smoke test、5 分鐘 demo flow 與 Docker Compose demo 驗證已完成。
 - v0.6.0: Bridge Contracts、OCR provider interface、RAG provider interface、processing status、chunk citation schema 與 processing job contract 已完成。
-- v0.7.0: Real OCR Provider Spike tickets 已建立；07-01 已選定 PaddleOCR，07-02 已新增 provider adapter，07-03 已完成 output normalization，07-04 已完成 demo hardening。
+- v0.7.0: Real OCR Provider Spike 已完成；07-01 已選定 PaddleOCR，07-02 已新增 provider adapter，07-03 已完成 output normalization，07-04 已完成 demo hardening，UI 已只顯示目前版本號並提供 provider-selected OCR 操作。

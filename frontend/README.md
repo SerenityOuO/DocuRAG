@@ -1,6 +1,6 @@
 # DocuRAG AgentOps Frontend
 
-最小 Vue 3 + Vite demo UI，用來檢查 backend health、上傳文件、顯示文件列表、執行 mock OCR，並用 local RAG chat 查看 deterministic answer、citations 與 retrieved chunks。v0.5.1 搭配公開 sample data、demo seed script 與 API smoke test，讓 GitHub / 面試展示可以快速重跑。v0.6 bridge 保持 UI contract 不變，backend 目前只用 `KeywordRagProvider` 回傳 local keyword RAG 結果。v0.7 的 real OCR spike 已選定 PaddleOCR，backend 已新增 provider-selected OCR endpoint 與 optional real OCR smoke flow，但 UI demo 預設仍走 mock path，避免未安裝 real OCR dependency 時破壞展示流程。
+最小 Vue 3 + Vite demo UI，用來檢查 backend health、上傳文件、顯示文件列表、執行 OCR，並用 local RAG chat 查看 deterministic answer、citations 與 retrieved chunks。v0.5.1 搭配公開 sample data、demo seed script 與 API smoke test，讓 GitHub / 面試展示可以快速重跑。v0.6 bridge 保持 UI contract 不變，backend 目前只用 `KeywordRagProvider` 回傳 local keyword RAG 結果。v0.7 的 real OCR spike 已選定 PaddleOCR，backend 已新增 provider-selected OCR endpoint 與 optional real OCR smoke flow；UI 首頁只顯示目前版本號，並保留 mock path 供沒有 real OCR dependency 的環境重跑。
 
 ## Install
 
@@ -46,14 +46,16 @@ npm.cmd run build
 
 ## Demo UI
 
-v0.5.1 UI 支援：
+v0.7.0 UI 支援：
 
 - `GET /health` 顯示 backend 狀態。
+- 首頁只顯示目前版本號。
 - `POST /documents/upload` 上傳本機文件。
 - 上傳成功後自動刷新 `GET /documents` 文件列表。
 - 文件列表顯示 filename、status、OCR status、size、created_at 與 content_type。
 - 點選 filename 後呼叫 `GET /documents/{document_id}`，並顯示 metadata JSON。
 - 選中文件後可按 `Run Mock OCR` 呼叫 `POST /documents/{document_id}/ocr/mock`。
+- 選中文件後也可按 `Run Selected OCR` 呼叫 provider-selected `POST /documents/{document_id}/ocr`。
 - OCR client 支援 `GET /documents/{document_id}/ocr` 查詢目前 OCR result。
 - OCR result 面板顯示 OCR status、OCR text 與 extracted fields。
 - 文件列表與 OCR result 面板顯示 backend `processing` contract 的 indexing、ready 與 latest job 狀態。
