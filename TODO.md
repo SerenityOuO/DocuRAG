@@ -157,10 +157,10 @@
 
 ## Phase 10 - LLM RAG Backlog
 
-- [ ] `tasks/phase-10-llm-rag/10-01-llm-provider-decision.md`: 選定第一個本機大模型 provider。
-- [ ] `tasks/phase-10-llm-rag/10-02-openai-compatible-llm-client.md`: 新增 OpenAI-compatible LLM client。
-- [ ] `tasks/phase-10-llm-rag/10-03-llm-rag-generation.md`: 在既有 citations contract 上加入 LLM answer generation。
-- [ ] `tasks/phase-10-llm-rag/10-04-llm-demo-smoke.md`: 補齊 LLM demo smoke 與 UI answer source。
+- [ ] `tasks/phase-10-llm-rag/10-01-qwen3-ollama-provider-decision.md`: 依 `goal.md` 固定 Ollama `qwen3:8b` / `qwen3-vl:8b` provider 決策。
+- [ ] `tasks/phase-10-llm-rag/10-02-ollama-qwen3-client.md`: 新增 Ollama `qwen3:8b` LLM client。
+- [ ] `tasks/phase-10-llm-rag/10-03-qwen3-rag-generation.md`: 在既有 citations contract 上加入 `qwen3:8b` answer generation。
+- [ ] `tasks/phase-10-llm-rag/10-04-qwen3-demo-smoke.md`: 補齊 Qwen3 demo smoke 與 UI answer source。
 
 ## Release Verification Status
 
