@@ -546,7 +546,7 @@ Goal：在 Phase 13 retrieval evaluation baseline 完成後，先規劃 rerank /
 
 Tickets：
 
-- [ ] `tasks/phase-14-retrieval-quality/14-01-rerank-provider-decision.md`
+- [x] `tasks/phase-14-retrieval-quality/14-01-rerank-provider-decision.md`
 - [ ] `tasks/phase-14-retrieval-quality/14-02-retrieval-quality-contract.md`
 - [ ] `tasks/phase-14-retrieval-quality/14-03-eval-dataset-expansion-plan.md`
 - [ ] `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md`
@@ -561,8 +561,9 @@ Expected Outcome：
 
 14-01 Rerank Provider Decision：
 
-- 回顧 Phase 13 metrics，固定 rerank provider decision criteria。
-- 明確規劃 rerank 與 hybrid search 的先後順序建議。
+- Phase 13 baseline input：keyword eval Hit Rate@K `0.8333`、MRR@K `0.6389`、Recall@K `0.75`、failure count `0`；optional vector eval Hit Rate@K `0.6667`、MRR@K `0.6667`、Recall@K `0.5833`、failure count `0`。
+- Rerank provider decision criteria：local-first / self-hosted 優先、disabled-by-default、fallback-safe、可用 Phase 13 eval runner 重跑比較，並能記錄 provider、model、candidate count、rerank top K、score、latency 與 fallback reason。
+- 建議先規劃 `vector_rerank`，再延後比較 `hybrid` / `hybrid_rerank`；hybrid 需等 merge policy、dedupe rule 與 trace metadata contract 固定後才進 implementation。
 - 不新增 runtime、不下載模型、不修改 backend / frontend。
 
 14-02 Retrieval Quality Contract：

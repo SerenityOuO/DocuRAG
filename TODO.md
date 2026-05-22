@@ -40,8 +40,8 @@
 
 下一步優先順序：
 
-1. `tasks/phase-14-retrieval-quality/14-01-rerank-provider-decision.md` 待執行，先固定 Phase 14 retrieval quality planning boundary。
-2. `tasks/phase-14-retrieval-quality/14-02-retrieval-quality-contract.md` 待執行，規劃 future rerank / hybrid trace contract。
+1. `tasks/phase-14-retrieval-quality/14-01-rerank-provider-decision.md` 已完成，固定 Phase 14 retrieval quality planning boundary。
+2. `tasks/phase-14-retrieval-quality/14-02-retrieval-quality-contract.md` 待執行，下一步規劃 future rerank / hybrid trace contract。
 3. `tasks/phase-14-retrieval-quality/14-03-eval-dataset-expansion-plan.md` 待執行，規劃 eval dataset 擴充方向。
 4. `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md` 待執行，規劃 future demo / validation / release checklist。
 
@@ -266,7 +266,8 @@ Phase 13 guardrails：
 
 ## MVP v0.14.0 Retrieval Quality Planning Backlog
 
-- [ ] `tasks/phase-14-retrieval-quality/14-01-rerank-provider-decision.md`: 固定 Phase 14 rerank provider decision 與 retrieval quality planning boundary，只做文件決策，不新增 runtime。
+- [x] `tasks/phase-14-retrieval-quality/14-01-rerank-provider-decision.md`: 固定 Phase 14 rerank provider decision 與 retrieval quality planning boundary，引用 Phase 13 metrics，記錄 local-first / disabled-by-default / fallback-safe decision criteria；只做文件決策，不新增 runtime。
+- [x] 14-01 validation：`rg -n "v0.14.0|Phase 14|rerank|hybrid|retrieval quality" TODO.md docs/ROADMAP.md tasks/phase-14-retrieval-quality/14-01-rerank-provider-decision.md` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
 - [ ] `tasks/phase-14-retrieval-quality/14-02-retrieval-quality-contract.md`: 定義 future rerank / hybrid strategy labels、trace metadata 與 fallback contract，只做 Markdown contract。
 - [ ] `tasks/phase-14-retrieval-quality/14-03-eval-dataset-expansion-plan.md`: 規劃 retrieval eval dataset 擴充方向，只做文件計畫，不修改 dataset JSON。
 - [ ] `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md`: 規劃 future demo smoke、validation 與 release sync checklist，不執行 version bump。
