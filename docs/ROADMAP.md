@@ -1003,7 +1003,7 @@ Tickets：
 - [x] `tasks/phase-20-interview-mvp-packaging/20-01-interview-demo-doc-refresh.md`
 - [x] `tasks/phase-20-interview-mvp-packaging/20-02-sample-eval-coverage-expansion.md`
 - [x] `tasks/phase-20-interview-mvp-packaging/20-03-demo-media-and-readme-polish.md`
-- [ ] `tasks/phase-20-interview-mvp-packaging/20-04-final-interview-mvp-validation.md`
+- [x] `tasks/phase-20-interview-mvp-packaging/20-04-final-interview-mvp-validation.md`
 
 Expected Outcome：
 
@@ -1034,6 +1034,16 @@ Expected Outcome：
 - Demo media 已新增 `docs/demo-media/frontend-overview.png`、`docs/demo-media/frontend-trace.png` 與 `docs/demo-media/eval-summary.png`，只使用 repo 內公開 synthetic sample data 與本機 eval summary。
 - `docs/demo-script.md` 已引用新增 media，並明確區分 baseline demo、optional vector / rerank / hybrid / `hybrid_rerank` eval path 與尚未實作的 production runtime。
 - 20-03 validation：`npm.cmd run build` 通過；Browser 檢查 local frontend demo view 通過；`rg` 與 `git diff --check` 通過。
+
+20-04 Final Validation Status：
+
+- Backend package / app version、frontend package / lock / fallback version、health test 與 Docker Compose `DOCURAG_VERSION` 已同步到 `0.20.0`。
+- README、backend README、frontend README、TODO 與 ROADMAP 已記錄 `v0.20.0` interview MVP packaging release status。
+- Backend tests 通過，`127 passed`（僅 pytest cache 權限警告）；frontend build 通過。
+- Baseline demo smoke 通過，health version `0.20.0`、answer source `deterministic baseline`、retrieval source `keyword baseline`。
+- Baseline retrieval eval smoke 通過，keyword summary `case_count=20`、Hit Rate@K `0.7`、MRR@K `0.475`、Recall@K `0.625`、failure count `0`、fallback count `0`、trace metadata count `62`。
+- Optional `-RunVector`、`-RunVectorRerank` 與 `-RunHybrid` 已執行 preflight；本機 Qdrant collection `docurag_chunks_v1` 不可用，因此 optional vector-backed eval 需先啟動 Qdrant 並重跑 `scripts/qdrant-collection-smoke.ps1`。
+- Phase 20 沒有新增 out-of-scope runtime、infra、auth、DB 或 deployment 功能。
 
 Acceptance Criteria：
 
