@@ -2,7 +2,10 @@ param(
     [string]$ApiBaseUrl = "http://127.0.0.1:8000",
     [string]$SamplePath = "",
     [switch]$RunRealOcr,
-    [string]$RealOcrSamplePath = ""
+    [string]$RealOcrSamplePath = "",
+    [switch]$RunLlm,
+    [string]$LlmBaseUrl = "http://127.0.0.1:11434",
+    [string]$LlmModel = "qwen3.5:4b"
 )
 
 Set-StrictMode -Version Latest
@@ -58,6 +61,47 @@ function Get-ErrorResponseBody {
     }
 }
 
+function Get-RagAnswerSource {
+    param([object]$Rag)
+
+    if ($null -eq $Rag -or $null -eq $Rag.citations -or $Rag.citations.Count -eq 0) {
+        return "deterministic baseline"
+    }
+
+    $trace = $Rag.citations[0].trace_metadata
+    if ($null -eq $trace) {
+        return "deterministic baseline"
+    }
+
+    $statusProperty = $trace.PSObject.Properties["llm_generation_status"]
+    if ($null -eq $statusProperty) {
+        return "deterministic baseline"
+    }
+
+    if ($statusProperty.Value -eq "completed") {
+        $provider = "ollama"
+        $model = "qwen3.5:4b"
+        $providerProperty = $trace.PSObject.Properties["llm_provider"]
+        $modelProperty = $trace.PSObject.Properties["llm_model"]
+
+        if ($null -ne $providerProperty -and -not [string]::IsNullOrWhiteSpace([string]$providerProperty.Value)) {
+            $provider = [string]$providerProperty.Value
+        }
+
+        if ($null -ne $modelProperty -and -not [string]::IsNullOrWhiteSpace([string]$modelProperty.Value)) {
+            $model = [string]$modelProperty.Value
+        }
+
+        return "$provider/$model"
+    }
+
+    if ($statusProperty.Value -eq "failed") {
+        return "LLM unavailable fallback"
+    }
+
+    return "deterministic baseline"
+}
+
 function Invoke-FileUpload {
     param(
         [string]$Url,
@@ -93,6 +137,22 @@ function Invoke-FileUpload {
 Write-Host "Demo smoke test"
 Write-Host "API: $ApiBaseUrl"
 
+if ($RunLlm) {
+    $ollamaTagsUrl = "$($LlmBaseUrl.TrimEnd('/'))/api/tags"
+    Write-Host "LLM smoke enabled"
+    Write-Host "Ollama tags: $ollamaTagsUrl"
+
+    try {
+        $ollamaTags = Invoke-RestMethod -Method Get -Uri $ollamaTagsUrl
+    }
+    catch {
+        throw "Ollama is required for -RunLlm but $ollamaTagsUrl was unavailable. Start Ollama and pull $LlmModel first. $($_.Exception.Message)"
+    }
+
+    $modelNames = @($ollamaTags.models | ForEach-Object { $_.name })
+    Assert-Condition ($modelNames -contains $LlmModel) "Ollama model '$LlmModel' was not found. Available models: $($modelNames -join ', ')"
+}
+
 $health = Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/health"
 Assert-Condition ($health.status -eq "ok") "Expected /health status ok."
 Assert-Condition (-not [string]::IsNullOrWhiteSpace($health.version)) "Expected /health version."
@@ -114,11 +174,23 @@ $ragBody = @{
 } | ConvertTo-Json
 $rag = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/rag/query" -ContentType "application/json" -Body $ragBody
 
-Assert-Condition ($rag.answer -match "mock-invoice-aurora.txt") "RAG answer did not reference the sample invoice."
 Assert-Condition ($rag.citations.Count -gt 0) "RAG did not return citations."
 Assert-Condition ($rag.retrieved_chunks.Count -gt 0) "RAG did not return retrieved chunks."
 Assert-Condition (($rag.retrieved_chunks | ConvertTo-Json -Depth 8) -match "AUR-2026-051") "Retrieved chunks did not include expected invoice evidence."
-Write-Host "RAG query OK"
+$ragAnswerSource = Get-RagAnswerSource $rag
+
+if ($RunLlm) {
+    $expectedSource = "ollama/$LlmModel"
+    Assert-Condition ($ragAnswerSource -eq $expectedSource) "Expected LLM answer source '$expectedSource'. Got '$ragAnswerSource'. Start backend with DOCURAG_LLM_PROVIDER=ollama, DOCURAG_LLM_BASE_URL=$LlmBaseUrl, and DOCURAG_LLM_MODEL=$LlmModel."
+    Assert-Condition (-not [string]::IsNullOrWhiteSpace($rag.answer)) "LLM RAG answer was empty."
+    Assert-Condition ($rag.answer -notmatch "LLM generation unavailable") "LLM RAG fell back to deterministic answer."
+}
+else {
+    Assert-Condition ($rag.answer -match "mock-invoice-aurora.txt") "RAG answer did not reference the sample invoice."
+    Assert-Condition ($ragAnswerSource -eq "deterministic baseline") "Expected deterministic baseline answer source. Got '$ragAnswerSource'."
+}
+
+Write-Host "RAG query OK: source $ragAnswerSource"
 
 if ($RunRealOcr) {
     Write-Host "Real OCR check"

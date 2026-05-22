@@ -13,11 +13,14 @@
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
-目前下一步優先順序：
+目前已完成優先順序：
 
 1. `tasks/phase-09-gpu-runtime/09-03-paddleocr-engine-lifecycle-preload.md` 已完成。
 2. `tasks/phase-09-gpu-runtime/09-04-paddleocr-performance-observability-tuning.md` 已完成。
-3. Phase 09 performance hardening 已收斂為 `v0.9.1`；下一步才依序執行 Phase 10 的 Qwen3 / Ollama / RAG demo ticket。
+3. `tasks/phase-10-llm-rag/10-01-qwen3-ollama-provider-decision.md` 已完成，只固定 Ollama `qwen3.5:4b` provider decision 與 env 文件。
+4. `tasks/phase-10-llm-rag/10-02-ollama-qwen3-client.md` 已完成，只新增最小 Ollama client building block，未改變既有 `/rag/query` deterministic baseline 預設。
+5. `tasks/phase-10-llm-rag/10-03-qwen3-rag-generation.md` 已完成，只在 retrieved chunks 與 query 上加入可選 generation path。
+6. `tasks/phase-10-llm-rag/10-04-qwen3-demo-smoke.md` 已完成，補齊 demo smoke、UI answer source 與 `v0.10.0` release/version sync。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -178,10 +181,14 @@
 
 ## MVP v0.10.0 LLM RAG Backlog
 
-- [ ] `tasks/phase-10-llm-rag/10-01-qwen3-ollama-provider-decision.md`: 依 `goal.md` 固定 Ollama `qwen3.5:4b` LLM / VLM provider 決策。
-- [ ] `tasks/phase-10-llm-rag/10-02-ollama-qwen3-client.md`: 新增 Ollama `qwen3.5:4b` LLM client。
-- [ ] `tasks/phase-10-llm-rag/10-03-qwen3-rag-generation.md`: 在既有 citations contract 上加入 `qwen3.5:4b` answer generation。
-- [ ] `tasks/phase-10-llm-rag/10-04-qwen3-demo-smoke.md`: 補齊 Qwen3.5 demo smoke 與 UI answer source。
+- [x] `tasks/phase-10-llm-rag/10-01-qwen3-ollama-provider-decision.md`: 依 `goal.md` 固定 Ollama `qwen3.5:4b` LLM / VLM provider 決策；已補齊 `DOCURAG_LLM_BASE_URL=http://127.0.0.1:11434` 與 `.env.example` provider env。
+- [x] 10-01 validation：`nvidia-smi` 通過，GPU 為 RTX 5070 Ti；`ollama` CLI 目前不在 PATH，`http://127.0.0.1:11434/api/tags` 目前無服務回應，屬 10-02 前需補齊的本機前置條件。
+- [x] `tasks/phase-10-llm-rag/10-02-ollama-qwen3-client.md`: 新增 Ollama `qwen3.5:4b` LLM client；預設 disabled，設定 `DOCURAG_LLM_PROVIDER=ollama` 後使用 native `POST /api/generate` 與 `stream=false`，並以 `GET /api/tags` 做 health helper。
+- [x] 10-02 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`58 passed`；`curl.exe http://127.0.0.1:11434/api/tags` 仍因本機 Ollama service 未啟動而無法連線，mock HTTP / monkeypatch 測試已覆蓋 request / response。
+- [x] `tasks/phase-10-llm-rag/10-03-qwen3-rag-generation.md`: 在既有 citations contract 上加入可選 `qwen3.5:4b` answer generation；prompt 只使用 query 與 retrieved chunks，LLM failure 會明確 fallback 到 retrieved OCR chunks。
+- [x] 10-03 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`61 passed`；mock LLM client 測試已覆蓋 prompt assembly、成功生成、failure fallback、citation preservation 與 trace metadata。
+- [x] `tasks/phase-10-llm-rag/10-04-qwen3-demo-smoke.md`: 補齊 Qwen3.5 demo smoke、UI answer source、`-RunLlm` optional smoke 與 `v0.10.0` release/version sync。
+- [x] 10-04 validation：backend test script 通過，`61 passed`；`npm.cmd run build` 通過；`scripts/demo-smoke-test.ps1` 通過並確認 answer source 為 `deterministic baseline`；2026-05-22 follow-up 已安裝 Ollama 0.24.0、pull `qwen3.5:4b`，並以 LLM-enabled backend 跑通 `scripts/demo-smoke-test.ps1 -RunLlm`，確認 answer source 為 `ollama/qwen3.5:4b`。
 
 ## Release Verification Status
 
@@ -200,3 +207,4 @@
 - [x] v0.8.0: PaddleOCR Runtime Stabilization 已完成；Python 3.12、PaddleOCR 2.10.0、PaddlePaddle 3.0.0 sample real OCR flow 已驗證。
 - [x] v0.9.0: GPU Runtime 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.9.0`，本機 Python 3.12 + CUDA PaddlePaddle GPU runtime 與繁中 provider-selected OCR smoke 已通過。
 - [x] v0.9.1: OCR Performance Hardening 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.9.1`，PaddleOCR startup preload、provider reuse、timing metadata、`cls=False` baseline 與 provider-selected real OCR smoke 已通過。
+- [x] v0.10.0: LLM RAG Backlog 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.10.0`，Ollama `qwen3.5:4b` provider decision、最小 client、optional generation path、demo smoke `-RunLlm` 與 frontend answer source 已補齊。

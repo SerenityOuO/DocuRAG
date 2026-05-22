@@ -7,10 +7,12 @@ from fastapi.testclient import TestClient
 from app.api.routes.documents import get_document_storage as get_documents_storage
 from app.api.routes.rag import get_document_storage as get_rag_storage
 from app.api.routes.rag import get_rag_provider
+from app.core.config import get_settings
 from app.main import app
 from app.schemas.documents import BoundingBox, DocumentChunk, DocumentMetadata, DocumentStatus
 from app.schemas.rag import RagCitation, RagQueryResponse
 from app.services.document_storage import DocumentStorage
+from app.services.llm import LlmGeneration, LlmProviderError
 from app.services.rag import KeywordRagProvider
 
 
@@ -185,6 +187,132 @@ def test_keyword_rag_provider_returns_empty_result() -> None:
     assert "No OCR chunks matched query: missing" in response.answer
     assert response.citations == []
     assert response.retrieved_chunks == []
+
+
+def test_keyword_rag_provider_uses_llm_generation_with_retrieved_chunks() -> None:
+    class StubLlmProvider:
+        name = "ollama"
+
+        def __init__(self) -> None:
+            self.prompt = ""
+            self.system = ""
+
+        def generate(self, prompt: str, system: str | None = None) -> LlmGeneration:
+            self.prompt = prompt
+            self.system = system or ""
+            return LlmGeneration(
+                text="Generated answer from retrieved chunks.",
+                model="qwen3.5:4b",
+                prompt_tokens=42,
+                completion_tokens=9,
+                total_duration_ms=123.45,
+                load_duration_ms=10.0,
+            )
+
+    llm_provider = StubLlmProvider()
+    document = DocumentMetadata(
+        document_id="doc-001",
+        filename="invoice-a.txt",
+        stored_filename="doc-001-invoice-a.txt",
+        file_type="txt",
+        content_type="text/plain",
+        size=100,
+        status=DocumentStatus.READY,
+        created_at="2026-05-20T00:00:00Z",
+        chunks=[
+            DocumentChunk(
+                chunk_id="chunk-001",
+                document_id="doc-001",
+                text="Invoice total is USD 42.00.",
+                source="ocr_paddleocr",
+                created_at="2026-05-20T00:00:00Z",
+                page_number=1,
+                source_type="ocr_paddleocr",
+                metadata={"origin": "ocr_line", "provider": "ocr_paddleocr"},
+            )
+        ],
+    )
+
+    response = KeywordRagProvider(llm_provider=llm_provider).query("What is the invoice total?", 3, [document])
+
+    assert response.answer == "Generated answer from retrieved chunks."
+    assert "Use only the retrieved chunks" in llm_provider.prompt
+    assert "What is the invoice total?" in llm_provider.prompt
+    assert "chunk_id=chunk-001" in llm_provider.prompt
+    assert "Invoice total is USD 42.00." in llm_provider.prompt
+    assert "using only the supplied retrieved OCR chunks" in llm_provider.system
+    assert response.retrieved_chunks[0].chunk_id == "chunk-001"
+    assert response.citations[0].chunk_id == "chunk-001"
+    assert response.citations[0].trace_metadata == {
+        "source": "ocr_paddleocr",
+        "origin": "ocr_line",
+        "provider": "ocr_paddleocr",
+        "llm_generation_status": "completed",
+        "llm_provider": "ollama",
+        "llm_model": "qwen3.5:4b",
+        "llm_prompt_source": "retrieved_chunks",
+        "llm_prompt_chunk_count": "1",
+        "llm_prompt_tokens": "42",
+        "llm_completion_tokens": "9",
+        "llm_total_duration_ms": "123.45",
+        "llm_load_duration_ms": "10.00",
+        "llm_generation_latency_ms": response.citations[0].trace_metadata["llm_generation_latency_ms"],
+    }
+
+
+def test_keyword_rag_provider_falls_back_when_llm_generation_fails() -> None:
+    class FailingLlmProvider:
+        name = "ollama"
+        model = "qwen3.5:4b"
+
+        def generate(self, prompt: str, system: str | None = None) -> LlmGeneration:
+            raise LlmProviderError("Cannot connect to Ollama")
+
+    document = DocumentMetadata(
+        document_id="doc-001",
+        filename="invoice-a.txt",
+        stored_filename="doc-001-invoice-a.txt",
+        file_type="txt",
+        content_type="text/plain",
+        size=100,
+        status=DocumentStatus.READY,
+        created_at="2026-05-20T00:00:00Z",
+        chunks=[
+            DocumentChunk(
+                chunk_id="chunk-001",
+                document_id="doc-001",
+                text="Invoice total is USD 42.00.",
+                source="ocr_paddleocr",
+                created_at="2026-05-20T00:00:00Z",
+            )
+        ],
+    )
+
+    response = KeywordRagProvider(llm_provider=FailingLlmProvider()).query("invoice total", 3, [document])
+
+    assert "Local OCR chunks matched the query" in response.answer
+    assert "LLM generation unavailable; returning retrieved OCR chunks only" in response.answer
+    assert "Cannot connect to Ollama" in response.answer
+    assert response.citations[0].trace_metadata["llm_generation_status"] == "failed"
+    assert response.citations[0].trace_metadata["llm_provider"] == "ollama"
+    assert response.citations[0].trace_metadata["llm_model"] == "qwen3.5:4b"
+    assert response.citations[0].trace_metadata["llm_error"] == "Cannot connect to Ollama"
+
+
+def test_get_rag_provider_enables_ollama_from_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DOCURAG_LLM_PROVIDER", "ollama")
+    monkeypatch.setenv("DOCURAG_LLM_MODEL", "qwen3.5:4b")
+    monkeypatch.setenv("DOCURAG_LLM_BASE_URL", "http://127.0.0.1:11434")
+    get_settings.cache_clear()
+
+    try:
+        provider = get_rag_provider()
+    finally:
+        get_settings.cache_clear()
+
+    assert isinstance(provider, KeywordRagProvider)
+    assert provider.llm_provider is not None
+    assert provider.llm_provider.name == "ollama"
 
 
 def test_rag_query_backfills_chunks_from_existing_ocr_text(

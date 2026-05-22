@@ -1,6 +1,6 @@
 # Backend
 
-DocuRAG AgentOps backend MVP v0.9.1 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、local RAG query API、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，目前 RAG 只接 `KeywordRagProvider`。v0.7 的 real OCR spike 已選定 PaddleOCR，v0.8 將 PaddleOCR runtime 收斂到 Python 3.12、PaddleOCR 2.10.0 與 PaddlePaddle 3.0.0 sample flow；v0.9.0 runtime baseline 開始 provider-selected real OCR 只支援 PaddlePaddle GPU / CUDA build，且預設使用 PP-OCRv4 mobile 中文 / 中英混合模型設定。v0.9.1 補上 backend startup preload、provider / engine reuse、OCR timing metadata 與小範圍效能 baseline。此階段不接資料庫、OpenAI API、Ollama、vLLM、embedding、Qdrant、rerank、Redis、NATS 或登入權限。
+DocuRAG AgentOps backend MVP v0.10.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、local RAG query API、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，目前 RAG 仍以 `KeywordRagProvider` 做 keyword retrieval 與 citation contract。v0.7 的 real OCR spike 已選定 PaddleOCR，v0.8 將 PaddleOCR runtime 收斂到 Python 3.12、PaddleOCR 2.10.0 與 PaddlePaddle 3.0.0 sample flow；v0.9.0 runtime baseline 開始 provider-selected real OCR 只支援 PaddlePaddle GPU / CUDA build，且預設使用 PP-OCRv4 mobile 中文 / 中英混合模型設定。v0.9.1 補上 backend startup preload、provider / engine reuse、OCR timing metadata 與小範圍效能 baseline。v0.10.0 加入最小 Ollama `qwen3.5:4b` LLM client、可選 `/rag/query` generation path 與 demo smoke；未設定 LLM provider 時既有 `/rag/query` 預設仍是 deterministic baseline。此階段不接資料庫、OpenAI API、vLLM、embedding、Qdrant、rerank、Redis、NATS 或登入權限。
 
 ## Install
 
@@ -141,6 +141,17 @@ curl -X POST http://127.0.0.1:8000/rag/query `
   -d "{\"query\":\"invoice\",\"top_k\":3}"
 ```
 
+Phase 10 Ollama LLM RAG：
+
+- `DOCURAG_LLM_PROVIDER` 未設定時，LLM provider 是 disabled，既有 `/rag/query` 仍回傳 deterministic keyword baseline。
+- 設定 `DOCURAG_LLM_PROVIDER=ollama`、`DOCURAG_LLM_BASE_URL=http://127.0.0.1:11434` 與 `DOCURAG_LLM_MODEL=qwen3.5:4b` 後，可用 `OllamaLlmProvider` 呼叫 Ollama native `/api/generate`。
+- client 使用 `stream=false`，讓回應維持單一 JSON 物件，方便 backend 測試與後續 RAG generation path 接入。
+- `check_health()` 會呼叫 `/api/tags`，確認 service 可連線且目標模型出現在本機模型清單。
+- 10-03 起 `/rag/query` 在 LLM provider enabled 且 retrieval 有命中 chunks 時，會用 query + retrieved chunks 組 prompt 產生回答；prompt 不包含未檢索內容。
+- citations 與 retrieved chunks contract 保持不變，citation `trace_metadata` 會加上 `llm_provider`、`llm_model`、generation status、latency 與 token usage。
+- Ollama 未啟動、模型不存在或 request timeout 時，answer 會明確標示 LLM generation unavailable，並 fallback 到 retrieved OCR chunks；不會讓模型捏造未檢索內容。
+- `scripts/demo-smoke-test.ps1 -RunLlm` 會檢查 Ollama `/api/tags`、確認 `qwen3.5:4b` 存在，並要求 RAG answer source 為 `ollama/qwen3.5:4b`。
+
 ## Local Storage
 
 上傳 API 會將原始檔案保存到 repo root 的 `data/uploads/`，並將 metadata 寫入 `data/documents.json`。`filename` 會先安全化，避免 `../` 或 Windows path separator 造成 path traversal。
@@ -190,7 +201,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1
 ```
 
-`demo-smoke-test.ps1` 會驗證 `/health`、upload、OCR mock 與 `/rag/query`。`seed-demo-data.ps1` 會上傳 `sample-data/documents/mock-invoice-aurora.txt`、執行 OCR mock、查詢 `payment due date Net 15`，並輸出 answer、citations、retrieved chunks。
+`demo-smoke-test.ps1` 會驗證 `/health`、upload、OCR mock 與 `/rag/query`；預設要求 deterministic baseline answer source。`-RunLlm` 需要 backend 以 `DOCURAG_LLM_PROVIDER=ollama` 啟動，並要求 Ollama service 已載入 `qwen3.5:4b`。`seed-demo-data.ps1` 會上傳 `sample-data/documents/mock-invoice-aurora.txt`、執行 OCR mock、查詢 `payment due date Net 15`，並輸出 answer、citations、retrieved chunks。
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunLlm
+```
 
 Real OCR demo 只在 backend 已用 Python 3.12 安裝 CUDA PaddlePaddle wheel 與 `.[dev,real-ocr]` 時使用。v0.8 起 provider-selected `/ocr` 預設走 PaddleOCR；Phase 09 起缺少 GPU dependency 或不是 CUDA build 時，`-RunRealOcr` smoke 會明確失敗，mock smoke / seed flow 可透過 `/ocr/mock` 或 `DOCURAG_OCR_PROVIDER=mock` 重跑：
 
@@ -256,3 +271,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 
 - v0.8.0: PaddleOCR Runtime Stabilization、Python 3.12 runtime guard、PaddleOCR 2.10.0 / PaddlePaddle 3.0.0 dependency baseline 與 sample real OCR flow 已完成。
 - v0.9.0: GPU Runtime、PaddlePaddle GPU-only guard、PP-OCRv4 mobile 中文 / 中英混合模型設定與模型目錄文件已完成；本機 Python 3.12 + CUDA PaddlePaddle GPU runtime、sample invoice 與繁中 provider-selected OCR smoke 已通過。
 - v0.9.1: OCR Performance Hardening、backend startup preload、provider / engine reuse、OCR timing log / metadata、`cls=False` baseline 與文件版本同步已完成。
+- v0.10.0: LLM RAG Backlog、Ollama `qwen3.5:4b` provider decision、最小 client、optional `/rag/query` generation path、demo smoke `-RunLlm`、frontend answer source 與文件版本同步已完成。

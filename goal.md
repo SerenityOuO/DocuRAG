@@ -597,6 +597,7 @@ Redis 用途：
 
 ```env
 DOCURAG_LLM_PROVIDER=ollama
+DOCURAG_LLM_BASE_URL=http://127.0.0.1:11434
 DOCURAG_LLM_MODEL=qwen3.5:4b
 DOCURAG_VLM_PROVIDER=ollama
 DOCURAG_VLM_MODEL=qwen3.5:4b
@@ -1558,21 +1559,22 @@ docurag-agentops/
 
 ### 23.1 目前 ticket 優先順序覆寫
 
-目前下一步先回到 Phase 09 末端補 OCR performance hardening，再進入 Phase 10：
+Phase 09 performance hardening 已收斂為 `v0.9.1`。Phase 10 已依 ticket-first 順序完成 10-01 provider decision、10-02 Ollama client、10-03 optional generation path 與 10-04 demo smoke / answer source / `v0.10.0` release sync：
 
-1. `tasks/phase-09-gpu-runtime/09-03-paddleocr-engine-lifecycle-preload.md`：只處理 OCR engine lifecycle、backend startup preload 與 provider reuse，避免每次 OCR request 重新 cold start。
-2. `tasks/phase-09-gpu-runtime/09-04-paddleocr-performance-observability-tuning.md`：只處理 OCR timing log / baseline，並小範圍評估 `cls=True`、warmup、圖片尺寸與推論參數對速度的影響。
-3. `tasks/phase-10-llm-rag/10-01-qwen3-ollama-provider-decision.md`
-4. `tasks/phase-10-llm-rag/10-02-ollama-qwen3-client.md`
-5. `tasks/phase-10-llm-rag/10-03-qwen3-rag-generation.md`
-6. `tasks/phase-10-llm-rag/10-04-qwen3-demo-smoke.md`
+1. [x] `tasks/phase-09-gpu-runtime/09-03-paddleocr-engine-lifecycle-preload.md`：只處理 OCR engine lifecycle、backend startup preload 與 provider reuse，避免每次 OCR request 重新 cold start。
+2. [x] `tasks/phase-09-gpu-runtime/09-04-paddleocr-performance-observability-tuning.md`：只處理 OCR timing log / baseline，並小範圍評估 `cls=True`、warmup、圖片尺寸與推論參數對速度的影響。
+3. [x] `tasks/phase-10-llm-rag/10-01-qwen3-ollama-provider-decision.md`：只固定 Ollama `qwen3.5:4b` LLM / VLM provider decision 與 env 文件，不實作 backend LLM client。
+4. [x] `tasks/phase-10-llm-rag/10-02-ollama-qwen3-client.md`：只新增最小 Ollama LLM client、timeout / error handling 與 health helper，不改既有 `/rag/query` deterministic baseline。
+5. [x] `tasks/phase-10-llm-rag/10-03-qwen3-rag-generation.md`：只在 existing keyword retrieval 與 citation contract 上加入可選 LLM generation path，prompt 只使用 query 與 retrieved chunks。
+6. [x] `tasks/phase-10-llm-rag/10-04-qwen3-demo-smoke.md`：只補齊 demo smoke、UI answer source、optional LLM smoke 與 `v0.10.0` release/version sync。
 
 執行限制：
 
 - `09-03` 不處理 OCR timing、baseline、warmup 或參數調校。
 - `09-04` 不處理 provider lifecycle 以外的大型架構變更，只做效能觀測與小範圍調校。
 - 不提前實作 worker queue、Redis、NATS、資料庫 schema、登入、權限、PDF rendering、多頁 OCR pipeline 或 production-grade OCR tuning。
-- Phase 10 照 Qwen3 / Ollama / RAG demo 順序執行，不把 OCR performance work 混進 Phase 10。
+- Phase 10 照 Qwen3 / Ollama / RAG demo 順序執行完成；不要在同一輪回頭擴張 Phase 10 scope。
+- Phase 10 不提前實作 embedding、Qdrant、rerank、worker、Redis、NATS、資料庫 schema、登入、權限、VLM parser、PDF rendering 或 streaming。
 
 ---
 

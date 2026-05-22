@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from app.core.config import get_settings
 from app.schemas.rag import RagQueryRequest, RagQueryResponse
 from app.services.document_storage import DocumentStorage
+from app.services.llm import create_llm_provider
 from app.services.rag import KeywordRagProvider
 
 
@@ -17,7 +18,9 @@ def get_document_storage() -> DocumentStorage:
 
 
 def get_rag_provider() -> KeywordRagProvider:
-    return KeywordRagProvider()
+    settings = get_settings()
+    llm_provider = create_llm_provider(settings) if settings.llm_provider else None
+    return KeywordRagProvider(llm_provider=llm_provider)
 
 
 DocumentStorageDep = Annotated[DocumentStorage, Depends(get_document_storage)]

@@ -366,6 +366,18 @@ td {
   text-transform: uppercase;
 }
 
+.answer-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.answer-heading h3 {
+  margin: 0;
+}
+
 .answer-text {
   min-height: 120px;
 }

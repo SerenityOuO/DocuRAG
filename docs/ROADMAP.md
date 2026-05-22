@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.9.1 的已交付切片，並補上 v0.10.0 LLM RAG backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.10.0 的已交付切片。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -273,9 +273,65 @@ Baseline and decisions（2026-05-22，Windows / Python 3.12.10 / PaddleOCR 2.10.
 
 Decision：`cls=False` 在兩張直立 sample 上保留相同行數與文字預覽，且首張推論明顯較快，因此採用為 v0.9.1 預設。`det_limit_side_len=736` 沒有穩定收益，保留 PaddleOCR mobile 預設 `960`。startup warmup 可降低第一張 request latency，但會讓 backend startup 依賴 sample image inference，本 milestone 不採用預設 warmup。
 
+## v0.10.0 LLM RAG Backlog Milestone
+
+Goal：在既有 keyword retrieval、citation contract 與 deterministic baseline 穩定後，加入可選 Ollama Qwen3.5 RAG generation demo；不得提前引入 embedding、Qdrant、rerank、worker、DB、登入或 RBAC。
+
+Tickets：
+
+- [x] `tasks/phase-10-llm-rag/10-01-qwen3-ollama-provider-decision.md`
+- [x] `tasks/phase-10-llm-rag/10-02-ollama-qwen3-client.md`
+- [x] `tasks/phase-10-llm-rag/10-03-qwen3-rag-generation.md`
+- [x] `tasks/phase-10-llm-rag/10-04-qwen3-demo-smoke.md`
+
+10-01 Provider decision：
+
+- LLM provider：`DOCURAG_LLM_PROVIDER=ollama`。
+- LLM endpoint：`DOCURAG_LLM_BASE_URL=http://127.0.0.1:11434`。
+- RAG generation model：`DOCURAG_LLM_MODEL=qwen3.5:4b`。
+- VLM / Parser target provider：`DOCURAG_VLM_PROVIDER=ollama`。
+- VLM / Parser target model：`DOCURAG_VLM_MODEL=qwen3.5:4b`，但 VLM parser implementation 仍留給後續 ticket。
+- vLLM 保留為後續 LLMOps / serving / latency 展示；v0.10.0 第一版不採用 vLLM。
+- OpenAI-compatible API 保留為 fallback 設定，不是 v0.10.0 預設路線。
+- 較新的大型 Qwen 系列可作為後續 fallback 候選；未公開或未上架的 4B 型號不寫入預設路線。
+
+10-01 local validation（2026-05-22）：
+
+- `nvidia-smi` 通過，GPU 為 NVIDIA GeForce RTX 5070 Ti。
+- `ollama list` 與 `ollama show qwen3.5:4b` 目前因 `ollama` CLI 不在 PATH 而無法執行。
+- `curl.exe http://127.0.0.1:11434/api/tags` 目前無法連線，表示本機 Ollama service 未回應。
+- 以上為實際本機 generation 前置環境風險，不在 10-01 下載模型或啟動 service；10-02 client 測試以 mock HTTP / monkeypatch 覆蓋。
+
+10-02 Client status：
+
+- 已新增 backend LLM provider interface、disabled provider 與 Ollama native HTTP client。
+- 未設定 `DOCURAG_LLM_PROVIDER` 時，provider 保持 disabled，既有 deterministic `/rag/query` baseline 不受影響。
+- 設定 `DOCURAG_LLM_PROVIDER=ollama` 時，client 使用 `DOCURAG_LLM_BASE_URL`、`DOCURAG_LLM_MODEL=qwen3.5:4b` 與明確 timeout 呼叫 `POST /api/generate`，並設定 `stream=false`。
+- `check_health()` 使用 `GET /api/tags` 判斷 Ollama service 與本機模型清單是否可用。
+- 測試覆蓋成功回應、timeout、connection error、HTTP error、missing model 與 provider disabled。
+- 2026-05-22 validation：backend test script 通過，`58 passed`；本機 `/api/tags` 仍因 Ollama service 未啟動而無法連線。
+
+10-03 Generation status：
+
+- `/rag/query` 仍先使用 existing keyword retrieval 與 citation contract。
+- LLM provider 未設定時，回應保持 deterministic keyword baseline。
+- LLM provider enabled 且 retrieval 有命中 chunks 時，generation prompt 只包含 user query 與 retrieved chunks，不加入未檢索內容。
+- LLM success 時，answer 使用 `qwen3.5:4b` generation 結果；citations 與 retrieved chunks 保持對齊原 chunk metadata。
+- citation `trace_metadata` 會記錄 `llm_provider=ollama`、`llm_model=qwen3.5:4b`、generation status、latency 與 token usage。
+- LLM unavailable / timeout / model missing 時，answer 明確標示 LLM generation unavailable，並 fallback 到 retrieved OCR chunks，不產生誤導性回答。
+- 2026-05-22 validation：backend test script 通過，`61 passed`；mock LLM client 測試覆蓋 prompt、成功生成、failure fallback、citation preservation 與 trace metadata。
+
+10-04 Demo smoke status：
+
+- `scripts/demo-smoke-test.ps1` 預設仍驗證 deterministic baseline answer source，確認 non-LLM demo 可重跑。
+- `scripts/demo-smoke-test.ps1 -RunLlm` 會檢查 Ollama `/api/tags`、確認 `qwen3.5:4b` 存在，並要求 RAG answer source 為 `ollama/qwen3.5:4b`。
+- frontend RAG result 會依 citation `trace_metadata` 顯示 `deterministic baseline`、`ollama/qwen3.5:4b` 或 `LLM unavailable fallback`。
+- backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.10.0`。
+- 2026-05-22 validation：backend test script 通過，`61 passed`；`npm.cmd run build` 通過；baseline `scripts/demo-smoke-test.ps1` 通過並確認 answer source 為 `deterministic baseline`；follow-up 已安裝 Ollama 0.24.0、pull `qwen3.5:4b`，並以 LLM-enabled backend 跑通 `scripts/demo-smoke-test.ps1 -RunLlm`，確認 answer source 為 `ollama/qwen3.5:4b`。
+
 Next Candidate Milestone：
 
-- v0.10.0 LLM RAG Backlog：Phase 09 performance hardening 完成後，在既有 citations contract 上加入 Ollama Qwen3 RAG generation demo。
+- v0.10.0 已完成；下一個 milestone 尚未開始，需另依 ticket-first 規範決定。
 - Future Embedding / Qdrant Indexing Spike：在 OCR、GPU runtime 與 LLM demo 邊界穩定後，再把 local keyword retrieval 替換成可驗證的 vector indexing。
 
 ## Release Verification
@@ -292,3 +348,4 @@ Next Candidate Milestone：
 - v0.8.0: PaddleOCR Runtime Stabilization 已完成；Python 3.12、PaddleOCR 2.10.0、PaddlePaddle 3.0.0 sample real OCR flow 已驗證，provider-selected OCR 預設走 PaddleOCR。
 - v0.9.0: GPU Runtime 已完成；PaddleOCR real OCR 收斂為 GPU-only，PP-OCRv4 mobile 中文 / 中英混合模型設定、模型目錄文件與繁中 sample 已補齊；本機 real OCR GPU validation、sample invoice 與繁中 provider-selected OCR smoke 已通過。
 - v0.9.1: OCR Performance Hardening 已完成；backend startup preload、provider / engine reuse、OCR timing log / metadata、`cls=False` baseline、v0.9.1 version / README / TODO / ROADMAP 同步與 provider-selected real OCR smoke 已通過。
+- v0.10.0: LLM RAG Backlog 已完成；Ollama `qwen3.5:4b` provider decision、最小 client、optional `/rag/query` generation path、demo smoke `-RunLlm`、frontend answer source、v0.10.0 version / README / TODO / ROADMAP 同步已完成。

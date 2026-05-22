@@ -52,7 +52,7 @@ const latestResponse = ref<
   | null
 >(null);
 
-const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.9.1"));
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.10.0"));
 
 const healthLabel = computed(() => {
   if (healthState.value === "success" && health.value?.status === "ok") {
@@ -87,6 +87,32 @@ const selectedOcrEntries = computed(() =>
 const selectedOcrText = computed(() =>
   selectedDocument.value?.ocr.text ? selectedDocument.value.ocr.text : "尚未執行 OCR。",
 );
+
+const ragAnswerSource = computed(() => {
+  const trace = ragResult.value?.citations[0]?.trace_metadata;
+
+  if (trace?.llm_generation_status === "completed") {
+    return `${trace.llm_provider ?? "ollama"}/${trace.llm_model ?? "qwen3.5:4b"}`;
+  }
+
+  if (trace?.llm_generation_status === "failed") {
+    return "LLM unavailable fallback";
+  }
+
+  return "deterministic baseline";
+});
+
+const ragAnswerSourceClass = computed(() => {
+  if (ragAnswerSource.value === "LLM unavailable fallback") {
+    return "status-failed";
+  }
+
+  if (ragAnswerSource.value === "deterministic baseline") {
+    return "status-ready";
+  }
+
+  return "status-success";
+});
 
 function formatBytes(size: number): string {
   return `${size.toLocaleString()} bytes`;
@@ -283,8 +309,8 @@ onMounted(() => {
       <p class="eyebrow">{{ currentVersionLabel }}</p>
       <h1>DocuRAG AgentOps</h1>
       <p class="hero-copy">
-        Backend health、本機文件上傳、metadata 保存、PaddleOCR PP-OCRv4 Chinese provider、mock override、local keyword RAG
-        與 citation trace 驗證。
+        Backend health、本機文件上傳、metadata 保存、PaddleOCR PP-OCRv4 Chinese provider、mock override、local keyword RAG、
+        optional Ollama Qwen3.5 answer source 與 citation trace 驗證。
       </p>
     </header>
 
@@ -576,7 +602,10 @@ onMounted(() => {
         <p v-if="ragError" class="error">{{ ragError }}</p>
 
         <section v-if="ragResult" class="rag-result">
-          <h3>Answer</h3>
+          <div class="answer-heading">
+            <h3>Answer</h3>
+            <span class="status-pill" :class="ragAnswerSourceClass">{{ ragAnswerSource }}</span>
+          </div>
           <pre class="answer-text">{{ ragResult.answer }}</pre>
 
           <h3>Citations</h3>

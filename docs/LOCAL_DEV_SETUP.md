@@ -185,6 +185,49 @@ data/documents.json
 
 也可用 `DOCURAG_DATA_DIR` 覆寫資料根目錄。
 
+## Phase 10 Ollama Provider Precheck
+
+v0.10.0 第一版 LLM / VLM provider 決策固定為 Ollama `qwen3.5:4b`。Phase 10 已新增最小 Ollama client、可選 `/rag/query` generation path 與 demo smoke `-RunLlm`；未設定 `DOCURAG_LLM_PROVIDER` 時，backend 仍回傳 deterministic keyword baseline。
+
+`.env` 相關設定：
+
+```powershell
+$env:DOCURAG_LLM_PROVIDER="ollama"
+$env:DOCURAG_LLM_BASE_URL="http://127.0.0.1:11434"
+$env:DOCURAG_LLM_MODEL="qwen3.5:4b"
+$env:DOCURAG_VLM_PROVIDER="ollama"
+$env:DOCURAG_VLM_MODEL="qwen3.5:4b"
+```
+
+本機前置檢查：
+
+```powershell
+nvidia-smi
+ollama list
+ollama show qwen3.5:4b
+curl.exe http://127.0.0.1:11434/api/tags
+```
+
+2026-05-22 10-01 validation notes：
+
+- `nvidia-smi` 通過，GPU 為 NVIDIA GeForce RTX 5070 Ti，driver 596.49，CUDA runtime 顯示 13.2。
+- `ollama` CLI 目前不在 PATH：`The term 'ollama' is not recognized`。
+- `curl.exe http://127.0.0.1:11434/api/tags` 目前無法連線，表示本機 Ollama service 未在 `11434` 回應。
+- 實際本機 generation 前需補齊 Ollama CLI / service / `qwen3.5:4b` model availability；10-01 不處理安裝、pull 或啟動，10-02 client 測試以 mock HTTP / monkeypatch 覆蓋。
+- 10-02 backend client 使用 Ollama native `POST /api/generate` 並設定 `stream=false`，另以 `GET /api/tags` 做 health helper；此 ticket 不新增 API route、不改 frontend、不改 `/rag/query` 預設 deterministic baseline。
+- 2026-05-22 10-02 validation：backend test script 通過，`58 passed`；本機 `curl.exe http://127.0.0.1:11434/api/tags` 仍因 Ollama service 未啟動而無法連線，已用 mock HTTP / monkeypatch 覆蓋 client request / response。
+- 10-03 backend generation path 只在 LLM provider enabled 且 retrieved chunks 非空時啟用；prompt 只包含 query 與 retrieved chunks，LLM failure 會明確 fallback 到 retrieved OCR chunks。
+- 2026-05-22 10-03 validation：backend test script 通過，`61 passed`；mock LLM client 測試覆蓋 prompt assembly、成功生成、failure fallback、citation preservation 與 trace metadata。
+- 10-04 demo smoke 預設仍可不啟用 Ollama 重跑 deterministic baseline；加上 `-RunLlm` 時會先檢查 Ollama `/api/tags` 與 `qwen3.5:4b`，再要求 RAG answer source 為 `ollama/qwen3.5:4b`。
+- 2026-05-22 10-04 validation：backend test script 通過，`61 passed`；frontend build 通過；baseline demo smoke 通過；follow-up 已安裝 Ollama 0.24.0、pull `qwen3.5:4b`，並以 LLM-enabled backend 跑通 `-RunLlm`，確認 answer source 為 `ollama/qwen3.5:4b`。首次生成若遇到 30 秒 timeout，可先用 `ollama run qwen3.5:4b "Reply with exactly OK."` warm model 後重跑。
+
+demo smoke：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunLlm
+```
+
 ## v0.7 / v0.9.1 Real OCR Flow
 
 mock demo 不需要 PaddleOCR dependency，明確設定 `DOCURAG_OCR_PROVIDER=mock` 或直接呼叫 `/ocr/mock`：
