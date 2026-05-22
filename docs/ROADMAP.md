@@ -485,7 +485,7 @@ Goal：在 keyword retrieval、optional vector retrieval 與 manual vector index
 
 Tickets：
 
-- [ ] `tasks/phase-13-retrieval-eval/13-01-retrieval-eval-contract.md`
+- [x] `tasks/phase-13-retrieval-eval/13-01-retrieval-eval-contract.md`
 - [ ] `tasks/phase-13-retrieval-eval/13-02-retrieval-eval-dataset.md`
 - [ ] `tasks/phase-13-retrieval-eval/13-03-retrieval-eval-runner.md`
 - [ ] `tasks/phase-13-retrieval-eval/13-04-retrieval-eval-demo-smoke.md`
@@ -505,6 +505,10 @@ Expected Outcome：
 - 固定 eval dataset schema、metrics 定義、strategy labels 與 result output contract。
 - Strategy labels 第一版只包含 `keyword`、`vector` 與 vector unavailable fallback；不引入 hybrid 或 rerank。
 - Result output 需同時支援人可讀 summary 與 machine-readable JSON。
+- Dataset schema 以 JSON array 表示，每筆 case 包含 `id`、`query`、`top_k`、`expected_document_filenames`、`expected_chunk_hints`、`expected_terms` 與 `tags`；optional `notes` 與 `expected_source_types` 只作補充，不可綁死 runtime。
+- Metrics 定義固定為 `Hit Rate@K`、`MRR@K`、`Recall@K`、`latency_ms` 與 `failure_count`；keyword baseline 必須可在沒有 Ollama embedding 或 Qdrant 時執行。
+- Result JSON 至少包含 `run_id`、`created_at`、`strategy`、`dataset_path`、`summary`、`results` 與 `environment`，其中 `environment` 不得記錄 secret。
+- 本 contract ticket 不 bump version；`v0.13.0` release/version sync 留到 `13-04`。
 
 13-02 Dataset：
 
