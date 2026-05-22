@@ -557,11 +557,15 @@ text
 - **數據庫**：schema 變更、遷移
 - **生產環境**：部署設置、環境變量變更
 
-### Git push 授權
+### Git 自動上傳規範
 
-- 若用戶在任務目標或後續訊息中明確要求 `git push origin main` 與指定 tag push，且已明確表示了解這會推送到外部 GitHub 並批准，後續同一任務內可直接執行相同 push，不需要重複詢問。
+- 每張 ticket 或明確指定任務完成後，Codex 必須先執行 ticket 指定 validation 與必要的文件同步，再檢查 `git status`，確認沒有偏離 `GOAL.md`、沒有超出 ticket scope，也沒有提前實作未排定功能。
+- 完成驗證後，Codex 應自動整理本次修改並上傳 Git：只 stage 本次任務相關檔案，使用繁體中文 commit message 建立 commit，然後 push 到目前分支已設定的 upstream。
+- 若目前分支沒有 upstream，Codex 應優先使用 `git push -u origin <current-branch>`；若目前分支是 `main`，則使用 `git push origin main`。
+- 不得自動 stage 或 commit 與本次任務無關的既有 dirty changes、未追蹤檔或用戶手動修改；若無法明確區分，先回報並請用戶確認。
+- 若任務包含版本 tag 或 release，只有在 ticket 或用戶明確指定 tag 名稱時才可 push tag；禁止自行推測 tag。
 - 嚴禁 `git push --force` 或任何 force push，除非用戶在當前回合以完整命令明確要求，且系統/工具審核允許。
-- 若系統、工具或安全審核仍要求再次取得 approval，必須以系統、工具或安全審核結果為準。
+- 若系統、工具或安全審核仍要求再次取得 approval，必須以系統、工具或安全審核結果為準；approval 通過後同一任務內可直接完成相同 push，不需要重複詢問。
 
 ---
 
