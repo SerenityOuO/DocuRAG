@@ -216,7 +216,8 @@
 
 ## MVP v0.12.0 Vector Indexing Hardening Backlog
 
-- [ ] `tasks/phase-12-vector-indexing/12-01-vector-indexing-contract.md`: 固定 local vector indexing contract、Qdrant payload metadata、stable point id、failure / fallback 行為與 Phase 12 guardrails；文件 ticket，不 bump version。
+- [x] `tasks/phase-12-vector-indexing/12-01-vector-indexing-contract.md`: 固定 local vector indexing contract、Qdrant payload metadata、stable point id、failure / fallback 行為與 Phase 12 guardrails；文件 ticket，不 bump version。
+- [x] 12-01 validation：`rg -n "v0.12.0|phase-12|Vector Indexing|docurag_chunks_v1" TODO.md docs/ROADMAP.md tasks/phase-12-vector-indexing/12-01-vector-indexing-contract.md` 通過；`git diff --check` 通過。
 - [ ] `tasks/phase-12-vector-indexing/12-02-vector-indexing-service.md`: 新增最小同步 vector indexing service/helper，將 existing document chunks idempotently embed + upsert 到 Qdrant；不新增 API、worker、DB 或 default-on vector path。
 - [ ] `tasks/phase-12-vector-indexing/12-03-vector-indexing-api.md`: 新增手動 vector indexing API，例如 `POST /documents/{document_id}/index/vector`，讓 demo 可明確執行 indexing；不新增 batch indexing、frontend 大改版或 async queue。
 - [ ] `tasks/phase-12-vector-indexing/12-04-vector-indexing-demo-smoke.md`: 更新 optional vector demo smoke，先手動 vector indexing 再 vector retrieval query，並完成 `v0.12.0` release/version sync。
@@ -227,6 +228,9 @@ Phase 12 guardrails：
 - 保留 optional Ollama `qwen3.5:4b` generation path。
 - 不實作 rerank、hybrid search、eval runner、Redis、NATS、worker、PostgreSQL schema、登入、RBAC、VLM parser、PDF rendering 或 production OCR pipeline。
 - Qdrant 或 embedding 不可用時，baseline demo 不可被破壞。
+- Stable vector point id 規則固定為 `uuid5(NAMESPACE_URL, f"docurag:{document_id}:{chunk_id}")`，重跑 manual indexing 只能 idempotently upsert 同一 chunk。
+- Qdrant payload 必須保留 `document_id`、`filename`、`chunk_id`、`text`、`source`、`source_type`、`page_number`、`bbox`、`confidence`、`created_at` 與 chunk `metadata`。
+- Empty chunks、embedding disabled / unavailable、Qdrant unavailable、collection missing 或 vector size mismatch 必須回傳清楚 skipped / failed result，不修改 local metadata，不影響 keyword RAG baseline。
 
 ## Release Verification Status
 

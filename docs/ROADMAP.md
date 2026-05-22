@@ -426,7 +426,7 @@ Goal：把 Phase 11 的 request-time vector retrieval demo 收斂成明確、可
 
 Tickets：
 
-- [ ] `tasks/phase-12-vector-indexing/12-01-vector-indexing-contract.md`
+- [x] `tasks/phase-12-vector-indexing/12-01-vector-indexing-contract.md`
 - [ ] `tasks/phase-12-vector-indexing/12-02-vector-indexing-service.md`
 - [ ] `tasks/phase-12-vector-indexing/12-03-vector-indexing-api.md`
 - [ ] `tasks/phase-12-vector-indexing/12-04-vector-indexing-demo-smoke.md`
@@ -439,6 +439,15 @@ Expected Outcome：
 - Baseline keyword RAG 不依賴 Qdrant 或 embedding；optional vector indexing / retrieval 需明確 env 與手動 action。
 - Optional vector demo smoke 會呈現 upload -> OCR -> chunks -> manual vector indexing -> vector retrieval query。
 - External runtime unavailable 時有清楚錯誤或 fallback，不破壞 baseline demo。
+
+12-01 Contract：
+
+- Stable point id 固定為 `uuid5(NAMESPACE_URL, f"docurag:{document_id}:{chunk_id}")`，讓同一 chunk 重跑 indexing 時 upsert 到同一 Qdrant point。
+- Collection 沿用 `docurag_chunks_v1`，distance 固定 `Cosine`，vector size 由 `DOCURAG_QDRANT_VECTOR_SIZE` 控制，預設 `1024`。
+- Payload 必填 `document_id`、`filename`、`chunk_id`、`text`、`source`、`source_type` 與 `created_at`；若 chunk 有 `page_number`、`bbox`、`confidence` 與 `metadata`，必須保留。
+- Payload trace 欄位需標示 `indexing_provider=vector`、`vector_store=qdrant`、`qdrant_collection`、`embedding_provider` 與 `embedding_model`，但不新增 project / organization filter。
+- Empty chunks 應回傳 `status=skipped`；embedding disabled / unavailable、Qdrant unavailable、collection missing 或 vector size mismatch 應回傳清楚 failed result 或 HTTP error detail。
+- Manual vector indexing 不修改 local document metadata，不由 upload、OCR 或 backend startup 自動觸發；keyword RAG baseline 與 Phase 11 vector retrieval fallback 仍保持可用。
 
 Out of Scope：
 
