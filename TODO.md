@@ -152,8 +152,15 @@
 
 ## Phase 09 - GPU Runtime Backlog
 
-- [ ] `tasks/phase-09-gpu-runtime/09-01-paddleocr-chinese-language.md`: PaddleOCR 中文 / 中英混合 language 設定。
-- [ ] `tasks/phase-09-gpu-runtime/09-02-paddleocr-gpu-runtime.md`: PaddleOCR GPU runtime baseline。
+- [ ] `tasks/phase-09-gpu-runtime/09-01-paddleocr-gpu-only-runtime.md`: PaddleOCR GPU-only runtime baseline。
+- [ ] `tasks/phase-09-gpu-runtime/09-02-paddleocr-v4-mobile-chinese-model.md`: PaddleOCR PP-OCRv4 mobile 中文 / 中英混合模型。
+
+## Phase 10 - LLM RAG Backlog
+
+- [ ] `tasks/phase-10-llm-rag/10-01-llm-provider-decision.md`: 選定第一個本機大模型 provider。
+- [ ] `tasks/phase-10-llm-rag/10-02-openai-compatible-llm-client.md`: 新增 OpenAI-compatible LLM client。
+- [ ] `tasks/phase-10-llm-rag/10-03-llm-rag-generation.md`: 在既有 citations contract 上加入 LLM answer generation。
+- [ ] `tasks/phase-10-llm-rag/10-04-llm-demo-smoke.md`: 補齊 LLM demo smoke 與 UI answer source。
 
 ## Release Verification Status
 
