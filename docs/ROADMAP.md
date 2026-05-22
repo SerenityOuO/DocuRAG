@@ -852,7 +852,7 @@ Goal：規劃 future `hybrid_rerank` slice，先把 candidate flow、dataset nee
 
 Tickets：
 
-- [ ] `tasks/phase-18-hybrid-rerank-planning/18-01-hybrid-rerank-boundary-contract.md`
+- [x] `tasks/phase-18-hybrid-rerank-planning/18-01-hybrid-rerank-boundary-contract.md`
 - [ ] `tasks/phase-18-hybrid-rerank-planning/18-02-hybrid-rerank-eval-dataset-plan.md`
 - [ ] `tasks/phase-18-hybrid-rerank-planning/18-03-hybrid-rerank-trace-report-plan.md`
 - [ ] `tasks/phase-18-hybrid-rerank-planning/18-04-phase-18-demo-release-plan.md`
@@ -863,6 +863,14 @@ Expected Outcome：
 - 18-02 規劃 future eval dataset case 類型：lexical-heavy、semantic-heavy、branch disagreement、rerank improves ordering 與 rerank fallback。
 - 18-03 規劃 future trace / report visibility：branch counts、merge policy、rerank provider / status / score、fallback reason 與 missing metadata behavior。
 - 18-04 規劃 future demo / release checklist：backend tests、frontend build、baseline smoke、optional strategy smoke 與若 implementation 完成時的 `v0.18.0` version sync 檔案。
+
+18-01 Boundary Contract Status：
+
+- `hybrid_rerank` candidate flow 固定為 keyword branch + vector branch -> hybrid merge / dedupe -> optional rerank reordering。
+- Strategy label 固定為 `hybrid_rerank`，後續 implementation 必須 disabled-by-default 且 explicit opt-in，不接 baseline `/rag/query`、frontend demo 或 default eval。
+- Trace metadata 需保留 branch candidate counts、hybrid merge / dedupe metadata、rerank provider / status / score / latency、candidate ordering 與 fallback reason。
+- Fallback states 已區分 vector unavailable / empty、merge dedupe partial、reranker disabled / unavailable；任何 optional failure 都不得破壞 keyword baseline。
+- 18-01 validation：`rg -n "v0.18.0|Phase 18|hybrid_rerank|Version bump required: no" TODO.md docs/ROADMAP.md tasks/phase-18-hybrid-rerank-planning/*.md` 通過；`git diff --check` 通過。
 
 Acceptance Criteria：
 
