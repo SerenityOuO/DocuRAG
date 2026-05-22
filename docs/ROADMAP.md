@@ -69,6 +69,7 @@ Expected Outcome：
 - v0.9.0 只做 PaddleOCR GPU runtime 與模型選擇 backlog，不接 LLM、embedding、Qdrant、worker、DB、登入或 RBAC。
 - v0.9.1 只做 PaddleOCR engine lifecycle、backend startup preload、provider reuse、timing log、baseline 與小範圍 OCR 參數調校，不接 worker、Redis、NATS、資料庫 schema、PDF pipeline、登入或 RBAC。
 - v0.10.0 只做 LLM RAG provider / client / demo smoke，不接 embedding、Qdrant、rerank、worker、DB、登入或 RBAC。
+- v0.11.0 先做 vector RAG provider decision、embedding client、Qdrant local runtime 與 optional vector retrieval demo；每張 ticket 需保留 keyword RAG fallback，未完成 release ticket 前不替換預設 `/rag/query`。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -329,10 +330,45 @@ Tickets：
 - backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.10.0`。
 - 2026-05-22 validation：backend test script 通過，`61 passed`；`npm.cmd run build` 通過；baseline `scripts/demo-smoke-test.ps1` 通過並確認 answer source 為 `deterministic baseline`；follow-up 已安裝 Ollama 0.24.0、pull `qwen3.5:4b`，並以 LLM-enabled backend 跑通 `scripts/demo-smoke-test.ps1 -RunLlm`，確認 answer source 為 `ollama/qwen3.5:4b`。
 
+## v0.11.0 Vector RAG Backlog Milestone
+
+Goal：在 v0.10.0 LLM generation path 穩定後，逐步把 local keyword retrieval 擴充為可選 vector retrieval demo；第一階段只固定 embedding / vector store provider decision，後續再用小 ticket 接入 runtime。
+
+Tickets：
+
+- [x] `tasks/phase-11-vector-rag/11-01-embedding-qdrant-provider-decision.md`
+- [ ] `tasks/phase-11-vector-rag/11-02-ollama-embedding-client.md`
+- [ ] `tasks/phase-11-vector-rag/11-03-qdrant-local-runtime.md`
+- [ ] `tasks/phase-11-vector-rag/11-04-vector-retrieval-demo-smoke.md`
+
+11-01 Provider decision：
+
+- Embedding provider：Ollama native embedding API。
+- Embedding endpoint：`DOCURAG_EMBEDDING_BASE_URL=http://127.0.0.1:11434`。
+- Embedding model：`DOCURAG_EMBEDDING_MODEL=qwen3-embedding:0.6b`。
+- Decision rationale：Ollama 官方 `qwen3-embedding` library 支援 `/api/embed`，`0.6b` tag 約 639MB，適合作為本機 demo 起點；Qwen3 Embedding 系列定位為 text embedding，且具 multilingual 能力，適合中英混合 OCR chunks。
+- Vector store：Qdrant self-hosted Docker / Docker Compose。
+- Qdrant endpoint：`DOCURAG_QDRANT_URL=http://127.0.0.1:6333`。
+- Collection name：`docurag_chunks_v1`。
+- Vector dimension：11-02 必須以 `qwen3-embedding:0.6b` 實際 `/api/embed` 回傳長度固定，不在 provider decision ticket 硬編碼。
+- Payload metadata：`document_id`、`filename`、`chunk_id`、`source_type`、`page_number`、`ocr_provider`、`created_at`；project / organization filtering 留到 auth / project scope 排定後。
+
+11-01 Guardrails：
+
+- 不新增 embedding client、Qdrant dependency、Docker Compose service 或 runtime。
+- 不改 `/rag/query` 預設行為，不移除 keyword RAG baseline。
+- 不新增 rerank、hybrid search、eval runner、Redis、NATS、worker、DB、登入或 RBAC。
+- Phase 11 runtime ticket 必須保留 deterministic baseline 與 LLM generation fallback，避免 vector path 不可用時中斷 demo。
+
+11-01 validation：
+
+- `rg -n "v0.11.0|phase-11|qwen3-embedding|Qdrant" TODO.md docs/ROADMAP.md tasks/phase-11-vector-rag/11-01-embedding-qdrant-provider-decision.md` 通過。
+- `git diff --check` 通過。
+
 Next Candidate Milestone：
 
-- v0.10.0 已完成；下一個 milestone 尚未開始，需另依 ticket-first 規範決定。
-- Future Embedding / Qdrant Indexing Spike：在 OCR、GPU runtime 與 LLM demo 邊界穩定後，再把 local keyword retrieval 替換成可驗證的 vector indexing。
+- v0.11.0 已開始；下一步執行 `tasks/phase-11-vector-rag/11-02-ollama-embedding-client.md`，只新增 disabled-by-default embedding client building block。
+- Future Embedding / Qdrant Indexing Spike：在 11-02 / 11-03 分別完成 embedding client 與 Qdrant local runtime 後，再用 11-04 加入 optional vector retrieval demo。
 
 ## Release Verification
 
@@ -349,3 +385,4 @@ Next Candidate Milestone：
 - v0.9.0: GPU Runtime 已完成；PaddleOCR real OCR 收斂為 GPU-only，PP-OCRv4 mobile 中文 / 中英混合模型設定、模型目錄文件與繁中 sample 已補齊；本機 real OCR GPU validation、sample invoice 與繁中 provider-selected OCR smoke 已通過。
 - v0.9.1: OCR Performance Hardening 已完成；backend startup preload、provider / engine reuse、OCR timing log / metadata、`cls=False` baseline、v0.9.1 version / README / TODO / ROADMAP 同步與 provider-selected real OCR smoke 已通過。
 - v0.10.0: LLM RAG Backlog 已完成；Ollama `qwen3.5:4b` provider decision、最小 client、optional `/rag/query` generation path、demo smoke `-RunLlm`、frontend answer source、v0.10.0 version / README / TODO / ROADMAP 同步已完成。
+- v0.11.0: Vector RAG Backlog 已開始；11-01 已固定 Ollama `qwen3-embedding:0.6b` 與 Qdrant provider decision，尚未完成 runtime release。

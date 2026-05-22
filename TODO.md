@@ -10,6 +10,7 @@
 - Phase 09 -> `v0.9.0`
 - Phase 09 performance hardening -> `v0.9.1`
 - Phase 10 -> `v0.10.0`
+- Phase 11 -> `v0.11.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -21,6 +22,7 @@
 4. `tasks/phase-10-llm-rag/10-02-ollama-qwen3-client.md` 已完成，只新增最小 Ollama client building block，未改變既有 `/rag/query` deterministic baseline 預設。
 5. `tasks/phase-10-llm-rag/10-03-qwen3-rag-generation.md` 已完成，只在 retrieved chunks 與 query 上加入可選 generation path。
 6. `tasks/phase-10-llm-rag/10-04-qwen3-demo-smoke.md` 已完成，補齊 demo smoke、UI answer source 與 `v0.10.0` release/version sync。
+7. `tasks/phase-11-vector-rag/11-01-embedding-qdrant-provider-decision.md` 已完成，只固定 Phase 11 embedding / Qdrant provider decision 與 backlog，不新增 runtime。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -190,6 +192,14 @@
 - [x] `tasks/phase-10-llm-rag/10-04-qwen3-demo-smoke.md`: 補齊 Qwen3.5 demo smoke、UI answer source、`-RunLlm` optional smoke 與 `v0.10.0` release/version sync。
 - [x] 10-04 validation：backend test script 通過，`61 passed`；`npm.cmd run build` 通過；`scripts/demo-smoke-test.ps1` 通過並確認 answer source 為 `deterministic baseline`；2026-05-22 follow-up 已安裝 Ollama 0.24.0、pull `qwen3.5:4b`，並以 LLM-enabled backend 跑通 `scripts/demo-smoke-test.ps1 -RunLlm`，確認 answer source 為 `ollama/qwen3.5:4b`。
 
+## MVP v0.11.0 Vector RAG Backlog
+
+- [x] `tasks/phase-11-vector-rag/11-01-embedding-qdrant-provider-decision.md`: 固定 Phase 11 第一版 embedding / vector store provider decision；選定 Ollama `qwen3-embedding:0.6b` 作為 local embedding 起點，Qdrant self-hosted Docker / Docker Compose 作為 vector store，並定義 `docurag_chunks_v1` collection 與 chunk payload metadata。
+- [x] 11-01 validation：`rg -n "v0.11.0|phase-11|qwen3-embedding|Qdrant" TODO.md docs/ROADMAP.md tasks/phase-11-vector-rag/11-01-embedding-qdrant-provider-decision.md` 通過；`git diff --check` 通過。
+- [ ] 後續 `11-02`: 新增最小 Ollama embedding client building block，預設 disabled，不改 `/rag/query`。
+- [ ] 後續 `11-03`: 新增 Qdrant local runtime / collection smoke，仍不替換 keyword RAG 預設。
+- [ ] 後續 `11-04`: 加入 optional vector retrieval path 與 demo smoke，完成後再評估 `v0.11.0` release/version sync。
+
 ## Release Verification Status
 
 - [x] v0.0: repo structure、docs、tasks 已完成。
@@ -208,3 +218,4 @@
 - [x] v0.9.0: GPU Runtime 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.9.0`，本機 Python 3.12 + CUDA PaddlePaddle GPU runtime 與繁中 provider-selected OCR smoke 已通過。
 - [x] v0.9.1: OCR Performance Hardening 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.9.1`，PaddleOCR startup preload、provider reuse、timing metadata、`cls=False` baseline 與 provider-selected real OCR smoke 已通過。
 - [x] v0.10.0: LLM RAG Backlog 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.10.0`，Ollama `qwen3.5:4b` provider decision、最小 client、optional generation path、demo smoke `-RunLlm` 與 frontend answer source 已補齊。
+- [ ] v0.11.0: Vector RAG Backlog 已開始；11-01 provider decision 已完成，但尚未新增 embedding client、Qdrant runtime、vector retrieval path 或 release/version sync。
