@@ -853,7 +853,7 @@ Goal：規劃 future `hybrid_rerank` slice，先把 candidate flow、dataset nee
 Tickets：
 
 - [x] `tasks/phase-18-hybrid-rerank-planning/18-01-hybrid-rerank-boundary-contract.md`
-- [ ] `tasks/phase-18-hybrid-rerank-planning/18-02-hybrid-rerank-eval-dataset-plan.md`
+- [x] `tasks/phase-18-hybrid-rerank-planning/18-02-hybrid-rerank-eval-dataset-plan.md`
 - [ ] `tasks/phase-18-hybrid-rerank-planning/18-03-hybrid-rerank-trace-report-plan.md`
 - [ ] `tasks/phase-18-hybrid-rerank-planning/18-04-phase-18-demo-release-plan.md`
 
@@ -871,6 +871,13 @@ Expected Outcome：
 - Trace metadata 需保留 branch candidate counts、hybrid merge / dedupe metadata、rerank provider / status / score / latency、candidate ordering 與 fallback reason。
 - Fallback states 已區分 vector unavailable / empty、merge dedupe partial、reranker disabled / unavailable；任何 optional failure 都不得破壞 keyword baseline。
 - 18-01 validation：`rg -n "v0.18.0|Phase 18|hybrid_rerank|Version bump required: no" TODO.md docs/ROADMAP.md tasks/phase-18-hybrid-rerank-planning/*.md` 通過；`git diff --check` 通過。
+
+18-02 Dataset Plan Status：
+
+- Future dataset case types 已固定為 `lexical_heavy`、`semantic_heavy`、`branch_disagreement`、`rerank_improves_ordering`、`rerank_filters_distractor` 與 `rerank_fallback`。
+- 後續 dataset update ticket 應保留公開虛構資料、case tags、expected evidence、strategy comparison notes 與 baseline keyword eval 可重跑。
+- Metrics summary 沿用既有 `fallback_count`、`trace_metadata_count`、`result_strategy_counts`、`fallback_reasons`、Hit Rate@K、MRR@K、Recall@K、latency 與 failure count。
+- 18-02 validation：`rg -n "v0.18.0|Phase 18|hybrid_rerank|dataset|Version bump required: no" TODO.md docs/ROADMAP.md tasks/phase-18-hybrid-rerank-planning/*.md` 通過；`git diff --check` 通過。
 
 Acceptance Criteria：
 
