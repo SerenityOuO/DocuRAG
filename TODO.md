@@ -246,7 +246,8 @@ Phase 12 guardrails：
 - [x] 13-01 validation：`rg -n "v0.13.0|phase-13|Retrieval Evaluation|Hit Rate|MRR" TODO.md docs/ROADMAP.md tasks/phase-13-retrieval-eval/13-01-retrieval-eval-contract.md` 通過；`git diff --check` 通過。
 - [x] `tasks/phase-13-retrieval-eval/13-02-retrieval-eval-dataset.md`: 新增最小公開 retrieval eval dataset，使用既有虛構 sample documents，不新增 runner 或 runtime API。
 - [x] 13-02 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`99 passed`（本機 PowerShell PATH 臨時補上 Codex bundled Python 3.12；pytest cache 權限警告不影響結果）；`git diff --check` 通過。
-- [ ] `tasks/phase-13-retrieval-eval/13-03-retrieval-eval-runner.md`: 新增本機 retrieval eval runner，計算 keyword baseline 與 optional vector retrieval 的 Hit Rate@K、MRR@K、Recall@K、latency 與 failure count。
+- [x] `tasks/phase-13-retrieval-eval/13-03-retrieval-eval-runner.md`: 新增本機 retrieval eval runner，計算 keyword baseline 與 optional vector retrieval 的 Hit Rate@K、MRR@K、Recall@K、latency 與 failure count。
+- [x] 13-03 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`104 passed`（本機 PowerShell PATH 臨時補上 Codex bundled Python 3.12；pytest cache 權限警告不影響結果）；baseline `scripts/retrieval-eval-smoke.ps1` 通過，Hit Rate@K `0.8333`、MRR@K `0.6389`、Recall@K `0.75`、failure count `0`；optional vector `scripts/retrieval-eval-smoke.ps1 -RunVector` 通過，Hit Rate@K `0.6667`、MRR@K `0.6667`、Recall@K `0.5833`、failure count `0`；`git diff --check` 通過。
 - [ ] `tasks/phase-13-retrieval-eval/13-04-retrieval-eval-demo-smoke.md`: 補齊 retrieval eval demo smoke，完成 `v0.13.0` release/version sync。
 
 Phase 13 guardrails：

@@ -40,11 +40,11 @@
 
 ## Acceptance Criteria
 
-- [ ] Keyword baseline eval 可在無 Qdrant / embedding 時執行。
-- [ ] Optional vector eval 可在明確 env 與 manual indexing 後執行。
-- [ ] Summary metrics 包含 Hit Rate@K、MRR@K、Recall@K、latency 與 failure count。
-- [ ] Metric calculation 有單元測試。
-- [ ] 不改 upload、OCR、manual indexing 或 `/rag/query` 預設行為。
+- [x] Keyword baseline eval 可在無 Qdrant / embedding 時執行。
+- [x] Optional vector eval 可在明確 env 與 manual indexing 後執行。
+- [x] Summary metrics 包含 Hit Rate@K、MRR@K、Recall@K、latency 與 failure count。
+- [x] Metric calculation 有單元測試。
+- [x] 不改 upload、OCR、manual indexing 或 `/rag/query` 預設行為。
 
 ## Validation
 
