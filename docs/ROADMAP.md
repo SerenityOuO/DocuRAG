@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.15.0 rerank runtime spike 的已交付切片。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.15.0 rerank runtime spike 的已交付切片，並追蹤 v0.16.0 hybrid retrieval planning backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.15.0 planning checklist。
+- TODO 包含 Phase 00 到 v0.16.0 planning checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -74,6 +74,7 @@ Expected Outcome：
 - v0.13.0 只做 retrieval evaluation baseline、公開 eval dataset、metrics runner 與 demo smoke；不實作 rerank、hybrid search、LLM-as-judge、worker、DB、登入或 RBAC。
 - v0.14.0 目前只做 retrieval quality planning、rerank / hybrid contract 草案、dataset expansion plan 與 future demo / release plan；不實作 runtime、外部依賴、worker、DB、登入或 RBAC。
 - v0.15.0 只做 disabled-by-default `vector_rerank` runtime spike；保留 keyword baseline fallback，不實作 hybrid search、worker、DB、登入或 RBAC。
+- v0.16.0 規劃為公開 eval dataset expansion 與 optional `hybrid` eval strategy；不做 default-on hybrid、不新增 BM25 dependency、frontend trace UI、worker、DB、登入或 RBAC。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -425,6 +426,7 @@ Next Candidate Milestone：
 - v0.12.0: Vector Indexing Hardening 已完成；manual vector indexing contract、同步 indexing service、`POST /documents/{document_id}/index/vector`、optional vector indexing smoke、fallback-safe vector retrieval 與 v0.12.0 version / README / TODO / ROADMAP 同步已完成。
 - v0.13.0: Retrieval Evaluation Baseline 已完成；公開 eval dataset、retrieval eval runner、Hit Rate@K / MRR@K / Recall@K / latency / failure count metrics、baseline eval smoke、optional vector eval smoke 與 v0.13.0 version / README / TODO / ROADMAP 同步已完成。
 - v0.15.0: Rerank Runtime Spike 已完成；FastEmbed provider decision、disabled-by-default rerank adapter、optional `vector_rerank` eval strategy、rerank trace metadata、baseline smoke 與 v0.15.0 version / README / TODO / ROADMAP 同步已完成。
+- v0.16.0: Hybrid Retrieval Planning 已建立；ticket 順序為 hybrid contract、eval dataset JSON expansion、optional hybrid eval integration、demo / release sync。實作尚未開始。
 
 ## v0.12.0 Vector Indexing Hardening Backlog
 
@@ -674,3 +676,72 @@ Out of Scope：
 - 不實作 hybrid search、BM25、score fusion、merge / dedupe policy 或 frontend trace UI。
 - 不新增 eval dataset JSON、sample documents、Redis、NATS、worker、async queue、PostgreSQL schema、登入或 RBAC。
 - 不新增 VLM parser、PDF rendering、production OCR pipeline、Docker service 或 release tag。
+
+## v0.16.0 Hybrid Retrieval Planning Backlog
+
+Goal：在 Phase 15 disabled-by-default `vector_rerank` runtime spike 完成後，規劃下一階段 retrieval quality slice。Phase 16 優先處理 optional `hybrid` contract、公開 eval dataset JSON expansion、eval runner integration 與 demo / release sync；frontend trace UI、`hybrid_rerank` 與 infra 類能力延後。
+
+Tickets：
+
+- [ ] `tasks/phase-16-hybrid-retrieval/16-01-hybrid-retrieval-contract.md`
+- [ ] `tasks/phase-16-hybrid-retrieval/16-02-eval-dataset-expansion-json.md`
+- [ ] `tasks/phase-16-hybrid-retrieval/16-03-hybrid-eval-strategy-integration.md`
+- [ ] `tasks/phase-16-hybrid-retrieval/16-04-hybrid-demo-release-sync.md`
+
+Expected Outcome：
+
+- 16-01 後續固定 optional `hybrid` strategy label、keyword / vector candidate source、merge policy、dedupe key、trace metadata 與 fallback contract。
+- 16-02 後續擴充公開 retrieval eval dataset JSON，讓總 cases 至少達到 `12`，並涵蓋 lexical mismatch、multi-evidence、near-duplicate chunks、cross-document ambiguity 與 numeric / table lookup 等類型。
+- 16-03 後續新增 optional `hybrid` eval strategy，沿用 Phase 13 Hit Rate@K、MRR@K、Recall@K、latency 與 failure count，並保留 Phase 15 rerank trace metadata 不被破壞。
+- 16-04 後續補齊 optional hybrid demo / eval smoke，並在 Phase 16 implementation 完成時執行 `v0.16.0` version / docs / TODO / ROADMAP release sync。
+
+Acceptance Criteria：
+
+- Phase 16 tickets 都包含 Goal、Scope、Out of Scope、Files likely to change、Acceptance Criteria、Validation 與 Release Impact。
+- Phase 16 目標明確聚焦 dataset expansion 與 optional `hybrid` eval strategy，不把 `hybrid_rerank` 或 frontend trace UI 混進同一階段。
+- 所有 tickets 都保留 keyword baseline fallback，並明確避免 default-on optional strategy。
+- `16-04` 才允許 `v0.16.0` version bump；前置 tickets 若未完成 release artifact，必須寫 `Version bump required: no`。
+
+16-01 Hybrid Contract Plan：
+
+- Strategy label：`hybrid`。
+- Candidate sources：existing keyword branch + optional vector branch。
+- Dedupe key：優先使用 `(document_id, chunk_id)`；若資料不足，必須保留 branch metadata 與 fallback reason，不可靜默丟失 citation trace。
+- Merge policy：第一版優先採 deterministic rank-based fusion，避免新增 BM25 dependency 或跨 provider score normalization 風險。
+- Trace metadata：`strategy_label`、keyword / vector candidate count、merge policy、dedupe count、branch failures、final rank、branch rank、merged score 與 fallback reason。
+
+16-02 Dataset Expansion Plan：
+
+- Dataset expansion 只使用既有公開虛構 sample documents；若既有 fixtures 無法支撐 planned cases，必須停止並拆新文件 / sample ticket。
+- 第一版目標是讓 dataset 總 cases 至少達到 `12`，並補足 lexical mismatch、multi-evidence、near-duplicate chunks、cross-document ambiguity 與 numeric / table lookup coverage。
+- Baseline keyword eval 必須仍可在無 Ollama embedding、Qdrant 或 FastEmbed runtime 時執行。
+
+16-03 Hybrid Eval Integration Plan：
+
+- Eval runner 顯式支援 `hybrid` strategy；預設仍是 keyword baseline。
+- Hybrid strategy 不接 `/rag/query` 或 frontend UI，只用於本機 eval runner / smoke flag。
+- Vector branch unavailable 時 fallback 到 keyword-only result，並記錄 trace metadata；不得讓 optional runtime failure 破壞 baseline eval。
+
+16-04 Demo and Release Plan：
+
+- Baseline validations：backend tests、baseline demo smoke、baseline retrieval eval smoke 與 `git diff --check`。
+- Optional validations：local preflight 可用時執行 vector、`vector_rerank` 與 `hybrid` eval smoke。
+- Release sync：backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP。
+
+Validation：
+
+- Phase 16 planning validation 使用 `rg` 檢查 `v0.16.0`、`Phase 16`、`16-01`、`16-04` 與 `hybrid retrieval` 是否同步到 TODO、ROADMAP 與 tickets。
+- `git diff --check`
+
+Release Impact：
+
+- Target version: `v0.16.0`。
+- Planning version bump required: no。
+- 原因：目前只建立 Phase 16 ticket / roadmap / TODO 規劃，不執行 Phase 16 runtime implementation；實際版本同步留到 `16-04`。
+
+Out of Scope：
+
+- 不直接實作 Phase 16。
+- 不實作 `hybrid_rerank`、frontend trace UI、BM25 dependency、LLM-as-judge、answer faithfulness、citation quality scoring 或 eval dashboard。
+- 不新增外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入或 RBAC。
+- 不新增 VLM parser、PDF rendering、production OCR pipeline、deployment 設定或 release tag。

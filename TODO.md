@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.15 planning backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.16 planning backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -15,6 +15,7 @@
 - Phase 13 -> `v0.13.0`
 - Phase 14 -> `v0.14.0`
 - Phase 15 -> `v0.15.0`
+- Phase 16 -> `v0.16.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -49,6 +50,10 @@
 6. `tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md` 已完成，新增 disabled-by-default FastEmbed rerank adapter building block。
 7. `tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md` 已完成，將 optional `vector_rerank` 接入 retrieval eval runner。
 8. `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md` 已完成，補齊 rerank demo / eval smoke 文件並完成 `v0.15.0` release/version sync。
+9. `tasks/phase-16-hybrid-retrieval/16-01-hybrid-retrieval-contract.md` 待執行，先固定 optional `hybrid` retrieval contract。
+10. `tasks/phase-16-hybrid-retrieval/16-02-eval-dataset-expansion-json.md` 待執行，擴充公開 retrieval eval dataset JSON。
+11. `tasks/phase-16-hybrid-retrieval/16-03-hybrid-eval-strategy-integration.md` 待執行，將 optional `hybrid` 接入 retrieval eval runner。
+12. `tasks/phase-16-hybrid-retrieval/16-04-hybrid-demo-release-sync.md` 待執行，補齊 hybrid demo / eval smoke 並執行 `v0.16.0` release/version sync。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -315,6 +320,29 @@ Phase 15 guardrails：
 - 不新增 Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC、VLM parser、PDF rendering 或 production OCR pipeline。
 - 若需要外部依賴、模型下載或 Docker runtime，必須由 ticket 明確列出，並依工具要求取得 approval。
 - Phase 15 完成後，hybrid search、dataset JSON expansion、frontend trace UI 與真正 dependency packaging 留到 Phase 16 或後續 ticket 規劃。
+
+## MVP v0.16.0 Hybrid Retrieval Planning Backlog
+
+- [ ] `tasks/phase-16-hybrid-retrieval/16-01-hybrid-retrieval-contract.md`: 固定 optional `hybrid` strategy、candidate source、merge policy、dedupe key 與 trace metadata contract；文件 ticket，不 bump version。
+- [ ] `tasks/phase-16-hybrid-retrieval/16-02-eval-dataset-expansion-json.md`: 依 Phase 14 plan 擴充公開 retrieval eval dataset JSON，至少讓總 cases 達到 `12`，並保留 baseline keyword eval 可重跑。
+- [ ] `tasks/phase-16-hybrid-retrieval/16-03-hybrid-eval-strategy-integration.md`: 將 optional `hybrid` strategy 接入 retrieval eval runner，沿用 Phase 13 metrics 並保留 fallback trace metadata。
+- [ ] `tasks/phase-16-hybrid-retrieval/16-04-hybrid-demo-release-sync.md`: 補齊 optional hybrid demo / eval smoke，並在 implementation 完成時執行 `v0.16.0` release/version sync。
+- [x] Phase 16 planning validation：`rg -n "v0.16.0|Phase 16|16-01|16-04|hybrid retrieval" TODO.md docs/ROADMAP.md tasks/phase-16-hybrid-retrieval/*.md` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
+
+Phase 16 goal：
+
+- 在 Phase 15 disabled-by-default `vector_rerank` runtime spike 後，規劃下一個 retrieval quality slice：公開 dataset expansion 與 optional `hybrid` eval strategy。
+- `hybrid` 第一版只用既有 keyword branch 與 optional vector branch，不新增 BM25 dependency。
+- 使用 Phase 13 eval metrics 比較 `keyword`、`vector`、`vector_rerank` 與 `hybrid`。
+- 16-04 才允許 `v0.16.0` version bump 與 release docs sync。
+
+Phase 16 guardrails：
+
+- 先執行 `16-01` contract，再開始 dataset 或 runtime implementation。
+- 不讓 hybrid、vector retrieval、rerank 或 eval strategy default-on。
+- 不實作 `hybrid_rerank`、frontend trace UI、LLM-as-judge、answer faithfulness、citation quality scoring 或 eval dashboard，除非後續 ticket 明確要求。
+- 不新增外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC、VLM parser、PDF rendering、production OCR pipeline 或 deployment 設定。
+- Dataset expansion 只能使用公開虛構資料；若既有 sample documents 不足，必須停止並回報，不可自行加入真實或敏感資料。
 
 ## Release Verification Status
 
