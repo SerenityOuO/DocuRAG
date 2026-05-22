@@ -1,6 +1,6 @@
 # Backend
 
-DocuRAG AgentOps backend MVP v0.13.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、manual vector indexing API、local RAG query API、retrieval evaluation runner、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，RAG 預設仍以 `KeywordRagProvider` 做 keyword retrieval 與 citation contract。v0.10.0 加入最小 Ollama `qwen3.5:4b` LLM client、可選 `/rag/query` generation path 與 demo smoke；v0.11.0 加入 disabled-by-default Ollama embedding client、optional Qdrant runtime 與 fallback-safe vector retrieval path；v0.12.0 加入 manual vector indexing service / API，讓 vector retrieval 查詢已明確索引的 chunks；v0.13.0 加入公開 eval dataset 與 Hit Rate@K / MRR@K / Recall@K metrics runner。未設定 vector retrieval 或 LLM provider 時既有 `/rag/query` 預設仍是 deterministic keyword baseline。此階段不接資料庫、OpenAI API、vLLM、rerank、hybrid search、Redis、NATS、worker 或登入權限。
+DocuRAG AgentOps backend MVP v0.15.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、manual vector indexing API、local RAG query API、retrieval evaluation runner、disabled-by-default rerank adapter、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，RAG 預設仍以 `KeywordRagProvider` 做 keyword retrieval 與 citation contract。v0.10.0 加入最小 Ollama `qwen3.5:4b` LLM client、可選 `/rag/query` generation path 與 demo smoke；v0.11.0 加入 disabled-by-default Ollama embedding client、optional Qdrant runtime 與 fallback-safe vector retrieval path；v0.12.0 加入 manual vector indexing service / API，讓 vector retrieval 查詢已明確索引的 chunks；v0.13.0 加入公開 eval dataset 與 Hit Rate@K / MRR@K / Recall@K metrics runner；v0.15.0 加入 optional `vector_rerank` eval strategy 與 rerank trace metadata。未設定 vector retrieval、rerank 或 LLM provider 時既有 `/rag/query` 預設仍是 deterministic keyword baseline。此階段不接資料庫、OpenAI API、vLLM、hybrid search、Redis、NATS、worker 或登入權限。
 
 ## Install
 
@@ -221,6 +221,21 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 
 Eval result JSON 預設輸出到 `.tmp/retrieval-eval-result-keyword.json` 或 `.tmp/retrieval-eval-result-vector.json`，不寫入 production storage，也不在 backend startup、upload、OCR 或 `/rag/query` 自動執行。
 
+Phase 15 optional vector rerank eval：
+
+- `DOCURAG_RERANK_PROVIDER` 預設 disabled；只有設定為 `fastembed` 或使用 `retrieval-eval-smoke.ps1 -RunVectorRerank` 時才會嘗試 rerank。
+- `vector_rerank` strategy 先執行既有 vector retrieval，再對 vector candidates 呼叫 rerank adapter；vector retrieval 失敗時保留原 keyword fallback，不會對 fallback chunks 再 rerank。
+- Rerank unavailable、disabled、timeout 或 malformed scores 會保留原 vector candidates，並在 retrieved chunk metadata / citation trace metadata 記錄 `rerank_enabled=false`、`rerank_status` 與 `rerank_fallback_reason`。
+- FastEmbed runtime 採 lazy import；尚未安裝 optional rerank runtime 時 baseline keyword eval 與 optional vector eval 不受影響。
+- `vector_rerank` 不代表 hybrid search、BM25、score fusion、dataset JSON expansion 或 frontend trace UI 已完成。
+
+```powershell
+$env:DOCURAG_RERANK_PROVIDER="fastembed"
+$env:DOCURAG_RERANK_MODEL="BAAI/bge-reranker-base"
+$env:DOCURAG_RERANK_TOP_K="5"
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1 -RunVectorRerank
+```
+
 ## Local Storage
 
 上傳 API 會將原始檔案保存到 repo root 的 `data/uploads/`，並將 metadata 寫入 `data/documents.json`。`filename` 會先安全化，避免 `../` 或 Windows path separator 造成 path traversal。
@@ -282,10 +297,11 @@ Retrieval eval smoke 不需要啟動 frontend；baseline mode 也不需要 Qdran
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1
 ```
 
-Optional vector retrieval eval 需要 Ollama embedding、Qdrant collection 與 vector-enabled backend。它會先做 manual vector indexing API preflight，再跑本機 eval runner：
+Optional vector retrieval eval 需要 Ollama embedding、Qdrant collection 與 vector-enabled backend。它會先做 manual vector indexing API preflight，再跑本機 eval runner；optional `vector_rerank` eval 另可用 `-RunVectorRerank` 驗證 rerank metadata 或 fallback metadata：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1 -RunVector
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1 -RunVectorRerank
 ```
 
 Real OCR demo 只在 backend 已用 Python 3.12 安裝 CUDA PaddlePaddle wheel 與 `.[dev,real-ocr]` 時使用。v0.8 起 provider-selected `/ocr` 預設走 PaddleOCR；Phase 09 起缺少 GPU dependency 或不是 CUDA build 時，`-RunRealOcr` smoke 會明確失敗，mock smoke / seed flow 可透過 `/ocr/mock` 或 `DOCURAG_OCR_PROVIDER=mock` 重跑：
@@ -356,3 +372,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 
 - v0.11.0: Vector RAG Backlog、Ollama `qwen3-embedding:0.6b` embedding client、Qdrant local runtime / collection smoke、optional vector retrieval path、fallback trace metadata、demo smoke `-RunVector` 與文件版本同步已完成。
 - v0.12.0: Vector Indexing Hardening、manual vector indexing contract、同步 indexing service、`POST /documents/{document_id}/index/vector`、optional vector indexing smoke 與文件版本同步已完成。
 - v0.13.0: Retrieval Evaluation Baseline、公開 eval dataset、retrieval eval runner、Hit Rate@K / MRR@K / Recall@K / latency / failure count metrics、baseline eval smoke 與 optional vector eval smoke 已完成。
+- v0.15.0: Rerank Runtime Spike、FastEmbed provider decision、disabled-by-default rerank adapter、optional `vector_rerank` eval strategy、rerank trace metadata 與文件版本同步已完成。

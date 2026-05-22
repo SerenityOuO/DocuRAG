@@ -48,7 +48,7 @@
 5. `tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md` 已完成，選定 FastEmbed + `BAAI/bge-reranker-base` 作為 disabled-by-default `vector_rerank` runtime spike 起點。
 6. `tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md` 已完成，新增 disabled-by-default FastEmbed rerank adapter building block。
 7. `tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md` 已完成，將 optional `vector_rerank` 接入 retrieval eval runner。
-8. `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md` 待執行，規劃後續 demo / release sync。
+8. `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md` 已完成，補齊 rerank demo / eval smoke 文件並完成 `v0.15.0` release/version sync。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -296,7 +296,8 @@ Phase 14 guardrails：
 - [x] 15-02 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
 - [x] `tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md`: 將 optional `vector_rerank` 接入 retrieval eval runner，輸出 Phase 13 metrics 與 rerank trace metadata。
 - [x] 15-03 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1` 通過；optional rerank eval smoke command documented as `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1 -RunVectorRerank`；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
-- [ ] `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md`: 後續補齊 optional rerank demo / eval smoke 並執行 `v0.15.0` release/version sync。
+- [x] `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md`: 補齊 optional rerank demo / eval smoke 並執行 `v0.15.0` release/version sync。
+- [x] 15-04 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過；`frontend` 的 `npm.cmd run build` 通過；baseline `scripts/demo-smoke-test.ps1` 通過，version `0.15.0`、answer source `deterministic baseline`、retrieval source `keyword baseline`；baseline `scripts/retrieval-eval-smoke.ps1` 通過，Hit Rate@K `0.8333`、MRR@K `0.6389`、Recall@K `0.75`、failure count `0`；optional `vector_rerank` eval smoke command 已文件化為 `scripts/retrieval-eval-smoke.ps1 -RunVectorRerank`，本機未執行 optional rerank smoke，因為 `.venv` 未安裝 optional FastEmbed runtime（Ollama embedding 與 Qdrant collection 可連線）；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
 - [x] Phase 15 planning validation：`rg -n "v0.15.0|Phase 15|15-01|15-04|rerank runtime" TODO.md docs/ROADMAP.md tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
 
 Phase 15 goal：
@@ -313,6 +314,7 @@ Phase 15 guardrails：
 - 不實作 hybrid search、BM25、score fusion、merge / dedupe policy 或 frontend trace UI，除非後續 ticket 明確要求。
 - 不新增 Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC、VLM parser、PDF rendering 或 production OCR pipeline。
 - 若需要外部依賴、模型下載或 Docker runtime，必須由 ticket 明確列出，並依工具要求取得 approval。
+- Phase 15 完成後，hybrid search、dataset JSON expansion、frontend trace UI 與真正 dependency packaging 留到 Phase 16 或後續 ticket 規劃。
 
 ## Release Verification Status
 
@@ -335,3 +337,4 @@ Phase 15 guardrails：
 - [x] v0.11.0: Vector RAG Backlog 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.11.0`，Ollama `qwen3-embedding:0.6b` embedding client、Qdrant local runtime / collection smoke、optional vector retrieval path、fallback trace metadata、demo smoke `-RunVector` 與 frontend retrieval source 已補齊。
 - [x] v0.12.0: Vector Indexing Hardening 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.12.0`，manual vector indexing contract、同步 indexing service、`POST /documents/{document_id}/index/vector`、optional vector indexing smoke 與 fallback-safe vector retrieval 已補齊。
 - [x] v0.13.0: Retrieval Evaluation Baseline 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.13.0`，公開 eval dataset、retrieval eval runner、baseline eval smoke、optional vector eval smoke 與 metrics output 已補齊。
+- [x] v0.15.0: Rerank Runtime Spike 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.15.0`，FastEmbed provider decision、disabled-by-default rerank adapter、optional `vector_rerank` eval strategy、rerank trace metadata 與 baseline smoke 已補齊。

@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.14.0 planning backlog 的已交付切片，並追蹤 v0.15.0 rerank runtime spike backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.15.0 rerank runtime spike 的已交付切片。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -73,7 +73,7 @@ Expected Outcome：
 - v0.12.0 只做 optional vector indexing contract、manual indexing service / API 與 demo smoke hardening；不實作 rerank、hybrid search、eval runner、worker、DB、登入或 RBAC。
 - v0.13.0 只做 retrieval evaluation baseline、公開 eval dataset、metrics runner 與 demo smoke；不實作 rerank、hybrid search、LLM-as-judge、worker、DB、登入或 RBAC。
 - v0.14.0 目前只做 retrieval quality planning、rerank / hybrid contract 草案、dataset expansion plan 與 future demo / release plan；不實作 runtime、外部依賴、worker、DB、登入或 RBAC。
-- v0.15.0 規劃為 disabled-by-default `vector_rerank` runtime spike；必須先做 provider decision，保留 keyword baseline fallback，不實作 hybrid search、worker、DB、登入或 RBAC。
+- v0.15.0 只做 disabled-by-default `vector_rerank` runtime spike；保留 keyword baseline fallback，不實作 hybrid search、worker、DB、登入或 RBAC。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -424,6 +424,7 @@ Next Candidate Milestone：
 - v0.11.0: Vector RAG Backlog 已完成；Ollama `qwen3-embedding:0.6b` embedding client、Qdrant local runtime / collection smoke、optional vector retrieval path、fallback trace metadata、demo smoke `-RunVector`、v0.11.0 version / README / TODO / ROADMAP 同步已完成。
 - v0.12.0: Vector Indexing Hardening 已完成；manual vector indexing contract、同步 indexing service、`POST /documents/{document_id}/index/vector`、optional vector indexing smoke、fallback-safe vector retrieval 與 v0.12.0 version / README / TODO / ROADMAP 同步已完成。
 - v0.13.0: Retrieval Evaluation Baseline 已完成；公開 eval dataset、retrieval eval runner、Hit Rate@K / MRR@K / Recall@K / latency / failure count metrics、baseline eval smoke、optional vector eval smoke 與 v0.13.0 version / README / TODO / ROADMAP 同步已完成。
+- v0.15.0: Rerank Runtime Spike 已完成；FastEmbed provider decision、disabled-by-default rerank adapter、optional `vector_rerank` eval strategy、rerank trace metadata、baseline smoke 與 v0.15.0 version / README / TODO / ROADMAP 同步已完成。
 
 ## v0.12.0 Vector Indexing Hardening Backlog
 
@@ -610,16 +611,16 @@ Goal：在 Phase 14 retrieval quality planning 完成後，規劃下一階段 di
 Tickets：
 
 - [x] `tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md`
-- [ ] `tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md`
-- [ ] `tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md`
-- [ ] `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md`
+- [x] `tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md`
+- [x] `tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md`
+- [x] `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md`
 
 Expected Outcome：
 
 - 15-01 已決定 local-first rerank provider / model、dependency / model download 邊界與 approval 需求，不新增 runtime。
-- 15-02 後續實作 disabled-by-default FastEmbed rerank adapter，輸入 query + vector candidates，輸出保留 citation metadata 的 reranked candidates。
-- 15-03 後續新增 optional `vector_rerank` eval strategy，沿用 Phase 13 Hit Rate@K、MRR@K、Recall@K、latency 與 failure count。
-- 15-04 後續補齊 optional rerank demo / eval smoke，並在 runtime spike 完成時執行 `v0.15.0` version / docs / TODO / ROADMAP release sync。
+- 15-02 已實作 disabled-by-default FastEmbed rerank adapter，輸入 query + vector candidates，輸出保留 citation metadata 的 reranked candidates。
+- 15-03 已新增 optional `vector_rerank` eval strategy，沿用 Phase 13 Hit Rate@K、MRR@K、Recall@K、latency 與 failure count。
+- 15-04 已補齊 optional rerank demo / eval smoke 文件，並執行 `v0.15.0` version / docs / TODO / ROADMAP release sync。
 
 Acceptance Criteria：
 
@@ -640,20 +641,36 @@ Acceptance Criteria：
 - 15-01 不新增 dependency 或 model download；15-02 若新增 runtime，必須使用 optional dependency、lazy import 與 unavailable fallback，且不可讓 backend startup 自動下載 model。
 - Hybrid search 延後到後續 Phase，不與 `vector_rerank` runtime spike 混在同一階段。
 
+15-02 / 15-03 Runtime Status：
+
+- Rerank provider 設定已新增為 `DOCURAG_RERANK_PROVIDER`、`DOCURAG_RERANK_MODEL`、`DOCURAG_RERANK_TOP_K` 與 `DOCURAG_RERANK_TIMEOUT_SECONDS`，預設 disabled。
+- `FastEmbedRerankProvider` 採 lazy import；FastEmbed 不存在、provider disabled、timeout 或 malformed scores 時，`RerankService` 會保留原 candidates 並記錄 fallback metadata。
+- `vector_rerank` eval strategy 已接入 `app.services.evaluation`；流程為 vector retrieval -> rerank candidates -> Phase 13 metrics。若 vector retrieval fallback，eval result strategy 會標成 `vector_unavailable_fallback`，且不對 keyword fallback chunks rerank。
+- `scripts/retrieval-eval-smoke.ps1 -RunVectorRerank` 已可輸出 `.tmp/retrieval-eval-result-vector-rerank.json`，並檢查 rerank metadata 或 fallback metadata。
+
+15-04 Release Sync：
+
+- Backend / frontend version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.15.0`。
+- Baseline keyword demo / eval smoke 仍維持可執行；`vector_rerank` 不會成為 default-on path。
+- Hybrid search、BM25、score fusion、dataset JSON expansion、frontend trace UI、Redis、NATS、worker、PostgreSQL schema、登入與 RBAC 仍留到後續 Phase。
+
 Validation：
 
-- Phase 15 planning validation 使用 `rg` 檢查 `v0.15.0`、`Phase 15`、`15-01`、`15-04` 與 `rerank runtime` 是否同步到 TODO、ROADMAP 與 tickets。
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
+- `npm.cmd run build`（於 `frontend/`）
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1`
+- Optional rerank eval smoke command：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1 -RunVectorRerank`（需 vector-enabled backend、Ollama embedding、Qdrant collection 與 optional FastEmbed runtime preflight；未具備時不要求 baseline release 阻塞）
 - `git diff --check`
 
 Release Impact：
 
 - Target version: `v0.15.0`。
-- Planning version bump required: no。
-- 原因：目前只建立 Phase 15 ticket / roadmap / TODO 規劃，不執行 Phase 15 runtime implementation；實際版本同步留到 `15-04`。
+- Version bump required: yes。
+- 原因：`15-04` 完成後，Phase 15 disabled-by-default `vector_rerank` runtime spike 已具備 adapter、eval integration、smoke flag 與 release 文件同步。
 
 Out of Scope：
 
-- 不直接實作 Phase 15。
 - 不實作 hybrid search、BM25、score fusion、merge / dedupe policy 或 frontend trace UI。
 - 不新增 eval dataset JSON、sample documents、Redis、NATS、worker、async queue、PostgreSQL schema、登入或 RBAC。
 - 不新增 VLM parser、PDF rendering、production OCR pipeline、Docker service 或 release tag。

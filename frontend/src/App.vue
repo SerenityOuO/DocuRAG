@@ -52,7 +52,7 @@ const latestResponse = ref<
   | null
 >(null);
 
-const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.13.0"));
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.15.0"));
 
 const healthLabel = computed(() => {
   if (healthState.value === "success" && health.value?.status === "ok") {
