@@ -9,9 +9,9 @@
 - 一張 ticket 應小到 Codex 一次可以完成，完成後應可單獨 commit。
 - 若任務超出 ticket 的 `Scope`，先停止並回報，不要順手擴張。
 - 嚴格遵守 `Out of Scope`，尤其不要提前實作 OCR、RAG、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
-- 開始任何 ticket 前，必須先閱讀 `GOAL.md`，確認目前專案目標、當前階段與下一步優先順序，再用它判斷要執行哪張 ticket；若 `GOAL.md` 不存在，先停止並回報，不要自行猜測下一步。
-- 實作前先檢查 `GOAL.md`、`README.md`、`TODO.md`、`docs/PRD.md`、`docs/architecture.md`、`docs/ROADMAP.md` 與當前 ticket。
-- 每次完成後更新 `TODO.md` 中對應 checklist，執行 ticket 指定的 validation，並再次檢查 `GOAL.md`，確認本次修改沒有偏離目標、沒有超出 ticket scope，也沒有提前實作未排定功能。
+- 開始任何 ticket 前，必須先閱讀 `goal.md`，確認目前專案目標、當前階段與下一步優先順序，再用它判斷要執行哪張 ticket；若 `goal.md` 不存在，先停止並回報，不要自行猜測下一步。
+- 實作前先檢查 `goal.md`、`README.md`、`TODO.md`、`docs/PRD.md`、`docs/architecture.md`、`docs/ROADMAP.md` 與當前 ticket。
+- 每次完成後更新 `TODO.md` 中對應 checklist，執行 ticket 指定的 validation，並再次檢查 `goal.md`，確認本次修改沒有偏離目標、沒有超出 ticket scope，也沒有提前實作未排定功能。
 - 文件 ticket 只改 Markdown；程式 ticket 才能新增或修改程式碼。
 - 優先最小改動、貼合既有風格，不為未來擴充提前抽象化。
 - 當使用者已在當前對話明確確認某個 Phase 的 ticket 草案、文件更新清單或規劃寫入後，Codex 可直接寫入該次已確認的 Markdown / ticket / TODO / ROADMAP 變更，後續同類文件寫入不需要重複詢問；但仍必須遵守 ticket-first、Scope / Out of Scope、validation、git 流程與安全限制，不得因此自動新增外部依賴、資料庫 schema、認證權限、部署設定或程式碼實作。
@@ -560,7 +560,7 @@ text
 
 ### Git 自動上傳規範
 
-- 每張 ticket 或明確指定任務完成後，Codex 必須先執行 ticket 指定 validation 與必要的文件同步，再檢查 `git status`，確認沒有偏離 `GOAL.md`、沒有超出 ticket scope，也沒有提前實作未排定功能。
+- 每張 ticket 或明確指定任務完成後，Codex 必須先執行 ticket 指定 validation 與必要的文件同步，再檢查 `git status`，確認沒有偏離 `goal.md`、沒有超出 ticket scope，也沒有提前實作未排定功能。
 - 完成驗證後，Codex 應自動整理本次修改並上傳 Git：只 stage 本次任務相關檔案，使用繁體中文 commit message 建立 commit，然後 push 到目前分支已設定的 upstream。
 - 若目前分支沒有 upstream，Codex 應優先使用 `git push -u origin <current-branch>`；若目前分支是 `main`，則使用 `git push origin main`。
 - 不得自動 stage 或 commit 與本次任務無關的既有 dirty changes、未追蹤檔或用戶手動修改；若無法明確區分，先回報並請用戶確認。
