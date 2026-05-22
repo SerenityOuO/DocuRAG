@@ -430,7 +430,7 @@ Next Candidate Milestone：
 - v0.15.0: Rerank Runtime Spike 已完成；FastEmbed provider decision、disabled-by-default rerank adapter、optional `vector_rerank` eval strategy、rerank trace metadata、baseline smoke 與 v0.15.0 version / README / TODO / ROADMAP 同步已完成。
 - v0.16.0: Hybrid Retrieval Slice 已完成；hybrid contract、12 筆 eval dataset JSON expansion、optional hybrid eval integration、demo / release sync 與 version / README / TODO / ROADMAP 同步已完成。
 - v0.17.0: Retrieval Trace UI / Eval Visibility 已完成；frontend trace panel、eval summary fallback / trace metadata reporting、baseline demo smoke、baseline eval smoke、optional vector / `vector_rerank` / `hybrid` smoke 與 version / README / TODO / ROADMAP 同步已完成。
-- v0.18.0: Hybrid Rerank Planning 已建立；`hybrid_rerank` boundary、eval dataset plan、trace report plan 與 future demo / release checklist 已拆成 Markdown-only tickets，不執行 version bump。
+- v0.18.0: Hybrid Rerank Planning 已完成；`hybrid_rerank` boundary、eval dataset plan、trace report plan 與 future demo / release checklist 已拆成 Markdown-only tickets，不執行 version bump。
 
 ## v0.12.0 Vector Indexing Hardening Backlog
 
@@ -855,7 +855,7 @@ Tickets：
 - [x] `tasks/phase-18-hybrid-rerank-planning/18-01-hybrid-rerank-boundary-contract.md`
 - [x] `tasks/phase-18-hybrid-rerank-planning/18-02-hybrid-rerank-eval-dataset-plan.md`
 - [x] `tasks/phase-18-hybrid-rerank-planning/18-03-hybrid-rerank-trace-report-plan.md`
-- [ ] `tasks/phase-18-hybrid-rerank-planning/18-04-phase-18-demo-release-plan.md`
+- [x] `tasks/phase-18-hybrid-rerank-planning/18-04-phase-18-demo-release-plan.md`
 
 Expected Outcome：
 
@@ -886,6 +886,14 @@ Expected Outcome：
 - Missing metadata behavior 沿用 Phase 17：graceful hidden、`metadata unavailable` 或 fallback state；branch score、merged score 與 rerank score 必須標明 source。
 - Explicit non-goals：不建立 production eval dashboard、strategy comparison page、export UI、live eval runner、backend endpoint 或 frontend route。
 - 18-03 validation：`rg -n "v0.18.0|Phase 18|hybrid_rerank|trace|report|Version bump required: no" TODO.md docs/ROADMAP.md tasks/phase-18-hybrid-rerank-planning/*.md` 通過；`git diff --check` 通過。
+
+18-04 Demo Release Plan Status：
+
+- Future validation checklist 已固定 backend tests、frontend build、baseline demo smoke、baseline eval smoke、optional vector / `vector_rerank` / `hybrid` / future `hybrid_rerank` eval smoke 與 `git diff --check`。
+- Future release sync files 已固定 backend version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP。
+- Deferred items 已明確保留 production eval dashboard、Redis、NATS、worker、PostgreSQL schema、auth、RBAC、deployment、LLM-as-judge、answer faithfulness、citation quality scoring、query rewriting 與 BM25 到後續 Phase。
+- Phase 18 planning 完成狀態：四張 ticket 均為 Markdown-only，不 bump backend / frontend / Docker Compose version，不新增 runtime。
+- 18-04 validation：`rg -n "v0.18.0|Phase 18|hybrid_rerank|Version bump required: no|release sync" TODO.md docs/ROADMAP.md tasks/phase-18-hybrid-rerank-planning/*.md` 通過；`git diff --check` 通過。
 
 Acceptance Criteria：
 
