@@ -43,7 +43,8 @@
 1. `tasks/phase-14-retrieval-quality/14-01-rerank-provider-decision.md` 已完成，固定 Phase 14 retrieval quality planning boundary。
 2. `tasks/phase-14-retrieval-quality/14-02-retrieval-quality-contract.md` 已完成，規劃 future rerank / hybrid trace contract。
 3. `tasks/phase-14-retrieval-quality/14-03-eval-dataset-expansion-plan.md` 已完成，規劃 eval dataset 擴充方向。
-4. `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md` 待執行，下一步規劃 future demo / validation / release checklist。
+4. `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md` 已完成，規劃 future demo / validation / release checklist。
+5. Phase 14 planning tickets 已完成；下一步只規劃 Phase 15，不直接實作 runtime。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -272,7 +273,8 @@ Phase 13 guardrails：
 - [x] 14-02 validation：`rg -n "vector_rerank|hybrid_rerank|rerank score|fallback|default-on" TODO.md docs/ROADMAP.md tasks/phase-14-retrieval-quality/14-02-retrieval-quality-contract.md` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
 - [x] `tasks/phase-14-retrieval-quality/14-03-eval-dataset-expansion-plan.md`: 規劃 retrieval eval dataset 擴充原則、lexical mismatch、multi-evidence、near-duplicate chunks、cross-document ambiguity、numeric / table lookup 等 future cases 與 quality gates；只做文件計畫，不修改 dataset JSON。
 - [x] 14-03 validation：`rg -n "dataset expansion|lexical mismatch|multi-evidence|near-duplicate|cross-document" TODO.md docs/ROADMAP.md tasks/phase-14-retrieval-quality/14-03-eval-dataset-expansion-plan.md` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
-- [ ] `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md`: 規劃 future demo smoke、validation 與 release sync checklist，不執行 version bump。
+- [x] `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md`: 規劃 future demo smoke preflight、validation checklist、release sync checklist 與 runtime implementation boundary；不執行 version bump、release sync、tag 或 runtime 實作。
+- [x] 14-04 validation：`rg -n "v0.14.0|demo smoke|release sync|Version bump required: no|future implementation" TODO.md docs/ROADMAP.md tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
 
 Phase 14 guardrails：
 

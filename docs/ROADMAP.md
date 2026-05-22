@@ -549,7 +549,7 @@ Tickets：
 - [x] `tasks/phase-14-retrieval-quality/14-01-rerank-provider-decision.md`
 - [x] `tasks/phase-14-retrieval-quality/14-02-retrieval-quality-contract.md`
 - [x] `tasks/phase-14-retrieval-quality/14-03-eval-dataset-expansion-plan.md`
-- [ ] `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md`
+- [x] `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md`
 
 Expected Outcome：
 
@@ -585,9 +585,12 @@ Expected Outcome：
 
 14-04 Demo and Release Plan：
 
-- 規劃 future rerank / hybrid demo smoke preflight、expected output 與 validation checklist。
-- 記錄若 future implementation 完成 `v0.14.0` runtime release 時需要同步的檔案。
+- 規劃 future rerank / hybrid demo smoke preflight：baseline backend tests、baseline demo smoke、baseline eval smoke、optional vector / reranker preflight、optional strategy eval 與 Phase 13 metrics comparison。
+- Expected output 至少包含 `strategy_label`、Hit Rate@K、MRR@K、Recall@K、average latency、failure count、trace metadata presence、fallback reason 與 keyword baseline safety check。
+- Future validation checklist：backend tests、frontend build（若有 frontend 變更）、baseline demo smoke、baseline retrieval eval smoke、optional strategy eval smoke 與 `git diff --check`。
+- 記錄若 future implementation 完成 `v0.14.0` runtime release 時需要同步 backend / frontend version、fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP。
 - 此 planning ticket 不修改版本號、不 push tag、不建立 release note。
+- Runtime implementation 必須另開後續 ticket；不得在 Phase 14 planning 完成後直接實作。
 
 Out of Scope：
 
