@@ -854,7 +854,7 @@ Tickets：
 
 - [x] `tasks/phase-18-hybrid-rerank-planning/18-01-hybrid-rerank-boundary-contract.md`
 - [x] `tasks/phase-18-hybrid-rerank-planning/18-02-hybrid-rerank-eval-dataset-plan.md`
-- [ ] `tasks/phase-18-hybrid-rerank-planning/18-03-hybrid-rerank-trace-report-plan.md`
+- [x] `tasks/phase-18-hybrid-rerank-planning/18-03-hybrid-rerank-trace-report-plan.md`
 - [ ] `tasks/phase-18-hybrid-rerank-planning/18-04-phase-18-demo-release-plan.md`
 
 Expected Outcome：
@@ -878,6 +878,14 @@ Expected Outcome：
 - 後續 dataset update ticket 應保留公開虛構資料、case tags、expected evidence、strategy comparison notes 與 baseline keyword eval 可重跑。
 - Metrics summary 沿用既有 `fallback_count`、`trace_metadata_count`、`result_strategy_counts`、`fallback_reasons`、Hit Rate@K、MRR@K、Recall@K、latency 與 failure count。
 - 18-02 validation：`rg -n "v0.18.0|Phase 18|hybrid_rerank|dataset|Version bump required: no" TODO.md docs/ROADMAP.md tasks/phase-18-hybrid-rerank-planning/*.md` 通過；`git diff --check` 通過。
+
+18-03 Trace Report Plan Status：
+
+- Future visibility surfaces 已規劃 CLI summary、JSON output 與既有 frontend trace panel；frontend 只能讀既有 response / result metadata。
+- Report fields 已拆成 run-level、case-level 與 candidate-level，涵蓋 branch counts、merge policy、dedupe key、rerank provider / status / score / latency、candidate ordering 與 fallback reason。
+- Missing metadata behavior 沿用 Phase 17：graceful hidden、`metadata unavailable` 或 fallback state；branch score、merged score 與 rerank score 必須標明 source。
+- Explicit non-goals：不建立 production eval dashboard、strategy comparison page、export UI、live eval runner、backend endpoint 或 frontend route。
+- 18-03 validation：`rg -n "v0.18.0|Phase 18|hybrid_rerank|trace|report|Version bump required: no" TODO.md docs/ROADMAP.md tasks/phase-18-hybrid-rerank-planning/*.md` 通過；`git diff --check` 通過。
 
 Acceptance Criteria：
 

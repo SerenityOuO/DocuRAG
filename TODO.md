@@ -62,8 +62,8 @@
 16. `tasks/phase-17-retrieval-trace-ui/17-04-trace-ui-demo-release-sync.md` 已完成，補齊 trace UI / eval visibility demo validation 並執行 `v0.17.0` release/version sync。
 17. `tasks/phase-18-hybrid-rerank-planning/18-01-hybrid-rerank-boundary-contract.md` 已完成，固定 `hybrid_rerank` planning boundary、candidate flow、trace metadata 與 fallback states。
 18. `tasks/phase-18-hybrid-rerank-planning/18-02-hybrid-rerank-eval-dataset-plan.md` 已完成，規劃 future eval dataset case 類型、demo-safe 資料邊界與 metrics 摘要使用方式。
-19. `tasks/phase-18-hybrid-rerank-planning/18-03-hybrid-rerank-trace-report-plan.md` 尚未開始，下一步規劃 future trace / report visibility。
-20. `tasks/phase-18-hybrid-rerank-planning/18-04-phase-18-demo-release-plan.md` 尚未開始，需在 18-03 完成後才執行。
+19. `tasks/phase-18-hybrid-rerank-planning/18-03-hybrid-rerank-trace-report-plan.md` 已完成，規劃 future trace / report visibility、report fields 與 missing metadata behavior。
+20. `tasks/phase-18-hybrid-rerank-planning/18-04-phase-18-demo-release-plan.md` 尚未開始，下一步規劃 future demo validation 與 release checklist。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -422,7 +422,7 @@ Phase 17 guardrails：
 
 - [x] `tasks/phase-18-hybrid-rerank-planning/18-01-hybrid-rerank-boundary-contract.md`: 規劃 `hybrid_rerank` candidate flow、disabled-by-default 邊界、trace metadata 與 fallback states；文件 ticket，不 bump version。
 - [x] `tasks/phase-18-hybrid-rerank-planning/18-02-hybrid-rerank-eval-dataset-plan.md`: 規劃 future `hybrid_rerank` eval dataset case 類型與 metrics 摘要使用方式；文件 ticket，不 bump version。
-- [ ] `tasks/phase-18-hybrid-rerank-planning/18-03-hybrid-rerank-trace-report-plan.md`: 規劃 future `hybrid_rerank` trace / report visibility 與 missing metadata behavior；文件 ticket，不 bump version。
+- [x] `tasks/phase-18-hybrid-rerank-planning/18-03-hybrid-rerank-trace-report-plan.md`: 規劃 future `hybrid_rerank` trace / report visibility 與 missing metadata behavior；文件 ticket，不 bump version。
 - [ ] `tasks/phase-18-hybrid-rerank-planning/18-04-phase-18-demo-release-plan.md`: 規劃 future `v0.18.0` demo validation 與 release sync checklist；文件 ticket，不 bump version。
 - [x] Phase 18 planning validation：`rg -n "v0.18.0|Phase 18|hybrid_rerank|Version bump required: no|release sync" TODO.md docs/ROADMAP.md tasks/phase-18-hybrid-rerank-planning/*.md` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
 
@@ -452,6 +452,13 @@ Phase 18 guardrails：
 - 後續 dataset update ticket 必須只使用公開虛構 sample documents；若既有 sample 不足，需停止並拆新 sample ticket。
 - Metrics summary 邊界沿用 `fallback_count`、`trace_metadata_count`、`result_strategy_counts`、`fallback_reasons` 與既有 Hit Rate@K / MRR@K / Recall@K / latency / failure count。
 - 18-02 validation：`rg -n "v0.18.0|Phase 18|hybrid_rerank|dataset|Version bump required: no" TODO.md docs/ROADMAP.md tasks/phase-18-hybrid-rerank-planning/*.md` 通過；`git diff --check` 通過。
+
+18-03 trace report plan status：
+
+- Future visibility surfaces 已規劃 CLI summary、JSON output 與既有 frontend trace panel 的只讀顯示邊界。
+- Report fields 已拆成 run-level、case-level 與 candidate-level，涵蓋 branch counts、merge policy、dedupe、rerank provider / status / score、fallback reason 與 candidate ordering。
+- Missing metadata behavior 沿用 Phase 17：graceful hidden、`metadata unavailable` 或清楚 fallback state；不得把 branch score、merged score 與 rerank score 混成單一分數。
+- 18-03 validation：`rg -n "v0.18.0|Phase 18|hybrid_rerank|trace|report|Version bump required: no" TODO.md docs/ROADMAP.md tasks/phase-18-hybrid-rerank-planning/*.md` 通過；`git diff --check` 通過。
 
 ## Release Verification Status
 

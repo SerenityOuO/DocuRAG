@@ -24,6 +24,73 @@
 - Version bump required: no。
 - 原因：本 ticket 只規劃 trace / report display contract，不修改 frontend、backend 或 release artifact。
 
+## Future Visibility Surfaces
+
+後續 `hybrid_rerank` implementation 若接入 eval runner，trace / report visibility 應分成三個層次：
+
+1. CLI summary：提供 demo 口頭講解需要的 strategy、metrics、fallback 與 trace metadata 摘要。
+2. JSON output：保留完整 run-level、case-level 與 candidate-level trace metadata，方便後續 README / report 摘錄。
+3. Existing frontend trace panel：若後續接入 `/rag/query` 或 result metadata，只能讀既有 response / result 欄位，不新增 live eval dashboard。
+
+## Future Report Fields
+
+run-level fields：
+
+- `strategy_label`
+- `candidate_flow`
+- `keyword_candidate_count`
+- `vector_candidate_count`
+- `hybrid_candidate_count`
+- `rerank_input_count`
+- `final_candidate_count`
+- `merge_policy`
+- `dedupe_key`
+- `dedupe_count`
+- `rerank_provider`
+- `rerank_model`
+- `rerank_status`
+- `rerank_latency_ms`
+- `fallback_state`
+- `fallback_reason`
+- `branch_failures`
+
+case-level fields：
+
+- `question`
+- `expected_answer`
+- `gold_document_id`
+- `gold_chunk_ids`
+- `result_strategy`
+- `hit_at_k`
+- `mrr_at_k`
+- `recall_at_k`
+- `latency_ms`
+- `trace_metadata_present`
+- `fallback_reason`
+
+candidate-level fields：
+
+- final rank、document id、chunk id、filename、text preview
+- branch labels、branch rank、branch score
+- merged rank、merged score
+- rerank input rank、reranked rank、rerank score
+- page / bbox / confidence（若存在）
+
+## Missing Metadata Behavior
+
+後續 UI / report 應沿用 Phase 17 原則：
+
+- 欄位不存在時使用 graceful hidden、`metadata unavailable` 或明確 fallback state。
+- optional vector / rerank metadata 缺失不得讓 keyword baseline demo 或 eval summary 失敗。
+- branch score、merged score 與 rerank score 不可混成單一分數；若呈現比較，必須標明 score source。
+- candidate ordering 應清楚區分 branch rank、merged rank 與 reranked final rank。
+
+## Explicit Non-Goals
+
+- 不建立 production eval dashboard、strategy comparison page、export UI 或 live eval runner。
+- 不新增 frontend route、backend endpoint、API response 欄位或 smoke script。
+- 不把 `hybrid_rerank` trace 規劃解讀為 runtime 已可用。
+
 ## Files likely to change
 
 - `TODO.md`
@@ -32,10 +99,10 @@
 
 ## Acceptance Criteria
 
-- [ ] 已列出 future `hybrid_rerank` trace / report 欄位。
-- [ ] 已明確禁止 production eval dashboard 與 live eval runner。
-- [ ] 已定義 missing metadata / fallback display 原則。
-- [ ] Release Impact 明確寫 `Version bump required: no` 並說明原因。
+- [x] 已列出 future `hybrid_rerank` trace / report 欄位。
+- [x] 已明確禁止 production eval dashboard 與 live eval runner。
+- [x] 已定義 missing metadata / fallback display 原則。
+- [x] Release Impact 明確寫 `Version bump required: no` 並說明原因。
 
 ## Validation
 
