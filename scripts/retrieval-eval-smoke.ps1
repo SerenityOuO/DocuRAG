@@ -1,11 +1,16 @@
 param(
     [switch]$RunVector,
+    [switch]$RunVectorRerank,
     [string]$ApiBaseUrl = "http://127.0.0.1:8000",
     [string]$DatasetPath = "",
     [string]$SamplePath = "",
     [string]$OutputPath = "",
     [string]$EmbeddingBaseUrl = "http://127.0.0.1:11434",
     [string]$EmbeddingModel = "qwen3-embedding:0.6b",
+    [string]$RerankProvider = "fastembed",
+    [string]$RerankModel = "BAAI/bge-reranker-base",
+    [int]$RerankTopK = 5,
+    [int]$RerankTimeoutSeconds = 30,
     [string]$QdrantUrl = "http://127.0.0.1:6333",
     [string]$QdrantCollection = "docurag_chunks_v1",
     [int]$QdrantVectorSize = 1024
@@ -30,6 +35,9 @@ if ([string]::IsNullOrWhiteSpace($OutputPath)) {
     $resultName = "retrieval-eval-result-keyword.json"
     if ($RunVector) {
         $resultName = "retrieval-eval-result-vector.json"
+    }
+    if ($RunVectorRerank) {
+        $resultName = "retrieval-eval-result-vector-rerank.json"
     }
     $OutputPath = Join-Path $repoRoot ".tmp/$resultName"
 }
@@ -110,8 +118,23 @@ if (-not (Test-Path -LiteralPath $venvPython)) {
 $resolvedDatasetPath = (Resolve-Path -LiteralPath $DatasetPath).Path
 $resolvedSamplePath = (Resolve-Path -LiteralPath $SamplePath).Path
 $strategy = "keyword"
-if ($RunVector) {
-    $strategy = "vector"
+if ($RunVector -and $RunVectorRerank) {
+    throw "Use either -RunVector or -RunVectorRerank, not both."
+}
+
+if ($RunVector -or $RunVectorRerank) {
+    if ($RunVectorRerank) {
+        $strategy = "vector_rerank"
+        $env:DOCURAG_RERANK_PROVIDER = $RerankProvider
+        $env:DOCURAG_RERANK_MODEL = $RerankModel
+        $env:DOCURAG_RERANK_TOP_K = [string]$RerankTopK
+        $env:DOCURAG_RERANK_TIMEOUT_SECONDS = [string]$RerankTimeoutSeconds
+    }
+    else {
+        $strategy = "vector"
+        $env:DOCURAG_RERANK_PROVIDER = ""
+    }
+
     $env:DOCURAG_RAG_RETRIEVAL_PROVIDER = "vector"
     $env:DOCURAG_EMBEDDING_PROVIDER = "ollama"
     $env:DOCURAG_EMBEDDING_BASE_URL = $EmbeddingBaseUrl
@@ -127,6 +150,10 @@ if ($RunVector) {
     Write-Host "Ollama embedding tags: $embeddingTagsUrl"
     Write-Host "Qdrant collection: $qdrantCollectionUrl"
     Write-Host "Backend API: $ApiBaseUrl"
+    if ($RunVectorRerank) {
+        Write-Host "Rerank provider: $RerankProvider"
+        Write-Host "Rerank model: $RerankModel"
+    }
 
     try {
         $embeddingTags = Invoke-RestMethod -Method Get -Uri $embeddingTagsUrl
@@ -217,6 +244,14 @@ if ($RunVector) {
     Assert-Condition ($result.summary.failure_count -eq 0) "Vector eval reported failures. Check Ollama embedding, Qdrant, and manual indexing readiness."
     Assert-Condition ($result.environment.retrieval_provider -eq "vector") "Vector eval did not report vector provider metadata."
     Assert-Condition ($result.environment.indexed_chunk_count -gt 0) "Vector eval did not index sample chunks."
+}
+elseif ($RunVectorRerank) {
+    Assert-Condition ($result.environment.retrieval_provider -eq "vector_rerank") "Vector rerank eval did not report vector_rerank provider metadata."
+    Assert-Condition ($result.environment.indexed_chunk_count -gt 0) "Vector rerank eval did not index sample chunks."
+    Assert-Condition ($result.environment.rerank_provider -eq $RerankProvider) "Vector rerank eval did not report expected rerank provider metadata."
+
+    $rerankMetadataRows = @($result.results | ForEach-Object { $_.retrieved_chunks } | Where-Object { $null -ne $_.metadata.rerank_enabled })
+    Assert-Condition ($rerankMetadataRows.Count -gt 0) "Vector rerank eval did not include rerank trace metadata. Install optional rerank runtime or check fallback metadata."
 }
 else {
     Assert-Condition ($result.summary.failure_count -eq 0) "Keyword eval should not report failures."

@@ -14,12 +14,13 @@ from app.schemas.documents import DocumentChunk, DocumentMetadata, DocumentStatu
 from app.schemas.rag import RagQueryResponse, RetrievedChunk
 from app.services.embedding import create_embedding_provider
 from app.services.rag import KeywordRagProvider, RagProvider, VectorRagProvider
+from app.services.rerank import RerankService, create_rerank_service
 from app.services.vector_indexing import VectorIndexingService
 from app.services.vector_store import create_qdrant_vector_store
 
 
-EvalStrategy = Literal["keyword", "vector"]
-ResultStrategy = Literal["keyword", "vector", "vector_unavailable_fallback"]
+EvalStrategy = Literal["keyword", "vector", "vector_rerank"]
+ResultStrategy = Literal["keyword", "vector", "vector_rerank", "vector_unavailable_fallback"]
 
 
 @dataclass(frozen=True)
@@ -238,6 +239,33 @@ def run_retrieval_eval(
     )
 
 
+class VectorRerankEvalProvider:
+    name = "vector_rerank"
+
+    def __init__(
+        self,
+        vector_provider: RagProvider,
+        response_builder: KeywordRagProvider,
+        rerank_service: RerankService,
+    ) -> None:
+        self.vector_provider = vector_provider
+        self.response_builder = response_builder
+        self.rerank_service = rerank_service
+
+    def query(
+        self,
+        query: str,
+        top_k: int,
+        documents: list[DocumentMetadata],
+    ) -> RagQueryResponse:
+        vector_response = self.vector_provider.query(query, top_k, documents)
+        if _vector_fallback_error(vector_response):
+            return vector_response
+
+        rerank_result = self.rerank_service.rerank(query, vector_response.retrieved_chunks)
+        return self.response_builder.build_response(query, rerank_result.chunks)
+
+
 def evaluate_retrieval_response(
     case: RetrievalEvalCase,
     response: RagQueryResponse,
@@ -270,7 +298,7 @@ def evaluate_retrieval_response(
         case_id=case.id,
         query=case.query,
         top_k=case.top_k,
-        strategy="vector_unavailable_fallback" if fallback_error and strategy == "vector" else strategy,
+        strategy="vector_unavailable_fallback" if fallback_error and strategy in {"vector", "vector_rerank"} else strategy,
         latency_ms=latency_ms,
         hit=first_relevant_rank is not None,
         first_relevant_rank=first_relevant_rank,
@@ -325,19 +353,31 @@ def create_eval_provider(
         details = "; ".join(result.error or result.reason or result.status for result in failed_indexing)
         raise RuntimeError(f"Vector eval manual indexing did not complete. {details}")
 
-    return (
-        VectorRagProvider(keyword_provider, embedding_provider, vector_store),
+    vector_provider = VectorRagProvider(keyword_provider, embedding_provider, vector_store)
+    environment = {
+        "retrieval_provider": "vector" if strategy == "vector" else "vector_rerank",
+        "embedding_provider": embedding_provider.name,
+        "embedding_model": str(getattr(embedding_provider, "model", "unknown")),
+        "qdrant_collection": vector_store.collection_name,
+        "qdrant_vector_size": vector_store.vector_size,
+        "qdrant_collection_exists": collection.exists,
+        "indexed_document_count": len(indexing_results),
+        "indexed_chunk_count": sum(result.indexed_chunk_count for result in indexing_results),
+    }
+
+    if strategy == "vector":
+        return vector_provider, environment
+
+    rerank_service = create_rerank_service(settings)
+    environment.update(
         {
-            "retrieval_provider": "vector",
-            "embedding_provider": embedding_provider.name,
-            "embedding_model": str(getattr(embedding_provider, "model", "unknown")),
-            "qdrant_collection": vector_store.collection_name,
-            "qdrant_vector_size": vector_store.vector_size,
-            "qdrant_collection_exists": collection.exists,
-            "indexed_document_count": len(indexing_results),
-            "indexed_chunk_count": sum(result.indexed_chunk_count for result in indexing_results),
-        },
+            "rerank_provider": rerank_service.provider.name,
+            "rerank_model": str(rerank_service.provider.model or ""),
+            "rerank_top_k": rerank_service.top_k,
+            "rerank_timeout_seconds": rerank_service.timeout_seconds,
+        }
     )
+    return VectorRerankEvalProvider(vector_provider, keyword_provider, rerank_service), environment
 
 
 def default_repo_root() -> Path:
@@ -347,7 +387,7 @@ def default_repo_root() -> Path:
 def main() -> int:
     repo_root = default_repo_root()
     parser = argparse.ArgumentParser(description="Run DocuRAG retrieval evaluation baseline.")
-    parser.add_argument("--strategy", choices=["keyword", "vector"], default="keyword")
+    parser.add_argument("--strategy", choices=["keyword", "vector", "vector_rerank"], default="keyword")
     parser.add_argument("--dataset", type=Path, default=repo_root / "sample-data/eval/retrieval-eval.json")
     parser.add_argument("--sample-documents", type=Path, default=repo_root / "sample-data/documents")
     parser.add_argument("--output", type=Path, default=repo_root / ".tmp/retrieval-eval-result.json")
