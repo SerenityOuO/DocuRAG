@@ -1,6 +1,8 @@
 param(
     [switch]$RunVector,
+    [string]$ApiBaseUrl = "http://127.0.0.1:8000",
     [string]$DatasetPath = "",
+    [string]$SamplePath = "",
     [string]$OutputPath = "",
     [string]$EmbeddingBaseUrl = "http://127.0.0.1:11434",
     [string]$EmbeddingModel = "qwen3-embedding:0.6b",
@@ -18,6 +20,10 @@ $venvPython = Join-Path $backendRoot ".venv/Scripts/python.exe"
 
 if ([string]::IsNullOrWhiteSpace($DatasetPath)) {
     $DatasetPath = Join-Path $repoRoot "sample-data/eval/retrieval-eval.json"
+}
+
+if ([string]::IsNullOrWhiteSpace($SamplePath)) {
+    $SamplePath = Join-Path $repoRoot "sample-data/documents/mock-invoice-aurora.txt"
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputPath)) {
@@ -39,11 +45,70 @@ function Assert-Condition {
     }
 }
 
+function Get-ErrorResponseBody {
+    param([object]$ErrorRecord)
+
+    $response = $ErrorRecord.Exception.Response
+    if ($null -ne $ErrorRecord.ErrorDetails -and -not [string]::IsNullOrWhiteSpace($ErrorRecord.ErrorDetails.Message)) {
+        return $ErrorRecord.ErrorDetails.Message
+    }
+
+    if ($null -eq $response) {
+        return ""
+    }
+
+    try {
+        $stream = $response.GetResponseStream()
+        if ($null -eq $stream) {
+            return ""
+        }
+
+        $reader = New-Object System.IO.StreamReader($stream)
+        return $reader.ReadToEnd()
+    }
+    catch {
+        return ""
+    }
+}
+
+function Invoke-FileUpload {
+    param(
+        [string]$Url,
+        [string]$FilePath,
+        [string]$ContentType
+    )
+
+    $tempBody = [System.IO.Path]::GetTempFileName()
+    try {
+        $httpStatus = & curl.exe -sS -o $tempBody -w "%{http_code}" -X POST $Url -F "file=@$FilePath;type=$ContentType"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Upload failed with curl exit code $LASTEXITCODE"
+        }
+
+        $body = ""
+        if (Test-Path -LiteralPath $tempBody) {
+            $body = Get-Content -Raw -LiteralPath $tempBody
+        }
+
+        if ($httpStatus -notmatch "^2") {
+            throw "Upload failed with HTTP $httpStatus. Response body: $body"
+        }
+
+        return $body | ConvertFrom-Json
+    }
+    finally {
+        if (Test-Path -LiteralPath $tempBody) {
+            Remove-Item -LiteralPath $tempBody -Force
+        }
+    }
+}
+
 if (-not (Test-Path -LiteralPath $venvPython)) {
     throw "Backend virtual environment not found at $venvPython. Run scripts/test-backend.ps1 first."
 }
 
 $resolvedDatasetPath = (Resolve-Path -LiteralPath $DatasetPath).Path
+$resolvedSamplePath = (Resolve-Path -LiteralPath $SamplePath).Path
 $strategy = "keyword"
 if ($RunVector) {
     $strategy = "vector"
@@ -54,6 +119,65 @@ if ($RunVector) {
     $env:DOCURAG_QDRANT_URL = $QdrantUrl
     $env:DOCURAG_QDRANT_COLLECTION = $QdrantCollection
     $env:DOCURAG_QDRANT_VECTOR_SIZE = [string]$QdrantVectorSize
+
+    $embeddingTagsUrl = "$($EmbeddingBaseUrl.TrimEnd('/'))/api/tags"
+    $qdrantCollectionUrl = "$($QdrantUrl.TrimEnd('/'))/collections/$QdrantCollection"
+
+    Write-Host "Vector preflight"
+    Write-Host "Ollama embedding tags: $embeddingTagsUrl"
+    Write-Host "Qdrant collection: $qdrantCollectionUrl"
+    Write-Host "Backend API: $ApiBaseUrl"
+
+    try {
+        $embeddingTags = Invoke-RestMethod -Method Get -Uri $embeddingTagsUrl
+    }
+    catch {
+        throw "Ollama embedding service is required for -RunVector but $embeddingTagsUrl was unavailable. Start Ollama and pull $EmbeddingModel first. $($_.Exception.Message)"
+    }
+
+    $embeddingModelNames = @($embeddingTags.models | ForEach-Object { $_.name })
+    Assert-Condition ($embeddingModelNames -contains $EmbeddingModel) "Ollama embedding model '$EmbeddingModel' was not found. Available models: $($embeddingModelNames -join ', ')"
+
+    try {
+        $qdrantCollectionInfo = Invoke-RestMethod -Method Get -Uri $qdrantCollectionUrl
+    }
+    catch {
+        throw "Qdrant collection '$QdrantCollection' is required for -RunVector but $qdrantCollectionUrl was unavailable. Run scripts/qdrant-collection-smoke.ps1 first. $($_.Exception.Message)"
+    }
+
+    $vectors = $qdrantCollectionInfo.result.config.params.vectors
+    Assert-Condition ([int]$vectors.size -eq $QdrantVectorSize) "Qdrant collection '$QdrantCollection' vector size is $($vectors.size); expected $QdrantVectorSize."
+    Assert-Condition ([string]$vectors.distance -eq "Cosine") "Qdrant collection '$QdrantCollection' distance is $($vectors.distance); expected Cosine."
+
+    try {
+        $health = Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/health"
+    }
+    catch {
+        throw "Backend API is required for -RunVector manual indexing preflight but $ApiBaseUrl was unavailable. Start backend with vector env first. $($_.Exception.Message)"
+    }
+
+    Assert-Condition ($health.status -eq "ok") "Expected /health status ok."
+
+    $upload = Invoke-FileUpload "$ApiBaseUrl/documents/upload" $resolvedSamplePath "text/plain"
+    $ocr = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($upload.document_id)/ocr/mock"
+    Assert-Condition ($ocr.status -eq "completed") "OCR mock did not complete before vector indexing preflight."
+
+    try {
+        $vectorIndexing = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($upload.document_id)/index/vector"
+    }
+    catch {
+        $errorBody = Get-ErrorResponseBody $_
+        $detail = $_.Exception.Message
+        if (-not [string]::IsNullOrWhiteSpace($errorBody)) {
+            $detail = "$detail Response body: $errorBody"
+        }
+
+        throw "Manual vector indexing API preflight failed. Start backend with DOCURAG_EMBEDDING_PROVIDER=ollama, DOCURAG_EMBEDDING_MODEL=$EmbeddingModel, DOCURAG_QDRANT_URL=$QdrantUrl, and DOCURAG_QDRANT_COLLECTION=$QdrantCollection. $detail"
+    }
+
+    Assert-Condition ($vectorIndexing.status -eq "completed") "Expected manual vector indexing status completed. Got '$($vectorIndexing.status)'."
+    Assert-Condition ($vectorIndexing.indexed_chunk_count -gt 0) "Manual vector indexing API did not index any chunks."
+    Write-Host "Manual vector indexing API preflight OK: indexed chunks $($vectorIndexing.indexed_chunk_count)"
 }
 else {
     $env:DOCURAG_RAG_RETRIEVAL_PROVIDER = "keyword"

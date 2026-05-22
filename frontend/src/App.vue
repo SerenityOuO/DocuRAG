@@ -52,7 +52,7 @@ const latestResponse = ref<
   | null
 >(null);
 
-const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.12.0"));
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.13.0"));
 
 const healthLabel = computed(() => {
   if (healthState.value === "success" && health.value?.status === "ok") {
@@ -336,7 +336,7 @@ onMounted(() => {
       <h1>DocuRAG AgentOps</h1>
       <p class="hero-copy">
         Backend health、本機文件上傳、metadata 保存、PaddleOCR PP-OCRv4 Chinese provider、mock override、local keyword RAG、
-        optional Ollama Qwen3.5 answer source、manual vector indexing、optional vector retrieval fallback 與 citation trace 驗證。
+        optional Ollama Qwen3.5 answer source、manual vector indexing、optional vector retrieval fallback、retrieval eval metrics 與 citation trace 驗證。
       </p>
     </header>
 

@@ -1,6 +1,6 @@
 # Backend
 
-DocuRAG AgentOps backend MVP v0.12.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、manual vector indexing API、local RAG query API、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，RAG 預設仍以 `KeywordRagProvider` 做 keyword retrieval 與 citation contract。v0.10.0 加入最小 Ollama `qwen3.5:4b` LLM client、可選 `/rag/query` generation path 與 demo smoke；v0.11.0 加入 disabled-by-default Ollama embedding client、optional Qdrant runtime 與 fallback-safe vector retrieval path；v0.12.0 加入 manual vector indexing service / API，讓 vector retrieval 查詢已明確索引的 chunks。未設定 vector retrieval 或 LLM provider 時既有 `/rag/query` 預設仍是 deterministic keyword baseline。此階段不接資料庫、OpenAI API、vLLM、rerank、Redis、NATS、worker 或登入權限。
+DocuRAG AgentOps backend MVP v0.13.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、manual vector indexing API、local RAG query API、retrieval evaluation runner、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，RAG 預設仍以 `KeywordRagProvider` 做 keyword retrieval 與 citation contract。v0.10.0 加入最小 Ollama `qwen3.5:4b` LLM client、可選 `/rag/query` generation path 與 demo smoke；v0.11.0 加入 disabled-by-default Ollama embedding client、optional Qdrant runtime 與 fallback-safe vector retrieval path；v0.12.0 加入 manual vector indexing service / API，讓 vector retrieval 查詢已明確索引的 chunks；v0.13.0 加入公開 eval dataset 與 Hit Rate@K / MRR@K / Recall@K metrics runner。未設定 vector retrieval 或 LLM provider 時既有 `/rag/query` 預設仍是 deterministic keyword baseline。此階段不接資料庫、OpenAI API、vLLM、rerank、hybrid search、Redis、NATS、worker 或登入權限。
 
 ## Install
 
@@ -206,6 +206,21 @@ py -3.12 -m uvicorn app.main:app --reload
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunVector
 ```
 
+Phase 13 retrieval evaluation baseline：
+
+- `sample-data/eval/retrieval-eval.json` 使用公開虛構 invoice 與 support contract sample。
+- `app.services.evaluation` 會讀取 eval cases、建立本機 sample chunks、執行 keyword 或 optional vector retrieval，並輸出 per-query results 與 summary metrics。
+- Summary metrics 包含 `Hit Rate@K`、`MRR@K`、`Recall@K`、平均 latency 與 failure count。
+- Baseline keyword eval 不依賴 Ollama embedding 或 Qdrant。
+- Optional vector eval 必須明確設定 embedding / Qdrant env；smoke 會先檢查 Ollama `qwen3-embedding:0.6b`、`docurag_chunks_v1` collection，並透過 `POST /documents/{document_id}/index/vector` 做 manual indexing API preflight。
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1 -RunVector
+```
+
+Eval result JSON 預設輸出到 `.tmp/retrieval-eval-result-keyword.json` 或 `.tmp/retrieval-eval-result-vector.json`，不寫入 production storage，也不在 backend startup、upload、OCR 或 `/rag/query` 自動執行。
+
 ## Local Storage
 
 上傳 API 會將原始檔案保存到 repo root 的 `data/uploads/`，並將 metadata 寫入 `data/documents.json`。`filename` 會先安全化，避免 `../` 或 Windows path separator 造成 path traversal。
@@ -216,7 +231,7 @@ document metadata 會包含 `processing` contract，明確記錄 `upload`、`ocr
 
 document metadata 也會保存 `processing_jobs` history 與 `latest_job` summary。同步 upload 會記錄 completed upload job；mock OCR 成功會記錄 completed OCR 與 local indexing job；provider failed 會記錄 failed OCR job。這些 job metadata 只是 contract，不代表已引入 worker、queue、Redis 或 NATS。
 
-v0.5.1 chunks 由 OCR mock text 產生，每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。v0.6 chunk / citation schema 另外補齊 optional `page_number`、`bbox`、`confidence`、`source_type`、chunk `metadata` 與 citation `trace_metadata` 欄位；mock OCR chunk 只填 `source_type=ocr_mock` 與 metadata safe default，不產生真正 OCR bbox 或 confidence。v0.7 real OCR output 先正規化到 `OcrResult.lines`，再將 line-level page、bbox、confidence 與 metadata 寫入 `DocumentChunk`，讓 citations 與 retrieved chunks 不依賴 PaddleOCR 私有格式。`POST /rag/query` 預設透過 `KeywordRagProvider` 做本機 keyword retrieval，設定 `DOCURAG_RAG_RETRIEVAL_PROVIDER=vector` 時才改用 `VectorRagProvider` 嘗試 Ollama embedding + Qdrant search。對 `text/plain`、`.txt`、`.md`、`.csv` sample，OCR mock 會把上傳文字納入 deterministic mock OCR text，方便 demo query 引用具體欄位；這不是 rerank、hybrid search 或 eval runner。
+v0.5.1 chunks 由 OCR mock text 產生，每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。v0.6 chunk / citation schema 另外補齊 optional `page_number`、`bbox`、`confidence`、`source_type`、chunk `metadata` 與 citation `trace_metadata` 欄位；mock OCR chunk 只填 `source_type=ocr_mock` 與 metadata safe default，不產生真正 OCR bbox 或 confidence。v0.7 real OCR output 先正規化到 `OcrResult.lines`，再將 line-level page、bbox、confidence 與 metadata 寫入 `DocumentChunk`，讓 citations 與 retrieved chunks 不依賴 PaddleOCR 私有格式。`POST /rag/query` 預設透過 `KeywordRagProvider` 做本機 keyword retrieval，設定 `DOCURAG_RAG_RETRIEVAL_PROVIDER=vector` 時才改用 `VectorRagProvider` 嘗試 Ollama embedding + Qdrant search。對 `text/plain`、`.txt`、`.md`、`.csv` sample，OCR mock 會把上傳文字納入 deterministic mock OCR text，方便 demo query 引用具體欄位；這不是 rerank、hybrid search、LLM-as-judge 或 answer quality evaluation。
 
 可用環境變數覆寫資料目錄：
 
@@ -259,6 +274,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunLlm
+```
+
+Retrieval eval smoke 不需要啟動 frontend；baseline mode 也不需要 Qdrant 或 embedding：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1
+```
+
+Optional vector retrieval eval 需要 Ollama embedding、Qdrant collection 與 vector-enabled backend。它會先做 manual vector indexing API preflight，再跑本機 eval runner：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1 -RunVector
 ```
 
 Real OCR demo 只在 backend 已用 Python 3.12 安裝 CUDA PaddlePaddle wheel 與 `.[dev,real-ocr]` 時使用。v0.8 起 provider-selected `/ocr` 預設走 PaddleOCR；Phase 09 起缺少 GPU dependency 或不是 CUDA build 時，`-RunRealOcr` smoke 會明確失敗，mock smoke / seed flow 可透過 `/ocr/mock` 或 `DOCURAG_OCR_PROVIDER=mock` 重跑：
@@ -328,3 +355,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 
 - v0.10.0: LLM RAG Backlog、Ollama `qwen3.5:4b` provider decision、最小 client、optional `/rag/query` generation path、demo smoke `-RunLlm`、frontend answer source 與文件版本同步已完成。
 - v0.11.0: Vector RAG Backlog、Ollama `qwen3-embedding:0.6b` embedding client、Qdrant local runtime / collection smoke、optional vector retrieval path、fallback trace metadata、demo smoke `-RunVector` 與文件版本同步已完成。
 - v0.12.0: Vector Indexing Hardening、manual vector indexing contract、同步 indexing service、`POST /documents/{document_id}/index/vector`、optional vector indexing smoke 與文件版本同步已完成。
+- v0.13.0: Retrieval Evaluation Baseline、公開 eval dataset、retrieval eval runner、Hit Rate@K / MRR@K / Recall@K / latency / failure count metrics、baseline eval smoke 與 optional vector eval smoke 已完成。

@@ -57,11 +57,11 @@
 
 ## Acceptance Criteria
 
-- [ ] Baseline retrieval eval smoke 不依賴 Qdrant 或 embedding，仍通過。
-- [ ] Optional vector retrieval eval smoke 會先完成 manual vector indexing，再輸出 vector metrics。
-- [ ] Eval output 包含 per-query results 與 summary metrics。
-- [ ] Qdrant / embedding unavailable 時，optional vector eval smoke 以清楚 preflight error 失敗，不影響 baseline eval。
-- [ ] `v0.13.0` release/version sync 完成。
+- [x] Baseline retrieval eval smoke 不依賴 Qdrant 或 embedding，仍通過。
+- [x] Optional vector retrieval eval smoke 會先完成 manual vector indexing，再輸出 vector metrics。
+- [x] Eval output 包含 per-query results 與 summary metrics。
+- [x] Qdrant / embedding unavailable 時，optional vector eval smoke 以清楚 preflight error 失敗，不影響 baseline eval。
+- [x] `v0.13.0` release/version sync 完成。
 
 ## Validation
 

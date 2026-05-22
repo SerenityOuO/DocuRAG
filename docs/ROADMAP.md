@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.12.0 的已交付切片，並追蹤下一階段 v0.13.0 backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.13.0 的已交付切片，並追蹤下一階段 backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.12.0 checklist。
+- TODO 包含 Phase 00 到 v0.13.0 checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -421,6 +421,7 @@ Next Candidate Milestone：
 - v0.10.0: LLM RAG Backlog 已完成；Ollama `qwen3.5:4b` provider decision、最小 client、optional `/rag/query` generation path、demo smoke `-RunLlm`、frontend answer source、v0.10.0 version / README / TODO / ROADMAP 同步已完成。
 - v0.11.0: Vector RAG Backlog 已完成；Ollama `qwen3-embedding:0.6b` embedding client、Qdrant local runtime / collection smoke、optional vector retrieval path、fallback trace metadata、demo smoke `-RunVector`、v0.11.0 version / README / TODO / ROADMAP 同步已完成。
 - v0.12.0: Vector Indexing Hardening 已完成；manual vector indexing contract、同步 indexing service、`POST /documents/{document_id}/index/vector`、optional vector indexing smoke、fallback-safe vector retrieval 與 v0.12.0 version / README / TODO / ROADMAP 同步已完成。
+- v0.13.0: Retrieval Evaluation Baseline 已完成；公開 eval dataset、retrieval eval runner、Hit Rate@K / MRR@K / Recall@K / latency / failure count metrics、baseline eval smoke、optional vector eval smoke 與 v0.13.0 version / README / TODO / ROADMAP 同步已完成。
 
 ## v0.12.0 Vector Indexing Hardening Backlog
 
@@ -488,7 +489,7 @@ Tickets：
 - [x] `tasks/phase-13-retrieval-eval/13-01-retrieval-eval-contract.md`
 - [x] `tasks/phase-13-retrieval-eval/13-02-retrieval-eval-dataset.md`
 - [x] `tasks/phase-13-retrieval-eval/13-03-retrieval-eval-runner.md`
-- [ ] `tasks/phase-13-retrieval-eval/13-04-retrieval-eval-demo-smoke.md`
+- [x] `tasks/phase-13-retrieval-eval/13-04-retrieval-eval-demo-smoke.md`
 
 Expected Outcome：
 
@@ -525,6 +526,8 @@ Expected Outcome：
 13-04 Demo smoke：
 
 - 補齊 baseline retrieval eval smoke 與 optional vector retrieval eval smoke。
+- Baseline retrieval eval smoke 會輸出 keyword metrics，不依賴 Ollama embedding 或 Qdrant。
+- Optional vector retrieval eval smoke 會先檢查 Ollama embedding、Qdrant collection 與 manual vector indexing API，再輸出 vector metrics。
 - 完成 backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 的 `v0.13.0` release sync。
 
 Out of Scope：

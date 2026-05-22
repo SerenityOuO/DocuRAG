@@ -32,13 +32,14 @@
 12. `tasks/phase-12-vector-indexing/12-02-vector-indexing-service.md` 已完成，新增同步 vector indexing service / helper。
 13. `tasks/phase-12-vector-indexing/12-03-vector-indexing-api.md` 已完成，新增手動 vector indexing API。
 14. `tasks/phase-12-vector-indexing/12-04-vector-indexing-demo-smoke.md` 已完成，補齊 optional vector indexing smoke 與 `v0.12.0` release/version sync。
+15. `tasks/phase-13-retrieval-eval/13-01-retrieval-eval-contract.md` 已完成，固定 retrieval evaluation contract。
+16. `tasks/phase-13-retrieval-eval/13-02-retrieval-eval-dataset.md` 已完成，新增公開 retrieval eval dataset。
+17. `tasks/phase-13-retrieval-eval/13-03-retrieval-eval-runner.md` 已完成，新增本機 retrieval eval runner。
+18. `tasks/phase-13-retrieval-eval/13-04-retrieval-eval-demo-smoke.md` 已完成，補齊 retrieval eval smoke 與 `v0.13.0` release/version sync。
 
 下一步優先順序：
 
-1. `tasks/phase-13-retrieval-eval/13-01-retrieval-eval-contract.md`
-2. `tasks/phase-13-retrieval-eval/13-02-retrieval-eval-dataset.md`
-3. `tasks/phase-13-retrieval-eval/13-03-retrieval-eval-runner.md`
-4. `tasks/phase-13-retrieval-eval/13-04-retrieval-eval-demo-smoke.md`
+1. Phase 14 規劃與 ticket 草案，需先由 Codex 提案並等使用者確認後才寫入。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -248,7 +249,8 @@ Phase 12 guardrails：
 - [x] 13-02 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`99 passed`（本機 PowerShell PATH 臨時補上 Codex bundled Python 3.12；pytest cache 權限警告不影響結果）；`git diff --check` 通過。
 - [x] `tasks/phase-13-retrieval-eval/13-03-retrieval-eval-runner.md`: 新增本機 retrieval eval runner，計算 keyword baseline 與 optional vector retrieval 的 Hit Rate@K、MRR@K、Recall@K、latency 與 failure count。
 - [x] 13-03 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`104 passed`（本機 PowerShell PATH 臨時補上 Codex bundled Python 3.12；pytest cache 權限警告不影響結果）；baseline `scripts/retrieval-eval-smoke.ps1` 通過，Hit Rate@K `0.8333`、MRR@K `0.6389`、Recall@K `0.75`、failure count `0`；optional vector `scripts/retrieval-eval-smoke.ps1 -RunVector` 通過，Hit Rate@K `0.6667`、MRR@K `0.6667`、Recall@K `0.5833`、failure count `0`；`git diff --check` 通過。
-- [ ] `tasks/phase-13-retrieval-eval/13-04-retrieval-eval-demo-smoke.md`: 補齊 retrieval eval demo smoke，完成 `v0.13.0` release/version sync。
+- [x] `tasks/phase-13-retrieval-eval/13-04-retrieval-eval-demo-smoke.md`: 補齊 retrieval eval demo smoke，完成 `v0.13.0` release/version sync。
+- [x] 13-04 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`104 passed`（本機 PowerShell PATH 臨時補上 Codex bundled Python 3.12；pytest cache 權限警告不影響結果）；`frontend` 的 `npm.cmd run build` 通過；baseline `scripts/demo-smoke-test.ps1` 通過，version `0.13.0`、answer source `deterministic baseline`、retrieval source `keyword baseline`；baseline `scripts/retrieval-eval-smoke.ps1` 通過，Hit Rate@K `0.8333`、MRR@K `0.6389`、Recall@K `0.75`、failure count `0`；optional vector `scripts/retrieval-eval-smoke.ps1 -RunVector` 通過，manual vector indexing API preflight indexed chunks `2`，Hit Rate@K `0.6667`、MRR@K `0.6667`、Recall@K `0.5833`、failure count `0`；`git diff --check` 通過。
 
 Phase 13 guardrails：
 
@@ -278,3 +280,4 @@ Phase 13 guardrails：
 - [x] v0.10.0: LLM RAG Backlog 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.10.0`，Ollama `qwen3.5:4b` provider decision、最小 client、optional generation path、demo smoke `-RunLlm` 與 frontend answer source 已補齊。
 - [x] v0.11.0: Vector RAG Backlog 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.11.0`，Ollama `qwen3-embedding:0.6b` embedding client、Qdrant local runtime / collection smoke、optional vector retrieval path、fallback trace metadata、demo smoke `-RunVector` 與 frontend retrieval source 已補齊。
 - [x] v0.12.0: Vector Indexing Hardening 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.12.0`，manual vector indexing contract、同步 indexing service、`POST /documents/{document_id}/index/vector`、optional vector indexing smoke 與 fallback-safe vector retrieval 已補齊。
+- [x] v0.13.0: Retrieval Evaluation Baseline 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.13.0`，公開 eval dataset、retrieval eval runner、baseline eval smoke、optional vector eval smoke 與 metrics output 已補齊。
