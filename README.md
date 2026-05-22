@@ -46,6 +46,25 @@ DocuRAG AgentOps 要展示三件事：
 - Redis、NATS、async worker、queue、PostgreSQL、資料庫 schema、登入、權限或 RBAC。
 - Production-grade K8s deployment。
 
+## Interview Demo Path
+
+5 到 10 分鐘面試導覽建議：
+
+1. 先用 frontend health 與 upload panel 說明 backend / frontend 邊界，以及目前是 single-user local demo。
+2. 選擇公開虛構 sample document，展示 document metadata、OCR status、local indexing status 與 OCR text。
+3. 用 `payment due date Net 15` 詢問 RAG，展示 deterministic baseline answer、citations 與 retrieved chunks。
+4. 打開 retrieval trace panel，說明 strategy、answer source、retrieval source、candidate rows、fallback state 與 trace metadata。
+5. 切到 retrieval eval smoke summary，說明 `case_count=20`、Hit Rate@K、MRR@K、Recall@K、failure count 與 trace metadata count。
+6. 補充 optional paths：`vector`、`vector_rerank`、`hybrid` 與 `hybrid_rerank` 都是 explicit eval / demo path；`hybrid_rerank` 不接 default `/rag/query` 或 frontend chat route。
+
+Demo media：
+
+![Frontend health and upload overview](docs/demo-media/frontend-overview.png)
+
+![RAG answer, retrieval trace and citations](docs/demo-media/frontend-trace.png)
+
+![Retrieval eval summary](docs/demo-media/eval-summary.png)
+
 ## Local Run
 
 使用 Python 3.12 啟動 backend：

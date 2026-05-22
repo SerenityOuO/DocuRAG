@@ -1002,7 +1002,7 @@ Tickets：
 
 - [x] `tasks/phase-20-interview-mvp-packaging/20-01-interview-demo-doc-refresh.md`
 - [x] `tasks/phase-20-interview-mvp-packaging/20-02-sample-eval-coverage-expansion.md`
-- [ ] `tasks/phase-20-interview-mvp-packaging/20-03-demo-media-and-readme-polish.md`
+- [x] `tasks/phase-20-interview-mvp-packaging/20-03-demo-media-and-readme-polish.md`
 - [ ] `tasks/phase-20-interview-mvp-packaging/20-04-final-interview-mvp-validation.md`
 
 Expected Outcome：
@@ -1027,6 +1027,13 @@ Expected Outcome：
 - `sample-data/documents/README.md` 與 `sample-data/eval/README.md` 已標明資料皆為 synthetic / fictional，可公開展示且不可提交真實個資、公司文件或敏感資訊。
 - Dataset contract tests 已檢查至少 20 筆 cases、至少 5 份文字 sample fixtures、expected terms 可由公開 sample documents 支撐，以及 Phase 20 tags 覆蓋。
 - 20-02 validation：backend tests 通過，`127 passed`（僅 pytest cache 權限警告）；baseline retrieval eval smoke 通過，keyword summary `case_count=20`、Hit Rate@K `0.7`、MRR@K `0.475`、Recall@K `0.625`、failure count `0`、fallback count `0`、trace metadata count `62`；`rg` 與 `git diff --check` 通過。
+
+20-03 Demo Media Status：
+
+- README 已新增 5 到 10 分鐘 interview demo path，串起 frontend health / upload、OCR、RAG answer、citations、retrieval trace 與 eval summary。
+- Demo media 已新增 `docs/demo-media/frontend-overview.png`、`docs/demo-media/frontend-trace.png` 與 `docs/demo-media/eval-summary.png`，只使用 repo 內公開 synthetic sample data 與本機 eval summary。
+- `docs/demo-script.md` 已引用新增 media，並明確區分 baseline demo、optional vector / rerank / hybrid / `hybrid_rerank` eval path 與尚未實作的 production runtime。
+- 20-03 validation：`npm.cmd run build` 通過；Browser 檢查 local frontend demo view 通過；`rg` 與 `git diff --check` 通過。
 
 Acceptance Criteria：
 
