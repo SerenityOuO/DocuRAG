@@ -663,7 +663,11 @@ def default_repo_root() -> Path:
 def main() -> int:
     repo_root = default_repo_root()
     parser = argparse.ArgumentParser(description="Run DocuRAG retrieval evaluation baseline.")
-    parser.add_argument("--strategy", choices=["keyword", "vector", "vector_rerank", "hybrid"], default="keyword")
+    parser.add_argument(
+        "--strategy",
+        choices=["keyword", "vector", "vector_rerank", "hybrid", "hybrid_rerank"],
+        default="keyword",
+    )
     parser.add_argument("--dataset", type=Path, default=repo_root / "sample-data/eval/retrieval-eval.json")
     parser.add_argument("--sample-documents", type=Path, default=repo_root / "sample-data/documents")
     parser.add_argument("--output", type=Path, default=repo_root / ".tmp/retrieval-eval-result.json")

@@ -2,6 +2,7 @@ param(
     [switch]$RunVector,
     [switch]$RunVectorRerank,
     [switch]$RunHybrid,
+    [switch]$RunHybridRerank,
     [string]$ApiBaseUrl = "http://127.0.0.1:8000",
     [string]$DatasetPath = "",
     [string]$SamplePath = "",
@@ -42,6 +43,9 @@ if ([string]::IsNullOrWhiteSpace($OutputPath)) {
     }
     if ($RunHybrid) {
         $resultName = "retrieval-eval-result-hybrid.json"
+    }
+    if ($RunHybridRerank) {
+        $resultName = "retrieval-eval-result-hybrid-rerank.json"
     }
     $OutputPath = Join-Path $repoRoot ".tmp/$resultName"
 }
@@ -126,13 +130,19 @@ $optionalModeCount = 0
 if ($RunVector) { $optionalModeCount += 1 }
 if ($RunVectorRerank) { $optionalModeCount += 1 }
 if ($RunHybrid) { $optionalModeCount += 1 }
+if ($RunHybridRerank) { $optionalModeCount += 1 }
 if ($optionalModeCount -gt 1) {
-    throw "Use only one optional strategy flag: -RunVector, -RunVectorRerank, or -RunHybrid."
+    throw "Use only one optional strategy flag: -RunVector, -RunVectorRerank, -RunHybrid, or -RunHybridRerank."
 }
 
-if ($RunVector -or $RunVectorRerank -or $RunHybrid) {
-    if ($RunVectorRerank) {
-        $strategy = "vector_rerank"
+if ($RunVector -or $RunVectorRerank -or $RunHybrid -or $RunHybridRerank) {
+    if ($RunVectorRerank -or $RunHybridRerank) {
+        if ($RunHybridRerank) {
+            $strategy = "hybrid_rerank"
+        }
+        else {
+            $strategy = "vector_rerank"
+        }
         $env:DOCURAG_RERANK_PROVIDER = $RerankProvider
         $env:DOCURAG_RERANK_MODEL = $RerankModel
         $env:DOCURAG_RERANK_TOP_K = [string]$RerankTopK
@@ -162,7 +172,7 @@ if ($RunVector -or $RunVectorRerank -or $RunHybrid) {
     Write-Host "Ollama embedding tags: $embeddingTagsUrl"
     Write-Host "Qdrant collection: $qdrantCollectionUrl"
     Write-Host "Backend API: $ApiBaseUrl"
-    if ($RunVectorRerank) {
+    if ($RunVectorRerank -or $RunHybridRerank) {
         Write-Host "Rerank provider: $RerankProvider"
         Write-Host "Rerank model: $RerankModel"
     }
@@ -276,6 +286,18 @@ elseif ($RunHybrid) {
 
     $hybridMetadataRows = @($result.results | ForEach-Object { $_.retrieved_chunks } | Where-Object { $_.metadata.strategy_label -eq "hybrid" })
     Assert-Condition ($hybridMetadataRows.Count -gt 0) "Hybrid eval did not include hybrid trace metadata."
+}
+elseif ($RunHybridRerank) {
+    Assert-Condition ($result.summary.failure_count -eq 0) "Hybrid rerank eval reported failures. Check Ollama embedding, Qdrant, manual indexing readiness, and rerank fallback metadata."
+    Assert-Condition ($result.environment.retrieval_provider -eq "hybrid_rerank") "Hybrid rerank eval did not report hybrid_rerank provider metadata."
+    Assert-Condition ($result.environment.indexed_chunk_count -gt 0) "Hybrid rerank eval did not index sample chunks."
+    Assert-Condition ($result.environment.rerank_provider -eq $RerankProvider) "Hybrid rerank eval did not report expected rerank provider metadata."
+
+    $hybridRerankMetadataRows = @($result.results | ForEach-Object { $_.retrieved_chunks } | Where-Object { $_.metadata.strategy_label -eq "hybrid_rerank" })
+    Assert-Condition ($hybridRerankMetadataRows.Count -gt 0) "Hybrid rerank eval did not include hybrid_rerank trace metadata."
+
+    $rerankMetadataRows = @($hybridRerankMetadataRows | Where-Object { $null -ne $_.metadata.rerank_status })
+    Assert-Condition ($rerankMetadataRows.Count -gt 0) "Hybrid rerank eval did not include rerank status metadata. Install optional rerank runtime or check fallback metadata."
 }
 else {
     Assert-Condition ($result.summary.failure_count -eq 0) "Keyword eval should not report failures."

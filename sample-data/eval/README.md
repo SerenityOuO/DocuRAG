@@ -30,7 +30,9 @@
 
 ## Runner Usage
 
-`retrieval-eval-smoke.ps1` 會讀取此 dataset，對每筆 case 執行 keyword baseline retrieval；optional vector、`vector_rerank` 與 `hybrid` mode 必須透過 explicit flag、embedding / Qdrant preflight 與 manual vector indexing 完成後才執行。
+`retrieval-eval-smoke.ps1` 會讀取此 dataset，對每筆 case 執行 keyword baseline retrieval；optional vector、`vector_rerank`、`hybrid` 與 `hybrid_rerank` mode 必須透過 explicit flag、embedding / Qdrant preflight 與 manual vector indexing 完成後才執行。
+
+`hybrid_rerank` 可用 `scripts/retrieval-eval-smoke.ps1 -RunHybridRerank` 明確 opt in。它只屬於 retrieval eval runner：先產生 hybrid candidates，再對 candidates 執行 optional rerank；不代表 `/rag/query`、frontend chat 或 production eval dashboard 已支援此策略。
 
 Baseline eval 不依賴 Ollama embedding、Qdrant 或 FastEmbed runtime。Optional runtime 不可用時，baseline keyword smoke 仍應可重跑；vector-backed optional smoke 會在 preflight 階段停止並回報缺少的 local runtime。
 
@@ -46,7 +48,7 @@ Eval result JSON 的 `summary` 會輸出：
 - `failure_count`：真正讓該 strategy 失敗的 case 數；keyword baseline 應維持 `0`。
 - `fallback_count`：有 optional branch fallback、rerank fallback 或 unavailable metadata 的 case 數。
 - `trace_metadata_count`：retrieved chunks 中帶有 metadata 的筆數，方便確認 trace metadata 是否仍存在。
-- `result_strategy_counts`：實際 result strategy 分布，例如 `keyword`、`vector_unavailable_fallback` 或 `hybrid`。
+- `result_strategy_counts`：實際 result strategy 分布，例如 `keyword`、`vector_unavailable_fallback`、`hybrid` 或 `hybrid_rerank`。
 - `fallback_reasons`：fallback / unavailable 原因與出現次數，用於 demo 摘錄與 regression 檢查。
 
-此 dataset 不評估 answer faithfulness、citation quality、LLM-as-judge、`hybrid_rerank` 或 production eval dashboard。
+此 dataset 不評估 answer faithfulness、citation quality、LLM-as-judge 或 production eval dashboard。

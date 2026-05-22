@@ -928,7 +928,7 @@ Goal：把 Phase 18 planning 中的 `hybrid_rerank` 落地為 disabled-by-defaul
 Tickets：
 
 - [x] `tasks/phase-19-hybrid-rerank-runtime/19-01-hybrid-rerank-eval-provider.md`
-- [ ] `tasks/phase-19-hybrid-rerank-runtime/19-02-hybrid-rerank-smoke-flag.md`
+- [x] `tasks/phase-19-hybrid-rerank-runtime/19-02-hybrid-rerank-smoke-flag.md`
 - [ ] `tasks/phase-19-hybrid-rerank-runtime/19-03-hybrid-rerank-trace-report-sync.md`
 - [ ] `tasks/phase-19-hybrid-rerank-runtime/19-04-hybrid-rerank-demo-release-sync.md`
 
@@ -947,6 +947,13 @@ Expected Outcome：
 - Rerank unavailable 時保留 hybrid candidates，記錄 `rerank_status`、`rerank_fallback_reason` 與 fallback state。
 - Vector branch unavailable 時沿用 hybrid keyword-only fallback metadata，不讓 `hybrid_rerank` eval result 變成 hard failure。
 - 19-01 validation：`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Set-Location 'C:/Users/USER/Desktop/DocuRAG'; ./scripts/test-backend.ps1"` 通過，`125 passed`（僅 pytest cache 權限警告）；`rg -n "hybrid_rerank|HybridRerank|rerank_fallback_reason|strategy_label" backend/app/services/evaluation.py backend/tests/test_evaluation.py TODO.md docs/ROADMAP.md` 通過；`git diff --check` 通過。
+
+19-02 Smoke Flag Status：
+
+- Eval runner CLI 已接受 `--strategy hybrid_rerank`，預設仍維持 `keyword`。
+- `scripts/retrieval-eval-smoke.ps1` 已新增互斥的 `-RunHybridRerank` flag，輸出 `.tmp/retrieval-eval-result-hybrid-rerank.json`。
+- `-RunHybridRerank` 沿用 vector preflight、manual indexing preflight 與 rerank fallback metadata 檢查；usage 文件已標明這只是 optional eval strategy，不接 `/rag/query` 或 frontend chat。
+- 19-02 validation：backend tests 通過，`125 passed`（僅 pytest cache 權限警告）；baseline retrieval eval smoke 通過，keyword summary `case_count=12`、Hit Rate@K `0.6667`、MRR@K `0.4861`、Recall@K `0.625`、failure count `0`、fallback count `0`、trace metadata count `34`；optional `-RunHybridRerank` 已進入 vector preflight，但本機 Qdrant collection / Docker daemon 未啟動而停止，需先啟動 Qdrant 並重跑 `scripts/qdrant-collection-smoke.ps1`；`rg` 與 `git diff --check` 通過。
 
 Acceptance Criteria：
 

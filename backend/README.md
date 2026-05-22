@@ -219,7 +219,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1 -RunVector
 ```
 
-Eval result JSON 預設輸出到 `.tmp/retrieval-eval-result-keyword.json` 或 `.tmp/retrieval-eval-result-vector.json`，不寫入 production storage，也不在 backend startup、upload、OCR 或 `/rag/query` 自動執行。
+Eval result JSON 預設輸出到 `.tmp/retrieval-eval-result-keyword.json`、`.tmp/retrieval-eval-result-vector.json`、`.tmp/retrieval-eval-result-vector-rerank.json`、`.tmp/retrieval-eval-result-hybrid.json` 或 `.tmp/retrieval-eval-result-hybrid-rerank.json`，不寫入 production storage，也不在 backend startup、upload、OCR 或 `/rag/query` 自動執行。
 
 Phase 15 optional vector rerank eval：
 
@@ -246,6 +246,17 @@ Phase 16 optional hybrid eval：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1 -RunHybrid
+```
+
+Phase 19 optional hybrid rerank eval：
+
+- `hybrid_rerank` strategy 只接入 retrieval eval runner，不接 `/rag/query`、frontend chat、production eval dashboard 或 default demo path。
+- `hybrid_rerank` 先重用 `hybrid` 的 keyword + vector branch merge / dedupe candidates，再對 hybrid candidates 呼叫 rerank adapter。
+- `-RunHybridRerank` 沿用 vector preflight、manual vector indexing API preflight 與 rerank fallback behavior；FastEmbed runtime 不可用時會保留 hybrid candidates 並記錄 `rerank_status` / `rerank_fallback_reason`。
+- 輸出 `.tmp/retrieval-eval-result-hybrid-rerank.json`，summary 會保留 fallback count、trace metadata count 與 result strategy counts。
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1 -RunHybridRerank
 ```
 
 ## Local Storage
