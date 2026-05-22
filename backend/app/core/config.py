@@ -19,7 +19,7 @@ def default_data_dir() -> Path:
 
 class Settings(BaseSettings):
     app_name: str = "DocuRAG AgentOps Backend"
-    version: str = "0.16.0"
+    version: str = "0.17.0"
     environment: str = "local"
     data_dir: Path = Field(default_factory=default_data_dir)
     ocr_provider: str = "paddleocr"

@@ -39,11 +39,11 @@
 
 ## Acceptance Criteria
 
-- [ ] `v0.17.0` version / docs / TODO / ROADMAP release sync 已完成。
-- [ ] README Release Status 只列版本號。
-- [ ] Baseline demo smoke 與 baseline retrieval eval smoke 仍可執行。
-- [ ] Optional vector / `vector_rerank` / `hybrid` eval smoke 在 local preflight 可用時已重跑或清楚記錄不可用原因。
-- [ ] `hybrid_rerank`、production eval dashboard、worker、DB、auth 與 deployment 明確留到後續 Phase。
+- [x] `v0.17.0` version / docs / TODO / ROADMAP release sync 已完成。
+- [x] README Release Status 只列版本號。
+- [x] Baseline demo smoke 與 baseline retrieval eval smoke 仍可執行。
+- [x] Optional vector / `vector_rerank` / `hybrid` eval smoke 在 local preflight 可用時已重跑或清楚記錄不可用原因。
+- [x] `hybrid_rerank`、production eval dashboard、worker、DB、auth 與 deployment 明確留到後續 Phase。
 
 ## Validation
 
@@ -54,6 +54,17 @@
 - Optional vector / vector_rerank / hybrid eval smoke commands must be run when local preflight is available.
 - 若 frontend dev server 可用，使用 Browser 檢查 trace UI。
 - `git diff --check`
+
+## Validation Results
+
+- `PATH="/c/Users/USER/AppData/Local/Programs/Python/Python312:/c/Users/USER/AppData/Local/Programs/Python/Python312/Scripts:$PATH" powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/test-backend.ps1` 通過：`121 passed`，僅 pytest cache 權限警告。
+- `npm.cmd run build`（於 `frontend/`）通過。
+- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/demo-smoke-test.ps1` 通過：health version `0.17.0`、answer source `deterministic baseline`、retrieval source `keyword baseline`。
+- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/retrieval-eval-smoke.ps1` 通過：keyword `case_count=12`、Hit Rate@K `0.6667`、MRR@K `0.4861`、Recall@K `0.625`、failure count `0`、fallback count `0`、trace metadata count `34`。
+- 本機 Ollama embedding model 與 Qdrant collection 可用，optional `-RunVector` 通過：Hit Rate@K `0.5`、MRR@K `0.4167`、Recall@K `0.4583`、failure count `0`、fallback count `0`、trace metadata count `26`。
+- Optional `-RunVectorRerank` 通過：Hit Rate@K `0.5`、MRR@K `0.4167`、Recall@K `0.4583`、failure count `0`、fallback count `12`、trace metadata count `26`；FastEmbed 未安裝時以 fallback reason 記錄，不列為 failure。
+- Optional `-RunHybrid` 通過：Hit Rate@K `0.5833`、MRR@K `0.5`、Recall@K `0.5833`、failure count `0`、fallback count `0`、trace metadata count `36`。
+- Browser 檢查 `http://localhost:5173` 通過：頁面顯示 health version `0.17.0`，trace panel、candidate table 與 fallback state 可見，無水平溢出。
 
 ## Release Impact
 

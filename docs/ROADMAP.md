@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.16.0 hybrid retrieval slice 的已交付切片，並追蹤 v0.17.0 retrieval trace UI / eval visibility backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.17.0 planning checklist。
+- TODO 包含 Phase 00 到 v0.17.0 release checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -428,6 +428,7 @@ Next Candidate Milestone：
 - v0.13.0: Retrieval Evaluation Baseline 已完成；公開 eval dataset、retrieval eval runner、Hit Rate@K / MRR@K / Recall@K / latency / failure count metrics、baseline eval smoke、optional vector eval smoke 與 v0.13.0 version / README / TODO / ROADMAP 同步已完成。
 - v0.15.0: Rerank Runtime Spike 已完成；FastEmbed provider decision、disabled-by-default rerank adapter、optional `vector_rerank` eval strategy、rerank trace metadata、baseline smoke 與 v0.15.0 version / README / TODO / ROADMAP 同步已完成。
 - v0.16.0: Hybrid Retrieval Slice 已完成；hybrid contract、12 筆 eval dataset JSON expansion、optional hybrid eval integration、demo / release sync 與 version / README / TODO / ROADMAP 同步已完成。
+- v0.17.0: Retrieval Trace UI / Eval Visibility 已完成；frontend trace panel、eval summary fallback / trace metadata reporting、baseline demo smoke、baseline eval smoke、optional vector / `vector_rerank` / `hybrid` smoke 與 version / README / TODO / ROADMAP 同步已完成。
 
 ## v0.12.0 Vector Indexing Hardening Backlog
 
@@ -771,14 +772,14 @@ Tickets：
 - [x] `tasks/phase-17-retrieval-trace-ui/17-01-retrieval-trace-ui-contract.md`
 - [x] `tasks/phase-17-retrieval-trace-ui/17-02-frontend-retrieval-trace-panel.md`
 - [x] `tasks/phase-17-retrieval-trace-ui/17-03-eval-result-report-summary.md`
-- [ ] `tasks/phase-17-retrieval-trace-ui/17-04-trace-ui-demo-release-sync.md`
+- [x] `tasks/phase-17-retrieval-trace-ui/17-04-trace-ui-demo-release-sync.md`
 
 Expected Outcome：
 
 - 17-01 已固定 trace UI contract，涵蓋 keyword、vector、`vector_rerank`、`hybrid`、fallback 與 missing metadata display。
 - 17-02 已在既有 RAG result UI 加入 compact trace panel，只讀既有 response，不新增 backend endpoint。
 - 17-03 已改善 retrieval eval smoke / summary output，讓 strategy metrics、fallback count 與 trace metadata 更適合 demo / README 摘錄。
-- 17-04 補齊 `v0.17.0` version / docs / TODO / ROADMAP release sync，並執行 backend、frontend、demo smoke 與 eval smoke validation。
+- 17-04 已補齊 `v0.17.0` version / docs / TODO / ROADMAP release sync，並完成 backend、frontend、demo smoke、eval smoke、optional vector-backed smoke 與 Browser trace UI validation。
 
 Acceptance Criteria：
 
@@ -809,19 +810,26 @@ Acceptance Criteria：
 - Retrieval eval summary 已新增 `case_count`、`fallback_count`、`trace_metadata_count`、`result_strategy_counts` 與 `fallback_reasons`，run-level 仍保留 strategy、dataset path 與 case count。
 - CLI summary 會列出 strategy、case count、Hit Rate@K、MRR@K、Recall@K、average latency、failure count、fallback count、trace metadata count 與 result strategy counts。
 - Baseline keyword eval smoke 不依賴 external runtime，已通過：case count `12`、Hit Rate@K `0.6667`、MRR@K `0.4861`、Recall@K `0.625`、failure count `0`、fallback count `0`、trace metadata count `34`。
-- Optional vector / `vector_rerank` / `hybrid` 仍需 explicit flag 與 local preflight；本機 Ollama / Qdrant 可連線，但 backend upload preflight 因 Windows data dir `PermissionError` 不完整，未執行 optional smoke。
+- Optional vector / `vector_rerank` / `hybrid` 仍需 explicit flag 與 local preflight；17-04 已用本機 Ollama / Qdrant 與 vector-enabled backend 重跑 optional smoke，其中 `vector_rerank` 在未安裝 FastEmbed 時以 fallback metadata 通過。
 - 不新增真實資料、不新增 dashboard、不新增 DB 或 external dependency。
 
-17-04 Demo and Release Plan：
+17-04 Demo and Release Status：
 
-- Baseline validations：backend tests、frontend build、baseline demo smoke、baseline retrieval eval smoke 與 `git diff --check`。
-- Optional validations：local preflight 可用時執行 vector、`vector_rerank` 與 `hybrid` eval smoke。
-- Release sync：backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 需同步到 `v0.17.0`。
+- Release sync：backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.17.0`。
+- Baseline validations：backend tests `121 passed`、frontend build、baseline demo smoke、baseline retrieval eval smoke 與 Browser trace UI 檢查皆已通過。
+- Optional validations：本機 Ollama embedding model 與 Qdrant collection 可用時，`-RunVector`、`-RunVectorRerank` 與 `-RunHybrid` 均已通過；`vector_rerank` 因 FastEmbed 未安裝而記錄 fallback count `12`，不列為 failure。
 - Release status：production eval dashboard、`hybrid_rerank`、worker、DB、auth 與 deployment 仍留到後續 Phase。
 
 Validation：
 
-- `rg -n "v0.17.0|Phase 17|17-01|17-04|trace UI|eval visibility" TODO.md docs/ROADMAP.md tasks/phase-17-retrieval-trace-ui/*.md`
+- `PATH="/c/Users/USER/AppData/Local/Programs/Python/Python312:/c/Users/USER/AppData/Local/Programs/Python/Python312/Scripts:$PATH" powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/test-backend.ps1`
+- `npm.cmd run build`（於 `frontend/`）
+- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/demo-smoke-test.ps1`
+- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/retrieval-eval-smoke.ps1`
+- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/retrieval-eval-smoke.ps1 -RunVector`
+- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/retrieval-eval-smoke.ps1 -RunVectorRerank`
+- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/retrieval-eval-smoke.ps1 -RunHybrid`
+- Browser 檢查 `http://localhost:5173` trace UI。
 - `git diff --check`
 
 Release Impact：
