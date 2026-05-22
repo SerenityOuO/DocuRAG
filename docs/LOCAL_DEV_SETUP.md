@@ -4,7 +4,7 @@
 
 ## Required Tools
 
-- Python 3.11 或更新版本。
+- Python 3.12。
 - Python launcher for Windows，也就是 `py` 指令。
 - `pip`。
 - Node.js 與 `npm.cmd`。
@@ -31,6 +31,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1
 - `py -0p`
 - `python --version`
 - `py --version`
+- `py -3.12 --version`
 - `pip`
 - `node --version`
 - `npm.cmd --version`
@@ -53,7 +54,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1
 
 建議使用 Python 官方 Windows installer：
 
-1. 安裝 Python 3.11 或更新版本。
+1. 安裝 Python 3.12。
 2. 安裝時勾選 `Add python.exe to PATH`。
 3. 安裝時保留 `py launcher`。
 4. 重新開啟終端機。
@@ -64,7 +65,8 @@ where python
 where py
 py -0p
 py --version
-py -m pip --version
+py -3.12 --version
+py -3.12 -m pip --version
 ```
 
 如果 `python` 仍指向 Microsoft Store alias，請到 Windows：
@@ -189,9 +191,9 @@ mock demo 不需要 PaddleOCR dependency，明確設定 `DOCURAG_OCR_PROVIDER=mo
 
 ```powershell
 cd backend
-py -3 -m pip install -e ".[dev]"
+py -3.12 -m pip install -e ".[dev]"
 $env:DOCURAG_OCR_PROVIDER="mock"
-py -3 -m uvicorn app.main:app --reload
+py -3.12 -m uvicorn app.main:app --reload
 ```
 
 Phase 08 起 provider-selected `/ocr` 預設走 PaddleOCR。若要手動嘗試 provider-selected real OCR，先用 Python 3.12 安裝 optional extra，再啟動 backend：
@@ -213,7 +215,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps
 
 ## Phase 08 PaddleOCR Environment Baseline
 
-Phase 08 real OCR dependency 目前只支援 Python 3.11 或 3.12。PaddlePaddle Windows 安裝文件列出的支援範圍到 Python 3.12，本專案 backend 則要求 Python 3.11+；因此 Windows 本機 real OCR 建議固定使用 Python 3.12。Python 3.13+ 會被 `PaddleOcrProvider` 明確拒絕，並回傳 `paddleocr_python_unsupported`，不會靜默 fallback 到 mock。
+Phase 08 起本專案 backend runtime 固定使用 Python 3.12。Python 3.13+ 或 3.11 會被 `PaddleOcrProvider` 明確拒絕，並回傳 `paddleocr_python_unsupported`，不會靜默 fallback 到 mock。
 
 Windows CPU 安裝建議：
 
@@ -287,14 +289,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps
   "detail": {
     "provider": "paddleocr",
     "error_code": "paddleocr_python_unsupported",
-    "error": "PaddleOCR local runtime is supported only on Python 3.11 or 3.12 in this project. Current Python is 3.14.5. Install Python 3.12, then run py -3.12 -m pip install -e \".[dev,real-ocr]\" from the backend directory."
+    "error": "PaddleOCR local runtime is supported only on Python 3.12 in this project. Current Python is 3.14.5. Install Python 3.12, then run py -3.12 -m pip install -e \".[dev,real-ocr]\" from the backend directory."
   }
 }
 ```
 
 2026-05-21 08-02 validation notes：
 
-- `py -3 -m pip install -e ".[dev,real-ocr]"` 與 `py -3 -m pytest` 皆因本機 `py.exe` 無法執行而失敗：`指定的登入工作階段不存在。可能已被終止。`
+- 舊版 Python launcher 預設命令曾因本機 `py.exe` 無法執行而失敗：`指定的登入工作階段不存在。可能已被終止。`
 - 使用 08-01 偵測到的 Python fallback 執行 `C:\Users\USER\AppData\Local\Python\pythoncore-3.14-64\python.exe -m pytest`，結果 `47 passed`；此驗證只確認 mock flow 與 unsupported-Python failure path，不代表 real OCR dependency 已安裝。
 - 直接執行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1` 仍會打到目前既有 `http://127.0.0.1:8000` 服務，該服務 upload 回傳 `HTTP 500` 與 `Internal Server Error`。
 - 以隔離資料目錄啟動 mock backend 後，`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -ApiBaseUrl http://127.0.0.1:8019` 通過。
@@ -303,7 +305,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps
 2026-05-21 08-03 validation notes：
 
 - Phase 08 決策：不設定 `DOCURAG_OCR_PROVIDER` 時，provider-selected `/ocr` 預設走 `paddleocr`；需要 mock override 時，設定 `DOCURAG_OCR_PROVIDER=mock` 或直接呼叫 `/documents/{document_id}/ocr/mock`。
-- `py -3 -m pytest` 仍因本機 `py.exe` 無法執行而失敗：`指定的登入工作階段不存在。可能已被終止。`
+- 舊版 Python launcher 預設命令仍因本機 `py.exe` 無法執行而失敗：`指定的登入工作階段不存在。可能已被終止。`
 - 使用 fallback Python 執行 `C:\Users\USER\AppData\Local\Python\pythoncore-3.14-64\python.exe -m pytest`，結果 `48 passed`；新增測試覆蓋預設 provider 與 `DOCURAG_OCR_PROVIDER=mock` override。
 - `npm.cmd run build` 在一般 sandbox 內因 esbuild 讀取上層目錄被拒失敗；以同一命令取得許可後重跑通過。
 - 直接執行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1` 仍會打到目前既有 `http://127.0.0.1:8000` 服務，該服務 upload 回傳 `HTTP 500` 與 `Internal Server Error`。

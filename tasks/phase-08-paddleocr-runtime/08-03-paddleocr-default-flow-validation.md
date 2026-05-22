@@ -40,7 +40,7 @@
 
 ## Validation
 
-- `py -3 -m pytest`
+- `py -3.12 -m pytest`
 - `npm.cmd run build`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunRealOcr`

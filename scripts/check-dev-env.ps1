@@ -166,26 +166,16 @@ function Find-PythonFromPip {
 }
 
 function Get-PythonCommandLine {
-    $supportedPyLaunchers = @("py -3.12", "py -3.11")
-    foreach ($candidate in $supportedPyLaunchers) {
+    $pythonCandidates = @("py -3.12", "python")
+    foreach ($candidate in $pythonCandidates) {
         $candidateCheck = Invoke-CmdLine "$candidate --version"
-        if ($candidateCheck.ExitCode -eq 0) {
+        if ($candidateCheck.ExitCode -eq 0 -and $candidateCheck.Output -match "Python 3\.12\.") {
             return $candidate
         }
     }
 
-    $pyCheck = Invoke-CmdLine "py -3 --version"
-    if ($pyCheck.ExitCode -eq 0) {
-        return "py -3"
-    }
-
-    $pythonCheck = Invoke-CmdLine "python --version"
-    if ($pythonCheck.ExitCode -eq 0) {
-        return "python"
-    }
-
     $pipPython = Find-PythonFromPip
-    if ($null -ne $pipPython) {
+    if ($null -ne $pipPython -and $pipPython.Version -match "Python 3\.12\.") {
         return "`"$($pipPython.Path)`""
     }
 
@@ -235,8 +225,9 @@ def print_stage(status, name, detail):
     print(f"[{status}] {name} - {detail}")
 
 print_stage("INFO", "python", f"{sys.version.split()[0]} at {sys.executable}")
-if sys.version_info >= (3, 13):
-    print_stage("WARN", "python support", "PaddleOCR real OCR path in this project supports Python 3.11 or 3.12; use Python 3.12 for backend[real-ocr]")
+if sys.version_info[:2] != (3, 12):
+    failed = True
+    print_stage("FAIL", "python support", "PaddleOCR real OCR path in this project supports Python 3.12; use Python 3.12 for backend[real-ocr]")
 else:
     print_stage("PASS", "python support", "Python version is within the project PaddleOCR support window")
 
@@ -357,24 +348,31 @@ $pyWhereOk = Invoke-DiagnosticLine "where py" "where py"
 
 $pythonOk = Invoke-DiagnosticLine "python --version" "python --version"
 $pyOk = Invoke-DiagnosticLine "py --version" "py --version"
+$python312Ok = Invoke-DiagnosticLine "py -3.12 --version" "py -3.12 --version"
 Invoke-DiagnosticLine "py -0p" "py -0p" | Out-Null
 
-if ($pyOk) {
-    Write-Result "usable Python" $true "py launcher is available"
-    Invoke-CheckLine "pip via py" "py -m pip --version" | Out-Null
+if ($python312Ok) {
+    Write-Result "usable Python" $true "py -3.12 is available"
+    Invoke-CheckLine "pip via py -3.12" "py -3.12 -m pip --version" | Out-Null
 }
 elseif ($pythonOk) {
-    Write-Result "usable Python" $true "python command is available"
-    Invoke-CheckLine "pip via python" "python -m pip --version" | Out-Null
+    $pythonVersion = Invoke-CmdLine "python --version"
+    if ($pythonVersion.ExitCode -eq 0 -and $pythonVersion.Output -match "Python 3\.12\.") {
+        Write-Result "usable Python" $true "python command is Python 3.12"
+        Invoke-CheckLine "pip via python" "python -m pip --version" | Out-Null
+    }
+    else {
+        Write-Result "usable Python" $false "Python 3.12 is required; default python is $($pythonVersion.Output)"
+    }
 }
 else {
     $pipPython = Find-PythonFromPip
-    if ($null -ne $pipPython) {
+    if ($null -ne $pipPython -and $pipPython.Version -match "Python 3\.12\.") {
         Write-Result "usable Python via pip.exe" $true ($pipPython.Version + " at " + $pipPython.Path)
         Write-Result "pip" $true $pipPython.PipVersion
     }
     else {
-        Write-Result "pip" $false "Python is not available"
+        Write-Result "pip" $false "Python 3.12 is not available"
     }
 }
 

@@ -29,13 +29,13 @@
 
 ## Acceptance Criteria
 
-- [ ] `py -3 -m pip install -e ".[dev,real-ocr]"` 後可以 import `paddleocr` 與 `paddlepaddle`。
+- [ ] `py -3.12 -m pip install -e ".[dev,real-ocr]"` 後可以 import `paddleocr` 與 `paddlepaddle`。
 - [ ] `PaddleOcrProvider` 可以初始化 engine，或在環境不支援時回傳明確 actionable error。
 - [ ] 缺少 real OCR dependency 時，mock API 與預設 mock validation 仍可通過。
 - [ ] Docker real OCR build 條件與限制被清楚記錄。
 
 ## Validation
 
-- `py -3 -m pytest`
+- `py -3.12 -m pytest`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
 - 在已安裝 real OCR dependency 的環境執行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunRealOcr`

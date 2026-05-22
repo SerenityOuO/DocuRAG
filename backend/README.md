@@ -6,14 +6,14 @@ DocuRAG AgentOps backend MVP v0.7.0 是最小 FastAPI 服務，提供 healthchec
 
 ```powershell
 cd backend
-py -3 -m pip install -e ".[dev]"
+py -3.12 -m pip install -e ".[dev]"
 ```
 
 ## Run
 
 ```powershell
 cd backend
-py -3 -m uvicorn app.main:app --reload
+py -3.12 -m uvicorn app.main:app --reload
 ```
 
 Healthcheck：
@@ -82,7 +82,7 @@ cd backend
 py -3.12 -m pip install -e ".[dev,real-ocr]"
 ```
 
-Phase 08 將 `backend[real-ocr]` 固定在 Python 3.11 或 3.12 的受控範圍。Windows CPU 環境若需要先安裝 PaddlePaddle wheel，使用：
+Phase 08 將 backend runtime 固定在 Python 3.12；Windows CPU 環境若需要先安裝 PaddlePaddle wheel，使用：
 
 ```powershell
 py -3.12 -m pip install "paddlepaddle>=3.0,<3.1" -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
@@ -143,7 +143,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1
 
 ```powershell
 cd backend
-py -3 -m pytest
+py -3.12 -m pytest
 ```
 
 ## Demo Scripts

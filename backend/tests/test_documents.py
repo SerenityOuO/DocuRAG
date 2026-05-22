@@ -426,7 +426,7 @@ def test_paddleocr_provider_reports_unsupported_python(
     assert result.status == OcrStatus.FAILED
     assert result.extracted_fields["provider"] == "paddleocr"
     assert result.extracted_fields["error_code"] == "paddleocr_python_unsupported"
-    assert "Python 3.11 or 3.12" in result.extracted_fields["error"]
+    assert "Python 3.12" in result.extracted_fields["error"]
     assert 'py -3.12 -m pip install -e ".[dev,real-ocr]"' in result.extracted_fields["error"]
 
 

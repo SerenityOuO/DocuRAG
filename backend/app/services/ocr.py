@@ -227,10 +227,10 @@ class PaddleOcrProvider:
 
     def _load_engine(self):
         if self._engine is None:
-            if sys.version_info >= (3, 13):
+            if (sys.version_info.major, sys.version_info.minor) != (3, 12):
                 version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
                 raise PaddleOcrUnsupportedPythonError(
-                    "PaddleOCR local runtime is supported only on Python 3.11 or 3.12 in this project. "
+                    "PaddleOCR local runtime is supported only on Python 3.12 in this project. "
                     f"Current Python is {version}. Install Python 3.12, then run "
                     'py -3.12 -m pip install -e ".[dev,real-ocr]" from the backend directory.'
                 )
