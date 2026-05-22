@@ -186,6 +186,13 @@ Phase 11 optional Vector RAG：
 - Fallback 或成功狀態會寫入 citation `trace_metadata` 與 retrieved chunk `metadata`：`retrieval_provider`、`vector_retrieval_status`、`vector_store`、`qdrant_collection`、`embedding_provider`、`embedding_model` 與錯誤訊息或 vector score。
 - LLM generation path 仍可接在 retrieved chunks 後；vector retrieval 成功時可由 `ollama/qwen3.5:4b` 生成回答，vector 失敗時仍可對 keyword fallback chunks 生成回答。
 
+Phase 12 manual Vector Indexing：
+
+- `POST /documents/{document_id}/index/vector` 會對單一已完成 OCR 且已有 chunks 的 document 執行手動同步 vector indexing。
+- Endpoint 只在明確設定 `DOCURAG_EMBEDDING_PROVIDER=ollama` 且 Qdrant collection 可用時有機會成功；provider disabled、embedding failure、Qdrant unavailable 或 vector size mismatch 會回傳清楚錯誤。
+- 成功 response 會包含 `indexed_chunk_count`、`point_ids`、`collection_name`、`vector_size`、`embedding_provider` 與 `embedding_model`。
+- Empty chunks 會回傳 `status=skipped`，未完成 OCR 的 document 會回傳 `409`；upload / OCR 不會自動觸發 vector indexing。
+
 ```powershell
 $env:DOCURAG_RAG_RETRIEVAL_PROVIDER="vector"
 $env:DOCURAG_EMBEDDING_PROVIDER="ollama"

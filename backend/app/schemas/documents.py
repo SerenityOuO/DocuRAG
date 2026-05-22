@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -179,3 +180,17 @@ class DocumentDetailResponse(DocumentMetadata):
 
 class OcrResultResponse(OcrResult):
     document_id: str = Field(..., min_length=1)
+
+
+class VectorIndexingResponse(BaseModel):
+    document_id: str = Field(..., min_length=1)
+    status: Literal["completed", "skipped", "failed"]
+    indexed_chunk_count: int = Field(default=0, ge=0)
+    skipped_chunk_count: int = Field(default=0, ge=0)
+    point_ids: list[str] = Field(default_factory=list)
+    collection_name: str | None = None
+    vector_size: int | None = Field(default=None, ge=1)
+    embedding_provider: str | None = None
+    embedding_model: str | None = None
+    reason: str | None = None
+    error: str | None = None

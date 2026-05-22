@@ -43,11 +43,11 @@
 
 ## Acceptance Criteria
 
-- [ ] 可對單一 document 手動執行 vector indexing。
-- [ ] 成功 response 包含 indexed chunk count 與 Qdrant / embedding metadata。
-- [ ] Provider disabled 或 external runtime unavailable 時回傳清楚錯誤，不造成 backend crash。
-- [ ] 未完成 OCR 或沒有 chunks 的 document 不會被錯誤 index。
-- [ ] 不改 upload、OCR 或 `/rag/query` 預設行為。
+- [x] 可對單一 document 手動執行 vector indexing。
+- [x] 成功 response 包含 indexed chunk count 與 Qdrant / embedding metadata。
+- [x] Provider disabled 或 external runtime unavailable 時回傳清楚錯誤，不造成 backend crash。
+- [x] 未完成 OCR 或沒有 chunks 的 document 不會被錯誤 index。
+- [x] 不改 upload、OCR 或 `/rag/query` 預設行為。
 
 ## Validation
 

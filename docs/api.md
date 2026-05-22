@@ -34,6 +34,7 @@
 | GET | `/documents/{document_id}/pages` | OCR page text |
 | GET | `/documents/{document_id}/fields` | Extracted fields |
 | GET | `/documents/{document_id}/chunks` | Document chunks |
+| POST | `/documents/{document_id}/index/vector` | Manually index document chunks into Qdrant when embedding / Qdrant runtime is explicitly enabled |
 
 ## Chat
 

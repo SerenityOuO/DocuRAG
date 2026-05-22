@@ -12,6 +12,7 @@ from app.api.routes.documents import (
     get_document_storage,
     get_mock_ocr_provider,
     get_selected_ocr_provider,
+    get_vector_indexing_service,
     preload_selected_ocr_provider,
 )
 from app.core.config import get_settings
@@ -20,6 +21,7 @@ from app.schemas.documents import BoundingBox, DocumentMetadata, OcrResult, OcrS
 from app.services.document_storage import DocumentStorage
 from app.services import ocr as ocr_module
 from app.services.ocr import MockOcrProvider, PaddleOcrProvider
+from app.services.vector_indexing import VectorIndexingResult
 
 
 @pytest.fixture(autouse=True)
@@ -217,6 +219,172 @@ def test_get_ocr_result_returns_saved_mock_result(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.json() == mock_response.json()
+
+
+def test_vector_indexing_endpoint_returns_indexing_result(client: TestClient) -> None:
+    class StubVectorIndexingService:
+        def __init__(self) -> None:
+            self.document: DocumentMetadata | None = None
+
+        def index_document(self, document: DocumentMetadata) -> VectorIndexingResult:
+            self.document = document
+            return VectorIndexingResult(
+                document_id=document.document_id,
+                status="completed",
+                indexed_chunk_count=1,
+                point_ids=["point-001"],
+                collection_name="docurag_chunks_v1",
+                vector_size=1024,
+                embedding_provider="ollama",
+                embedding_model="qwen3-embedding:0.6b",
+            )
+
+    service = StubVectorIndexingService()
+    app.dependency_overrides[get_vector_indexing_service] = lambda: service
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("invoice.pdf", b"sample document", "application/pdf")},
+    )
+    document_id = upload_response.json()["document_id"]
+    client.post(f"/documents/{document_id}/ocr/mock")
+
+    response = client.post(f"/documents/{document_id}/index/vector")
+
+    assert response.status_code == 200
+    assert service.document is not None
+    assert service.document.document_id == document_id
+    assert service.document.chunks[0].chunk_id == f"{document_id}-chunk-001"
+    assert response.json() == {
+        "document_id": document_id,
+        "status": "completed",
+        "indexed_chunk_count": 1,
+        "skipped_chunk_count": 0,
+        "point_ids": ["point-001"],
+        "collection_name": "docurag_chunks_v1",
+        "vector_size": 1024,
+        "embedding_provider": "ollama",
+        "embedding_model": "qwen3-embedding:0.6b",
+        "reason": None,
+        "error": None,
+    }
+
+
+def test_vector_indexing_endpoint_returns_404_for_unknown_document(client: TestClient) -> None:
+    response = client.post("/documents/not-found/index/vector")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Document not found"
+
+
+def test_vector_indexing_endpoint_rejects_document_before_ocr(client: TestClient) -> None:
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("invoice.pdf", b"sample document", "application/pdf")},
+    )
+    document_id = upload_response.json()["document_id"]
+
+    response = client.post(f"/documents/{document_id}/index/vector")
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == {
+        "document_id": document_id,
+        "status": "failed",
+        "error": "Document OCR must be completed before vector indexing.",
+    }
+
+
+def test_vector_indexing_endpoint_returns_skipped_for_empty_chunks(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    class StubVectorIndexingService:
+        def index_document(self, document: DocumentMetadata) -> VectorIndexingResult:
+            assert document.chunks == []
+            return VectorIndexingResult(
+                document_id=document.document_id,
+                status="skipped",
+                skipped_chunk_count=0,
+                collection_name="docurag_chunks_v1",
+                vector_size=1024,
+                embedding_provider="ollama",
+                embedding_model="qwen3-embedding:0.6b",
+                reason="Document has no chunks to index.",
+            )
+
+    app.dependency_overrides[get_vector_indexing_service] = StubVectorIndexingService
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("invoice.pdf", b"sample document", "application/pdf")},
+    )
+    document_id = upload_response.json()["document_id"]
+    client.post(f"/documents/{document_id}/ocr/mock")
+
+    metadata_path = tmp_path / "data" / "documents.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata[0]["chunks"] = []
+    metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+
+    response = client.post(f"/documents/{document_id}/index/vector")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "skipped"
+    assert response.json()["reason"] == "Document has no chunks to index."
+
+
+def test_vector_indexing_endpoint_returns_503_when_provider_disabled(client: TestClient) -> None:
+    class DisabledVectorIndexingService:
+        def index_document(self, document: DocumentMetadata) -> VectorIndexingResult:
+            return VectorIndexingResult(
+                document_id=document.document_id,
+                status="failed",
+                collection_name="docurag_chunks_v1",
+                vector_size=1024,
+                embedding_provider="disabled",
+                error="Set DOCURAG_EMBEDDING_PROVIDER=ollama to enable local embeddings.",
+            )
+
+    app.dependency_overrides[get_vector_indexing_service] = DisabledVectorIndexingService
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("invoice.pdf", b"sample document", "application/pdf")},
+    )
+    document_id = upload_response.json()["document_id"]
+    client.post(f"/documents/{document_id}/ocr/mock")
+
+    response = client.post(f"/documents/{document_id}/index/vector")
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["status"] == "failed"
+    assert response.json()["detail"]["embedding_provider"] == "disabled"
+    assert "DOCURAG_EMBEDDING_PROVIDER=ollama" in response.json()["detail"]["error"]
+
+
+def test_vector_indexing_endpoint_returns_503_when_qdrant_fails(client: TestClient) -> None:
+    class FailingVectorIndexingService:
+        def index_document(self, document: DocumentMetadata) -> VectorIndexingResult:
+            return VectorIndexingResult(
+                document_id=document.document_id,
+                status="failed",
+                collection_name="docurag_chunks_v1",
+                vector_size=1024,
+                embedding_provider="ollama",
+                embedding_model="qwen3-embedding:0.6b",
+                error="Cannot connect to Qdrant",
+            )
+
+    app.dependency_overrides[get_vector_indexing_service] = FailingVectorIndexingService
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("invoice.pdf", b"sample document", "application/pdf")},
+    )
+    document_id = upload_response.json()["document_id"]
+    client.post(f"/documents/{document_id}/ocr/mock")
+
+    response = client.post(f"/documents/{document_id}/index/vector")
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["status"] == "failed"
+    assert response.json()["detail"]["error"] == "Cannot connect to Qdrant"
 
 
 def test_selected_ocr_default_provider_is_paddleocr() -> None:

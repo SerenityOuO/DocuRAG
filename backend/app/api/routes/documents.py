@@ -1,4 +1,5 @@
 import logging
+from dataclasses import asdict
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -11,9 +12,13 @@ from app.schemas.documents import (
     DocumentUploadResponse,
     OcrStatus,
     OcrResultResponse,
+    VectorIndexingResponse,
 )
 from app.services.document_storage import DocumentStorage
+from app.services.embedding import create_embedding_provider
 from app.services.ocr import MockOcrProvider, OcrProvider, PaddleOcrProvider
+from app.services.vector_indexing import VectorIndexingService
+from app.services.vector_store import create_qdrant_vector_store
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -29,6 +34,14 @@ def get_document_storage() -> DocumentStorage:
 
 def get_mock_ocr_provider() -> MockOcrProvider:
     return MockOcrProvider()
+
+
+def get_vector_indexing_service() -> VectorIndexingService:
+    settings = get_settings()
+    return VectorIndexingService(
+        embedding_provider=create_embedding_provider(settings),
+        vector_store=create_qdrant_vector_store(settings),
+    )
 
 
 def _selected_ocr_provider_key() -> tuple[object, ...]:
@@ -128,6 +141,7 @@ def _reset_selected_ocr_provider_cache() -> None:
 DocumentStorageDep = Annotated[DocumentStorage, Depends(get_document_storage)]
 MockOcrProviderDep = Annotated[MockOcrProvider, Depends(get_mock_ocr_provider)]
 SelectedOcrProviderDep = Annotated[OcrProvider, Depends(get_selected_ocr_provider)]
+VectorIndexingServiceDep = Annotated[VectorIndexingService, Depends(get_vector_indexing_service)]
 
 
 @router.post("/upload", response_model=DocumentUploadResponse)
@@ -209,6 +223,34 @@ async def get_ocr_result(
         raise HTTPException(status_code=404, detail="Document not found")
 
     return OcrResultResponse(document_id=document_id, **ocr_result.model_dump())
+
+
+@router.post("/{document_id}/index/vector", response_model=VectorIndexingResponse)
+async def index_document_vector(
+    document_id: str,
+    storage: DocumentStorageDep,
+    service: VectorIndexingServiceDep,
+) -> VectorIndexingResponse:
+    document = storage.get_document(document_id)
+
+    if document is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if document.ocr.status != OcrStatus.COMPLETED:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "document_id": document_id,
+                "status": "failed",
+                "error": "Document OCR must be completed before vector indexing.",
+            },
+        )
+
+    result = VectorIndexingResponse(**asdict(service.index_document(document)))
+    if result.status == "failed":
+        raise HTTPException(status_code=503, detail=result.model_dump())
+
+    return result
 
 
 @router.get("/{document_id}/download")
