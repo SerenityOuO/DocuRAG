@@ -37,10 +37,10 @@
 
 ## Acceptance Criteria
 
-- [ ] Retrieval eval dataset 使用公開虛構 sample data。
-- [ ] 每筆 eval case 有 query、top_k、expected evidence 與 tags。
-- [ ] Dataset schema 有最小測試或文件驗證。
-- [ ] 不新增 runtime API 或改 `/rag/query` 預設行為。
+- [x] Retrieval eval dataset 使用公開虛構 sample data。
+- [x] 每筆 eval case 有 query、top_k、expected evidence 與 tags。
+- [x] Dataset schema 有最小測試或文件驗證。
+- [x] 不新增 runtime API 或改 `/rag/query` 預設行為。
 
 ## Validation
 

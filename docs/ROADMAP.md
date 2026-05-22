@@ -486,7 +486,7 @@ Goal：在 keyword retrieval、optional vector retrieval 與 manual vector index
 Tickets：
 
 - [x] `tasks/phase-13-retrieval-eval/13-01-retrieval-eval-contract.md`
-- [ ] `tasks/phase-13-retrieval-eval/13-02-retrieval-eval-dataset.md`
+- [x] `tasks/phase-13-retrieval-eval/13-02-retrieval-eval-dataset.md`
 - [ ] `tasks/phase-13-retrieval-eval/13-03-retrieval-eval-runner.md`
 - [ ] `tasks/phase-13-retrieval-eval/13-04-retrieval-eval-demo-smoke.md`
 

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "invoice_due_date",
+    "query": "When is invoice AUR-2026-051 due?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-invoice-aurora.txt"],
+    "expected_chunk_hints": ["Invoice number: AUR-2026-051", "Due date: 2026-06-15"],
+    "expected_terms": ["AUR-2026-051", "2026-06-15"],
+    "tags": ["invoice", "date", "payment"],
+    "notes": "Checks whether retrieval can find the due date evidence for the fictional Aurora invoice."
+  },
+  {
+    "id": "invoice_payment_terms",
+    "query": "What are the payment terms for the Aurora invoice?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-invoice-aurora.txt"],
+    "expected_chunk_hints": ["Payment terms: Net 15", "Amount due: USD 1,248.50"],
+    "expected_terms": ["Net 15", "USD 1,248.50"],
+    "tags": ["invoice", "payment", "amount"],
+    "notes": "Covers amount and payment term lookup on the invoice sample."
+  },
+  {
+    "id": "invoice_vendor_customer",
+    "query": "Who are the vendor and customer on invoice AUR-2026-051?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-invoice-aurora.txt"],
+    "expected_chunk_hints": [
+      "Vendor: Aurora Office Supplies Demo LLC",
+      "Customer: Northstar Analytics Demo Team"
+    ],
+    "expected_terms": ["Aurora Office Supplies Demo LLC", "Northstar Analytics Demo Team"],
+    "tags": ["invoice", "party", "vendor", "customer"],
+    "notes": "Checks party-name retrieval from fictional invoice metadata."
+  },
+  {
+    "id": "support_contract_renewal",
+    "query": "What is the renewal date for support agreement SUP-2026-ALPHA?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-contract-support.txt"],
+    "expected_chunk_hints": ["Agreement ID: SUP-2026-ALPHA", "Renewal date: 2026-09-30"],
+    "expected_terms": ["SUP-2026-ALPHA", "2026-09-30"],
+    "tags": ["contract", "support", "date"],
+    "notes": "Checks agreement id and renewal date evidence."
+  },
+  {
+    "id": "support_contract_sla",
+    "query": "What first response target applies to critical incidents?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-contract-support.txt"],
+    "expected_chunk_hints": [
+      "Critical incidents target a first response within 4 business hours"
+    ],
+    "expected_terms": ["Critical incidents", "4 business hours"],
+    "tags": ["contract", "support", "sla"],
+    "notes": "Covers SLA retrieval from the support contract excerpt."
+  },
+  {
+    "id": "support_contract_service_credit",
+    "query": "What service credit is available if uptime falls below the threshold?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-contract-support.txt"],
+    "expected_chunk_hints": [
+      "monthly uptime falls below 99.5 percent",
+      "5 percent service credit"
+    ],
+    "expected_terms": ["99.5 percent", "5 percent service credit"],
+    "tags": ["contract", "support", "credit", "sla"],
+    "notes": "Checks threshold and service-credit evidence for the fictional contract."
+  }
+]
