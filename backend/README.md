@@ -1,6 +1,6 @@
 # Backend
 
-DocuRAG AgentOps backend MVP v0.11.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、local RAG query API、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，RAG 預設仍以 `KeywordRagProvider` 做 keyword retrieval 與 citation contract。v0.10.0 加入最小 Ollama `qwen3.5:4b` LLM client、可選 `/rag/query` generation path 與 demo smoke；v0.11.0 加入 disabled-by-default Ollama embedding client、optional Qdrant runtime 與 fallback-safe vector retrieval path。未設定 vector retrieval 或 LLM provider 時既有 `/rag/query` 預設仍是 deterministic keyword baseline。此階段不接資料庫、OpenAI API、vLLM、rerank、Redis、NATS、worker 或登入權限。
+DocuRAG AgentOps backend MVP v0.12.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、manual vector indexing API、local RAG query API、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，RAG 預設仍以 `KeywordRagProvider` 做 keyword retrieval 與 citation contract。v0.10.0 加入最小 Ollama `qwen3.5:4b` LLM client、可選 `/rag/query` generation path 與 demo smoke；v0.11.0 加入 disabled-by-default Ollama embedding client、optional Qdrant runtime 與 fallback-safe vector retrieval path；v0.12.0 加入 manual vector indexing service / API，讓 vector retrieval 查詢已明確索引的 chunks。未設定 vector retrieval 或 LLM provider 時既有 `/rag/query` 預設仍是 deterministic keyword baseline。此階段不接資料庫、OpenAI API、vLLM、rerank、Redis、NATS、worker 或登入權限。
 
 ## Install
 
@@ -181,7 +181,7 @@ docker-compose -f infra/docker-compose.yml down
 Phase 11 optional Vector RAG：
 
 - `DOCURAG_RAG_RETRIEVAL_PROVIDER` 預設為 `keyword`；只有設定為 `vector` 時才會嘗試 embedding + Qdrant。
-- Vector path 會在 query request 內以最小實作將 local chunks embed 後 upsert 到 Qdrant，再 embed query 並用 Qdrant search 取回 chunks。
+- Vector path 只會 embed query 並用 Qdrant search 取回已索引 chunks；`POST /documents/{document_id}/index/vector` 才會負責將 local chunks embed 後 upsert 到 Qdrant。
 - Embedding unavailable、Qdrant unavailable、collection mismatch、payload malformed 或 vector search 無結果時，response 會明確 fallback 到 keyword retrieval。
 - Fallback 或成功狀態會寫入 citation `trace_metadata` 與 retrieved chunk `metadata`：`retrieval_provider`、`vector_retrieval_status`、`vector_store`、`qdrant_collection`、`embedding_provider`、`embedding_model` 與錯誤訊息或 vector score。
 - LLM generation path 仍可接在 retrieved chunks 後；vector retrieval 成功時可由 `ollama/qwen3.5:4b` 生成回答，vector 失敗時仍可對 keyword fallback chunks 生成回答。
@@ -255,7 +255,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1
 ```
 
-`demo-smoke-test.ps1` 會驗證 `/health`、upload、OCR mock 與 `/rag/query`；預設要求 deterministic baseline answer source。`-RunLlm` 需要 backend 以 `DOCURAG_LLM_PROVIDER=ollama` 啟動，並要求 Ollama service 已載入 `qwen3.5:4b`。`seed-demo-data.ps1` 會上傳 `sample-data/documents/mock-invoice-aurora.txt`、執行 OCR mock、查詢 `payment due date Net 15`，並輸出 answer、citations、retrieved chunks。
+`demo-smoke-test.ps1` 會驗證 `/health`、upload、OCR mock 與 `/rag/query`；預設要求 deterministic baseline answer source。`-RunLlm` 需要 backend 以 `DOCURAG_LLM_PROVIDER=ollama` 啟動，並要求 Ollama service 已載入 `qwen3.5:4b`。`-RunVector` 需要 backend 以 vector / embedding / Qdrant env 啟動，會先呼叫 `POST /documents/{document_id}/index/vector`，再確認 retrieval source 為 `vector/qdrant`。`seed-demo-data.ps1` 會上傳 `sample-data/documents/mock-invoice-aurora.txt`、執行 OCR mock、查詢 `payment due date Net 15`，並輸出 answer、citations、retrieved chunks。
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunLlm
@@ -327,3 +327,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 
 - v0.9.1: OCR Performance Hardening、backend startup preload、provider / engine reuse、OCR timing log / metadata、`cls=False` baseline 與文件版本同步已完成。
 - v0.10.0: LLM RAG Backlog、Ollama `qwen3.5:4b` provider decision、最小 client、optional `/rag/query` generation path、demo smoke `-RunLlm`、frontend answer source 與文件版本同步已完成。
 - v0.11.0: Vector RAG Backlog、Ollama `qwen3-embedding:0.6b` embedding client、Qdrant local runtime / collection smoke、optional vector retrieval path、fallback trace metadata、demo smoke `-RunVector` 與文件版本同步已完成。
+- v0.12.0: Vector Indexing Hardening、manual vector indexing contract、同步 indexing service、`POST /documents/{document_id}/index/vector`、optional vector indexing smoke 與文件版本同步已完成。

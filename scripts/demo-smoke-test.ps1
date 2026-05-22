@@ -10,7 +10,8 @@ param(
     [string]$EmbeddingBaseUrl = "http://127.0.0.1:11434",
     [string]$EmbeddingModel = "qwen3-embedding:0.6b",
     [string]$QdrantUrl = "http://127.0.0.1:6333",
-    [string]$QdrantCollection = "docurag_chunks_v1"
+    [string]$QdrantCollection = "docurag_chunks_v1",
+    [int]$QdrantVectorSize = 1024
 )
 
 Set-StrictMode -Version Latest
@@ -205,9 +206,11 @@ if ($RunLlm) {
 if ($RunVector) {
     $embeddingTagsUrl = "$($EmbeddingBaseUrl.TrimEnd('/'))/api/tags"
     $qdrantCollectionsUrl = "$($QdrantUrl.TrimEnd('/'))/collections"
+    $qdrantCollectionUrl = "$($QdrantUrl.TrimEnd('/'))/collections/$QdrantCollection"
     Write-Host "Vector smoke enabled"
     Write-Host "Ollama embedding tags: $embeddingTagsUrl"
     Write-Host "Qdrant collections: $qdrantCollectionsUrl"
+    Write-Host "Qdrant collection: $qdrantCollectionUrl"
 
     try {
         $embeddingTags = Invoke-RestMethod -Method Get -Uri $embeddingTagsUrl
@@ -225,6 +228,17 @@ if ($RunVector) {
     catch {
         throw "Qdrant is required for -RunVector but $qdrantCollectionsUrl was unavailable. Start docker-compose Qdrant first. $($_.Exception.Message)"
     }
+
+    try {
+        $qdrantCollectionInfo = Invoke-RestMethod -Method Get -Uri $qdrantCollectionUrl
+    }
+    catch {
+        throw "Qdrant collection '$QdrantCollection' is required for -RunVector but $qdrantCollectionUrl was unavailable. Run scripts/qdrant-collection-smoke.ps1 first. $($_.Exception.Message)"
+    }
+
+    $vectors = $qdrantCollectionInfo.result.config.params.vectors
+    Assert-Condition ([int]$vectors.size -eq $QdrantVectorSize) "Qdrant collection '$QdrantCollection' vector size is $($vectors.size); expected $QdrantVectorSize."
+    Assert-Condition ([string]$vectors.distance -eq "Cosine") "Qdrant collection '$QdrantCollection' distance is $($vectors.distance); expected Cosine."
 }
 
 $health = Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/health"
@@ -241,6 +255,30 @@ $ocr = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($upload.docu
 Assert-Condition ($ocr.status -eq "completed") "OCR mock did not complete."
 Assert-Condition ($ocr.text -match "AUR-2026-051") "OCR mock did not include sample invoice content."
 Write-Host "OCR mock OK"
+
+if ($RunVector) {
+    Write-Host "Manual vector indexing"
+
+    try {
+        $vectorIndexing = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($upload.document_id)/index/vector"
+    }
+    catch {
+        $errorBody = Get-ErrorResponseBody $_
+        $detail = $_.Exception.Message
+        if (-not [string]::IsNullOrWhiteSpace($errorBody)) {
+            $detail = "$detail Response body: $errorBody"
+        }
+
+        throw "Manual vector indexing failed. Start backend with DOCURAG_EMBEDDING_PROVIDER=ollama, DOCURAG_EMBEDDING_MODEL=$EmbeddingModel, DOCURAG_QDRANT_URL=$QdrantUrl, and DOCURAG_QDRANT_COLLECTION=$QdrantCollection. $detail"
+    }
+
+    Assert-Condition ($vectorIndexing.status -eq "completed") "Expected manual vector indexing status completed. Got '$($vectorIndexing.status)'."
+    Assert-Condition ($vectorIndexing.indexed_chunk_count -gt 0) "Manual vector indexing did not index any chunks."
+    Assert-Condition ($vectorIndexing.collection_name -eq $QdrantCollection) "Manual vector indexing used unexpected collection '$($vectorIndexing.collection_name)'."
+    Assert-Condition ($vectorIndexing.vector_size -eq $QdrantVectorSize) "Manual vector indexing used vector size $($vectorIndexing.vector_size); expected $QdrantVectorSize."
+    Assert-Condition ($vectorIndexing.embedding_model -eq $EmbeddingModel) "Manual vector indexing used embedding model '$($vectorIndexing.embedding_model)'; expected '$EmbeddingModel'."
+    Write-Host "Manual vector indexing OK: indexed chunks $($vectorIndexing.indexed_chunk_count)"
+}
 
 $ragBody = @{
     query = "payment due date Net 15"

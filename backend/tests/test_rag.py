@@ -322,9 +322,10 @@ def test_vector_rag_provider_uses_embedding_and_qdrant_results() -> None:
         collection_name = "docurag_chunks_v1"
         vector_size = 1024
 
-        def __init__(self) -> None:
+        def __init__(self, payload: dict[str, object]) -> None:
+            self.payload = payload
             self.collection_checked = False
-            self.points: list[QdrantPoint] = []
+            self.upsert_called = False
 
         def get_collection(self) -> QdrantCollectionStatus:
             self.collection_checked = True
@@ -336,16 +337,16 @@ def test_vector_rag_provider_uses_embedding_and_qdrant_results() -> None:
             )
 
         def upsert_points(self, points: list[QdrantPoint]) -> None:
-            self.points = points
+            self.upsert_called = True
 
         def search(self, vector: list[float], limit: int) -> list[QdrantSearchResult]:
             assert vector == [float(len("payment due date Net 15")), 1.0]
             assert limit == 3
             return [
                 QdrantSearchResult(
-                    point_id=self.points[0].point_id,
+                    point_id="point-001",
                     score=0.88,
-                    payload=self.points[0].payload,
+                    payload=self.payload,
                 )
             ]
 
@@ -371,7 +372,19 @@ def test_vector_rag_provider_uses_embedding_and_qdrant_results() -> None:
         ],
     )
     embedding_provider = StubEmbeddingProvider()
-    vector_store = StubVectorStore()
+    payload = {
+        **document.chunks[0].model_dump(mode="json"),
+        "filename": document.filename,
+        "metadata": {
+            **document.chunks[0].metadata,
+            "indexing_provider": "vector",
+            "vector_store": "qdrant",
+            "qdrant_collection": "docurag_chunks_v1",
+            "embedding_provider": "ollama",
+            "embedding_model": "qwen3-embedding:0.6b",
+        },
+    }
+    vector_store = StubVectorStore(payload)
     provider = VectorRagProvider(
         keyword_provider=KeywordRagProvider(),
         embedding_provider=embedding_provider,
@@ -381,7 +394,8 @@ def test_vector_rag_provider_uses_embedding_and_qdrant_results() -> None:
     response = provider.query("payment due date Net 15", 3, [document])
 
     assert vector_store.collection_checked is True
-    assert embedding_provider.inputs == ["Payment terms are Net 15.", "payment due date Net 15"]
+    assert vector_store.upsert_called is False
+    assert embedding_provider.inputs == ["payment due date Net 15"]
     assert response.answer.startswith("Local OCR chunks matched the query")
     assert response.retrieved_chunks[0].score == 0.88
     assert response.retrieved_chunks[0].metadata["retrieval_provider"] == "vector"

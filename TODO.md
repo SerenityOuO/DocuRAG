@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.11 ticket backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.12 ticket backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -27,13 +27,14 @@
 8. `tasks/phase-11-vector-rag/11-02-ollama-embedding-client.md` 已完成，只新增 disabled-by-default Ollama embedding client。
 9. `tasks/phase-11-vector-rag/11-03-qdrant-local-runtime.md` 已完成，只新增 optional Qdrant local runtime / collection smoke。
 10. `tasks/phase-11-vector-rag/11-04-vector-retrieval-demo-smoke.md` 已完成，補齊 optional vector retrieval path、fallback trace metadata、demo smoke 與 `v0.11.0` release/version sync。
+11. `tasks/phase-12-vector-indexing/12-01-vector-indexing-contract.md` 已完成，固定 manual vector indexing contract 與 guardrails。
+12. `tasks/phase-12-vector-indexing/12-02-vector-indexing-service.md` 已完成，新增同步 vector indexing service / helper。
+13. `tasks/phase-12-vector-indexing/12-03-vector-indexing-api.md` 已完成，新增手動 vector indexing API。
+14. `tasks/phase-12-vector-indexing/12-04-vector-indexing-demo-smoke.md` 已完成，補齊 optional vector indexing smoke 與 `v0.12.0` release/version sync。
 
 下一步優先順序：
 
-1. `tasks/phase-12-vector-indexing/12-01-vector-indexing-contract.md`
-2. `tasks/phase-12-vector-indexing/12-02-vector-indexing-service.md`
-3. `tasks/phase-12-vector-indexing/12-03-vector-indexing-api.md`
-4. `tasks/phase-12-vector-indexing/12-04-vector-indexing-demo-smoke.md`
+1. Phase 12 已完成；後續若要做 hybrid search、rerank、eval runner、worker、DB、登入或 RBAC，需先另開小 ticket 並更新 roadmap。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -222,7 +223,8 @@
 - [x] 12-02 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`91 passed`（本機 PowerShell PATH 需臨時補上 Codex bundled Python 3.12）；`git diff --check` 通過。單元測試覆蓋 stable point id、payload metadata、empty chunks skipped、embedding failure、Qdrant failure、collection size mismatch 與 embedding dimension mismatch。
 - [x] `tasks/phase-12-vector-indexing/12-03-vector-indexing-api.md`: 新增手動 vector indexing API，例如 `POST /documents/{document_id}/index/vector`，讓 demo 可明確執行 indexing；不新增 batch indexing、frontend 大改版或 async queue。
 - [x] 12-03 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`97 passed`（本機 PowerShell PATH 需臨時補上 Codex bundled Python 3.12）；`git diff --check` 通過。Endpoint tests 覆蓋 success、document not found、OCR 未完成、empty chunks skipped、provider disabled 與 Qdrant failure。
-- [ ] `tasks/phase-12-vector-indexing/12-04-vector-indexing-demo-smoke.md`: 更新 optional vector demo smoke，先手動 vector indexing 再 vector retrieval query，並完成 `v0.12.0` release/version sync。
+- [x] `tasks/phase-12-vector-indexing/12-04-vector-indexing-demo-smoke.md`: 更新 optional vector demo smoke，先手動 vector indexing 再 vector retrieval query，並完成 `v0.12.0` release/version sync。
+- [x] 12-04 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`97 passed`（本機 PowerShell PATH 需臨時補上 Codex bundled Python 3.12）；`frontend` 的 `npm.cmd run build` 通過；baseline `scripts/demo-smoke-test.ps1` 通過，answer source 為 `deterministic baseline`、retrieval source 為 `keyword baseline`；optional vector indexing `scripts/demo-smoke-test.ps1 -RunVector` 通過，會先 manual vector indexing，retrieval source 為 `vector/qdrant`；`git diff --check` 通過。
 
 Phase 12 guardrails：
 
@@ -253,3 +255,4 @@ Phase 12 guardrails：
 - [x] v0.9.1: OCR Performance Hardening 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.9.1`，PaddleOCR startup preload、provider reuse、timing metadata、`cls=False` baseline 與 provider-selected real OCR smoke 已通過。
 - [x] v0.10.0: LLM RAG Backlog 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.10.0`，Ollama `qwen3.5:4b` provider decision、最小 client、optional generation path、demo smoke `-RunLlm` 與 frontend answer source 已補齊。
 - [x] v0.11.0: Vector RAG Backlog 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.11.0`，Ollama `qwen3-embedding:0.6b` embedding client、Qdrant local runtime / collection smoke、optional vector retrieval path、fallback trace metadata、demo smoke `-RunVector` 與 frontend retrieval source 已補齊。
+- [x] v0.12.0: Vector Indexing Hardening 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.12.0`，manual vector indexing contract、同步 indexing service、`POST /documents/{document_id}/index/vector`、optional vector indexing smoke 與 fallback-safe vector retrieval 已補齊。

@@ -58,11 +58,11 @@
 
 ## Acceptance Criteria
 
-- [ ] Baseline demo smoke 不依賴 Qdrant 或 embedding，仍通過。
-- [ ] Optional vector smoke 會先執行 manual vector indexing，再確認 retrieval source 為 `vector/qdrant`。
-- [ ] Qdrant / embedding unavailable 時，optional vector smoke 以清楚 preflight error 失敗，不影響 baseline demo。
-- [ ] Frontend 若有調整，只呈現最小 indexing / retrieval 狀態。
-- [ ] `v0.12.0` release/version sync 完成。
+- [x] Baseline demo smoke 不依賴 Qdrant 或 embedding，仍通過。
+- [x] Optional vector smoke 會先執行 manual vector indexing，再確認 retrieval source 為 `vector/qdrant`。
+- [x] Qdrant / embedding unavailable 時，optional vector smoke 以清楚 preflight error 失敗，不影響 baseline demo。
+- [x] Frontend 若有調整，只呈現最小 indexing / retrieval 狀態。
+- [x] `v0.12.0` release/version sync 完成。
 
 ## Validation
 

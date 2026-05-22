@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.11.0 的已交付切片，並追蹤下一階段 v0.12.0 backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.12.0 的已交付切片，並追蹤後續候選 backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.11.0 checklist。
+- TODO 包含 Phase 00 到 v0.12.0 checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -419,6 +419,7 @@ Next Candidate Milestone：
 - v0.9.1: OCR Performance Hardening 已完成；backend startup preload、provider / engine reuse、OCR timing log / metadata、`cls=False` baseline、v0.9.1 version / README / TODO / ROADMAP 同步與 provider-selected real OCR smoke 已通過。
 - v0.10.0: LLM RAG Backlog 已完成；Ollama `qwen3.5:4b` provider decision、最小 client、optional `/rag/query` generation path、demo smoke `-RunLlm`、frontend answer source、v0.10.0 version / README / TODO / ROADMAP 同步已完成。
 - v0.11.0: Vector RAG Backlog 已完成；Ollama `qwen3-embedding:0.6b` embedding client、Qdrant local runtime / collection smoke、optional vector retrieval path、fallback trace metadata、demo smoke `-RunVector`、v0.11.0 version / README / TODO / ROADMAP 同步已完成。
+- v0.12.0: Vector Indexing Hardening 已完成；manual vector indexing contract、同步 indexing service、`POST /documents/{document_id}/index/vector`、optional vector indexing smoke、fallback-safe vector retrieval 與 v0.12.0 version / README / TODO / ROADMAP 同步已完成。
 
 ## v0.12.0 Vector Indexing Hardening Backlog
 
@@ -427,9 +428,9 @@ Goal：把 Phase 11 的 request-time vector retrieval demo 收斂成明確、可
 Tickets：
 
 - [x] `tasks/phase-12-vector-indexing/12-01-vector-indexing-contract.md`
-- [ ] `tasks/phase-12-vector-indexing/12-02-vector-indexing-service.md`
-- [ ] `tasks/phase-12-vector-indexing/12-03-vector-indexing-api.md`
-- [ ] `tasks/phase-12-vector-indexing/12-04-vector-indexing-demo-smoke.md`
+- [x] `tasks/phase-12-vector-indexing/12-02-vector-indexing-service.md`
+- [x] `tasks/phase-12-vector-indexing/12-03-vector-indexing-api.md`
+- [x] `tasks/phase-12-vector-indexing/12-04-vector-indexing-demo-smoke.md`
 
 Expected Outcome：
 
@@ -448,6 +449,25 @@ Expected Outcome：
 - Payload trace 欄位需標示 `indexing_provider=vector`、`vector_store=qdrant`、`qdrant_collection`、`embedding_provider` 與 `embedding_model`，但不新增 project / organization filter。
 - Empty chunks 應回傳 `status=skipped`；embedding disabled / unavailable、Qdrant unavailable、collection missing 或 vector size mismatch 應回傳清楚 failed result 或 HTTP error detail。
 - Manual vector indexing 不修改 local document metadata，不由 upload、OCR 或 backend startup 自動觸發；keyword RAG baseline 與 Phase 11 vector retrieval fallback 仍保持可用。
+
+12-02 Service status：
+
+- 已新增 `VectorIndexingService`，對單一 document chunks 產生 stable point ids、Ollama embeddings 與 Qdrant points payload。
+- Success result 會回傳 `indexed_chunk_count`、`point_ids`、collection、vector size、embedding provider / model。
+- Empty chunks 回傳 `status=skipped`；embedding / Qdrant / collection mismatch / dimension mismatch 回傳 `status=failed`，不修改 local metadata。
+
+12-03 API status：
+
+- 已新增 `POST /documents/{document_id}/index/vector`，只對已完成 OCR 的單一 document 執行 manual vector indexing。
+- Document not found 回傳 404；OCR 未完成回傳 409；provider disabled 或 Qdrant failure 回傳 503 與明確 detail。
+- API 不新增 frontend 大改、batch indexing、worker、DB，也不讓 upload / OCR 自動觸發 vector indexing。
+
+12-04 Demo smoke status：
+
+- `scripts/demo-smoke-test.ps1 -RunVector` 會 preflight Ollama embedding model、Qdrant service 與 `docurag_chunks_v1` collection。
+- Optional vector smoke flow 已改為 upload -> OCR mock -> manual vector indexing -> vector retrieval query。
+- Vector retrieval path 不再 query-time upsert local chunks，只查詢 Qdrant 中已 manual indexed 的 chunks；失敗仍 fallback 到 keyword retrieval。
+- Backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.12.0`。
 
 Out of Scope：
 

@@ -1,13 +1,12 @@
 import re
 from time import perf_counter
 from typing import Protocol
-from uuid import NAMESPACE_URL, uuid5
 
 from app.schemas.documents import DocumentMetadata
 from app.schemas.rag import RagCitation, RagQueryResponse, RetrievedChunk
 from app.services.embedding import EmbeddingProvider, EmbeddingProviderError
 from app.services.llm import LlmGeneration, LlmProvider, LlmProviderError
-from app.services.vector_store import QdrantPoint, QdrantVectorStore, QdrantVectorStoreError
+from app.services.vector_store import QdrantVectorStore, QdrantVectorStoreError
 
 
 class RagProvider(Protocol):
@@ -265,12 +264,12 @@ class VectorRagProvider:
         top_k: int,
         documents: list[DocumentMetadata],
     ) -> list[RetrievedChunk]:
-        chunks = [
-            (document, chunk)
+        indexed_document_ids = {
+            document.document_id
             for document in documents
-            for chunk in document.chunks
-        ]
-        if not chunks:
+            if document.chunks
+        }
+        if not indexed_document_ids:
             return []
 
         collection_status = self.vector_store.get_collection()
@@ -281,25 +280,17 @@ class VectorRagProvider:
                 f"Qdrant collection '{self.vector_store.collection_name}' vector size is {collection_status.vector_size}; expected {self.vector_store.vector_size}."
             )
 
-        points = []
-        for document, chunk in chunks:
-            embedding = self.embedding_provider.embed(chunk.text)
-            points.append(
-                QdrantPoint(
-                    point_id=str(uuid5(NAMESPACE_URL, chunk.chunk_id)),
-                    vector=embedding.embedding,
-                    payload={
-                        **chunk.model_dump(mode="json"),
-                        "filename": document.filename,
-                        "ocr_provider": chunk.metadata.get("provider", chunk.source_type),
-                    },
-                )
-            )
-
-        self.vector_store.upsert_points(points)
         query_embedding = self.embedding_provider.embed(query)
         search_results = self.vector_store.search(query_embedding.embedding, top_k)
-        return [self._retrieved_chunk_from_payload(result.payload, result.score) for result in search_results]
+        retrieved_chunks = []
+        for result in search_results:
+            payload_document_id = result.payload.get("document_id")
+            if payload_document_id is not None and str(payload_document_id) not in indexed_document_ids:
+                continue
+
+            retrieved_chunks.append(self._retrieved_chunk_from_payload(result.payload, result.score))
+
+        return retrieved_chunks
 
     def _retrieved_chunk_from_payload(self, payload: dict[str, object], score: float) -> RetrievedChunk:
         required_fields = ["chunk_id", "document_id", "filename", "text", "source", "created_at"]
