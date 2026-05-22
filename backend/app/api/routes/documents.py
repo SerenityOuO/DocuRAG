@@ -35,7 +35,16 @@ def get_selected_ocr_provider() -> OcrProvider:
         return MockOcrProvider()
 
     if provider_name in {"paddleocr", "paddle"}:
-        return PaddleOcrProvider()
+        return PaddleOcrProvider(
+            language=settings.ocr_language,
+            ocr_version=settings.ocr_version,
+            det_model_name=settings.ocr_det_model_name,
+            rec_model_name=settings.ocr_rec_model_name,
+            cls_model_name=settings.ocr_cls_model_name,
+            det_model_dir=settings.ocr_det_model_dir,
+            rec_model_dir=settings.ocr_rec_model_dir,
+            cls_model_dir=settings.ocr_cls_model_dir,
+        )
 
     raise HTTPException(
         status_code=500,

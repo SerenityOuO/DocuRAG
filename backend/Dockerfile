@@ -9,6 +9,7 @@ COPY pyproject.toml .
 COPY app ./app
 ARG DOCURAG_INSTALL_REAL_OCR=false
 RUN if [ "$DOCURAG_INSTALL_REAL_OCR" = "true" ]; then \
+      pip install --no-cache-dir "paddlepaddle-gpu==3.3.0" -i https://www.paddlepaddle.org.cn/packages/stable/cu129/ && \
       pip install --no-cache-dir ".[dev,real-ocr]"; \
     else \
       pip install --no-cache-dir ".[dev]"; \

@@ -52,7 +52,7 @@ const latestResponse = ref<
   | null
 >(null);
 
-const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.8.0"));
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.9.0"));
 
 const healthLabel = computed(() => {
   if (healthState.value === "success" && health.value?.status === "ok") {
@@ -283,7 +283,7 @@ onMounted(() => {
       <p class="eyebrow">{{ currentVersionLabel }}</p>
       <h1>DocuRAG AgentOps</h1>
       <p class="hero-copy">
-        Backend health、本機文件上傳、metadata 保存、PaddleOCR default provider、mock override、local keyword RAG
+        Backend health、本機文件上傳、metadata 保存、PaddleOCR PP-OCRv4 Chinese provider、mock override、local keyword RAG
         與 citation trace 驗證。
       </p>
     </header>
@@ -458,7 +458,7 @@ onMounted(() => {
         <div class="panel-heading">
           <div>
             <h2>OCR result</h2>
-            <p>Default /ocr provider: PaddleOCR；mock override: /ocr/mock</p>
+            <p>Default /ocr provider: GPU-only PaddleOCR PP-OCRv4；mock override: /ocr/mock</p>
           </div>
           <div class="button-row">
             <button

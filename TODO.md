@@ -164,8 +164,8 @@
 
 ## MVP v0.9.0 GPU Runtime Backlog
 
-- [ ] `tasks/phase-09-gpu-runtime/09-01-paddleocr-gpu-only-runtime.md`: PaddleOCR GPU-only runtime baseline。
-- [ ] `tasks/phase-09-gpu-runtime/09-02-paddleocr-v4-mobile-chinese-model.md`: PaddleOCR PP-OCRv4 mobile 中文 / 中英混合模型。
+- [x] `tasks/phase-09-gpu-runtime/09-01-paddleocr-gpu-only-runtime.md`: PaddleOCR GPU-only runtime baseline；本機已以 Python 3.12.10、`paddlepaddle-gpu==3.3.0`、CUDA 12.9 runtime wheel 與 RTX 5070 Ti 通過 `paddle.utils.run_check()`、`check-dev-env.ps1 -CheckPaddleOcr` 與 provider-selected real OCR smoke。
+- [x] `tasks/phase-09-gpu-runtime/09-02-paddleocr-v4-mobile-chinese-model.md`: PaddleOCR PP-OCRv4 mobile 中文 / 中英混合模型；已固定模型設定、記錄 det / rec / cls model directory、建立並驗證繁中 sample，mock OCR path 不受影響。
 
 ## MVP v0.10.0 LLM RAG Backlog
 
@@ -189,3 +189,4 @@
 - [x] v0.6.0: Bridge Contracts、OCR provider interface、RAG provider interface、processing status、chunk citation schema 與 processing job contract。
 - [x] v0.7.0: Real OCR Provider Spike 已完成；07-01 到 07-04 已執行，Docker validation 需待 Docker Desktop daemon 可用後重跑。
 - [x] v0.8.0: PaddleOCR Runtime Stabilization 已完成；Python 3.12、PaddleOCR 2.10.0、PaddlePaddle 3.0.0 sample real OCR flow 已驗證。
+- [x] v0.9.0: GPU Runtime 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.9.0`，本機 Python 3.12 + CUDA PaddlePaddle GPU runtime 與繁中 provider-selected OCR smoke 已通過。

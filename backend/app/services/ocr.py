@@ -1,4 +1,5 @@
 from datetime import datetime
+import os
 from pathlib import Path
 import sys
 from typing import Protocol
@@ -21,6 +22,10 @@ class OcrProvider(Protocol):
 
 
 class PaddleOcrUnsupportedPythonError(RuntimeError):
+    pass
+
+
+class PaddleOcrGpuRequiredError(RuntimeError):
     pass
 
 
@@ -75,8 +80,25 @@ class PaddleOcrProvider:
     job_type = ProcessingJobType.OCR_REAL
     supported_file_types = {"bmp", "jpeg", "jpg", "png", "tif", "tiff", "webp"}
 
-    def __init__(self, language: str = "en") -> None:
+    def __init__(
+        self,
+        language: str = "ch",
+        ocr_version: str = "PP-OCRv4",
+        det_model_name: str = "PP-OCRv4_mobile_det",
+        rec_model_name: str = "PP-OCRv4_mobile_rec",
+        cls_model_name: str = "ch_ppocr_mobile_v2.0_cls",
+        det_model_dir: str | None = None,
+        rec_model_dir: str | None = None,
+        cls_model_dir: str | None = None,
+    ) -> None:
         self.language = language
+        self.ocr_version = ocr_version
+        self.det_model_name = det_model_name
+        self.rec_model_name = rec_model_name
+        self.cls_model_name = cls_model_name
+        self.det_model_dir = self._resolve_model_dir(det_model_dir, "det", "ch", "ch_PP-OCRv4_det_infer")
+        self.rec_model_dir = self._resolve_model_dir(rec_model_dir, "rec", "ch", "ch_PP-OCRv4_rec_infer")
+        self.cls_model_dir = self._resolve_model_dir(cls_model_dir, "cls", "ch", "ch_ppocr_mobile_v2.0_cls_infer")
         self._engine = None
 
     def extract(
@@ -107,10 +129,16 @@ class PaddleOcrProvider:
                 str(exc),
                 extracted_at,
             )
+        except PaddleOcrGpuRequiredError as exc:
+            return self._failed_result(
+                "paddleocr_gpu_required",
+                str(exc),
+                extracted_at,
+            )
         except ImportError:
             return self._failed_result(
                 "paddleocr_dependency_missing",
-                "PaddleOCR dependency is not installed. Install backend with the real OCR extra to use provider-selected OCR.",
+                "PaddleOCR GPU dependency is not installed. Install the CUDA PaddlePaddle wheel and backend real OCR extra to use provider-selected OCR.",
                 extracted_at,
             )
         except Exception as exc:
@@ -195,6 +223,11 @@ class PaddleOcrProvider:
                         confidence=confidence,
                         metadata={
                             "ocr_provider": "paddleocr",
+                            "ocr_language": self.language,
+                            "ocr_version": self.ocr_version,
+                            "det_model": self.det_model_name,
+                            "rec_model": self.rec_model_name,
+                            "cls_model": self.cls_model_name,
                             "line_index": str(len(ocr_lines) + 1),
                         },
                     )
@@ -212,6 +245,14 @@ class PaddleOcrProvider:
             "chunk_source": self.chunk_source,
             "filename": document.filename,
             "line_count": str(len(ocr_lines)),
+            "ocr_language": self.language,
+            "ocr_version": self.ocr_version,
+            "det_model": self.det_model_name,
+            "rec_model": self.rec_model_name,
+            "cls_model": self.cls_model_name,
+            "det_model_dir": self.det_model_dir,
+            "rec_model_dir": self.rec_model_dir,
+            "cls_model_dir": self.cls_model_dir,
         }
 
         if confidences:
@@ -231,15 +272,44 @@ class PaddleOcrProvider:
                 version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
                 raise PaddleOcrUnsupportedPythonError(
                     "PaddleOCR local runtime is supported only on Python 3.12 in this project. "
-                    f"Current Python is {version}. Install Python 3.12, then run "
+                    f"Current Python is {version}. Install Python 3.12, then install "
+                    "paddlepaddle-gpu from the CUDA 12.9 stable index and run "
                     'py -3.12 -m pip install -e ".[dev,real-ocr]" from the backend directory.'
                 )
 
+            import paddle
+
+            if not paddle.device.is_compiled_with_cuda():
+                raise PaddleOcrGpuRequiredError(
+                    "DocuRAG real OCR requires a CUDA-enabled PaddlePaddle runtime. "
+                    "Install paddlepaddle-gpu from the CUDA 12.9 stable index before using provider-selected OCR."
+                )
+
+            try:
+                paddle.utils.run_check()
+            except Exception as exc:
+                raise PaddleOcrGpuRequiredError(f"PaddlePaddle CUDA runtime check failed: {exc}") from exc
+
             from paddleocr import PaddleOCR
 
-            self._engine = PaddleOCR(use_angle_cls=True, lang=self.language)
+            self._engine = PaddleOCR(
+                use_angle_cls=True,
+                lang=self.language,
+                ocr_version=self.ocr_version,
+                use_gpu=True,
+                det_model_dir=self.det_model_dir,
+                rec_model_dir=self.rec_model_dir,
+                cls_model_dir=self.cls_model_dir,
+            )
 
         return self._engine
+
+    def _resolve_model_dir(self, configured_dir: str | None, category: str, language: str, inference_dir: str) -> str:
+        if configured_dir:
+            return str(Path(configured_dir).expanduser())
+
+        model_root = Path(os.environ.get("PADDLEOCR_HOME", Path.home() / ".paddleocr")).expanduser()
+        return str(model_root / "whl" / category / language / inference_dir)
 
     def _is_line_item(self, value: object) -> bool:
         return (

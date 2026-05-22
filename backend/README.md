@@ -1,6 +1,6 @@
 # Backend
 
-DocuRAG AgentOps backend MVP v0.8.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、local RAG query API、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，目前 RAG 只接 `KeywordRagProvider`。v0.7 的 real OCR spike 已選定 PaddleOCR，v0.8 將 PaddleOCR runtime 收斂到 Python 3.12、PaddleOCR 2.10.0 與 PaddlePaddle 3.0.0 sample flow；此階段不接資料庫、OpenAI API、Ollama、vLLM、embedding、Qdrant、rerank、Redis、NATS 或登入權限。
+DocuRAG AgentOps backend MVP v0.9.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、local RAG query API、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，目前 RAG 只接 `KeywordRagProvider`。v0.7 的 real OCR spike 已選定 PaddleOCR，v0.8 將 PaddleOCR runtime 收斂到 Python 3.12、PaddleOCR 2.10.0 與 PaddlePaddle 3.0.0 sample flow；v0.9 runtime baseline 開始 provider-selected real OCR 只支援 PaddlePaddle GPU / CUDA build，且預設使用 PP-OCRv4 mobile 中文 / 中英混合模型設定。此階段不接資料庫、OpenAI API、Ollama、vLLM、embedding、Qdrant、rerank、Redis、NATS 或登入權限。
 
 ## Install
 
@@ -79,18 +79,29 @@ Phase 07 provider decision：
 
 ```powershell
 cd backend
+py -3.12 -m pip install "paddlepaddle-gpu==3.3.0" -i https://www.paddlepaddle.org.cn/packages/stable/cu129/
 py -3.12 -m pip install -e ".[dev,real-ocr]"
 ```
 
-v0.8 將 backend runtime 固定在 Python 3.12；Windows CPU 環境若需要先安裝 PaddlePaddle wheel，使用：
+Phase 09 將 backend real OCR runtime 固定在 Python 3.12 + PaddlePaddle GPU CUDA build。非 CUDA build 會回傳 `paddleocr_gpu_required`，不會改跑 CPU 或 mock：
 
 ```powershell
-py -3.12 -m pip install "paddlepaddle>=3.0,<3.1" -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
-py -3.12 -m pip install -e ".[dev,real-ocr]"
-py -3.12 -c "import paddle, paddleocr; paddle.utils.run_check(); print(paddle.__version__, paddleocr.__version__)"
+py -3.12 -c "import paddle, paddleocr; print(paddle.__version__, paddleocr.__version__); print(paddle.device.is_compiled_with_cuda()); print(paddle.device.get_device()); paddle.utils.run_check()"
 ```
 
 若使用 Python 3.13+ 啟動 `PaddleOcrProvider`，backend 會回傳 `paddleocr_python_unsupported`，提示改用 Python 3.12；不會改跑 mock。
+
+PaddleOCR provider 預設模型設定：
+
+| 設定 | 預設值 | 預期 cache / model directory |
+|---|---|---|
+| `DOCURAG_OCR_LANGUAGE` | `ch` | - |
+| `DOCURAG_OCR_VERSION` | `PP-OCRv4` | - |
+| `DOCURAG_OCR_DET_MODEL_NAME` | `PP-OCRv4_mobile_det` | `%USERPROFILE%\\.paddleocr\\whl\\det\\ch\\ch_PP-OCRv4_det_infer` |
+| `DOCURAG_OCR_REC_MODEL_NAME` | `PP-OCRv4_mobile_rec` | `%USERPROFILE%\\.paddleocr\\whl\\rec\\ch\\ch_PP-OCRv4_rec_infer` |
+| `DOCURAG_OCR_CLS_MODEL_NAME` | `ch_ppocr_mobile_v2.0_cls` | `%USERPROFILE%\\.paddleocr\\whl\\cls\\ch\\ch_ppocr_mobile_v2.0_cls_infer` |
+
+可用 `DOCURAG_OCR_DET_MODEL_DIR`、`DOCURAG_OCR_REC_MODEL_DIR`、`DOCURAG_OCR_CLS_MODEL_DIR` 指向已下載模型目錄。PP-OCRv4 mobile recognition 以簡中 / 中英數字識別為主；繁中 sample 目前只記錄驗證結果與限制，不自動切到 `chinese_cht_PP-OCRv3_rec`。
 
 Docker real OCR build 可用 build arg 開啟，預設不安裝 PaddleOCR：
 
@@ -157,14 +168,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1
 
 `demo-smoke-test.ps1` 會驗證 `/health`、upload、OCR mock 與 `/rag/query`。`seed-demo-data.ps1` 會上傳 `sample-data/documents/mock-invoice-aurora.txt`、執行 OCR mock、查詢 `payment due date Net 15`，並輸出 answer、citations、retrieved chunks。
 
-Real OCR demo 只在 backend 已用 Python 3.12 安裝 `.[dev,real-ocr]` 時使用。v0.8 起 provider-selected `/ocr` 預設走 PaddleOCR；缺少 PaddleOCR dependency 時，`-RunRealOcr` smoke 會明確失敗，mock smoke / seed flow 可透過 `/ocr/mock` 或 `DOCURAG_OCR_PROVIDER=mock` 重跑：
+Real OCR demo 只在 backend 已用 Python 3.12 安裝 CUDA PaddlePaddle wheel 與 `.[dev,real-ocr]` 時使用。v0.8 起 provider-selected `/ocr` 預設走 PaddleOCR；Phase 09 起缺少 GPU dependency 或不是 CUDA build 時，`-RunRealOcr` smoke 會明確失敗，mock smoke / seed flow 可透過 `/ocr/mock` 或 `DOCURAG_OCR_PROVIDER=mock` 重跑：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunRealOcr
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1 -RunRealOcr
 ```
 
-optional sample image 是 `sample-data/documents/sample-ocr-invoice.png`，內容為自造虛構 invoice。
+optional sample image 包含 `sample-data/documents/sample-ocr-invoice.png` 與 `sample-data/documents/sample-ocr-zh-tw.png`，內容皆為自造虛構資料。
 
 ## Docker
 
@@ -199,13 +210,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1
 
 如果 Python 或 Docker 不可用，依 `docs/LOCAL_DEV_SETUP.md` 修復本機工具後再重跑測試。
 
-v0.8 PaddleOCR baseline 可用同一支腳本分段檢查 dependency import、model cache / engine initialization 與 sample image OCR：
+v0.9 PaddleOCR GPU baseline 可用同一支腳本分段檢查 NVIDIA CLI、CUDA Paddle build、`paddle.utils.run_check()`、model cache / engine initialization 與 sample image OCR：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 -CheckPaddleOcr
 ```
 
-2026-05-21 Windows 本機以 Python 3.12.10、PaddleOCR 2.10.0 與 PaddlePaddle 3.0.0 完成 baseline；sample image OCR 認出 4 行文字，preview 包含 `DocuRAG OCR Demo Invoice`、`Invoice: OCR-2026-001` 與 `Total: USD 42.00`。
+2026-05-21 Windows 本機以 Python 3.12.10、PaddleOCR 2.10.0 與 PaddlePaddle 3.0.0 完成 v0.8 CPU baseline；Phase 09 已移除 CPU baseline。2026-05-22 已以 Python 3.12.10、PaddleOCR 2.10.0、`paddlepaddle-gpu==3.3.0` 與 CUDA 12.9 runtime wheel 完成 GPU baseline。
 
 ## Release Status
 
@@ -219,3 +230,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 
 - v0.6.0: Bridge Contracts、OCR provider interface、RAG provider interface、processing status、chunk citation schema 與 processing job contract 已完成。
 - v0.7.0: Real OCR Provider Spike、PaddleOCR adapter、provider-selected OCR endpoint、trace normalization 與 optional real OCR demo hardening 已完成。
 - v0.8.0: PaddleOCR Runtime Stabilization、Python 3.12 runtime guard、PaddleOCR 2.10.0 / PaddlePaddle 3.0.0 dependency baseline 與 sample real OCR flow 已完成。
+- v0.9.0: GPU Runtime、PaddlePaddle GPU-only guard、PP-OCRv4 mobile 中文 / 中英混合模型設定與模型目錄文件已完成；本機 Python 3.12 + CUDA PaddlePaddle GPU runtime、sample invoice 與繁中 provider-selected OCR smoke 已通過。

@@ -1,6 +1,8 @@
 from datetime import datetime
 import json
 from pathlib import Path
+import sys
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -213,6 +215,11 @@ def test_selected_ocr_default_provider_is_paddleocr() -> None:
         get_settings.cache_clear()
 
     assert isinstance(provider, PaddleOcrProvider)
+    assert provider.language == "ch"
+    assert provider.ocr_version == "PP-OCRv4"
+    assert provider.det_model_name == "PP-OCRv4_mobile_det"
+    assert provider.rec_model_name == "PP-OCRv4_mobile_rec"
+    assert provider.cls_model_name == "ch_ppocr_mobile_v2.0_cls"
 
 
 def test_selected_ocr_provider_can_be_overridden_to_mock(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -387,10 +394,26 @@ def test_paddleocr_provider_normalizes_raw_line_trace_metadata(tmp_path: Path) -
     assert result.text == "Invoice number AUR-2026-051\nTotal USD 120.00"
     assert result.extracted_fields["line_count"] == "2"
     assert result.extracted_fields["average_confidence"] == "0.9350"
+    assert result.extracted_fields["ocr_language"] == "ch"
+    assert result.extracted_fields["ocr_version"] == "PP-OCRv4"
+    assert result.extracted_fields["det_model"] == "PP-OCRv4_mobile_det"
+    assert result.extracted_fields["rec_model"] == "PP-OCRv4_mobile_rec"
+    assert result.extracted_fields["cls_model"] == "ch_ppocr_mobile_v2.0_cls"
+    assert result.extracted_fields["det_model_dir"].endswith("ch_PP-OCRv4_det_infer")
+    assert result.extracted_fields["rec_model_dir"].endswith("ch_PP-OCRv4_rec_infer")
+    assert result.extracted_fields["cls_model_dir"].endswith("ch_ppocr_mobile_v2.0_cls_infer")
     assert [line.page_number for line in result.lines] == [1, 1]
     assert result.lines[0].bbox == BoundingBox(x_min=10, y_min=20, x_max=180, y_max=44)
     assert result.lines[0].confidence == 0.96
-    assert result.lines[0].metadata == {"ocr_provider": "paddleocr", "line_index": "1"}
+    assert result.lines[0].metadata == {
+        "ocr_provider": "paddleocr",
+        "ocr_language": "ch",
+        "ocr_version": "PP-OCRv4",
+        "det_model": "PP-OCRv4_mobile_det",
+        "rec_model": "PP-OCRv4_mobile_rec",
+        "cls_model": "ch_ppocr_mobile_v2.0_cls",
+        "line_index": "1",
+    }
 
 
 def test_paddleocr_provider_reports_unsupported_python(
@@ -428,6 +451,58 @@ def test_paddleocr_provider_reports_unsupported_python(
     assert result.extracted_fields["error_code"] == "paddleocr_python_unsupported"
     assert "Python 3.12" in result.extracted_fields["error"]
     assert 'py -3.12 -m pip install -e ".[dev,real-ocr]"' in result.extracted_fields["error"]
+
+
+def test_paddleocr_provider_requires_cuda_paddle_build(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    class SupportedVersionInfo:
+        major = 3
+        minor = 12
+        micro = 10
+
+    class PaddleDevice:
+        @staticmethod
+        def is_compiled_with_cuda() -> bool:
+            return False
+
+    class PaddleUtils:
+        @staticmethod
+        def run_check() -> None:
+            return None
+
+    monkeypatch.setattr(ocr_module.sys, "version_info", SupportedVersionInfo())
+    monkeypatch.setitem(
+        sys.modules,
+        "paddle",
+        SimpleNamespace(
+            __version__="3.3.0",
+            device=PaddleDevice,
+            utils=PaddleUtils,
+        ),
+    )
+
+    file_path = tmp_path / "invoice.png"
+    file_path.write_bytes(b"fake image")
+    provider = PaddleOcrProvider()
+    document = DocumentMetadata(
+        document_id="doc-001",
+        filename="invoice.png",
+        stored_filename="doc-001-invoice.png",
+        file_type="png",
+        content_type="image/png",
+        size=10,
+        status="uploaded",
+        created_at="2026-05-20T00:00:00Z",
+    )
+
+    result = provider.extract(document, file_path, datetime.fromisoformat("2026-05-20T00:00:01+00:00"))
+
+    assert result.status == OcrStatus.FAILED
+    assert result.extracted_fields["provider"] == "paddleocr"
+    assert result.extracted_fields["error_code"] == "paddleocr_gpu_required"
+    assert "CUDA-enabled PaddlePaddle runtime" in result.extracted_fields["error"]
 
 
 def test_run_selected_ocr_returns_503_and_persists_real_failure(

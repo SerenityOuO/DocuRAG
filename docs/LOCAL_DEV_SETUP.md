@@ -185,7 +185,7 @@ data/documents.json
 
 也可用 `DOCURAG_DATA_DIR` 覆寫資料根目錄。
 
-## v0.7 / v0.8 Real OCR Flow
+## v0.7 / v0.9 Real OCR Flow
 
 mock demo 不需要 PaddleOCR dependency，明確設定 `DOCURAG_OCR_PROVIDER=mock` 或直接呼叫 `/ocr/mock`：
 
@@ -196,14 +196,27 @@ $env:DOCURAG_OCR_PROVIDER="mock"
 py -3.12 -m uvicorn app.main:app --reload
 ```
 
-v0.8 起 provider-selected `/ocr` 預設走 PaddleOCR。若要手動嘗試 provider-selected real OCR，先用 Python 3.12 安裝 optional extra，再啟動 backend：
+v0.8 起 provider-selected `/ocr` 預設走 PaddleOCR。Phase 09 起 real OCR 只支援 PaddlePaddle GPU / CUDA runtime；若要手動嘗試 provider-selected real OCR，先用 Python 3.12 安裝 CUDA wheel 與 optional extra，再啟動 backend：
 
 ```powershell
 cd backend
+py -3.12 -m pip install "paddlepaddle-gpu==3.3.0" -i https://www.paddlepaddle.org.cn/packages/stable/cu129/
 py -3.12 -m pip install -e ".[dev,real-ocr]"
 $env:DOCURAG_OCR_PROVIDER="paddleocr"
 py -3.12 -m uvicorn app.main:app --reload
 ```
+
+PP-OCRv4 mobile 中文 / 中英混合模型預設：
+
+| 設定 | 預設值 | 預期 cache / model directory |
+|---|---|---|
+| `DOCURAG_OCR_LANGUAGE` | `ch` | - |
+| `DOCURAG_OCR_VERSION` | `PP-OCRv4` | - |
+| `DOCURAG_OCR_DET_MODEL_NAME` | `PP-OCRv4_mobile_det` | `%USERPROFILE%\.paddleocr\whl\det\ch\ch_PP-OCRv4_det_infer` |
+| `DOCURAG_OCR_REC_MODEL_NAME` | `PP-OCRv4_mobile_rec` | `%USERPROFILE%\.paddleocr\whl\rec\ch\ch_PP-OCRv4_rec_infer` |
+| `DOCURAG_OCR_CLS_MODEL_NAME` | `ch_ppocr_mobile_v2.0_cls` | `%USERPROFILE%\.paddleocr\whl\cls\ch\ch_ppocr_mobile_v2.0_cls_infer` |
+
+可用 `DOCURAG_OCR_DET_MODEL_DIR`、`DOCURAG_OCR_REC_MODEL_DIR`、`DOCURAG_OCR_CLS_MODEL_DIR` 指到已下載的 inference model directory。PP-OCRv4 mobile 中文 recognition 主要驗證簡中 / 中英數字；繁中 sample 只記錄結果與限制，不在本 ticket 自動切到 `chinese_cht_PP-OCRv3_rec`。
 
 real OCR smoke check：
 
@@ -211,23 +224,23 @@ real OCR smoke check：
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunRealOcr
 ```
 
-若 PaddleOCR dependency、模型下載或 Docker 環境不可用，`-RunRealOcr` 會明確失敗；mock flow 仍應可透過 `/ocr/mock` 或 `DOCURAG_OCR_PROVIDER=mock` 重跑。這仍不是 production OCR pipeline。
+若 PaddleOCR GPU dependency、CUDA build、模型下載或 Docker 環境不可用，`-RunRealOcr` 會明確失敗；mock flow 仍應可透過 `/ocr/mock` 或 `DOCURAG_OCR_PROVIDER=mock` 重跑。這仍不是 production OCR pipeline。
 
-## v0.8 PaddleOCR Environment Baseline
+## v0.9 PaddleOCR GPU Environment Baseline
 
-v0.8 起本專案 backend runtime 固定使用 Python 3.12。Python 3.13+ 或 3.11 會被 `PaddleOcrProvider` 明確拒絕，並回傳 `paddleocr_python_unsupported`，不會靜默 fallback 到 mock。
+v0.8 起本專案 backend runtime 固定使用 Python 3.12。Python 3.13+ 或 3.11 會被 `PaddleOcrProvider` 明確拒絕，並回傳 `paddleocr_python_unsupported`，不會靜默 fallback 到 mock。Phase 09 起 PaddleOCR real provider 還會要求 `paddle.device.is_compiled_with_cuda()` 為 `True` 且 `paddle.utils.run_check()` 通過；CPU PaddlePaddle 會回傳 `paddleocr_gpu_required`。
 
-Windows CPU 安裝建議：
+Windows GPU 安裝建議：
 
 ```powershell
 cd backend
 py -3.12 -m pip install --upgrade pip
-py -3.12 -m pip install "paddlepaddle>=3.0,<3.1" -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+py -3.12 -m pip install "paddlepaddle-gpu==3.3.0" -i https://www.paddlepaddle.org.cn/packages/stable/cu129/
 py -3.12 -m pip install -e ".[dev,real-ocr]"
-py -3.12 -c "import paddle, paddleocr; paddle.utils.run_check(); print(paddle.__version__, paddleocr.__version__)"
+py -3.12 -c "import paddle, paddleocr; print(paddle.__version__, paddleocr.__version__); print(paddle.device.is_compiled_with_cuda()); print(paddle.device.get_device()); paddle.utils.run_check()"
 ```
 
-Docker real OCR build 使用 `python:3.12-slim`，因此與 Windows 本機 Python 3.14 問題分開處理。需要 Docker Desktop 可正常讀取 `C:\Users\USER\.docker\config.json` 後再執行：
+Docker real OCR build 使用 `python:3.12-slim` 並在 build arg 開啟時安裝 CUDA 12.9 `paddlepaddle-gpu` wheel；需要 Docker Desktop 可正常讀取 `C:\Users\USER\.docker\config.json` 且容器環境可使用 GPU 後再執行：
 
 ```powershell
 $env:DOCURAG_INSTALL_REAL_OCR="true"
@@ -247,15 +260,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 -CheckPaddleOcr -PaddleOcrSamplePath .\sample-data\documents\sample-ocr-invoice.png
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 -CheckPaddleOcr -PaddleOcrSamplePath .\sample-data\documents\sample-ocr-zh-tw.png
 ```
 
 此檢查會分段輸出：
 
 - Python runner 與 Python 版本。
+- `nvidia-smi` 與 `nvcc --version`。
 - `paddle` / `paddleocr` dependency import 與版本。
+- `paddle.device.is_compiled_with_cuda()`、`paddle.device.get_device()` 與 `paddle.utils.run_check()`。
 - PaddleOCR model cache 狀態；若 `~/.paddleocr` 不存在，初始化可能需要下載模型。
+- PP-OCRv4 mobile det / rec / cls model selection 與預期 model directory。
 - PaddleOCR engine initialization；若失敗，會標示 initialization 或 model download 相關錯誤。
-- `sample-data/documents/sample-ocr-invoice.png` 的 sample image OCR runtime 結果。
+- `sample-data/documents/sample-ocr-invoice.png` 或 `sample-data/documents/sample-ocr-zh-tw.png` 的 sample image OCR runtime 結果。
 
 2026-05-21 Windows 本機 baseline：
 
@@ -316,10 +333,21 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps
 2026-05-21 Python 3.12 follow-up validation：
 
 - 安裝 Python 3.12.10 後，`py -3.12 -m pip install -e ".[dev,real-ocr]"` 會因既有 `.egg-info` Windows 檔案鎖失敗；改以逐項安裝 runtime/test dependency 完成驗證環境。
-- `paddlepaddle>=3.0,<3.4` 會安裝 PaddlePaddle 3.3.1，sample OCR 在 Windows CPU 上失敗：`OneDnnContext does not have the input Filter`。因此 `backend[real-ocr]` 收斂為 `paddlepaddle>=3.0,<3.1`，實測使用 PaddlePaddle 3.0.0。
-- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 -CheckPaddleOcr` 通過；`paddle=3.0.0`、`paddleocr=2.10.0`，sample image OCR `recognized_lines=4`。
+- v0.8 曾以 Windows CPU PaddlePaddle 3.0.0 完成 sample OCR baseline；Phase 09 已移除 CPU PaddleOCR baseline，`backend[real-ocr]` 改為 `paddlepaddle-gpu==3.3.0`，需使用 CUDA 12.9 stable index 安裝。
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 -CheckPaddleOcr` 現在會在非 CUDA Paddle build 明確失敗；需看到 `is_compiled_with_cuda=True` 與 `paddle.utils.run_check()` 通過後才算 real OCR baseline 通過。
 - 以隔離資料目錄與 Python 3.12 backend 啟動 `http://127.0.0.1:8023` 後，`demo-smoke-test.ps1 -ApiBaseUrl http://127.0.0.1:8023` 通過。
 - 同一 backend 執行 `demo-smoke-test.ps1 -ApiBaseUrl http://127.0.0.1:8023 -RunRealOcr` 通過；provider-selected OCR 回傳 `status=completed`，並通過 saved OCR、processing、latest job 與 chunks 檢查。
+
+2026-05-22 Phase 09 validation notes：
+
+- `nvidia-smi` 通過，GPU 為 NVIDIA GeForce RTX 5070 Ti，driver 596.49。
+- `nvcc --version` 通過，CUDA compiler 為 12.8；PaddlePaddle GPU install 指令仍依官方 stable CUDA 12.9 wheel 記錄。
+- 已安裝官方 Python 3.12.10，並讓 `python` 與 `py -3.12` 優先指向 `C:\Users\USER\AppData\Local\Programs\Python\Python312\python.exe`，避開 WindowsApps Python Manager / Store alias。
+- 已安裝 `paddlepaddle-gpu==3.3.0`、PaddleOCR 2.10.0 與 CUDA 12.9 runtime wheels；全域 Python 與 `backend/.venv` 皆通過 `paddle.device.is_compiled_with_cuda() == True`、`paddle.device.get_device() == gpu:0` 與 `paddle.utils.run_check()`。
+- `check-dev-env.ps1 -CheckPaddleOcr` 通過；sample invoice OCR `recognized_lines=4`，preview 包含 `DocuRAG OcR Demo Invoice`、`Invoice: OCR-2026-001` 與 `Total: USD 42.00`。
+- `check-dev-env.ps1 -CheckPaddleOcr -PaddleOcrSamplePath .\sample-data\documents\sample-ocr-zh-tw.png` 通過；繁中 sample OCR `recognized_lines=4`，preview 包含 `DocuRAG 繁中 OCR 測試`、`發票號碼：OCR-2026-009` 與 `客户：星河科技股份有限公司`。
+- 以隔離資料目錄與 `backend/.venv` 啟動 `http://127.0.0.1:8024` 後，`demo-smoke-test.ps1 -ApiBaseUrl http://127.0.0.1:8024 -RunRealOcr` 通過；同一 backend 針對 `sample-ocr-zh-tw.png` 的 provider-selected OCR 也回傳 `status=completed`。
+- 繁中 sample 實際 provider-selected OCR 結果為 `DocuRAG 繁中 OCR 測試`、`發票號碼：OCR-2026-009`、`客户：星河科技股份有限公司`、`總計 : NT$ 12,345`，平均 confidence `0.9525`。其中 `客戶` 被辨識為簡中 `客户`，此為 PP-OCRv4 mobile 對繁中支援的已知限制；後續候選仍是 `chinese_cht_PP-OCRv3_rec`，本 ticket 不自動切換。
 
 ## Docker Validation
 

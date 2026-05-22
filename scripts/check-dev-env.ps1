@@ -46,6 +46,8 @@ function Invoke-CmdLine {
     $process.StartInfo.RedirectStandardError = $true
     $process.StartInfo.UseShellExecute = $false
     $process.StartInfo.CreateNoWindow = $true
+    $process.StartInfo.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8"
+    $process.StartInfo.EnvironmentVariables["PYTHONUTF8"] = "1"
     [void]$process.Start()
     $stdoutTask = $process.StandardOutput.ReadToEndAsync()
     $stderrTask = $process.StandardError.ReadToEndAsync()
@@ -219,7 +221,9 @@ import traceback
 sample_path = Path(sys.argv[1])
 failed = False
 engine = None
+paddle = None
 PaddleOCR = None
+paddle_cuda_ok = False
 
 def print_stage(status, name, detail):
     print(f"[{status}] {name} - {detail}")
@@ -245,7 +249,53 @@ except Exception as exc:
     print_stage("FAIL", "dependency import", f"{type(exc).__name__}: {exc}")
     traceback.print_exc()
 
+if paddle is not None:
+    try:
+        paddle_cuda_ok = bool(paddle.device.is_compiled_with_cuda())
+        paddle_device = paddle.device.get_device()
+        if paddle_cuda_ok:
+            print_stage("PASS", "paddle CUDA build", f"is_compiled_with_cuda=True; device={paddle_device}")
+        else:
+            failed = True
+            print_stage(
+                "FAIL",
+                "paddle CUDA build",
+                "is_compiled_with_cuda=False; install paddlepaddle-gpu from the CUDA 12.9 stable index. CPU PaddleOCR is not a supported DocuRAG real OCR baseline.",
+            )
+    except Exception as exc:
+        failed = True
+        print_stage("FAIL", "paddle CUDA build", f"{type(exc).__name__}: {exc}")
+        traceback.print_exc()
+
+    if paddle_cuda_ok:
+        try:
+            paddle.utils.run_check()
+            print_stage("PASS", "paddle run_check", "PaddlePaddle CUDA runtime check passed")
+        except Exception as exc:
+            failed = True
+            print_stage("FAIL", "paddle run_check", f"{type(exc).__name__}: {exc}")
+            traceback.print_exc()
+
 model_root = Path(os.environ.get("PADDLEOCR_HOME", Path.home() / ".paddleocr")).expanduser()
+ocr_language = "ch"
+ocr_version = "PP-OCRv4"
+det_model_name = "PP-OCRv4_mobile_det"
+rec_model_name = "PP-OCRv4_mobile_rec"
+cls_model_name = "ch_ppocr_mobile_v2.0_cls"
+det_model_dir = model_root / "whl" / "det" / "ch" / "ch_PP-OCRv4_det_infer"
+rec_model_dir = model_root / "whl" / "rec" / "ch" / "ch_PP-OCRv4_rec_infer"
+cls_model_dir = model_root / "whl" / "cls" / "ch" / "ch_ppocr_mobile_v2.0_cls_infer"
+
+print_stage(
+    "INFO",
+    "model selection",
+    (
+        f"language={ocr_language}; ocr_version={ocr_version}; "
+        f"det={det_model_name} -> {det_model_dir}; "
+        f"rec={rec_model_name} -> {rec_model_dir}; "
+        f"cls={cls_model_name} -> {cls_model_dir}"
+    ),
+)
 try:
     if model_root.exists():
         entries = sorted(path.name for path in model_root.iterdir())
@@ -256,16 +306,24 @@ try:
 except Exception as exc:
     print_stage("WARN", "model cache state", f"{type(exc).__name__}: {exc}")
 
-if PaddleOCR is not None:
+if PaddleOCR is not None and paddle_cuda_ok:
     try:
-        engine = PaddleOCR(use_angle_cls=True, lang="en")
+        engine = PaddleOCR(
+            use_angle_cls=True,
+            lang=ocr_language,
+            ocr_version=ocr_version,
+            use_gpu=True,
+            det_model_dir=str(det_model_dir),
+            rec_model_dir=str(rec_model_dir),
+            cls_model_dir=str(cls_model_dir),
+        )
         print_stage("PASS", "engine initialization", "PaddleOCR engine initialized")
     except Exception as exc:
         failed = True
         print_stage("FAIL", "engine initialization or model download", f"{type(exc).__name__}: {exc}")
         traceback.print_exc()
 else:
-    print_stage("SKIP", "engine initialization", "dependency import failed")
+    print_stage("SKIP", "engine initialization", "dependency import failed or PaddlePaddle is not a CUDA build")
 
 if engine is not None:
     try:
@@ -389,6 +447,8 @@ else {
 }
 
 if ($CheckPaddleOcr) {
+    Invoke-CheckLine "nvidia-smi" "nvidia-smi" | Out-Null
+    Invoke-CheckLine "nvcc --version" "nvcc --version" | Out-Null
     Invoke-PaddleOcrBaseline $PaddleOcrSamplePath | Out-Null
 }
 

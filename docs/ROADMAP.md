@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.8.0 的已交付切片，並保留 v0.9.0 GPU Runtime 與 v0.10.0 LLM RAG backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.9.0 的已交付切片，並保留 v0.10.0 LLM RAG backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -222,9 +222,26 @@ Expected Outcome：
 - v0.8 決策：provider-selected `/ocr` 預設走 PaddleOCR，mock 需透過 `/ocr/mock` 或 `DOCURAG_OCR_PROVIDER=mock` 明確 override。
 - 不新增 PDF rendering、image preprocessing、Qdrant、embedding、rerank、LLM、Redis、NATS、worker、資料庫 schema、登入或權限。
 
+## v0.9.0 GPU Runtime Milestone
+
+Goal：將 PaddleOCR real OCR runtime 收斂為 GPU-only，並固定 PP-OCRv4 mobile 中文 / 中英混合模型設定；mock path 仍是 demo-safe override。
+
+Tickets：
+
+- `tasks/phase-09-gpu-runtime/09-01-paddleocr-gpu-only-runtime.md`
+- `tasks/phase-09-gpu-runtime/09-02-paddleocr-v4-mobile-chinese-model.md`
+
+Expected Outcome：
+
+- `backend[real-ocr]` 不再維護 CPU PaddleOCR baseline；provider-selected real OCR 會要求 CUDA Paddle build，非 CUDA build 明確回傳 `paddleocr_gpu_required`。
+- PaddleOCR provider 預設 `lang=ch`、`ocr_version=PP-OCRv4`，並記錄 `PP-OCRv4_mobile_det`、`PP-OCRv4_mobile_rec`、`ch_ppocr_mobile_v2.0_cls` 與對應 cache / model directory。
+- OCR line normalization 保留 line text、bbox、confidence 與 trace metadata，並額外帶出 OCR language、version 與模型資訊。
+- 新增繁中 sample image `sample-data/documents/sample-ocr-zh-tw.png`；本機 Python 3.12.10 + CUDA PaddlePaddle GPU runtime 已完成驗證，實際辨識結果包含 `DocuRAG 繁中 OCR 測試`、`發票號碼：OCR-2026-009`、`客户：星河科技股份有限公司` 與 `總計 : NT$ 12,345`。
+- PP-OCRv4 mobile recognition 主要驗證中文 / 中英數字；若繁中辨識不足，後續候選是 `chinese_cht_PP-OCRv3_rec`，本 milestone 不自動切換。
+- 不新增 LLM、Ollama、vLLM、embedding、Qdrant、rerank、worker、Redis、NATS、資料庫 schema、登入或權限。
+
 Next Candidate Milestone：
 
-- v0.9.0 GPU Runtime Backlog：將 PaddleOCR real OCR runtime 收斂為 GPU-only，並驗證 PP-OCRv4 mobile 中文 / 中英混合模型。
 - v0.10.0 LLM RAG Backlog：在既有 citations contract 上加入 local / OpenAI-compatible LLM answer generation demo。
 - Future Embedding / Qdrant Indexing Spike：在 OCR、GPU runtime 與 LLM demo 邊界穩定後，再把 local keyword retrieval 替換成可驗證的 vector indexing。
 
@@ -240,3 +257,4 @@ Next Candidate Milestone：
 - v0.6.0: Bridge Contracts、OCR provider interface、RAG provider interface、processing status、chunk citation schema 與 processing job contract 已完成。
 - v0.7.0: Real OCR Provider Spike 已完成；PaddleOCR real OCR path 是 optional spike，mock demo 仍為預設可攜 flow。
 - v0.8.0: PaddleOCR Runtime Stabilization 已完成；Python 3.12、PaddleOCR 2.10.0、PaddlePaddle 3.0.0 sample real OCR flow 已驗證，provider-selected OCR 預設走 PaddleOCR。
+- v0.9.0: GPU Runtime 已完成；PaddleOCR real OCR 收斂為 GPU-only，PP-OCRv4 mobile 中文 / 中英混合模型設定、模型目錄文件與繁中 sample 已補齊；本機 real OCR GPU validation、sample invoice 與繁中 provider-selected OCR smoke 已通過。
