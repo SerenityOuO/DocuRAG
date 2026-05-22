@@ -685,14 +685,14 @@ Tickets：
 
 - [x] `tasks/phase-16-hybrid-retrieval/16-01-hybrid-retrieval-contract.md`
 - [x] `tasks/phase-16-hybrid-retrieval/16-02-eval-dataset-expansion-json.md`
-- [ ] `tasks/phase-16-hybrid-retrieval/16-03-hybrid-eval-strategy-integration.md`
+- [x] `tasks/phase-16-hybrid-retrieval/16-03-hybrid-eval-strategy-integration.md`
 - [ ] `tasks/phase-16-hybrid-retrieval/16-04-hybrid-demo-release-sync.md`
 
 Expected Outcome：
 
 - 16-01 已固定 optional `hybrid` strategy label、keyword / vector candidate source、merge policy、dedupe key、trace metadata 與 fallback contract。
 - 16-02 已擴充公開 retrieval eval dataset JSON，讓總 cases 達到 `12`，並涵蓋 lexical mismatch、multi-evidence、near-duplicate chunks、cross-document ambiguity 與 numeric / table lookup 等類型。
-- 16-03 後續新增 optional `hybrid` eval strategy，沿用 Phase 13 Hit Rate@K、MRR@K、Recall@K、latency 與 failure count，並保留 Phase 15 rerank trace metadata 不被破壞。
+- 16-03 已新增 optional `hybrid` eval strategy，沿用 Phase 13 Hit Rate@K、MRR@K、Recall@K、latency 與 failure count，並保留 Phase 15 rerank trace metadata 不被破壞。
 - 16-04 後續補齊 optional hybrid demo / eval smoke，並在 Phase 16 implementation 完成時執行 `v0.16.0` version / docs / TODO / ROADMAP release sync。
 
 Acceptance Criteria：
@@ -727,6 +727,9 @@ Acceptance Criteria：
 - Eval runner 顯式支援 `hybrid` strategy；預設仍是 keyword baseline。
 - Hybrid strategy 不接 `/rag/query` 或 frontend UI，只用於本機 eval runner / smoke flag。
 - Vector branch unavailable 時 fallback 到 keyword-only result，並記錄 trace metadata；不得讓 optional runtime failure 破壞 baseline eval。
+- Runtime status：`HybridEvalProvider` 已接入 eval runner path，使用 deterministic `rank_based_fusion` merge / dedupe keyword 與 vector candidates。
+- Smoke status：`scripts/retrieval-eval-smoke.ps1 -RunHybrid` 已加入並在本機 vector preflight 可用時跑通，Hit Rate@K `0.5833`、MRR@K `0.5`、Recall@K `0.5833`、failure count `0`。
+- Guardrail status：`hybrid` 不接 `/rag/query`、frontend UI 或 default demo path；`hybrid_rerank` 仍留到後續 Phase。
 
 16-04 Demo and Release Plan：
 

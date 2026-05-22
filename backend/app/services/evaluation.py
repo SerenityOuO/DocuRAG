@@ -19,8 +19,8 @@ from app.services.vector_indexing import VectorIndexingService
 from app.services.vector_store import create_qdrant_vector_store
 
 
-EvalStrategy = Literal["keyword", "vector", "vector_rerank"]
-ResultStrategy = Literal["keyword", "vector", "vector_rerank", "vector_unavailable_fallback"]
+EvalStrategy = Literal["keyword", "vector", "vector_rerank", "hybrid"]
+ResultStrategy = Literal["keyword", "vector", "vector_rerank", "hybrid", "vector_unavailable_fallback"]
 
 
 @dataclass(frozen=True)
@@ -266,6 +266,160 @@ class VectorRerankEvalProvider:
         return self.response_builder.build_response(query, rerank_result.chunks)
 
 
+class HybridEvalProvider:
+    name = "hybrid"
+    _fusion_rank_offset = 60
+
+    def __init__(
+        self,
+        keyword_provider: KeywordRagProvider,
+        vector_provider: RagProvider,
+    ) -> None:
+        self.keyword_provider = keyword_provider
+        self.vector_provider = vector_provider
+
+    def query(
+        self,
+        query: str,
+        top_k: int,
+        documents: list[DocumentMetadata],
+    ) -> RagQueryResponse:
+        keyword_chunks = self.keyword_provider.retrieve(query, top_k, documents)
+        vector_response = self.vector_provider.query(query, top_k, documents)
+        vector_error = _vector_fallback_error(vector_response)
+        if vector_error:
+            return self.keyword_provider.build_response(
+                query,
+                self._annotate_keyword_fallback(keyword_chunks, vector_error),
+            )
+
+        merged_chunks = self._merge_candidates(keyword_chunks, vector_response.retrieved_chunks, top_k)
+        return self.keyword_provider.build_response(query, merged_chunks)
+
+    def _annotate_keyword_fallback(
+        self,
+        keyword_chunks: list[RetrievedChunk],
+        vector_error: str,
+    ) -> list[RetrievedChunk]:
+        metadata = {
+            "strategy_label": "hybrid",
+            "hybrid_enabled": "true",
+            "merge_policy": "rank_based_fusion",
+            "branch_failures": "vector",
+            "fallback_reason": vector_error,
+            "vector_retrieval_status": "failed",
+            "vector_retrieval_error": vector_error,
+            "keyword_candidate_count": str(len(keyword_chunks)),
+            "vector_candidate_count": "0",
+            "merged_candidate_count": str(len(keyword_chunks)),
+            "deduped_candidate_count": "0",
+        }
+        return [
+            chunk.model_copy(
+                update={
+                    "metadata": {
+                        **chunk.metadata,
+                        **metadata,
+                        "branches": "keyword",
+                        "final_rank": str(rank),
+                        "keyword_rank": str(rank),
+                        "keyword_score": f"{chunk.score:.6f}",
+                    }
+                }
+            )
+            for rank, chunk in enumerate(keyword_chunks, start=1)
+        ]
+
+    def _merge_candidates(
+        self,
+        keyword_chunks: list[RetrievedChunk],
+        vector_chunks: list[RetrievedChunk],
+        top_k: int,
+    ) -> list[RetrievedChunk]:
+        candidates: dict[str, dict[str, object]] = {}
+
+        for branch_name, chunks in (("keyword", keyword_chunks), ("vector", vector_chunks)):
+            for rank, chunk in enumerate(chunks, start=1):
+                key, key_fallback = _candidate_dedupe_key(chunk)
+                candidate = candidates.setdefault(
+                    key,
+                    {
+                        "chunk": chunk,
+                        "branches": [],
+                        "score": 0.0,
+                        "best_rank": rank,
+                        "dedupe_key": key,
+                        "dedupe_key_fallback": key_fallback,
+                    },
+                )
+                branches = candidate["branches"]
+                assert isinstance(branches, list)
+                if branch_name not in branches:
+                    branches.append(branch_name)
+                candidate["score"] = float(candidate["score"]) + self._fusion_score(rank)
+                candidate["best_rank"] = min(int(candidate["best_rank"]), rank)
+                candidate[f"{branch_name}_rank"] = rank
+                candidate[f"{branch_name}_score"] = chunk.score
+
+                if branch_name == "keyword":
+                    candidate["chunk"] = chunk
+
+        merged_candidates = sorted(
+            candidates.values(),
+            key=lambda candidate: (
+                -float(candidate["score"]),
+                int(candidate["best_rank"]),
+                str(candidate["dedupe_key"]),
+            ),
+        )
+        deduped_count = len(keyword_chunks) + len(vector_chunks) - len(merged_candidates)
+
+        merged_chunks = []
+        for final_rank, candidate in enumerate(merged_candidates[:top_k], start=1):
+            chunk = candidate["chunk"]
+            assert isinstance(chunk, RetrievedChunk)
+            branches = candidate["branches"]
+            assert isinstance(branches, list)
+            metadata = {
+                **chunk.metadata,
+                "strategy_label": "hybrid",
+                "hybrid_enabled": "true",
+                "merge_policy": "rank_based_fusion",
+                "dedupe_key": str(candidate["dedupe_key"]),
+                "dedupe_key_fallback": str(candidate["dedupe_key_fallback"]),
+                "keyword_candidate_count": str(len(keyword_chunks)),
+                "vector_candidate_count": str(len(vector_chunks)),
+                "merged_candidate_count": str(len(merged_candidates)),
+                "deduped_candidate_count": str(deduped_count),
+                "branch_failures": "",
+                "fallback_reason": "",
+                "branches": ",".join(str(branch) for branch in branches),
+                "final_rank": str(final_rank),
+                "merged_score": f"{float(candidate['score']):.6f}",
+            }
+
+            if "keyword_rank" in candidate:
+                metadata["keyword_rank"] = str(candidate["keyword_rank"])
+                metadata["keyword_score"] = f"{float(candidate['keyword_score']):.6f}"
+            if "vector_rank" in candidate:
+                metadata["vector_rank"] = str(candidate["vector_rank"])
+                metadata["vector_score"] = f"{float(candidate['vector_score']):.6f}"
+
+            merged_chunks.append(
+                chunk.model_copy(
+                    update={
+                        "score": float(candidate["score"]),
+                        "metadata": metadata,
+                    }
+                )
+            )
+
+        return merged_chunks
+
+    def _fusion_score(self, rank: int) -> float:
+        return 1 / (rank + self._fusion_rank_offset)
+
+
 def evaluate_retrieval_response(
     case: RetrievalEvalCase,
     response: RagQueryResponse,
@@ -293,12 +447,13 @@ def evaluate_retrieval_response(
     reciprocal_rank = 0.0 if first_relevant_rank is None else 1 / first_relevant_rank
     recall_at_k = _recall_at_k(case, matched_expected_terms, response.retrieved_chunks[: case.top_k])
     fallback_error = _vector_fallback_error(response)
+    result_error = fallback_error if strategy in {"vector", "vector_rerank"} else None
 
     return RetrievalEvalResult(
         case_id=case.id,
         query=case.query,
         top_k=case.top_k,
-        strategy="vector_unavailable_fallback" if fallback_error and strategy in {"vector", "vector_rerank"} else strategy,
+        strategy="vector_unavailable_fallback" if result_error else strategy,
         latency_ms=latency_ms,
         hit=first_relevant_rank is not None,
         first_relevant_rank=first_relevant_rank,
@@ -306,7 +461,7 @@ def evaluate_retrieval_response(
         recall_at_k=recall_at_k,
         matched_expected_terms=matched_expected_terms,
         retrieved_chunks=_retrieved_chunks_output(response.retrieved_chunks[: case.top_k]),
-        error=fallback_error,
+        error=result_error,
     )
 
 
@@ -355,7 +510,7 @@ def create_eval_provider(
 
     vector_provider = VectorRagProvider(keyword_provider, embedding_provider, vector_store)
     environment = {
-        "retrieval_provider": "vector" if strategy == "vector" else "vector_rerank",
+        "retrieval_provider": strategy,
         "embedding_provider": embedding_provider.name,
         "embedding_model": str(getattr(embedding_provider, "model", "unknown")),
         "qdrant_collection": vector_store.collection_name,
@@ -367,6 +522,15 @@ def create_eval_provider(
 
     if strategy == "vector":
         return vector_provider, environment
+
+    if strategy == "hybrid":
+        environment.update(
+            {
+                "merge_policy": "rank_based_fusion",
+                "dedupe_key": "document_id_chunk_id",
+            }
+        )
+        return HybridEvalProvider(keyword_provider, vector_provider), environment
 
     rerank_service = create_rerank_service(settings)
     environment.update(
@@ -387,7 +551,7 @@ def default_repo_root() -> Path:
 def main() -> int:
     repo_root = default_repo_root()
     parser = argparse.ArgumentParser(description="Run DocuRAG retrieval evaluation baseline.")
-    parser.add_argument("--strategy", choices=["keyword", "vector", "vector_rerank"], default="keyword")
+    parser.add_argument("--strategy", choices=["keyword", "vector", "vector_rerank", "hybrid"], default="keyword")
     parser.add_argument("--dataset", type=Path, default=repo_root / "sample-data/eval/retrieval-eval.json")
     parser.add_argument("--sample-documents", type=Path, default=repo_root / "sample-data/documents")
     parser.add_argument("--output", type=Path, default=repo_root / ".tmp/retrieval-eval-result.json")
@@ -478,6 +642,17 @@ def _vector_fallback_error(response: RagQueryResponse) -> str | None:
             return citation.trace_metadata.get("vector_retrieval_error") or "vector retrieval unavailable"
 
     return None
+
+
+def _candidate_dedupe_key(chunk: RetrievedChunk) -> tuple[str, str]:
+    if chunk.document_id and chunk.chunk_id:
+        return f"{chunk.document_id}:{chunk.chunk_id}", ""
+
+    normalized_text = " ".join(chunk.text.casefold().split())
+    if chunk.document_id and normalized_text:
+        return f"{chunk.document_id}:{normalized_text}", "document_text"
+
+    return f"{chunk.filename}:{normalized_text}", "unavailable"
 
 
 def _retrieved_chunks_output(chunks: list[RetrievedChunk]) -> list[dict[str, object]]:

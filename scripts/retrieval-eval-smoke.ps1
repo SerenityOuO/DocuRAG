@@ -1,6 +1,7 @@
 param(
     [switch]$RunVector,
     [switch]$RunVectorRerank,
+    [switch]$RunHybrid,
     [string]$ApiBaseUrl = "http://127.0.0.1:8000",
     [string]$DatasetPath = "",
     [string]$SamplePath = "",
@@ -38,6 +39,9 @@ if ([string]::IsNullOrWhiteSpace($OutputPath)) {
     }
     if ($RunVectorRerank) {
         $resultName = "retrieval-eval-result-vector-rerank.json"
+    }
+    if ($RunHybrid) {
+        $resultName = "retrieval-eval-result-hybrid.json"
     }
     $OutputPath = Join-Path $repoRoot ".tmp/$resultName"
 }
@@ -118,17 +122,25 @@ if (-not (Test-Path -LiteralPath $venvPython)) {
 $resolvedDatasetPath = (Resolve-Path -LiteralPath $DatasetPath).Path
 $resolvedSamplePath = (Resolve-Path -LiteralPath $SamplePath).Path
 $strategy = "keyword"
-if ($RunVector -and $RunVectorRerank) {
-    throw "Use either -RunVector or -RunVectorRerank, not both."
+$optionalModeCount = 0
+if ($RunVector) { $optionalModeCount += 1 }
+if ($RunVectorRerank) { $optionalModeCount += 1 }
+if ($RunHybrid) { $optionalModeCount += 1 }
+if ($optionalModeCount -gt 1) {
+    throw "Use only one optional strategy flag: -RunVector, -RunVectorRerank, or -RunHybrid."
 }
 
-if ($RunVector -or $RunVectorRerank) {
+if ($RunVector -or $RunVectorRerank -or $RunHybrid) {
     if ($RunVectorRerank) {
         $strategy = "vector_rerank"
         $env:DOCURAG_RERANK_PROVIDER = $RerankProvider
         $env:DOCURAG_RERANK_MODEL = $RerankModel
         $env:DOCURAG_RERANK_TOP_K = [string]$RerankTopK
         $env:DOCURAG_RERANK_TIMEOUT_SECONDS = [string]$RerankTimeoutSeconds
+    }
+    elseif ($RunHybrid) {
+        $strategy = "hybrid"
+        $env:DOCURAG_RERANK_PROVIDER = ""
     }
     else {
         $strategy = "vector"
@@ -159,7 +171,7 @@ if ($RunVector -or $RunVectorRerank) {
         $embeddingTags = Invoke-RestMethod -Method Get -Uri $embeddingTagsUrl
     }
     catch {
-        throw "Ollama embedding service is required for -RunVector but $embeddingTagsUrl was unavailable. Start Ollama and pull $EmbeddingModel first. $($_.Exception.Message)"
+        throw "Ollama embedding service is required for optional vector-backed eval but $embeddingTagsUrl was unavailable. Start Ollama and pull $EmbeddingModel first. $($_.Exception.Message)"
     }
 
     $embeddingModelNames = @($embeddingTags.models | ForEach-Object { $_.name })
@@ -169,7 +181,7 @@ if ($RunVector -or $RunVectorRerank) {
         $qdrantCollectionInfo = Invoke-RestMethod -Method Get -Uri $qdrantCollectionUrl
     }
     catch {
-        throw "Qdrant collection '$QdrantCollection' is required for -RunVector but $qdrantCollectionUrl was unavailable. Run scripts/qdrant-collection-smoke.ps1 first. $($_.Exception.Message)"
+        throw "Qdrant collection '$QdrantCollection' is required for optional vector-backed eval but $qdrantCollectionUrl was unavailable. Run scripts/qdrant-collection-smoke.ps1 first. $($_.Exception.Message)"
     }
 
     $vectors = $qdrantCollectionInfo.result.config.params.vectors
@@ -252,6 +264,14 @@ elseif ($RunVectorRerank) {
 
     $rerankMetadataRows = @($result.results | ForEach-Object { $_.retrieved_chunks } | Where-Object { $null -ne $_.metadata.rerank_enabled })
     Assert-Condition ($rerankMetadataRows.Count -gt 0) "Vector rerank eval did not include rerank trace metadata. Install optional rerank runtime or check fallback metadata."
+}
+elseif ($RunHybrid) {
+    Assert-Condition ($result.summary.failure_count -eq 0) "Hybrid eval reported failures. Check Ollama embedding, Qdrant, and manual indexing readiness."
+    Assert-Condition ($result.environment.retrieval_provider -eq "hybrid") "Hybrid eval did not report hybrid provider metadata."
+    Assert-Condition ($result.environment.indexed_chunk_count -gt 0) "Hybrid eval did not index sample chunks."
+
+    $hybridMetadataRows = @($result.results | ForEach-Object { $_.retrieved_chunks } | Where-Object { $_.metadata.strategy_label -eq "hybrid" })
+    Assert-Condition ($hybridMetadataRows.Count -gt 0) "Hybrid eval did not include hybrid trace metadata."
 }
 else {
     Assert-Condition ($result.summary.failure_count -eq 0) "Keyword eval should not report failures."

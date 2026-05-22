@@ -13,6 +13,15 @@
 - 更新 retrieval eval smoke script，新增 optional `-RunHybrid` 或等價明確 flag。
 - 補齊 backend tests，覆蓋 success、vector branch fallback、dedupe、trace metadata 與 baseline keyword 不受影響。
 
+## Implementation Notes
+
+- `hybrid` 已加入 retrieval eval runner strategy choices，預設仍為 `keyword`。
+- `HybridEvalProvider` 只存在於 eval runner path；不接 `/rag/query` 或 frontend。
+- Merge policy 固定為 `rank_based_fusion`，使用 existing keyword branch 與 optional vector branch。
+- Dedupe key 優先使用 `document_id:chunk_id`，並保留 branch rank、branch score、merged score、dedupe count 與 fallback metadata。
+- Vector branch unavailable 時回到 keyword-only candidates，chunk / citation trace 會記錄 `branch_failures="vector"` 與 `fallback_reason`，且不把 optional branch fallback 算成 eval failure。
+- `scripts/retrieval-eval-smoke.ps1 -RunHybrid` 已加入 explicit optional smoke flag。
+
 ## Out of Scope
 
 - 不把 hybrid strategy 接到 `/rag/query`、frontend UI 或 default demo path。
@@ -39,11 +48,11 @@
 
 ## Acceptance Criteria
 
-- [ ] Eval runner 支援 explicit `hybrid` strategy，且預設仍是 keyword baseline。
-- [ ] Hybrid strategy 會 merge / dedupe keyword 與 vector candidates，並保留 trace metadata。
-- [ ] Vector branch unavailable 時會 fallback 到 keyword-only result，不讓 baseline eval 失敗。
-- [ ] Tests 覆蓋 hybrid success、fallback、dedupe 與 baseline safety。
-- [ ] Optional hybrid smoke flag 已文件化或實作，且不要求沒有 vector runtime 的環境必跑。
+- [x] Eval runner 支援 explicit `hybrid` strategy，且預設仍是 keyword baseline。
+- [x] Hybrid strategy 會 merge / dedupe keyword 與 vector candidates，並保留 trace metadata。
+- [x] Vector branch unavailable 時會 fallback 到 keyword-only result，不讓 baseline eval 失敗。
+- [x] Tests 覆蓋 hybrid success、fallback、dedupe 與 baseline safety。
+- [x] Optional hybrid smoke flag 已文件化或實作，且不要求沒有 vector runtime 的環境必跑。
 
 ## Validation
 

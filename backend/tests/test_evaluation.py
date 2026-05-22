@@ -1,5 +1,6 @@
 from app.schemas.rag import RagQueryResponse, RetrievedChunk
 from app.services.evaluation import (
+    HybridEvalProvider,
     RetrievalEvalCase,
     VectorRerankEvalProvider,
     evaluate_retrieval_response,
@@ -73,6 +74,15 @@ class StubVectorProvider:
 
     def query(self, query: str, top_k: int, documents: list[object]) -> RagQueryResponse:
         return self.response
+
+
+class StubKeywordProvider(KeywordRagProvider):
+    def __init__(self, chunks: list[RetrievedChunk]) -> None:
+        super().__init__()
+        self.chunks = chunks
+
+    def retrieve(self, query: str, top_k: int, documents: list[object]) -> list[RetrievedChunk]:
+        return self.chunks[:top_k]
 
 
 def test_evaluate_retrieval_response_calculates_hit_mrr_and_recall() -> None:
@@ -159,6 +169,91 @@ def test_evaluate_retrieval_response_marks_vector_rerank_vector_fallback() -> No
     assert result.strategy == "vector_unavailable_fallback"
     assert result.error == "Cannot connect to Qdrant"
     assert result.hit is True
+
+
+def test_evaluate_retrieval_response_does_not_count_hybrid_vector_fallback_as_failure() -> None:
+    response = make_response(
+        [
+            make_chunk(
+                "Payment terms: Net 15",
+                metadata={
+                    "strategy_label": "hybrid",
+                    "vector_retrieval_status": "failed",
+                    "vector_retrieval_error": "Cannot connect to Qdrant",
+                },
+            )
+        ]
+    )
+
+    result = evaluate_retrieval_response(make_case(), response, "hybrid", latency_ms=1.0)
+
+    assert result.strategy == "hybrid"
+    assert result.error is None
+    assert result.hit is True
+
+
+def test_hybrid_eval_provider_merges_and_dedupes_keyword_and_vector_candidates() -> None:
+    provider = HybridEvalProvider(
+        keyword_provider=StubKeywordProvider(
+            [
+                make_chunk("Payment terms: Net 15", "chunk-001", metadata={"keyword_marker": "yes"}),
+                make_chunk("Amount due: USD 1,248.50", "chunk-002"),
+            ]
+        ),
+        vector_provider=StubVectorProvider(
+            make_response(
+                [
+                    make_chunk("Payment terms: Net 15", "chunk-001", metadata={"vector_score": "0.900000"}),
+                    make_chunk("Line items include monitor arms.", "chunk-003", metadata={"vector_score": "0.500000"}),
+                ]
+            )
+        ),
+    )
+
+    response = provider.query("payment terms", 3, [])
+
+    assert [chunk.chunk_id for chunk in response.retrieved_chunks] == ["chunk-001", "chunk-002", "chunk-003"]
+    first_metadata = response.retrieved_chunks[0].metadata
+    assert first_metadata["strategy_label"] == "hybrid"
+    assert first_metadata["merge_policy"] == "rank_based_fusion"
+    assert first_metadata["branches"] == "keyword,vector"
+    assert first_metadata["keyword_rank"] == "1"
+    assert first_metadata["vector_rank"] == "1"
+    assert first_metadata["keyword_candidate_count"] == "2"
+    assert first_metadata["vector_candidate_count"] == "2"
+    assert first_metadata["merged_candidate_count"] == "3"
+    assert first_metadata["deduped_candidate_count"] == "1"
+    assert response.citations[0].trace_metadata["strategy_label"] == "hybrid"
+
+
+def test_hybrid_eval_provider_falls_back_to_keyword_when_vector_branch_fails() -> None:
+    provider = HybridEvalProvider(
+        keyword_provider=StubKeywordProvider([make_chunk("Payment terms: Net 15", "chunk-001")]),
+        vector_provider=StubVectorProvider(
+            make_response(
+                [
+                    make_chunk(
+                        "Payment terms: Net 15",
+                        "chunk-001",
+                        metadata={
+                            "vector_retrieval_status": "failed",
+                            "vector_retrieval_error": "Qdrant unavailable",
+                        },
+                    )
+                ]
+            )
+        ),
+    )
+
+    response = provider.query("payment terms", 3, [])
+
+    assert [chunk.chunk_id for chunk in response.retrieved_chunks] == ["chunk-001"]
+    metadata = response.retrieved_chunks[0].metadata
+    assert metadata["strategy_label"] == "hybrid"
+    assert metadata["branches"] == "keyword"
+    assert metadata["branch_failures"] == "vector"
+    assert metadata["fallback_reason"] == "Qdrant unavailable"
+    assert response.citations[0].trace_metadata["fallback_reason"] == "Qdrant unavailable"
 
 
 def test_vector_rerank_eval_provider_reranks_vector_candidates() -> None:

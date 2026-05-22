@@ -52,7 +52,7 @@
 8. `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md` 已完成，補齊 rerank demo / eval smoke 文件並完成 `v0.15.0` release/version sync。
 9. `tasks/phase-16-hybrid-retrieval/16-01-hybrid-retrieval-contract.md` 已完成，固定 optional `hybrid` retrieval contract、merge policy、dedupe key 與 fallback trace metadata。
 10. `tasks/phase-16-hybrid-retrieval/16-02-eval-dataset-expansion-json.md` 已完成，公開 retrieval eval dataset 已擴充到 12 筆並覆蓋 Phase 16 retrieval quality case tags。
-11. `tasks/phase-16-hybrid-retrieval/16-03-hybrid-eval-strategy-integration.md` 待執行，將 optional `hybrid` 接入 retrieval eval runner。
+11. `tasks/phase-16-hybrid-retrieval/16-03-hybrid-eval-strategy-integration.md` 已完成，將 optional `hybrid` 接入 retrieval eval runner 並新增 explicit `-RunHybrid` smoke flag。
 12. `tasks/phase-16-hybrid-retrieval/16-04-hybrid-demo-release-sync.md` 待執行，補齊 hybrid demo / eval smoke 並執行 `v0.16.0` release/version sync。
 
 ## Phase 00 - Bootstrap Documents and Tickets
@@ -325,7 +325,7 @@ Phase 15 guardrails：
 
 - [x] `tasks/phase-16-hybrid-retrieval/16-01-hybrid-retrieval-contract.md`: 固定 optional `hybrid` strategy、candidate source、merge policy、dedupe key 與 trace metadata contract；文件 ticket，不 bump version。
 - [x] `tasks/phase-16-hybrid-retrieval/16-02-eval-dataset-expansion-json.md`: 依 Phase 14 plan 擴充公開 retrieval eval dataset JSON，至少讓總 cases 達到 `12`，並保留 baseline keyword eval 可重跑。
-- [ ] `tasks/phase-16-hybrid-retrieval/16-03-hybrid-eval-strategy-integration.md`: 將 optional `hybrid` strategy 接入 retrieval eval runner，沿用 Phase 13 metrics 並保留 fallback trace metadata。
+- [x] `tasks/phase-16-hybrid-retrieval/16-03-hybrid-eval-strategy-integration.md`: 將 optional `hybrid` strategy 接入 retrieval eval runner，沿用 Phase 13 metrics 並保留 fallback trace metadata。
 - [ ] `tasks/phase-16-hybrid-retrieval/16-04-hybrid-demo-release-sync.md`: 補齊 optional hybrid demo / eval smoke，並在 implementation 完成時執行 `v0.16.0` release/version sync。
 - [x] Phase 16 planning validation：`rg -n "v0.16.0|Phase 16|16-01|16-04|hybrid retrieval" TODO.md docs/ROADMAP.md tasks/phase-16-hybrid-retrieval/*.md` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
 
@@ -360,6 +360,15 @@ Phase 16 guardrails：
 - Tags 已覆蓋 `lexical_mismatch`、`multi_evidence`、`near_duplicate`、`cross_document_ambiguity` 與 `numeric_table_lookup`。
 - Baseline keyword eval smoke 仍可在無 Ollama embedding、Qdrant 或 FastEmbed runtime 時執行。
 - 16-02 validation：`scripts/test-backend.ps1` 通過；`scripts/retrieval-eval-smoke.ps1` 通過；`git diff --check` 通過。
+
+16-03 hybrid eval status：
+
+- Eval runner 已支援 explicit `hybrid` strategy，預設仍為 keyword baseline。
+- `hybrid` 使用 existing keyword branch + optional vector branch，依 deterministic `rank_based_fusion` merge / dedupe candidates。
+- Hybrid trace metadata 保留 branch ranks、branch scores、merged score、candidate counts、dedupe count、branch failures 與 fallback reason。
+- Vector branch unavailable 時 fallback 到 keyword-only candidates，不讓 baseline eval 失敗，也不把 optional hybrid fallback 算成 eval failure。
+- `scripts/retrieval-eval-smoke.ps1 -RunHybrid` 已可執行 optional hybrid eval smoke；本機 vector preflight 可用時已跑通，Hit Rate@K `0.5833`、MRR@K `0.5`、Recall@K `0.5833`、failure count `0`。
+- 16-03 validation：`scripts/test-backend.ps1` 通過，`120 passed`；baseline `scripts/retrieval-eval-smoke.ps1` 通過，keyword Hit Rate@K `0.6667`、MRR@K `0.4861`、Recall@K `0.625`、failure count `0`；optional `scripts/retrieval-eval-smoke.ps1 -RunHybrid` 通過；`git diff --check` 通過。
 
 ## Release Verification Status
 
