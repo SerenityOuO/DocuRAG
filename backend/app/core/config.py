@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     qdrant_vector_size: int = 1024
     qdrant_timeout_seconds: float = 10.0
     rag_retrieval_provider: str = "keyword"
+    rerank_provider: str | None = None
+    rerank_model: str = "BAAI/bge-reranker-base"
+    rerank_top_k: int = 5
+    rerank_timeout_seconds: float = 30.0
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

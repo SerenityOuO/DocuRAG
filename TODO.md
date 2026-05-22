@@ -46,7 +46,7 @@
 3. `tasks/phase-14-retrieval-quality/14-03-eval-dataset-expansion-plan.md` 已完成，規劃 eval dataset 擴充方向。
 4. `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md` 已完成，規劃 future demo / validation / release checklist。
 5. `tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md` 已完成，選定 FastEmbed + `BAAI/bge-reranker-base` 作為 disabled-by-default `vector_rerank` runtime spike 起點。
-6. `tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md` 待執行，實作 disabled-by-default rerank adapter。
+6. `tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md` 已完成，新增 disabled-by-default FastEmbed rerank adapter building block。
 7. `tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md` 待執行，規劃後續 `vector_rerank` eval integration。
 8. `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md` 待執行，規劃後續 demo / release sync。
 
@@ -292,7 +292,8 @@ Phase 14 guardrails：
 
 - [x] `tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md`: 決定 Phase 15 local-first rerank provider / model、dependency / model download 邊界與 `vector_rerank` 優先順序；文件票，不新增 runtime。
 - [x] 15-01 validation：`rg -n "v0.15.0|Phase 15|rerank provider|vector_rerank|hybrid" TODO.md docs/ROADMAP.md tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
-- [ ] `tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md`: 後續實作 disabled-by-default rerank provider adapter，保留 keyword baseline 與 vector retrieval fallback。
+- [x] `tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md`: 實作 disabled-by-default rerank provider adapter，保留 keyword baseline 與 vector retrieval fallback。
+- [x] 15-02 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
 - [ ] `tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md`: 後續將 optional `vector_rerank` 接入 retrieval eval runner，輸出 Phase 13 metrics 與 rerank trace metadata。
 - [ ] `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md`: 後續補齊 optional rerank demo / eval smoke 並執行 `v0.15.0` release/version sync。
 - [x] Phase 15 planning validation：`rg -n "v0.15.0|Phase 15|15-01|15-04|rerank runtime" TODO.md docs/ROADMAP.md tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
