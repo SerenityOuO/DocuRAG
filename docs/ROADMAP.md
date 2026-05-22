@@ -768,14 +768,14 @@ Goal：把 Phase 13-16 已建立的 retrieval eval output、rerank metadata 與 
 
 Tickets：
 
-- [ ] `tasks/phase-17-retrieval-trace-ui/17-01-retrieval-trace-ui-contract.md`
+- [x] `tasks/phase-17-retrieval-trace-ui/17-01-retrieval-trace-ui-contract.md`
 - [ ] `tasks/phase-17-retrieval-trace-ui/17-02-frontend-retrieval-trace-panel.md`
 - [ ] `tasks/phase-17-retrieval-trace-ui/17-03-eval-result-report-summary.md`
 - [ ] `tasks/phase-17-retrieval-trace-ui/17-04-trace-ui-demo-release-sync.md`
 
 Expected Outcome：
 
-- 17-01 固定 trace UI contract，涵蓋 keyword、vector、`vector_rerank`、`hybrid`、fallback 與 missing metadata display。
+- 17-01 已固定 trace UI contract，涵蓋 keyword、vector、`vector_rerank`、`hybrid`、fallback 與 missing metadata display。
 - 17-02 在既有 RAG result UI 加入 compact trace panel，只讀既有 response，不新增 backend endpoint。
 - 17-03 改善 retrieval eval smoke / summary output，讓 strategy metrics、fallback count 與 trace metadata 更適合 demo / README 摘錄。
 - 17-04 補齊 `v0.17.0` version / docs / TODO / ROADMAP release sync，並執行 backend、frontend、demo smoke 與 eval smoke validation。
@@ -787,12 +787,13 @@ Acceptance Criteria：
 - Frontend trace UI 只能讀既有 response；若缺少 metadata，必須 graceful hidden 或顯示清楚 fallback state。
 - `17-04` 才允許 `v0.17.0` version bump；前置 tickets 若未完成 release artifact，必須寫 `Version bump required: no`。
 
-17-01 Trace UI Contract Plan：
+17-01 Trace UI Contract Status：
 
-- Run-level display：strategy label、answer source、retrieval source、candidate count、latency、fallback state 與 provider status。
-- Candidate-level display：rank、score、document id、chunk id、filename、source text preview、branch metadata 與 missing metadata fallback。
-- Rerank display：rerank provider、rerank status、rerank score、original rank、reranked rank 與 fallback reason。
-- Hybrid display：merge policy、dedupe count、branches、branch rank、branch score、merged score、branch failures 與 fallback reason。
+- Run-level display 已固定：strategy label、answer source、retrieval source、candidate count、latency、fallback state 與 provider status；缺少 strategy metadata 時顯示 `unknown` 或既有 baseline label。
+- Candidate-level display 已固定：rank、score、document id、chunk id、filename、source text preview、page / bbox / confidence、branch metadata 與 missing metadata fallback。
+- `vector_rerank` display 已固定：rerank provider、model、status、input candidate count、rerank top K、rerank latency、original rank、reranked rank、rerank score 與 fallback reason。
+- `hybrid` display 已固定：merge policy、dedupe key、keyword / vector / merged candidate count、dedupe count、branches、branch rank、branch score、merged score、branch failures 與 fallback reason。
+- Missing metadata behavior 已固定：graceful hidden 或顯示 `metadata unavailable`；不得讓 keyword baseline demo 因缺少 optional metadata 失效。
 - Contract boundary：文件 ticket，不修改 runtime、不新增 API、不新增 frontend implementation。
 
 17-02 Frontend Trace Panel Plan：

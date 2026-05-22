@@ -55,8 +55,8 @@
 10. `tasks/phase-16-hybrid-retrieval/16-02-eval-dataset-expansion-json.md` 已完成，公開 retrieval eval dataset 已擴充到 12 筆並覆蓋 Phase 16 retrieval quality case tags。
 11. `tasks/phase-16-hybrid-retrieval/16-03-hybrid-eval-strategy-integration.md` 已完成，將 optional `hybrid` 接入 retrieval eval runner 並新增 explicit `-RunHybrid` smoke flag。
 12. `tasks/phase-16-hybrid-retrieval/16-04-hybrid-demo-release-sync.md` 已完成，補齊 hybrid demo / eval smoke 並執行 `v0.16.0` release/version sync。
-13. `tasks/phase-17-retrieval-trace-ui/17-01-retrieval-trace-ui-contract.md` 尚未開始，下一步先固定 retrieval trace UI / eval visibility contract。
-14. `tasks/phase-17-retrieval-trace-ui/17-02-frontend-retrieval-trace-panel.md` 尚未開始，需在 contract 完成後才實作 frontend trace panel。
+13. `tasks/phase-17-retrieval-trace-ui/17-01-retrieval-trace-ui-contract.md` 已完成，固定 retrieval trace UI / eval visibility contract。
+14. `tasks/phase-17-retrieval-trace-ui/17-02-frontend-retrieval-trace-panel.md` 尚未開始，下一步在既有 RAG result UI 實作 frontend trace panel。
 15. `tasks/phase-17-retrieval-trace-ui/17-03-eval-result-report-summary.md` 尚未開始，需在 trace contract 後改善 eval result summary。
 16. `tasks/phase-17-retrieval-trace-ui/17-04-trace-ui-demo-release-sync.md` 尚未開始，最後才執行 `v0.17.0` release/version sync。
 
@@ -388,7 +388,8 @@ Phase 16 guardrails：
 
 ## MVP v0.17.0 Retrieval Trace UI / Eval Visibility Backlog
 
-- [ ] `tasks/phase-17-retrieval-trace-ui/17-01-retrieval-trace-ui-contract.md`: 固定 frontend trace UI / eval visibility contract，涵蓋 keyword、vector、`vector_rerank` 與 `hybrid` metadata；文件 ticket，不 bump version。
+- [x] `tasks/phase-17-retrieval-trace-ui/17-01-retrieval-trace-ui-contract.md`: 固定 frontend trace UI / eval visibility contract，涵蓋 keyword、vector、`vector_rerank`、`hybrid`、fallback 與 missing metadata display；文件 ticket，不 bump version。
+- [x] 17-01 validation：`rg -n "v0.17.0|Phase 17|trace UI|hybrid|vector_rerank" TODO.md docs/ROADMAP.md tasks/phase-17-retrieval-trace-ui/17-01-retrieval-trace-ui-contract.md` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
 - [ ] `tasks/phase-17-retrieval-trace-ui/17-02-frontend-retrieval-trace-panel.md`: 在既有 RAG result UI 顯示 retrieval trace panel，只讀既有 response，不新增 backend API。
 - [ ] `tasks/phase-17-retrieval-trace-ui/17-03-eval-result-report-summary.md`: 改善 retrieval eval runner / smoke summary，讓 strategy metrics、fallback count 與 trace metadata 更適合 demo / README 摘錄。
 - [ ] `tasks/phase-17-retrieval-trace-ui/17-04-trace-ui-demo-release-sync.md`: 補齊 trace UI / eval visibility demo validation，並在 implementation 完成時執行 `v0.17.0` release/version sync。
@@ -397,13 +398,14 @@ Phase 16 guardrails：
 Phase 17 goal：
 
 - 把 Phase 13-16 已產生的 retrieval eval output、rerank metadata 與 hybrid trace metadata，轉成可展示、可閱讀、可驗證的 frontend / report visibility。
-- 17-01 先固定 trace UI contract；17-02 才能改 frontend；17-03 才能改善 eval reporting；17-04 才允許 `v0.17.0` version bump 與 release docs sync。
+- 17-01 已固定 trace UI contract；17-02 才能改 frontend；17-03 才能改善 eval reporting；17-04 才允許 `v0.17.0` version bump 與 release docs sync。
 - 保留 baseline keyword demo 與 optional vector / `vector_rerank` / `hybrid` eval smoke 可重跑。
 
 Phase 17 guardrails：
 
 - 先執行 `17-01` contract，再開始 frontend 或 reporting implementation。
 - Frontend trace panel 只能讀既有 response，不得為 UI 新增 backend endpoint 或改 API contract。
+- Missing metadata 必須 graceful hidden 或顯示清楚 fallback state，不得讓 keyword baseline demo 因缺少 optional metadata 失效。
 - 不讓 hybrid、vector retrieval、rerank 或 eval strategy default-on。
 - 不實作 `hybrid_rerank`、production eval dashboard、LLM-as-judge、answer faithfulness、citation quality scoring、query rewriting 或 BM25 dependency，除非後續 ticket 明確要求。
 - 不新增外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC、VLM parser、PDF rendering、production OCR pipeline 或 deployment 設定。
@@ -431,4 +433,4 @@ Phase 17 guardrails：
 - [x] v0.13.0: Retrieval Evaluation Baseline 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.13.0`，公開 eval dataset、retrieval eval runner、baseline eval smoke、optional vector eval smoke 與 metrics output 已補齊。
 - [x] v0.15.0: Rerank Runtime Spike 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.15.0`，FastEmbed provider decision、disabled-by-default rerank adapter、optional `vector_rerank` eval strategy、rerank trace metadata 與 baseline smoke 已補齊。
 - [x] v0.16.0: Hybrid Retrieval Slice 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.16.0`，公開 eval dataset 擴充到 12 筆、optional `hybrid` eval strategy、hybrid trace metadata、baseline smoke 與 optional `-RunHybrid` smoke 已補齊。
-- [ ] v0.17.0: Retrieval Trace UI / Eval Visibility 尚未開始；tickets 已規劃，version / README / backend README / frontend README / TODO / ROADMAP release sync 留到 `17-04`。
+- [ ] v0.17.0: Retrieval Trace UI / Eval Visibility 已開始；`17-01` trace UI contract 已完成，version / README / backend README / frontend README / TODO / ROADMAP release sync 留到 `17-04`。
