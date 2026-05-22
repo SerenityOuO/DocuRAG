@@ -45,8 +45,8 @@
 2. `tasks/phase-14-retrieval-quality/14-02-retrieval-quality-contract.md` 已完成，規劃 future rerank / hybrid trace contract。
 3. `tasks/phase-14-retrieval-quality/14-03-eval-dataset-expansion-plan.md` 已完成，規劃 eval dataset 擴充方向。
 4. `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md` 已完成，規劃 future demo / validation / release checklist。
-5. `tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md` 待執行，先決定 `v0.15.0` rerank runtime provider 與依賴邊界。
-6. `tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md` 待執行，規劃後續 disabled-by-default rerank adapter。
+5. `tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md` 已完成，選定 FastEmbed + `BAAI/bge-reranker-base` 作為 disabled-by-default `vector_rerank` runtime spike 起點。
+6. `tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md` 待執行，實作 disabled-by-default rerank adapter。
 7. `tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md` 待執行，規劃後續 `vector_rerank` eval integration。
 8. `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md` 待執行，規劃後續 demo / release sync。
 
@@ -290,7 +290,8 @@ Phase 14 guardrails：
 
 ## MVP v0.15.0 Rerank Runtime Spike Backlog
 
-- [ ] `tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md`: 決定 Phase 15 local-first rerank provider / model、dependency / model download 邊界與 `vector_rerank` 優先順序；文件票，不新增 runtime。
+- [x] `tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md`: 決定 Phase 15 local-first rerank provider / model、dependency / model download 邊界與 `vector_rerank` 優先順序；文件票，不新增 runtime。
+- [x] 15-01 validation：`rg -n "v0.15.0|Phase 15|rerank provider|vector_rerank|hybrid" TODO.md docs/ROADMAP.md tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
 - [ ] `tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md`: 後續實作 disabled-by-default rerank provider adapter，保留 keyword baseline 與 vector retrieval fallback。
 - [ ] `tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md`: 後續將 optional `vector_rerank` 接入 retrieval eval runner，輸出 Phase 13 metrics 與 rerank trace metadata。
 - [ ] `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md`: 後續補齊 optional rerank demo / eval smoke 並執行 `v0.15.0` release/version sync。
@@ -299,6 +300,7 @@ Phase 14 guardrails：
 Phase 15 goal：
 
 - 以 Phase 14 planning 為基礎，優先做 disabled-by-default `vector_rerank` runtime spike。
+- 15-01 已選定第一版 rerank runtime 路線為 FastEmbed `TextCrossEncoder` + `BAAI/bge-reranker-base`；實作仍必須 disabled-by-default。
 - 保留 keyword baseline 可在無 external runtime 時執行。
 - 使用 Phase 13 eval metrics 比較 `vector` 與 `vector_rerank`，先不實作 hybrid search。
 

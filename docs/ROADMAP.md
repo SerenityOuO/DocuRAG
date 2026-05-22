@@ -609,15 +609,15 @@ Goal：在 Phase 14 retrieval quality planning 完成後，規劃下一階段 di
 
 Tickets：
 
-- [ ] `tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md`
+- [x] `tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md`
 - [ ] `tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md`
 - [ ] `tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md`
 - [ ] `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md`
 
 Expected Outcome：
 
-- 15-01 先決定 local-first rerank provider / model、dependency / model download 邊界與 approval 需求，不新增 runtime。
-- 15-02 後續實作 disabled-by-default rerank adapter，輸入 query + vector candidates，輸出保留 citation metadata 的 reranked candidates。
+- 15-01 已決定 local-first rerank provider / model、dependency / model download 邊界與 approval 需求，不新增 runtime。
+- 15-02 後續實作 disabled-by-default FastEmbed rerank adapter，輸入 query + vector candidates，輸出保留 citation metadata 的 reranked candidates。
 - 15-03 後續新增 optional `vector_rerank` eval strategy，沿用 Phase 13 Hit Rate@K、MRR@K、Recall@K、latency 與 failure count。
 - 15-04 後續補齊 optional rerank demo / eval smoke，並在 runtime spike 完成時執行 `v0.15.0` version / docs / TODO / ROADMAP release sync。
 
@@ -627,6 +627,18 @@ Acceptance Criteria：
 - Phase 15 目標明確聚焦 `vector_rerank`，不把 hybrid search 混進同一階段。
 - 所有 tickets 都保留 keyword baseline fallback，並明確避免 default-on optional strategy。
 - `15-04` 才允許 `v0.15.0` version bump；前置 tickets 若未完成 release artifact，必須寫 `Version bump required: no`。
+
+15-01 Provider Decision：
+
+- Rerank provider：`fastembed`。
+- Rerank model：`BAAI/bge-reranker-base`。
+- Strategy label：`vector_rerank`。
+- Enable flag：`DOCURAG_RERANK_PROVIDER=fastembed`；未設定或設為 `disabled` 時必須保持 no-op provider。
+- Default env：`DOCURAG_RERANK_MODEL=BAAI/bge-reranker-base`、`DOCURAG_RERANK_TOP_K=5`。
+- 選擇理由：FastEmbed 是 Qdrant 官方文件示範的 local reranker runtime path；`BAAI/bge-reranker-base` 在 FastEmbed supported cross encoder list 中，授權 MIT，且比 CC-BY-NC multilingual Jina model 更適合作為公開 side project 的第一版 local-first candidate。
+- `BAAI/bge-reranker-v2-m3` 與 `Qwen/Qwen3-Reranker-0.6B` 保留為 future candidate；前者目前未出現在 FastEmbed supported reranker list，後者需要 `sentence-transformers` / `transformers` 或 vLLM，且現有 Ollama path 沒有 native rerank API。
+- 15-01 不新增 dependency 或 model download；15-02 若新增 runtime，必須使用 optional dependency、lazy import 與 unavailable fallback，且不可讓 backend startup 自動下載 model。
+- Hybrid search 延後到後續 Phase，不與 `vector_rerank` runtime spike 混在同一階段。
 
 Validation：
 
