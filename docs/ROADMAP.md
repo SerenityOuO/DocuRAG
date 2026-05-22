@@ -548,7 +548,7 @@ Tickets：
 
 - [x] `tasks/phase-14-retrieval-quality/14-01-rerank-provider-decision.md`
 - [x] `tasks/phase-14-retrieval-quality/14-02-retrieval-quality-contract.md`
-- [ ] `tasks/phase-14-retrieval-quality/14-03-eval-dataset-expansion-plan.md`
+- [x] `tasks/phase-14-retrieval-quality/14-03-eval-dataset-expansion-plan.md`
 - [ ] `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md`
 
 Expected Outcome：
@@ -577,6 +577,9 @@ Expected Outcome：
 14-03 Eval Dataset Expansion Plan：
 
 - 規劃 lexical mismatch、multi-evidence、near-duplicate chunks、cross-document ambiguity 等 future eval case。
+- 補充 numeric / table lookup case，讓金額、數量、稅額、日期等結構化資訊能在 future dataset 中被單獨標記。
+- Expected evidence 以 document fixture、document type、欄位/value、page hint、evidence description 與 case tags 表示，不綁死未來資料庫 id。
+- Quality gates：schema validation、第一版至少 `12` 個 cases、每個核心 case type 至少 `2` 個、每筆 item 需有 expected evidence 與 tag coverage。
 - 保持公開虛構資料原則，不新增真實文件或敏感資料。
 - 不修改 `sample-data/eval/retrieval-eval.json`。
 
