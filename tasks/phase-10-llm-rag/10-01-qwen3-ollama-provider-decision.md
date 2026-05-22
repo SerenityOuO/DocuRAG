@@ -25,6 +25,12 @@
 - 不實作 VLM parser、PDF rendering、image preprocessing 或 JSON 欄位抽取。
 - 不新增 embedding、Qdrant、rerank、worker、Redis、NATS、資料庫 schema、登入或權限。
 
+## Release Impact
+
+- Target version: `v0.10.0`。
+- Version bump required: no，本 ticket 只做 Phase 10 provider decision。
+- 完成後更新 TODO 與 ROADMAP，標示 Phase 10 尚未 release complete。
+
 ## Files likely to change
 
 - `docs/ROADMAP.md`

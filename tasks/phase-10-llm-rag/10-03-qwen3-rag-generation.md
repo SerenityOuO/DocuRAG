@@ -22,6 +22,12 @@
 - 不新增 worker queue、Redis、NATS、資料庫 schema、登入或權限。
 - 不改 OCR pipeline。
 
+## Release Impact
+
+- Target version: `v0.10.0`。
+- Version bump required: no，本 ticket 先接 Phase 10 generation path，最終版本更新由 `10-04` 收斂。
+- 完成後更新 TODO 與相關文件，標示 Phase 10 尚未 release complete。
+
 ## Files likely to change
 
 - `backend/app/services/rag.py`

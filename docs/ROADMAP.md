@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.6 的已交付切片，並新增 v0.7 Real OCR Provider Spike ticket backlog，作為接真正 OCR 前的第一個受控實驗階段。
+本 roadmap 記錄 Phase 00 到 v0.8.0 的已交付切片，並保留 v0.9.0 GPU Runtime 與 v0.10.0 LLM RAG backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.5.1 checklist。
+- TODO 包含 Phase 00 到 v0.10.0 checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -65,6 +65,10 @@ Expected Outcome：
 - v0.5.1 只做 demo hardening，不新增 Qdrant、embedding、rerank、真正 LLM、OpenAI API、Ollama、vLLM、Redis、NATS、PostgreSQL、登入或 RBAC。
 - v0.6.0 只做 bridge contracts，不接真正 OCR、embedding、Qdrant、rerank、LLM、Redis、NATS、PostgreSQL、登入或 RBAC。
 - v0.7.0 只做單一 local OCR provider spike，預設仍保留 mock provider，不接 queue、DB、Qdrant、embedding、rerank、LLM、Redis、NATS、登入或 RBAC。
+- v0.8.0 只做 PaddleOCR runtime stabilization，不新增 PDF rendering、Qdrant、embedding、rerank、LLM、worker、DB、登入或 RBAC。
+- v0.9.0 只做 PaddleOCR GPU runtime 與模型選擇 backlog，不接 LLM、embedding、Qdrant、worker、DB、登入或 RBAC。
+- v0.10.0 只做 LLM RAG provider / client / demo smoke，不接 embedding、Qdrant、rerank、worker、DB、登入或 RBAC。
+- `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
 ## v0.2.0 Demo UI Milestone
@@ -199,7 +203,7 @@ Phase 07 provider decision：
 - normalization 狀態：07-03 已把 PaddleOCR line text、page、bbox、confidence 與 metadata 正規化到 `OcrTextLine`，並由 chunks、citations 與 retrieved_chunks 一致帶出 trace metadata。
 - demo 狀態：07-04 已加入 `sample-ocr-invoice.png` 與 `-RunRealOcr` optional smoke / seed script；預設 validation 仍只要求 mock flow 可用。
 
-## Phase 08 PaddleOCR Runtime Stabilization
+## v0.8.0 PaddleOCR Runtime Stabilization Milestone
 
 Goal：在 v0.7 real OCR spike 後，針對 PaddleOCR 環境問題建立可重現 baseline、修復 dependency / runtime 相容性，並驗證預設 PaddleOCR flow。
 
@@ -215,12 +219,14 @@ Expected Outcome：
 - `backend[real-ocr]` dependency 與安裝文件能支援受控初始化 PaddleOCR。
 - provider-selected OCR 在預設 PaddleOCR flow 下可用 sample image 完成驗證。
 - `DOCURAG_OCR_PROVIDER=mock` 仍可保留 demo-safe mock path。
-- Phase 08 決策：provider-selected `/ocr` 預設走 PaddleOCR，mock 需透過 `/ocr/mock` 或 `DOCURAG_OCR_PROVIDER=mock` 明確 override。
+- v0.8 決策：provider-selected `/ocr` 預設走 PaddleOCR，mock 需透過 `/ocr/mock` 或 `DOCURAG_OCR_PROVIDER=mock` 明確 override。
 - 不新增 PDF rendering、image preprocessing、Qdrant、embedding、rerank、LLM、Redis、NATS、worker、資料庫 schema、登入或權限。
 
 Next Candidate Milestone：
 
-- v0.9.0 Embedding / Qdrant Indexing Spike：在 OCR 與 chunk / citation contract 穩定後，將 local keyword retrieval 替換成可驗證的 vector indexing。
+- v0.9.0 GPU Runtime Backlog：將 PaddleOCR real OCR runtime 收斂為 GPU-only，並驗證 PP-OCRv4 mobile 中文 / 中英混合模型。
+- v0.10.0 LLM RAG Backlog：在既有 citations contract 上加入 local / OpenAI-compatible LLM answer generation demo。
+- Future Embedding / Qdrant Indexing Spike：在 OCR、GPU runtime 與 LLM demo 邊界穩定後，再把 local keyword retrieval 替換成可驗證的 vector indexing。
 
 ## Release Verification
 
@@ -233,3 +239,4 @@ Next Candidate Milestone：
 - v0.5.1: Demo Hardening、公開 sample data、demo seed script、API smoke test、5 分鐘 README demo flow、Docker build / Compose demo smoke / seed script 已完成。
 - v0.6.0: Bridge Contracts、OCR provider interface、RAG provider interface、processing status、chunk citation schema 與 processing job contract 已完成。
 - v0.7.0: Real OCR Provider Spike 已完成；PaddleOCR real OCR path 是 optional spike，mock demo 仍為預設可攜 flow。
+- v0.8.0: PaddleOCR Runtime Stabilization 已完成；Python 3.12、PaddleOCR 2.10.0、PaddlePaddle 3.0.0 sample real OCR flow 已驗證，provider-selected OCR 預設走 PaddleOCR。

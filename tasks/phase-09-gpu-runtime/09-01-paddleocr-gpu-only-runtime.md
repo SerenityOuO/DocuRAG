@@ -20,6 +20,12 @@
 - 不新增 worker queue、Redis、NATS、資料庫 schema、登入或權限。
 - 不調整 OCR quality tuning、PDF rendering、image preprocessing 或版面分析。
 
+## Release Impact
+
+- Target version: `v0.9.0`。
+- Version bump required: no，本 ticket 是 Phase 09 的第一個 runtime baseline，最終版本更新由 `09-02` 收斂。
+- 完成後仍需更新 TODO 與相關文件，標示 Phase 09 尚未 release complete。
+
 ## Files likely to change
 
 - `backend/pyproject.toml`

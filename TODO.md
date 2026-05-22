@@ -1,6 +1,16 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.7 ticket backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.10 ticket backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+
+## Release Version Map
+
+已完成舊 ticket 不回填 `Release Impact`；從目前 release 修正與後續 backlog 起，Phase 與版本號必須明確對應：
+
+- Phase 08 -> `v0.8.0`
+- Phase 09 -> `v0.9.0`
+- Phase 10 -> `v0.10.0`
+
+後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -132,30 +142,32 @@
 - [x] backend 與 frontend 版本更新為 `0.7.0`。
 - [x] 確認 Phase 07 仍未接 queue、Redis、NATS、Qdrant、embedding、rerank、LLM、PostgreSQL、登入或 RBAC。
 
-## Phase 08 - PaddleOCR Runtime Stabilization
+## MVP v0.8.0 PaddleOCR Runtime Stabilization
 
 - [x] 執行 `tasks/phase-08-paddleocr-runtime/08-01-paddleocr-environment-baseline.md`。
 - [x] 執行 `tasks/phase-08-paddleocr-runtime/08-02-paddleocr-dependency-fix.md`。
 - [x] 執行 `tasks/phase-08-paddleocr-runtime/08-03-paddleocr-default-flow-validation.md`。
 - [x] 確認預設 PaddleOCR flow 可驗證，且 mock override 仍可重跑。
-- [x] 確認 Phase 08 不新增 PDF rendering、Qdrant、embedding、rerank、LLM、Redis、NATS、worker、資料庫 schema、登入或權限。
-
+- [x] 確認 v0.8.0 不新增 PDF rendering、Qdrant、embedding、rerank、LLM、Redis、NATS、worker、資料庫 schema、登入或權限。
 - [x] 以 Python 3.12、PaddleOCR 2.10.0 與 PaddlePaddle 3.0.0 驗證 real OCR sample，可完成 provider-selected OCR 與 chunks 產生。
+- [x] backend 與 frontend 版本更新為 `0.8.0`。
+- [x] Release 文件以 `v0.8.0` 記錄 Phase 08，不再用裸 `Phase 08` 當 release 條目。
+
 ## Parking Lot
 
-- [ ] Production-grade OCR / VLM parser（v0.7 只先做單一 provider spike）。
+- [ ] Production-grade OCR / VLM parser（v0.7 / v0.8 只先完成 provider spike 與 runtime stabilization）。
 - [ ] Embedding 與 Qdrant indexing。
 - [ ] Redis session / cache / rate limit。
 - [ ] NATS worker。
 - [ ] LLM-based RAG generation / rerank / citation trace evaluation。
 - [ ] vLLM / Ollama / OpenAI-compatible provider。
 
-## Phase 09 - GPU Runtime Backlog
+## MVP v0.9.0 GPU Runtime Backlog
 
 - [ ] `tasks/phase-09-gpu-runtime/09-01-paddleocr-gpu-only-runtime.md`: PaddleOCR GPU-only runtime baseline。
 - [ ] `tasks/phase-09-gpu-runtime/09-02-paddleocr-v4-mobile-chinese-model.md`: PaddleOCR PP-OCRv4 mobile 中文 / 中英混合模型。
 
-## Phase 10 - LLM RAG Backlog
+## MVP v0.10.0 LLM RAG Backlog
 
 - [ ] `tasks/phase-10-llm-rag/10-01-qwen3-ollama-provider-decision.md`: 依 `goal.md` 固定 Ollama `qwen3:8b` / `qwen3-vl:8b` provider 決策。
 - [ ] `tasks/phase-10-llm-rag/10-02-ollama-qwen3-client.md`: 新增 Ollama `qwen3:8b` LLM client。
@@ -176,3 +188,4 @@
 - [x] v0.5.1: Demo Hardening、公開 sample data、demo seed script、API smoke test 與 Docker Compose demo 驗證已完成。
 - [x] v0.6.0: Bridge Contracts、OCR provider interface、RAG provider interface、processing status、chunk citation schema 與 processing job contract。
 - [x] v0.7.0: Real OCR Provider Spike 已完成；07-01 到 07-04 已執行，Docker validation 需待 Docker Desktop daemon 可用後重跑。
+- [x] v0.8.0: PaddleOCR Runtime Stabilization 已完成；Python 3.12、PaddleOCR 2.10.0、PaddlePaddle 3.0.0 sample real OCR flow 已驗證。

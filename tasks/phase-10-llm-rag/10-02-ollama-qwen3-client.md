@@ -22,6 +22,12 @@
 - 不接 embedding、Qdrant、rerank、worker、Redis、NATS、資料庫 schema、登入或權限。
 - 不改 frontend UI。
 
+## Release Impact
+
+- Target version: `v0.10.0`。
+- Version bump required: no，本 ticket 只新增 Phase 10 client building block。
+- 完成後更新 TODO 與相關文件，標示 Phase 10 尚未 release complete。
+
 ## Files likely to change
 
 - `backend/app/core/config.py`

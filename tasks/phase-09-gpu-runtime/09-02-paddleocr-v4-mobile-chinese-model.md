@@ -20,15 +20,31 @@
 - 不做 PDF rendering、image preprocessing、版面分析、表格抽取或 OCR quality tuning。
 - 不新增 embedding、Qdrant、rerank、LLM、worker、Redis、NATS、資料庫 schema、登入或權限。
 
+## Release Impact
+
+- Target version: `v0.9.0`。
+- Version bump required: yes，完成後 Phase 09 應以 `v0.9.0` release 記錄。
+- 同步更新 backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP。
+
 ## Files likely to change
 
+- `backend/pyproject.toml`
 - `backend/app/core/config.py`
 - `backend/app/api/routes/documents.py`
 - `backend/app/services/ocr.py`
 - `backend/tests/test_documents.py`
+- `backend/tests/test_health.py`
+- `frontend/package.json`
+- `frontend/package-lock.json`
+- `frontend/src/App.vue`
+- `infra/docker-compose.yml`
 - `scripts/check-dev-env.ps1`
 - `docs/LOCAL_DEV_SETUP.md`
+- `README.md`
 - `backend/README.md`
+- `frontend/README.md`
+- `TODO.md`
+- `docs/ROADMAP.md`
 
 ## Acceptance Criteria
 

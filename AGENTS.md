@@ -9,10 +9,19 @@
 - 一張 ticket 應小到 Codex 一次可以完成，完成後應可單獨 commit。
 - 若任務超出 ticket 的 `Scope`，先停止並回報，不要順手擴張。
 - 嚴格遵守 `Out of Scope`，尤其不要提前實作 OCR、RAG、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
-- 實作前先檢查 `README.md`、`TODO.md`、`docs/PRD.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md` 與當前 ticket。
-- 每次完成後更新 `TODO.md` 中對應 checklist，並執行 ticket 指定的 validation。
+- 開始任何 ticket 前，必須先閱讀 `GOAL.md`，確認目前專案目標、當前階段與下一步優先順序，再用它判斷要執行哪張 ticket；若 `GOAL.md` 不存在，先停止並回報，不要自行猜測下一步。
+- 實作前先檢查 `GOAL.md`、`README.md`、`TODO.md`、`docs/PRD.md`、`docs/architecture.md`、`docs/ROADMAP.md` 與當前 ticket。
+- 每次完成後更新 `TODO.md` 中對應 checklist，執行 ticket 指定的 validation，並再次檢查 `GOAL.md`，確認本次修改沒有偏離目標、沒有超出 ticket scope，也沒有提前實作未排定功能。
 - 文件 ticket 只改 Markdown；程式 ticket 才能新增或修改程式碼。
 - 優先最小改動、貼合既有風格，不為未來擴充提前抽象化。
+
+版本與文件同步規範：
+
+- 已完成的舊 ticket 不強制回填 `Release Impact`；從後續 ticket 起，每個 Phase 必須對應明確版本號。一般 Phase 使用 `v0.<phase>.0`，例如 Phase 08 對應 `v0.8.0`、Phase 09 對應 `v0.9.0`、Phase 10 對應 `v0.10.0`。
+- 若同一 Phase 需要 patch hardening，可使用 `v0.<phase>.<patch>`，但 ticket 必須在 `Release Impact` 寫明 target version 與原因。
+- 完成會產生 release 的 Phase ticket 時，必須同步更新 backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、`README.md`、`backend/README.md`、`frontend/README.md`、`TODO.md` 與 `docs/ROADMAP.md`。
+- `README.md` 的 `Release Status` 只能列版本號，不要用裸 `Phase XX` 當 release 條目；Phase 細節放在 `docs/ROADMAP.md`。
+- 若 ticket 不 bump version，必須在 `Release Impact` 明確寫 `Version bump required: no`，並說明不更新版本的理由。
 
 建議執行順序：
 

@@ -1,6 +1,6 @@
 # DocuRAG AgentOps Frontend
 
-最小 Vue 3 + Vite demo UI，用來檢查 backend health、上傳文件、顯示文件列表、執行 OCR，並用 local RAG chat 查看 deterministic answer、citations 與 retrieved chunks。v0.5.1 搭配公開 sample data、demo seed script 與 API smoke test，讓 GitHub / 面試展示可以快速重跑。v0.6 bridge 保持 UI contract 不變，backend 目前只用 `KeywordRagProvider` 回傳 local keyword RAG 結果。v0.7 的 real OCR spike 已選定 PaddleOCR，backend 已新增 provider-selected OCR endpoint；Phase 08 起 provider-selected `/ocr` 預設走 PaddleOCR，mock path 仍保留供沒有 real OCR dependency 的環境重跑。
+最小 Vue 3 + Vite demo UI，用來檢查 backend health、上傳文件、顯示文件列表、執行 OCR，並用 local RAG chat 查看 deterministic answer、citations 與 retrieved chunks。v0.5.1 搭配公開 sample data、demo seed script 與 API smoke test，讓 GitHub / 面試展示可以快速重跑。v0.6 bridge 保持 UI contract 不變，backend 目前只用 `KeywordRagProvider` 回傳 local keyword RAG 結果。v0.7 的 real OCR spike 已選定 PaddleOCR，backend 已新增 provider-selected OCR endpoint；v0.8 起 provider-selected `/ocr` 預設走 PaddleOCR，mock path 仍保留供沒有 real OCR dependency 的環境重跑。
 
 ## Install
 
@@ -46,7 +46,7 @@ npm.cmd run build
 
 ## Demo UI
 
-v0.7.0 UI 支援：
+v0.8.0 UI 支援：
 
 - `GET /health` 顯示 backend 狀態。
 - 首頁只顯示目前版本號。
@@ -70,4 +70,4 @@ payment due date Net 15
 
 在 backend 已執行 `scripts/seed-demo-data.ps1` 後，RAG result 預期會引用 `mock-invoice-aurora.txt`，retrieved chunks 會包含 `Invoice number: AUR-2026-051`、`Due date: 2026-06-15` 或 `Payment terms: Net 15` 等公開 demo 文字。
 
-目前 frontend 展示的是 local keyword RAG baseline，不是 embedding、Qdrant、rerank 或真正 LLM。backend v0.6 bridge 只把 `/rag/query` 整理到 `KeywordRagProvider`，並用 `processing`、`processing_jobs` 與 chunk / citation trace contract 顯示 upload / OCR / indexing / job / citation metadata。Phase 08 provider-selected OCR 預設走 PaddleOCR；若 dependency、Python 版本或模型不可用，backend 會用清楚錯誤與 processing metadata 呈現，不會靜默 fallback 到 mock。既有 mock OCR UI flow 仍可用 `Run Mock Override` 重跑；這不代表已完成 PDF rendering、image preprocessing 或 production OCR pipeline。
+目前 frontend 展示的是 local keyword RAG baseline，不是 embedding、Qdrant、rerank 或真正 LLM。backend v0.6 bridge 只把 `/rag/query` 整理到 `KeywordRagProvider`，並用 `processing`、`processing_jobs` 與 chunk / citation trace contract 顯示 upload / OCR / indexing / job / citation metadata。v0.8 provider-selected OCR 預設走 PaddleOCR；若 dependency、Python 版本或模型不可用，backend 會用清楚錯誤與 processing metadata 呈現，不會靜默 fallback 到 mock。既有 mock OCR UI flow 仍可用 `Run Mock Override` 重跑；這不代表已完成 PDF rendering、image preprocessing 或 production OCR pipeline。

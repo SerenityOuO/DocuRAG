@@ -20,15 +20,29 @@
 - 不接 embedding、Qdrant、rerank、worker、Redis、NATS、資料庫 schema、登入或權限。
 - 不改 OCR GPU 或 OCR model selection。
 
+## Release Impact
+
+- Target version: `v0.10.0`。
+- Version bump required: yes，完成後 Phase 10 應以 `v0.10.0` release 記錄。
+- 同步更新 backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP。
+
 ## Files likely to change
 
+- `backend/pyproject.toml`
+- `backend/app/core/config.py`
+- `backend/tests/test_health.py`
 - `scripts/demo-smoke-test.ps1`
 - `frontend/src/App.vue`
 - `frontend/src/api/client.ts`
+- `frontend/package.json`
+- `frontend/package-lock.json`
+- `infra/docker-compose.yml`
 - `README.md`
 - `backend/README.md`
 - `frontend/README.md`
 - `docs/LOCAL_DEV_SETUP.md`
+- `TODO.md`
+- `docs/ROADMAP.md`
 
 ## Acceptance Criteria
 

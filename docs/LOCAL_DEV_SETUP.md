@@ -185,7 +185,7 @@ data/documents.json
 
 也可用 `DOCURAG_DATA_DIR` 覆寫資料根目錄。
 
-## Phase 07 / Phase 08 Real OCR Flow
+## v0.7 / v0.8 Real OCR Flow
 
 mock demo 不需要 PaddleOCR dependency，明確設定 `DOCURAG_OCR_PROVIDER=mock` 或直接呼叫 `/ocr/mock`：
 
@@ -196,7 +196,7 @@ $env:DOCURAG_OCR_PROVIDER="mock"
 py -3.12 -m uvicorn app.main:app --reload
 ```
 
-Phase 08 起 provider-selected `/ocr` 預設走 PaddleOCR。若要手動嘗試 provider-selected real OCR，先用 Python 3.12 安裝 optional extra，再啟動 backend：
+v0.8 起 provider-selected `/ocr` 預設走 PaddleOCR。若要手動嘗試 provider-selected real OCR，先用 Python 3.12 安裝 optional extra，再啟動 backend：
 
 ```powershell
 cd backend
@@ -213,9 +213,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps
 
 若 PaddleOCR dependency、模型下載或 Docker 環境不可用，`-RunRealOcr` 會明確失敗；mock flow 仍應可透過 `/ocr/mock` 或 `DOCURAG_OCR_PROVIDER=mock` 重跑。這仍不是 production OCR pipeline。
 
-## Phase 08 PaddleOCR Environment Baseline
+## v0.8 PaddleOCR Environment Baseline
 
-Phase 08 起本專案 backend runtime 固定使用 Python 3.12。Python 3.13+ 或 3.11 會被 `PaddleOcrProvider` 明確拒絕，並回傳 `paddleocr_python_unsupported`，不會靜默 fallback 到 mock。
+v0.8 起本專案 backend runtime 固定使用 Python 3.12。Python 3.13+ 或 3.11 會被 `PaddleOcrProvider` 明確拒絕，並回傳 `paddleocr_python_unsupported`，不會靜默 fallback 到 mock。
 
 Windows CPU 安裝建議：
 
@@ -304,7 +304,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps
 
 2026-05-21 08-03 validation notes：
 
-- Phase 08 決策：不設定 `DOCURAG_OCR_PROVIDER` 時，provider-selected `/ocr` 預設走 `paddleocr`；需要 mock override 時，設定 `DOCURAG_OCR_PROVIDER=mock` 或直接呼叫 `/documents/{document_id}/ocr/mock`。
+- v0.8 決策：不設定 `DOCURAG_OCR_PROVIDER` 時，provider-selected `/ocr` 預設走 `paddleocr`；需要 mock override 時，設定 `DOCURAG_OCR_PROVIDER=mock` 或直接呼叫 `/documents/{document_id}/ocr/mock`。
 - 舊版 Python launcher 預設命令仍因本機 `py.exe` 無法執行而失敗：`指定的登入工作階段不存在。可能已被終止。`
 - 使用 fallback Python 執行 `C:\Users\USER\AppData\Local\Python\pythoncore-3.14-64\python.exe -m pytest`，結果 `48 passed`；新增測試覆蓋預設 provider 與 `DOCURAG_OCR_PROVIDER=mock` override。
 - `npm.cmd run build` 在一般 sandbox 內因 esbuild 讀取上層目錄被拒失敗；以同一命令取得許可後重跑通過。

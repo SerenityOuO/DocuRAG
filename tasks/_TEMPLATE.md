@@ -14,6 +14,13 @@
 - 條列本 ticket 明確不處理的內容。
 - 若工作超出這裡，應停止並拆新 ticket。
 
+## Release Impact
+
+- Target version: `v0.x.0` 或 `none`。
+- Version bump required: yes/no。
+- 若需要 bump version，確認同步更新 backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、TODO 與 ROADMAP。
+- 若不需要 bump version，說明原因，避免 Phase 完成後版本號與文件狀態脫節。
+
 ## Files likely to change
 
 - `path/to/file`
