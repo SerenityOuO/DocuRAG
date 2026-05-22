@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.16.0 hybrid retrieval slice 的已交付切片，並追蹤後續 retrieval quality backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.16.0 hybrid retrieval slice 的已交付切片，並追蹤 v0.17.0 retrieval trace UI / eval visibility backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.16.0 planning checklist。
+- TODO 包含 Phase 00 到 v0.17.0 planning checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -75,6 +75,7 @@ Expected Outcome：
 - v0.14.0 目前只做 retrieval quality planning、rerank / hybrid contract 草案、dataset expansion plan 與 future demo / release plan；不實作 runtime、外部依賴、worker、DB、登入或 RBAC。
 - v0.15.0 只做 disabled-by-default `vector_rerank` runtime spike；保留 keyword baseline fallback，不實作 hybrid search、worker、DB、登入或 RBAC。
 - v0.16.0 只做公開 eval dataset expansion 與 optional `hybrid` eval strategy；不做 default-on hybrid、不新增 BM25 dependency、frontend trace UI、worker、DB、登入或 RBAC。
+- v0.17.0 只做 retrieval trace UI / eval visibility；frontend 只讀既有 response，不新增 API，不做 production eval dashboard、`hybrid_rerank`、worker、DB、登入或 RBAC。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -759,4 +760,74 @@ Out of Scope：
 
 - 不實作 `hybrid_rerank`、frontend trace UI、BM25 dependency、LLM-as-judge、answer faithfulness、citation quality scoring 或 eval dashboard。
 - 不新增外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入或 RBAC。
+- 不新增 VLM parser、PDF rendering、production OCR pipeline、deployment 設定或 release tag。
+
+## v0.17.0 Retrieval Trace UI / Eval Visibility Backlog
+
+Goal：把 Phase 13-16 已建立的 retrieval eval output、rerank metadata 與 hybrid trace metadata，整理成可展示、可閱讀、可驗證的 frontend trace UI 與 eval summary。Phase 17 不新增 production eval dashboard，不改 API，不讓 optional strategy default-on。
+
+Tickets：
+
+- [ ] `tasks/phase-17-retrieval-trace-ui/17-01-retrieval-trace-ui-contract.md`
+- [ ] `tasks/phase-17-retrieval-trace-ui/17-02-frontend-retrieval-trace-panel.md`
+- [ ] `tasks/phase-17-retrieval-trace-ui/17-03-eval-result-report-summary.md`
+- [ ] `tasks/phase-17-retrieval-trace-ui/17-04-trace-ui-demo-release-sync.md`
+
+Expected Outcome：
+
+- 17-01 固定 trace UI contract，涵蓋 keyword、vector、`vector_rerank`、`hybrid`、fallback 與 missing metadata display。
+- 17-02 在既有 RAG result UI 加入 compact trace panel，只讀既有 response，不新增 backend endpoint。
+- 17-03 改善 retrieval eval smoke / summary output，讓 strategy metrics、fallback count 與 trace metadata 更適合 demo / README 摘錄。
+- 17-04 補齊 `v0.17.0` version / docs / TODO / ROADMAP release sync，並執行 backend、frontend、demo smoke 與 eval smoke validation。
+
+Acceptance Criteria：
+
+- Phase 17 tickets 都包含 Goal、Scope、Out of Scope、Files likely to change、Acceptance Criteria、Validation 與 Release Impact。
+- Phase 17 目標明確聚焦 retrieval trace UI / eval visibility，不把 `hybrid_rerank`、production eval dashboard、DB、worker 或 auth 混進同一階段。
+- Frontend trace UI 只能讀既有 response；若缺少 metadata，必須 graceful hidden 或顯示清楚 fallback state。
+- `17-04` 才允許 `v0.17.0` version bump；前置 tickets 若未完成 release artifact，必須寫 `Version bump required: no`。
+
+17-01 Trace UI Contract Plan：
+
+- Run-level display：strategy label、answer source、retrieval source、candidate count、latency、fallback state 與 provider status。
+- Candidate-level display：rank、score、document id、chunk id、filename、source text preview、branch metadata 與 missing metadata fallback。
+- Rerank display：rerank provider、rerank status、rerank score、original rank、reranked rank 與 fallback reason。
+- Hybrid display：merge policy、dedupe count、branches、branch rank、branch score、merged score、branch failures 與 fallback reason。
+- Contract boundary：文件 ticket，不修改 runtime、不新增 API、不新增 frontend implementation。
+
+17-02 Frontend Trace Panel Plan：
+
+- 在既有 RAG result UI 中加入 compact trace panel / table。
+- Baseline keyword result 必須仍可讀；metadata 缺失不可造成 UI error。
+- UI 顯示應支援 keyword、vector、`vector_rerank` 與 `hybrid` metadata，但不得接 live eval runner 或新增 comparison dashboard。
+- Validation 以 `npm.cmd run build` 為基本門檻；若 dev server 可用，需用 Browser 檢查 trace UI 不重疊、不破版。
+
+17-03 Eval Summary Plan：
+
+- Retrieval eval summary 應清楚列出 strategy、case count、Hit Rate@K、MRR@K、Recall@K、latency、failure count 與 fallback count。
+- Optional vector / `vector_rerank` / `hybrid` 仍需 explicit flag 與 local preflight；baseline keyword eval smoke 不依賴 external runtime。
+- 不新增真實資料、不新增 dashboard、不新增 DB 或 external dependency。
+
+17-04 Demo and Release Plan：
+
+- Baseline validations：backend tests、frontend build、baseline demo smoke、baseline retrieval eval smoke 與 `git diff --check`。
+- Optional validations：local preflight 可用時執行 vector、`vector_rerank` 與 `hybrid` eval smoke。
+- Release sync：backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 需同步到 `v0.17.0`。
+- Release status：production eval dashboard、`hybrid_rerank`、worker、DB、auth 與 deployment 仍留到後續 Phase。
+
+Validation：
+
+- `rg -n "v0.17.0|Phase 17|17-01|17-04|trace UI|eval visibility" TODO.md docs/ROADMAP.md tasks/phase-17-retrieval-trace-ui/*.md`
+- `git diff --check`
+
+Release Impact：
+
+- Target version: `v0.17.0`。
+- Version bump required: no for `17-01` to `17-03`; yes for `17-04`。
+- 原因：Phase 17 需要在 trace UI / eval visibility implementation 完成並通過 release validation 後，才形成 `v0.17.0` release artifact。
+
+Out of Scope：
+
+- 不實作 `hybrid_rerank`、production eval dashboard、BM25 dependency、LLM-as-judge、answer faithfulness、citation quality scoring 或 query rewriting。
+- 不新增 backend API endpoint、外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入或 RBAC。
 - 不新增 VLM parser、PDF rendering、production OCR pipeline、deployment 設定或 release tag。
