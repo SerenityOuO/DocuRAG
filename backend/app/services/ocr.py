@@ -1,10 +1,15 @@
 from datetime import datetime
+import logging
 import os
 from pathlib import Path
 import sys
+from time import perf_counter
 from typing import Protocol
 
 from app.schemas.documents import BoundingBox, DocumentMetadata, OcrResult, OcrStatus, OcrTextLine, ProcessingJobType
+
+
+logger = logging.getLogger(__name__)
 
 
 class OcrProvider(Protocol):
@@ -90,6 +95,9 @@ class PaddleOcrProvider:
         det_model_dir: str | None = None,
         rec_model_dir: str | None = None,
         cls_model_dir: str | None = None,
+        use_angle_cls: bool = False,
+        det_limit_side_len: int = 960,
+        rec_batch_num: int = 6,
     ) -> None:
         self.language = language
         self.ocr_version = ocr_version
@@ -99,7 +107,29 @@ class PaddleOcrProvider:
         self.det_model_dir = self._resolve_model_dir(det_model_dir, "det", "ch", "ch_PP-OCRv4_det_infer")
         self.rec_model_dir = self._resolve_model_dir(rec_model_dir, "rec", "ch", "ch_PP-OCRv4_rec_infer")
         self.cls_model_dir = self._resolve_model_dir(cls_model_dir, "cls", "ch", "ch_ppocr_mobile_v2.0_cls_infer")
+        self.use_angle_cls = use_angle_cls
+        self.det_limit_side_len = det_limit_side_len
+        self.rec_batch_num = rec_batch_num
         self._engine = None
+        self._engine_preload_duration_ms: float | None = None
+
+    def preload(self) -> None:
+        already_loaded = self._engine is not None
+        started_at = perf_counter()
+        self._load_engine()
+        duration_ms = (perf_counter() - started_at) * 1000
+
+        if not already_loaded:
+            self._engine_preload_duration_ms = duration_ms
+
+        logger.info(
+            "PaddleOCR engine preload completed: already_loaded=%s duration_ms=%.2f use_angle_cls=%s det_limit_side_len=%s rec_batch_num=%s",
+            already_loaded,
+            duration_ms,
+            self.use_angle_cls,
+            self.det_limit_side_len,
+            self.rec_batch_num,
+        )
 
     def extract(
         self,
@@ -121,45 +151,86 @@ class PaddleOcrProvider:
                 extracted_at,
             )
 
+        total_started_at = perf_counter()
+        engine_preloaded_before_request = self._engine is not None
+        engine_load_started_at = perf_counter()
         try:
             engine = self._load_engine()
         except PaddleOcrUnsupportedPythonError as exc:
+            engine_load_ms = (perf_counter() - engine_load_started_at) * 1000
             return self._failed_result(
                 "paddleocr_python_unsupported",
                 str(exc),
                 extracted_at,
+                self._timing_fields(
+                    engine_preloaded_before_request=engine_preloaded_before_request,
+                    engine_load_ms=engine_load_ms,
+                    total_ms=(perf_counter() - total_started_at) * 1000,
+                ),
             )
         except PaddleOcrGpuRequiredError as exc:
+            engine_load_ms = (perf_counter() - engine_load_started_at) * 1000
             return self._failed_result(
                 "paddleocr_gpu_required",
                 str(exc),
                 extracted_at,
+                self._timing_fields(
+                    engine_preloaded_before_request=engine_preloaded_before_request,
+                    engine_load_ms=engine_load_ms,
+                    total_ms=(perf_counter() - total_started_at) * 1000,
+                ),
             )
         except ImportError:
+            engine_load_ms = (perf_counter() - engine_load_started_at) * 1000
             return self._failed_result(
                 "paddleocr_dependency_missing",
                 "PaddleOCR GPU dependency is not installed. Install the CUDA PaddlePaddle wheel and backend real OCR extra to use provider-selected OCR.",
                 extracted_at,
+                self._timing_fields(
+                    engine_preloaded_before_request=engine_preloaded_before_request,
+                    engine_load_ms=engine_load_ms,
+                    total_ms=(perf_counter() - total_started_at) * 1000,
+                ),
             )
         except Exception as exc:
+            engine_load_ms = (perf_counter() - engine_load_started_at) * 1000
             return self._failed_result(
                 "paddleocr_initialization_failed",
                 f"PaddleOCR initialization failed: {exc}",
                 extracted_at,
+                self._timing_fields(
+                    engine_preloaded_before_request=engine_preloaded_before_request,
+                    engine_load_ms=engine_load_ms,
+                    total_ms=(perf_counter() - total_started_at) * 1000,
+                ),
             )
+        engine_load_ms = (perf_counter() - engine_load_started_at) * 1000
 
+        if not engine_preloaded_before_request and self._engine_preload_duration_ms is None:
+            self._engine_preload_duration_ms = engine_load_ms
+
+        inference_started_at = perf_counter()
         try:
             try:
-                raw_result = engine.ocr(str(file_path), cls=True)
+                raw_result = engine.ocr(str(file_path), cls=self.use_angle_cls)
             except TypeError:
                 raw_result = engine.ocr(str(file_path))
         except Exception as exc:
+            inference_ms = (perf_counter() - inference_started_at) * 1000
             return self._failed_result(
                 "paddleocr_runtime_failed",
                 f"PaddleOCR failed while processing the document: {exc}",
                 extracted_at,
+                self._timing_fields(
+                    engine_preloaded_before_request=engine_preloaded_before_request,
+                    engine_load_ms=engine_load_ms,
+                    inference_ms=inference_ms,
+                    total_ms=(perf_counter() - total_started_at) * 1000,
+                ),
             )
+        inference_ms = (perf_counter() - inference_started_at) * 1000
 
+        normalization_started_at = perf_counter()
         ocr_lines: list[OcrTextLine] = []
         confidences: list[float] = []
 
@@ -228,16 +299,28 @@ class PaddleOcrProvider:
                             "det_model": self.det_model_name,
                             "rec_model": self.rec_model_name,
                             "cls_model": self.cls_model_name,
+                            "use_angle_cls": str(self.use_angle_cls).lower(),
                             "line_index": str(len(ocr_lines) + 1),
                         },
                     )
                 )
+
+        normalization_ms = (perf_counter() - normalization_started_at) * 1000
+        total_ms = (perf_counter() - total_started_at) * 1000
+        timing_fields = self._timing_fields(
+            engine_preloaded_before_request=engine_preloaded_before_request,
+            engine_load_ms=engine_load_ms,
+            inference_ms=inference_ms,
+            normalization_ms=normalization_ms,
+            total_ms=total_ms,
+        )
 
         if not ocr_lines:
             return self._failed_result(
                 "paddleocr_empty_result",
                 "PaddleOCR returned no recognized text.",
                 extracted_at,
+                timing_fields,
             )
 
         extracted_fields = {
@@ -253,10 +336,27 @@ class PaddleOcrProvider:
             "det_model_dir": self.det_model_dir,
             "rec_model_dir": self.rec_model_dir,
             "cls_model_dir": self.cls_model_dir,
+            "use_angle_cls": str(self.use_angle_cls).lower(),
+            "det_limit_side_len": str(self.det_limit_side_len),
+            "rec_batch_num": str(self.rec_batch_num),
+            **timing_fields,
         }
 
         if confidences:
             extracted_fields["average_confidence"] = f"{sum(confidences) / len(confidences):.4f}"
+
+        logger.info(
+            "PaddleOCR OCR completed: filename=%s lines=%s engine_preloaded_before_request=%s engine_load_ms=%.2f inference_ms=%.2f normalization_ms=%.2f total_ms=%.2f use_angle_cls=%s det_limit_side_len=%s",
+            document.filename,
+            len(ocr_lines),
+            engine_preloaded_before_request,
+            engine_load_ms,
+            inference_ms,
+            normalization_ms,
+            total_ms,
+            self.use_angle_cls,
+            self.det_limit_side_len,
+        )
 
         return OcrResult(
             status=OcrStatus.COMPLETED,
@@ -293,13 +393,15 @@ class PaddleOcrProvider:
             from paddleocr import PaddleOCR
 
             self._engine = PaddleOCR(
-                use_angle_cls=True,
+                use_angle_cls=self.use_angle_cls,
                 lang=self.language,
                 ocr_version=self.ocr_version,
                 use_gpu=True,
                 det_model_dir=self.det_model_dir,
                 rec_model_dir=self.rec_model_dir,
                 cls_model_dir=self.cls_model_dir,
+                det_limit_side_len=self.det_limit_side_len,
+                rec_batch_num=self.rec_batch_num,
             )
 
         return self._engine
@@ -320,7 +422,39 @@ class PaddleOcrProvider:
             and isinstance(value[1][0], str)
         )
 
-    def _failed_result(self, error_code: str, message: str, extracted_at: datetime) -> OcrResult:
+    def _timing_fields(
+        self,
+        *,
+        engine_preloaded_before_request: bool,
+        engine_load_ms: float,
+        total_ms: float,
+        inference_ms: float | None = None,
+        normalization_ms: float | None = None,
+    ) -> dict[str, str]:
+        fields = {
+            "engine_preloaded_before_request": str(engine_preloaded_before_request).lower(),
+            "timing_engine_load_ms": f"{engine_load_ms:.2f}",
+            "timing_total_ms": f"{total_ms:.2f}",
+        }
+
+        if self._engine_preload_duration_ms is not None:
+            fields["timing_engine_preload_ms"] = f"{self._engine_preload_duration_ms:.2f}"
+
+        if inference_ms is not None:
+            fields["timing_inference_ms"] = f"{inference_ms:.2f}"
+
+        if normalization_ms is not None:
+            fields["timing_normalization_ms"] = f"{normalization_ms:.2f}"
+
+        return fields
+
+    def _failed_result(
+        self,
+        error_code: str,
+        message: str,
+        extracted_at: datetime,
+        extra_fields: dict[str, str] | None = None,
+    ) -> OcrResult:
         return OcrResult(
             status=OcrStatus.FAILED,
             text="",
@@ -328,6 +462,7 @@ class PaddleOcrProvider:
                 "provider": "paddleocr",
                 "error_code": error_code,
                 "error": message,
+                **(extra_fields or {}),
             },
             updated_at=extracted_at,
         )

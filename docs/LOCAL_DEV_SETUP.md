@@ -185,7 +185,7 @@ data/documents.json
 
 也可用 `DOCURAG_DATA_DIR` 覆寫資料根目錄。
 
-## v0.7 / v0.9 Real OCR Flow
+## v0.7 / v0.9.1 Real OCR Flow
 
 mock demo 不需要 PaddleOCR dependency，明確設定 `DOCURAG_OCR_PROVIDER=mock` 或直接呼叫 `/ocr/mock`：
 
@@ -215,6 +215,9 @@ PP-OCRv4 mobile 中文 / 中英混合模型預設：
 | `DOCURAG_OCR_DET_MODEL_NAME` | `PP-OCRv4_mobile_det` | `%USERPROFILE%\.paddleocr\whl\det\ch\ch_PP-OCRv4_det_infer` |
 | `DOCURAG_OCR_REC_MODEL_NAME` | `PP-OCRv4_mobile_rec` | `%USERPROFILE%\.paddleocr\whl\rec\ch\ch_PP-OCRv4_rec_infer` |
 | `DOCURAG_OCR_CLS_MODEL_NAME` | `ch_ppocr_mobile_v2.0_cls` | `%USERPROFILE%\.paddleocr\whl\cls\ch\ch_ppocr_mobile_v2.0_cls_infer` |
+| `DOCURAG_OCR_USE_ANGLE_CLS` | `false` | 直立 demo sample 不啟用 angle classifier |
+| `DOCURAG_OCR_DET_LIMIT_SIDE_LEN` | `960` | 保留 PaddleOCR mobile detection 預設尺寸上限 |
+| `DOCURAG_OCR_REC_BATCH_NUM` | `6` | 保留 PaddleOCR recognition 預設 batch |
 
 可用 `DOCURAG_OCR_DET_MODEL_DIR`、`DOCURAG_OCR_REC_MODEL_DIR`、`DOCURAG_OCR_CLS_MODEL_DIR` 指到已下載的 inference model directory。PP-OCRv4 mobile 中文 recognition 主要驗證簡中 / 中英數字；繁中 sample 只記錄結果與限制，不在本 ticket 自動切到 `chinese_cht_PP-OCRv3_rec`。
 
@@ -271,8 +274,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 
 - `paddle.device.is_compiled_with_cuda()`、`paddle.device.get_device()` 與 `paddle.utils.run_check()`。
 - PaddleOCR model cache 狀態；若 `~/.paddleocr` 不存在，初始化可能需要下載模型。
 - PP-OCRv4 mobile det / rec / cls model selection 與預期 model directory。
-- PaddleOCR engine initialization；若失敗，會標示 initialization 或 model download 相關錯誤。
-- `sample-data/documents/sample-ocr-invoice.png` 或 `sample-data/documents/sample-ocr-zh-tw.png` 的 sample image OCR runtime 結果。
+- PaddleOCR engine initialization 與 `engine_init_ms`；若失敗，會標示 initialization 或 model download 相關錯誤。
+- `sample-data/documents/sample-ocr-invoice.png` 或 `sample-data/documents/sample-ocr-zh-tw.png` 的 sample image OCR runtime 結果，包含 image size、`use_angle_cls`、`det_limit_side_len`、`rec_batch_num`、`inference_ms` 與 `normalization_ms`。
 
 2026-05-21 Windows 本機 baseline：
 
@@ -348,6 +351,31 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps
 - `check-dev-env.ps1 -CheckPaddleOcr -PaddleOcrSamplePath .\sample-data\documents\sample-ocr-zh-tw.png` 通過；繁中 sample OCR `recognized_lines=4`，preview 包含 `DocuRAG 繁中 OCR 測試`、`發票號碼：OCR-2026-009` 與 `客户：星河科技股份有限公司`。
 - 以隔離資料目錄與 `backend/.venv` 啟動 `http://127.0.0.1:8024` 後，`demo-smoke-test.ps1 -ApiBaseUrl http://127.0.0.1:8024 -RunRealOcr` 通過；同一 backend 針對 `sample-ocr-zh-tw.png` 的 provider-selected OCR 也回傳 `status=completed`。
 - 繁中 sample 實際 provider-selected OCR 結果為 `DocuRAG 繁中 OCR 測試`、`發票號碼：OCR-2026-009`、`客户：星河科技股份有限公司`、`總計 : NT$ 12,345`，平均 confidence `0.9525`。其中 `客戶` 被辨識為簡中 `客户`，此為 PP-OCRv4 mobile 對繁中支援的已知限制；後續候選仍是 `chinese_cht_PP-OCRv3_rec`，本 ticket 不自動切換。
+
+2026-05-22 Phase 09 performance hardening validation notes：
+
+- `09-03` 已將 backend lifespan startup 接到 `PaddleOcrProvider.preload()`；selected provider 為 PaddleOCR 時會 preload engine，後續 provider-selected OCR request 重用同一個 provider / engine。
+- `POST /documents/{document_id}/ocr/mock` 仍使用 mock override，不觸發 PaddleOCR preload。
+- `09-04` 已在 OCR result `extracted_fields` 加入 `timing_engine_preload_ms`、`timing_engine_load_ms`、`timing_inference_ms`、`timing_normalization_ms`、`timing_total_ms` 與 `engine_preloaded_before_request`。
+- backend log 會輸出 PaddleOCR startup preload 與每次 OCR completed timing summary。
+- 以 TestClient lifespan 手動觸發 startup preload 後，連續對 `sample-ocr-invoice.png` 執行兩次 provider-selected OCR，兩次皆回傳 `status=completed`、`line_count=4`，startup log 顯示 `PaddleOCR provider preloaded during backend startup`。
+
+v0.9.1 local tuning baseline：
+
+| Config | Sample | Image size | Engine init | First OCR | Second OCR | Lines |
+|---|---|---:|---:|---:|---:|---:|
+| `cls=True`, `det_limit_side_len=960` | `sample-ocr-invoice.png` | 760x260 | 4895.57 ms | 567.09 ms | 52.96 ms | 4 |
+| `cls=True`, `det_limit_side_len=960` | `sample-ocr-zh-tw.png` | 1000x420 | 4895.57 ms | 90.27 ms | 65.28 ms | 4 |
+| `cls=False`, `det_limit_side_len=960` | `sample-ocr-invoice.png` | 760x260 | 3749.86 ms | 84.18 ms | 39.81 ms | 4 |
+| `cls=False`, `det_limit_side_len=960` | `sample-ocr-zh-tw.png` | 1000x420 | 3749.86 ms | 53.75 ms | 51.39 ms | 4 |
+| `cls=False`, `det_limit_side_len=736` | `sample-ocr-invoice.png` | 760x260 | 3712.03 ms | 89.88 ms | 40.21 ms | 4 |
+| `cls=False`, `det_limit_side_len=736` | `sample-ocr-zh-tw.png` | 1000x420 | 3712.03 ms | 71.28 ms | 51.14 ms | 4 |
+
+決策：
+
+- `cls=False` 在兩張直立 sample 上保留相同行數與文字預覽，且首張推論明顯較快，因此 v0.9.1 預設 `DOCURAG_OCR_USE_ANGLE_CLS=false`。
+- `det_limit_side_len=736` 沒有穩定收益，保留 `DOCURAG_OCR_DET_LIMIT_SIDE_LEN=960`。
+- startup warmup 可把第一張圖的推論成本移到啟動階段，但需要啟動時跑 sample image inference；本 patch 不採用預設 warmup，避免 backend startup 依賴 runtime sample。
 
 ## Docker Validation
 

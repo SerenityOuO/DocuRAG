@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.9.0 的已交付切片，並保留 v0.10.0 LLM RAG backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.9.1 的已交付切片，並補上 v0.10.0 LLM RAG backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -67,6 +67,7 @@ Expected Outcome：
 - v0.7.0 只做單一 local OCR provider spike，預設仍保留 mock provider，不接 queue、DB、Qdrant、embedding、rerank、LLM、Redis、NATS、登入或 RBAC。
 - v0.8.0 只做 PaddleOCR runtime stabilization，不新增 PDF rendering、Qdrant、embedding、rerank、LLM、worker、DB、登入或 RBAC。
 - v0.9.0 只做 PaddleOCR GPU runtime 與模型選擇 backlog，不接 LLM、embedding、Qdrant、worker、DB、登入或 RBAC。
+- v0.9.1 只做 PaddleOCR engine lifecycle、backend startup preload、provider reuse、timing log、baseline 與小範圍 OCR 參數調校，不接 worker、Redis、NATS、資料庫 schema、PDF pipeline、登入或 RBAC。
 - v0.10.0 只做 LLM RAG provider / client / demo smoke，不接 embedding、Qdrant、rerank、worker、DB、登入或 RBAC。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
@@ -240,9 +241,41 @@ Expected Outcome：
 - PP-OCRv4 mobile recognition 主要驗證中文 / 中英數字；若繁中辨識不足，後續候選是 `chinese_cht_PP-OCRv3_rec`，本 milestone 不自動切換。
 - 不新增 LLM、Ollama、vLLM、embedding、Qdrant、rerank、worker、Redis、NATS、資料庫 schema、登入或權限。
 
+## v0.9.1 OCR Performance Hardening Milestone
+
+Goal：先修 PaddleOCR GPU 模式每張圖過慢的核心原因，讓 backend 啟動時完成 engine preload，request path 重用 provider / engine，並用 timing baseline 收斂小範圍效能設定。
+
+Tickets：
+
+- `tasks/phase-09-gpu-runtime/09-03-paddleocr-engine-lifecycle-preload.md`
+- `tasks/phase-09-gpu-runtime/09-04-paddleocr-performance-observability-tuning.md`
+
+Expected Outcome：
+
+- Backend startup path 可在 selected provider 為 PaddleOCR 時初始化 OCR engine，後續 provider-selected OCR request 不再每次 cold start。
+- Mock OCR override path 仍可重跑 demo-safe flow，不觸發 PaddleOCR preload。
+- PaddleOCR timing log / metadata 可觀察 engine preload、request engine load、inference、normalization 與 total duration。
+- 文件已記錄 sample image baseline、`cls=True` / `cls=False`、warmup、圖片尺寸與少量推論參數對速度的影響。
+- v0.9.1 預設 `DOCURAG_OCR_USE_ANGLE_CLS=false`、`DOCURAG_OCR_DET_LIMIT_SIDE_LEN=960`、`DOCURAG_OCR_REC_BATCH_NUM=6`。
+- Phase 09 performance hardening 完成前，不開始 Phase 10 Qwen3 / Ollama / RAG demo ticket。
+- 不新增 worker queue、Redis、NATS、資料庫 schema、登入、權限、PDF rendering、多頁 OCR pipeline 或 production-grade OCR tuning。
+
+Baseline and decisions（2026-05-22，Windows / Python 3.12.10 / PaddleOCR 2.10.0 / `paddlepaddle-gpu==3.3.0` / RTX 5070 Ti）：
+
+| Config | Sample | Image size | Engine init | First OCR | Second OCR | Lines |
+|---|---|---:|---:|---:|---:|---:|
+| `cls=True`, `det_limit_side_len=960` | `sample-ocr-invoice.png` | 760x260 | 4895.57 ms | 567.09 ms | 52.96 ms | 4 |
+| `cls=True`, `det_limit_side_len=960` | `sample-ocr-zh-tw.png` | 1000x420 | 4895.57 ms | 90.27 ms | 65.28 ms | 4 |
+| `cls=False`, `det_limit_side_len=960` | `sample-ocr-invoice.png` | 760x260 | 3749.86 ms | 84.18 ms | 39.81 ms | 4 |
+| `cls=False`, `det_limit_side_len=960` | `sample-ocr-zh-tw.png` | 1000x420 | 3749.86 ms | 53.75 ms | 51.39 ms | 4 |
+| `cls=False`, `det_limit_side_len=736` | `sample-ocr-invoice.png` | 760x260 | 3712.03 ms | 89.88 ms | 40.21 ms | 4 |
+| `cls=False`, `det_limit_side_len=736` | `sample-ocr-zh-tw.png` | 1000x420 | 3712.03 ms | 71.28 ms | 51.14 ms | 4 |
+
+Decision：`cls=False` 在兩張直立 sample 上保留相同行數與文字預覽，且首張推論明顯較快，因此採用為 v0.9.1 預設。`det_limit_side_len=736` 沒有穩定收益，保留 PaddleOCR mobile 預設 `960`。startup warmup 可降低第一張 request latency，但會讓 backend startup 依賴 sample image inference，本 milestone 不採用預設 warmup。
+
 Next Candidate Milestone：
 
-- v0.10.0 LLM RAG Backlog：在既有 citations contract 上加入 local / OpenAI-compatible LLM answer generation demo。
+- v0.10.0 LLM RAG Backlog：Phase 09 performance hardening 完成後，在既有 citations contract 上加入 Ollama Qwen3 RAG generation demo。
 - Future Embedding / Qdrant Indexing Spike：在 OCR、GPU runtime 與 LLM demo 邊界穩定後，再把 local keyword retrieval 替換成可驗證的 vector indexing。
 
 ## Release Verification
@@ -258,3 +291,4 @@ Next Candidate Milestone：
 - v0.7.0: Real OCR Provider Spike 已完成；PaddleOCR real OCR path 是 optional spike，mock demo 仍為預設可攜 flow。
 - v0.8.0: PaddleOCR Runtime Stabilization 已完成；Python 3.12、PaddleOCR 2.10.0、PaddlePaddle 3.0.0 sample real OCR flow 已驗證，provider-selected OCR 預設走 PaddleOCR。
 - v0.9.0: GPU Runtime 已完成；PaddleOCR real OCR 收斂為 GPU-only，PP-OCRv4 mobile 中文 / 中英混合模型設定、模型目錄文件與繁中 sample 已補齊；本機 real OCR GPU validation、sample invoice 與繁中 provider-selected OCR smoke 已通過。
+- v0.9.1: OCR Performance Hardening 已完成；backend startup preload、provider / engine reuse、OCR timing log / metadata、`cls=False` baseline、v0.9.1 version / README / TODO / ROADMAP 同步與 provider-selected real OCR smoke 已通過。

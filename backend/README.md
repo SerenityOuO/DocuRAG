@@ -1,6 +1,6 @@
 # Backend
 
-DocuRAG AgentOps backend MVP v0.9.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、local RAG query API、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，目前 RAG 只接 `KeywordRagProvider`。v0.7 的 real OCR spike 已選定 PaddleOCR，v0.8 將 PaddleOCR runtime 收斂到 Python 3.12、PaddleOCR 2.10.0 與 PaddlePaddle 3.0.0 sample flow；v0.9 runtime baseline 開始 provider-selected real OCR 只支援 PaddlePaddle GPU / CUDA build，且預設使用 PP-OCRv4 mobile 中文 / 中英混合模型設定。此階段不接資料庫、OpenAI API、Ollama、vLLM、embedding、Qdrant、rerank、Redis、NATS 或登入權限。
+DocuRAG AgentOps backend MVP v0.9.1 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、local RAG query API、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，目前 RAG 只接 `KeywordRagProvider`。v0.7 的 real OCR spike 已選定 PaddleOCR，v0.8 將 PaddleOCR runtime 收斂到 Python 3.12、PaddleOCR 2.10.0 與 PaddlePaddle 3.0.0 sample flow；v0.9.0 runtime baseline 開始 provider-selected real OCR 只支援 PaddlePaddle GPU / CUDA build，且預設使用 PP-OCRv4 mobile 中文 / 中英混合模型設定。v0.9.1 補上 backend startup preload、provider / engine reuse、OCR timing metadata 與小範圍效能 baseline。此階段不接資料庫、OpenAI API、Ollama、vLLM、embedding、Qdrant、rerank、Redis、NATS 或登入權限。
 
 ## Install
 
@@ -100,8 +100,32 @@ PaddleOCR provider 預設模型設定：
 | `DOCURAG_OCR_DET_MODEL_NAME` | `PP-OCRv4_mobile_det` | `%USERPROFILE%\\.paddleocr\\whl\\det\\ch\\ch_PP-OCRv4_det_infer` |
 | `DOCURAG_OCR_REC_MODEL_NAME` | `PP-OCRv4_mobile_rec` | `%USERPROFILE%\\.paddleocr\\whl\\rec\\ch\\ch_PP-OCRv4_rec_infer` |
 | `DOCURAG_OCR_CLS_MODEL_NAME` | `ch_ppocr_mobile_v2.0_cls` | `%USERPROFILE%\\.paddleocr\\whl\\cls\\ch\\ch_ppocr_mobile_v2.0_cls_infer` |
+| `DOCURAG_OCR_USE_ANGLE_CLS` | `false` | 直立 demo sample 不啟用 angle classifier |
+| `DOCURAG_OCR_DET_LIMIT_SIDE_LEN` | `960` | 保留 PaddleOCR mobile 預設 detection 尺寸上限 |
+| `DOCURAG_OCR_REC_BATCH_NUM` | `6` | 保留 PaddleOCR recognition 預設 batch |
 
 可用 `DOCURAG_OCR_DET_MODEL_DIR`、`DOCURAG_OCR_REC_MODEL_DIR`、`DOCURAG_OCR_CLS_MODEL_DIR` 指向已下載模型目錄。PP-OCRv4 mobile recognition 以簡中 / 中英數字識別為主；繁中 sample 目前只記錄驗證結果與限制，不自動切到 `chinese_cht_PP-OCRv3_rec`。
+
+v0.9.1 PaddleOCR lifecycle 與 timing：
+
+- backend lifespan startup 會在 selected provider 為 `paddleocr` 時呼叫 `PaddleOcrProvider.preload()`，後續 `/documents/{document_id}/ocr` 重用同一個 process 內的 provider / engine。
+- startup preload 失敗會記錄 error log 並中止啟動，不會靜默 fallback 到 mock。
+- `/documents/{document_id}/ocr/mock` 仍使用獨立 `MockOcrProvider`，不觸發 PaddleOCR preload。
+- OCR result `extracted_fields` 會包含 `timing_engine_preload_ms`、`timing_engine_load_ms`、`timing_inference_ms`、`timing_normalization_ms`、`timing_total_ms` 與 `engine_preloaded_before_request`。
+- backend log 會輸出 PaddleOCR preload 與 OCR completed timing summary。
+
+v0.9.1 本機 baseline（2026-05-22，Windows / Python 3.12.10 / PaddleOCR 2.10.0 / `paddlepaddle-gpu==3.3.0` / RTX 5070 Ti）：
+
+| Config | Sample | Image size | Engine init | First OCR | Second OCR | Lines |
+|---|---|---:|---:|---:|---:|---:|
+| `cls=True`, `det_limit_side_len=960` | `sample-ocr-invoice.png` | 760x260 | 4895.57 ms | 567.09 ms | 52.96 ms | 4 |
+| `cls=True`, `det_limit_side_len=960` | `sample-ocr-zh-tw.png` | 1000x420 | 4895.57 ms | 90.27 ms | 65.28 ms | 4 |
+| `cls=False`, `det_limit_side_len=960` | `sample-ocr-invoice.png` | 760x260 | 3749.86 ms | 84.18 ms | 39.81 ms | 4 |
+| `cls=False`, `det_limit_side_len=960` | `sample-ocr-zh-tw.png` | 1000x420 | 3749.86 ms | 53.75 ms | 51.39 ms | 4 |
+| `cls=False`, `det_limit_side_len=736` | `sample-ocr-invoice.png` | 760x260 | 3712.03 ms | 89.88 ms | 40.21 ms | 4 |
+| `cls=False`, `det_limit_side_len=736` | `sample-ocr-zh-tw.png` | 1000x420 | 3712.03 ms | 71.28 ms | 51.14 ms | 4 |
+
+決策：直立 demo sample 在 `cls=False` 下文字預覽與行數不變，且首張推論明顯較快，因此 v0.9.1 預設 `DOCURAG_OCR_USE_ANGLE_CLS=false`。`det_limit_side_len=736` 沒有穩定改善，保留 `960`。startup warmup 確實可把第一張圖的推論成本移到啟動階段，但會讓 backend 啟動依賴 sample image inference，本 patch 不採用預設 warmup。
 
 Docker real OCR build 可用 build arg 開啟，預設不安裝 PaddleOCR：
 
@@ -210,13 +234,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1
 
 如果 Python 或 Docker 不可用，依 `docs/LOCAL_DEV_SETUP.md` 修復本機工具後再重跑測試。
 
-v0.9 PaddleOCR GPU baseline 可用同一支腳本分段檢查 NVIDIA CLI、CUDA Paddle build、`paddle.utils.run_check()`、model cache / engine initialization 與 sample image OCR：
+v0.9.1 PaddleOCR GPU baseline 可用同一支腳本分段檢查 NVIDIA CLI、CUDA Paddle build、`paddle.utils.run_check()`、model cache / engine initialization、sample image OCR 與 OCR timing：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 -CheckPaddleOcr
 ```
 
-2026-05-21 Windows 本機以 Python 3.12.10、PaddleOCR 2.10.0 與 PaddlePaddle 3.0.0 完成 v0.8 CPU baseline；Phase 09 已移除 CPU baseline。2026-05-22 已以 Python 3.12.10、PaddleOCR 2.10.0、`paddlepaddle-gpu==3.3.0` 與 CUDA 12.9 runtime wheel 完成 GPU baseline。
+2026-05-21 Windows 本機以 Python 3.12.10、PaddleOCR 2.10.0 與 PaddlePaddle 3.0.0 完成 v0.8 CPU baseline；Phase 09 已移除 CPU baseline。2026-05-22 已以 Python 3.12.10、PaddleOCR 2.10.0、`paddlepaddle-gpu==3.3.0` 與 CUDA 12.9 runtime wheel 完成 GPU baseline；v0.9.1 timing baseline 採用 `cls=False`、`det_limit_side_len=960` 與 startup preload / provider reuse。
 
 ## Release Status
 
@@ -231,3 +255,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 
 - v0.7.0: Real OCR Provider Spike、PaddleOCR adapter、provider-selected OCR endpoint、trace normalization 與 optional real OCR demo hardening 已完成。
 - v0.8.0: PaddleOCR Runtime Stabilization、Python 3.12 runtime guard、PaddleOCR 2.10.0 / PaddlePaddle 3.0.0 dependency baseline 與 sample real OCR flow 已完成。
 - v0.9.0: GPU Runtime、PaddlePaddle GPU-only guard、PP-OCRv4 mobile 中文 / 中英混合模型設定與模型目錄文件已完成；本機 Python 3.12 + CUDA PaddlePaddle GPU runtime、sample invoice 與繁中 provider-selected OCR smoke 已通過。
+- v0.9.1: OCR Performance Hardening、backend startup preload、provider / engine reuse、OCR timing log / metadata、`cls=False` baseline 與文件版本同步已完成。

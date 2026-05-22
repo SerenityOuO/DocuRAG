@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -16,6 +17,9 @@ from app.services.ocr import MockOcrProvider, OcrProvider, PaddleOcrProvider
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+logger = logging.getLogger(__name__)
+_selected_ocr_provider: OcrProvider | None = None
+_selected_ocr_provider_cache_key: tuple[object, ...] | None = None
 
 
 def get_document_storage() -> DocumentStorage:
@@ -27,7 +31,25 @@ def get_mock_ocr_provider() -> MockOcrProvider:
     return MockOcrProvider()
 
 
-def get_selected_ocr_provider() -> OcrProvider:
+def _selected_ocr_provider_key() -> tuple[object, ...]:
+    settings = get_settings()
+    return (
+        settings.ocr_provider.strip().lower(),
+        settings.ocr_language,
+        settings.ocr_version,
+        settings.ocr_det_model_name,
+        settings.ocr_rec_model_name,
+        settings.ocr_cls_model_name,
+        settings.ocr_det_model_dir,
+        settings.ocr_rec_model_dir,
+        settings.ocr_cls_model_dir,
+        settings.ocr_use_angle_cls,
+        settings.ocr_det_limit_side_len,
+        settings.ocr_rec_batch_num,
+    )
+
+
+def _build_selected_ocr_provider() -> OcrProvider:
     settings = get_settings()
     provider_name = settings.ocr_provider.strip().lower()
 
@@ -44,12 +66,63 @@ def get_selected_ocr_provider() -> OcrProvider:
             det_model_dir=settings.ocr_det_model_dir,
             rec_model_dir=settings.ocr_rec_model_dir,
             cls_model_dir=settings.ocr_cls_model_dir,
+            use_angle_cls=settings.ocr_use_angle_cls,
+            det_limit_side_len=settings.ocr_det_limit_side_len,
+            rec_batch_num=settings.ocr_rec_batch_num,
         )
 
     raise HTTPException(
         status_code=500,
         detail=f"Unsupported OCR provider configured: {settings.ocr_provider}",
     )
+
+
+def get_selected_ocr_provider() -> OcrProvider:
+    global _selected_ocr_provider, _selected_ocr_provider_cache_key
+
+    cache_key = _selected_ocr_provider_key()
+    if _selected_ocr_provider is not None and _selected_ocr_provider_cache_key == cache_key:
+        return _selected_ocr_provider
+
+    _selected_ocr_provider = _build_selected_ocr_provider()
+    _selected_ocr_provider_cache_key = cache_key
+
+    return _selected_ocr_provider
+
+
+def preload_selected_ocr_provider() -> None:
+    settings = get_settings()
+    provider_name = settings.ocr_provider.strip().lower()
+    provider = get_selected_ocr_provider()
+
+    if provider_name in {"paddleocr", "paddle"} and isinstance(provider, PaddleOcrProvider):
+        try:
+            provider.preload()
+        except Exception:
+            logger.exception("PaddleOCR provider preload failed during backend startup.")
+            raise
+
+        logger.info(
+            "PaddleOCR provider preloaded during backend startup: language=%s ocr_version=%s det_model=%s rec_model=%s cls_model=%s use_angle_cls=%s det_limit_side_len=%s rec_batch_num=%s",
+            provider.language,
+            provider.ocr_version,
+            provider.det_model_name,
+            provider.rec_model_name,
+            provider.cls_model_name,
+            provider.use_angle_cls,
+            provider.det_limit_side_len,
+            provider.rec_batch_num,
+        )
+        return
+
+    logger.info("Selected OCR provider does not require startup preload: provider=%s", provider_name)
+
+
+def _reset_selected_ocr_provider_cache() -> None:
+    global _selected_ocr_provider, _selected_ocr_provider_cache_key
+
+    _selected_ocr_provider = None
+    _selected_ocr_provider_cache_key = None
 
 
 DocumentStorageDep = Annotated[DocumentStorage, Depends(get_document_storage)]

@@ -216,6 +216,7 @@ import json
 import os
 from pathlib import Path
 import sys
+from time import perf_counter
 import traceback
 
 sample_path = Path(sys.argv[1])
@@ -282,6 +283,9 @@ ocr_version = "PP-OCRv4"
 det_model_name = "PP-OCRv4_mobile_det"
 rec_model_name = "PP-OCRv4_mobile_rec"
 cls_model_name = "ch_ppocr_mobile_v2.0_cls"
+ocr_use_angle_cls = False
+det_limit_side_len = 960
+rec_batch_num = 6
 det_model_dir = model_root / "whl" / "det" / "ch" / "ch_PP-OCRv4_det_infer"
 rec_model_dir = model_root / "whl" / "rec" / "ch" / "ch_PP-OCRv4_rec_infer"
 cls_model_dir = model_root / "whl" / "cls" / "ch" / "ch_ppocr_mobile_v2.0_cls_infer"
@@ -293,7 +297,8 @@ print_stage(
         f"language={ocr_language}; ocr_version={ocr_version}; "
         f"det={det_model_name} -> {det_model_dir}; "
         f"rec={rec_model_name} -> {rec_model_dir}; "
-        f"cls={cls_model_name} -> {cls_model_dir}"
+        f"cls={cls_model_name} -> {cls_model_dir}; "
+        f"use_angle_cls={ocr_use_angle_cls}; det_limit_side_len={det_limit_side_len}; rec_batch_num={rec_batch_num}"
     ),
 )
 try:
@@ -308,16 +313,20 @@ except Exception as exc:
 
 if PaddleOCR is not None and paddle_cuda_ok:
     try:
+        engine_start = perf_counter()
         engine = PaddleOCR(
-            use_angle_cls=True,
+            use_angle_cls=ocr_use_angle_cls,
             lang=ocr_language,
             ocr_version=ocr_version,
             use_gpu=True,
             det_model_dir=str(det_model_dir),
             rec_model_dir=str(rec_model_dir),
             cls_model_dir=str(cls_model_dir),
+            det_limit_side_len=det_limit_side_len,
+            rec_batch_num=rec_batch_num,
         )
-        print_stage("PASS", "engine initialization", "PaddleOCR engine initialized")
+        engine_init_ms = (perf_counter() - engine_start) * 1000
+        print_stage("PASS", "engine initialization", f"PaddleOCR engine initialized; engine_init_ms={engine_init_ms:.2f}")
     except Exception as exc:
         failed = True
         print_stage("FAIL", "engine initialization or model download", f"{type(exc).__name__}: {exc}")
@@ -327,11 +336,18 @@ else:
 
 if engine is not None:
     try:
+        Image = importlib.import_module("PIL.Image")
+        with Image.open(sample_path) as image:
+            image_size = f"{image.width}x{image.height}"
+
+        inference_start = perf_counter()
         try:
-            raw_result = engine.ocr(str(sample_path), cls=True)
+            raw_result = engine.ocr(str(sample_path), cls=ocr_use_angle_cls)
         except TypeError:
             raw_result = engine.ocr(str(sample_path))
+        inference_ms = (perf_counter() - inference_start) * 1000
 
+        normalization_start = perf_counter()
         line_count = 0
         text_preview = []
         for page in raw_result or []:
@@ -357,11 +373,17 @@ if engine is not None:
                         line_count += 1
                         if len(text_preview) < 3:
                             text_preview.append(text)
+        normalization_ms = (perf_counter() - normalization_start) * 1000
 
         print_stage(
             "PASS" if line_count else "FAIL",
             "sample image OCR runtime",
-            f"recognized_lines={line_count}; preview={json.dumps(text_preview, ensure_ascii=False)}",
+            (
+                f"recognized_lines={line_count}; image_size={image_size}; use_angle_cls={ocr_use_angle_cls}; "
+                f"det_limit_side_len={det_limit_side_len}; rec_batch_num={rec_batch_num}; "
+                f"inference_ms={inference_ms:.2f}; normalization_ms={normalization_ms:.2f}; "
+                f"preview={json.dumps(text_preview, ensure_ascii=False)}"
+            ),
         )
         if not line_count:
             failed = True

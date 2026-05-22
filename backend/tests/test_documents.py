@@ -7,13 +7,26 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.routes.documents import get_document_storage, get_mock_ocr_provider, get_selected_ocr_provider
+from app.api.routes.documents import (
+    _reset_selected_ocr_provider_cache,
+    get_document_storage,
+    get_mock_ocr_provider,
+    get_selected_ocr_provider,
+    preload_selected_ocr_provider,
+)
 from app.core.config import get_settings
 from app.main import app
 from app.schemas.documents import BoundingBox, DocumentMetadata, OcrResult, OcrStatus, OcrTextLine, ProcessingJobType
 from app.services.document_storage import DocumentStorage
 from app.services import ocr as ocr_module
 from app.services.ocr import MockOcrProvider, PaddleOcrProvider
+
+
+@pytest.fixture(autouse=True)
+def reset_selected_ocr_provider_cache() -> None:
+    _reset_selected_ocr_provider_cache()
+    yield
+    _reset_selected_ocr_provider_cache()
 
 
 @pytest.fixture
@@ -220,6 +233,83 @@ def test_selected_ocr_default_provider_is_paddleocr() -> None:
     assert provider.det_model_name == "PP-OCRv4_mobile_det"
     assert provider.rec_model_name == "PP-OCRv4_mobile_rec"
     assert provider.cls_model_name == "ch_ppocr_mobile_v2.0_cls"
+    assert provider.use_angle_cls is False
+    assert provider.det_limit_side_len == 960
+    assert provider.rec_batch_num == 6
+
+
+def test_selected_ocr_provider_preload_reuses_process_engine(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class StubPaddleEngine:
+        def __init__(self) -> None:
+            self.ocr_calls = 0
+
+        def ocr(self, file_path: str, cls: bool = True):
+            assert file_path.endswith("real-provider.png")
+            assert cls is False
+            self.ocr_calls += 1
+            return [
+                (
+                    [[10, 20], [180, 20], [180, 44], [10, 44]],
+                    (f"Preloaded OCR call {self.ocr_calls}", 0.96),
+                )
+            ]
+
+    engine = StubPaddleEngine()
+    load_calls = 0
+
+    def fake_load_engine(self: PaddleOcrProvider):
+        nonlocal load_calls
+
+        if self._engine is None:
+            load_calls += 1
+            self._engine = engine
+
+        return self._engine
+
+    monkeypatch.setattr(PaddleOcrProvider, "_load_engine", fake_load_engine)
+
+    preload_selected_ocr_provider()
+    provider = get_selected_ocr_provider()
+
+    assert isinstance(provider, PaddleOcrProvider)
+    assert load_calls == 1
+
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("real-provider.png", b"fake image", "image/png")},
+    )
+    document_id = upload_response.json()["document_id"]
+
+    first_response = client.post(f"/documents/{document_id}/ocr")
+    second_response = client.post(f"/documents/{document_id}/ocr")
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 200
+    assert first_response.json()["text"] == "Preloaded OCR call 1"
+    assert second_response.json()["text"] == "Preloaded OCR call 2"
+    assert load_calls == 1
+    assert engine.ocr_calls == 2
+
+
+def test_paddleocr_preload_failure_raises_without_mock_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    def fake_load_engine(self: PaddleOcrProvider):
+        raise RuntimeError("preload failed")
+
+    monkeypatch.setattr(PaddleOcrProvider, "_load_engine", fake_load_engine)
+
+    with caplog.at_level("ERROR"), pytest.raises(RuntimeError, match="preload failed"):
+        preload_selected_ocr_provider()
+
+    provider = get_selected_ocr_provider()
+
+    assert isinstance(provider, PaddleOcrProvider)
+    assert "PaddleOCR provider preload failed during backend startup." in caplog.text
 
 
 def test_selected_ocr_provider_can_be_overridden_to_mock(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -361,7 +451,7 @@ def test_paddleocr_provider_normalizes_raw_line_trace_metadata(tmp_path: Path) -
     class StubPaddleEngine:
         def ocr(self, file_path: str, cls: bool = True):
             assert file_path.endswith("invoice.png")
-            assert cls is True
+            assert cls is False
             return [
                 (
                     [[10, 20], [180, 20], [180, 44], [10, 44]],
@@ -399,9 +489,17 @@ def test_paddleocr_provider_normalizes_raw_line_trace_metadata(tmp_path: Path) -
     assert result.extracted_fields["det_model"] == "PP-OCRv4_mobile_det"
     assert result.extracted_fields["rec_model"] == "PP-OCRv4_mobile_rec"
     assert result.extracted_fields["cls_model"] == "ch_ppocr_mobile_v2.0_cls"
+    assert result.extracted_fields["use_angle_cls"] == "false"
+    assert result.extracted_fields["det_limit_side_len"] == "960"
+    assert result.extracted_fields["rec_batch_num"] == "6"
     assert result.extracted_fields["det_model_dir"].endswith("ch_PP-OCRv4_det_infer")
     assert result.extracted_fields["rec_model_dir"].endswith("ch_PP-OCRv4_rec_infer")
     assert result.extracted_fields["cls_model_dir"].endswith("ch_ppocr_mobile_v2.0_cls_infer")
+    assert result.extracted_fields["engine_preloaded_before_request"] == "true"
+    assert float(result.extracted_fields["timing_engine_load_ms"]) >= 0
+    assert float(result.extracted_fields["timing_inference_ms"]) >= 0
+    assert float(result.extracted_fields["timing_normalization_ms"]) >= 0
+    assert float(result.extracted_fields["timing_total_ms"]) >= 0
     assert [line.page_number for line in result.lines] == [1, 1]
     assert result.lines[0].bbox == BoundingBox(x_min=10, y_min=20, x_max=180, y_max=44)
     assert result.lines[0].confidence == 0.96
@@ -412,6 +510,7 @@ def test_paddleocr_provider_normalizes_raw_line_trace_metadata(tmp_path: Path) -
         "det_model": "PP-OCRv4_mobile_det",
         "rec_model": "PP-OCRv4_mobile_rec",
         "cls_model": "ch_ppocr_mobile_v2.0_cls",
+        "use_angle_cls": "false",
         "line_index": "1",
     }
 

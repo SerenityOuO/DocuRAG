@@ -1556,6 +1556,24 @@ docurag-agentops/
 9. Agent tool-use。
 10. Redis / NATS / Ops 文件補強。
 
+### 23.1 目前 ticket 優先順序覆寫
+
+目前下一步先回到 Phase 09 末端補 OCR performance hardening，再進入 Phase 10：
+
+1. `tasks/phase-09-gpu-runtime/09-03-paddleocr-engine-lifecycle-preload.md`：只處理 OCR engine lifecycle、backend startup preload 與 provider reuse，避免每次 OCR request 重新 cold start。
+2. `tasks/phase-09-gpu-runtime/09-04-paddleocr-performance-observability-tuning.md`：只處理 OCR timing log / baseline，並小範圍評估 `cls=True`、warmup、圖片尺寸與推論參數對速度的影響。
+3. `tasks/phase-10-llm-rag/10-01-qwen3-ollama-provider-decision.md`
+4. `tasks/phase-10-llm-rag/10-02-ollama-qwen3-client.md`
+5. `tasks/phase-10-llm-rag/10-03-qwen3-rag-generation.md`
+6. `tasks/phase-10-llm-rag/10-04-qwen3-demo-smoke.md`
+
+執行限制：
+
+- `09-03` 不處理 OCR timing、baseline、warmup 或參數調校。
+- `09-04` 不處理 provider lifecycle 以外的大型架構變更，只做效能觀測與小範圍調校。
+- 不提前實作 worker queue、Redis、NATS、資料庫 schema、登入、權限、PDF rendering、多頁 OCR pipeline 或 production-grade OCR tuning。
+- Phase 10 照 Qwen3 / Ollama / RAG demo 順序執行，不把 OCR performance work 混進 Phase 10。
+
 ---
 
 ## 24. 最小可展示版本定義

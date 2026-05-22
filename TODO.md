@@ -8,9 +8,16 @@
 
 - Phase 08 -> `v0.8.0`
 - Phase 09 -> `v0.9.0`
+- Phase 09 performance hardening -> `v0.9.1`
 - Phase 10 -> `v0.10.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
+
+目前下一步優先順序：
+
+1. `tasks/phase-09-gpu-runtime/09-03-paddleocr-engine-lifecycle-preload.md` 已完成。
+2. `tasks/phase-09-gpu-runtime/09-04-paddleocr-performance-observability-tuning.md` 已完成。
+3. Phase 09 performance hardening 已收斂為 `v0.9.1`；下一步才依序執行 Phase 10 的 Qwen3 / Ollama / RAG demo ticket。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -162,10 +169,12 @@
 - [ ] LLM-based RAG generation / rerank / citation trace evaluation。
 - [ ] vLLM / Ollama / OpenAI-compatible provider。
 
-## MVP v0.9.0 GPU Runtime Backlog
+## MVP v0.9.x GPU Runtime Backlog
 
 - [x] `tasks/phase-09-gpu-runtime/09-01-paddleocr-gpu-only-runtime.md`: PaddleOCR GPU-only runtime baseline；本機已以 Python 3.12.10、`paddlepaddle-gpu==3.3.0`、CUDA 12.9 runtime wheel 與 RTX 5070 Ti 通過 `paddle.utils.run_check()`、`check-dev-env.ps1 -CheckPaddleOcr` 與 provider-selected real OCR smoke。
 - [x] `tasks/phase-09-gpu-runtime/09-02-paddleocr-v4-mobile-chinese-model.md`: PaddleOCR PP-OCRv4 mobile 中文 / 中英混合模型；已固定模型設定、記錄 det / rec / cls model directory、建立並驗證繁中 sample，mock OCR path 不受影響。
+- [x] `tasks/phase-09-gpu-runtime/09-03-paddleocr-engine-lifecycle-preload.md`: 後端啟動時初始化 PaddleOCR engine，provider-selected OCR request 重用同一個 provider / engine，避免每次 request cold start。
+- [x] `tasks/phase-09-gpu-runtime/09-04-paddleocr-performance-observability-tuning.md`: 加入 OCR timing log / baseline，評估 `cls=True`、warmup、圖片尺寸與推論參數對速度的影響，收斂 v0.9.1 performance hardening。
 
 ## MVP v0.10.0 LLM RAG Backlog
 
@@ -190,3 +199,4 @@
 - [x] v0.7.0: Real OCR Provider Spike 已完成；07-01 到 07-04 已執行，Docker validation 需待 Docker Desktop daemon 可用後重跑。
 - [x] v0.8.0: PaddleOCR Runtime Stabilization 已完成；Python 3.12、PaddleOCR 2.10.0、PaddlePaddle 3.0.0 sample real OCR flow 已驗證。
 - [x] v0.9.0: GPU Runtime 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.9.0`，本機 Python 3.12 + CUDA PaddlePaddle GPU runtime 與繁中 provider-selected OCR smoke 已通過。
+- [x] v0.9.1: OCR Performance Hardening 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.9.1`，PaddleOCR startup preload、provider reuse、timing metadata、`cls=False` baseline 與 provider-selected real OCR smoke 已通過。
