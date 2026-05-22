@@ -169,10 +169,10 @@
 
 ## MVP v0.10.0 LLM RAG Backlog
 
-- [ ] `tasks/phase-10-llm-rag/10-01-qwen3-ollama-provider-decision.md`: 依 `goal.md` 固定 Ollama `qwen3:8b` / `qwen3-vl:8b` provider 決策。
-- [ ] `tasks/phase-10-llm-rag/10-02-ollama-qwen3-client.md`: 新增 Ollama `qwen3:8b` LLM client。
-- [ ] `tasks/phase-10-llm-rag/10-03-qwen3-rag-generation.md`: 在既有 citations contract 上加入 `qwen3:8b` answer generation。
-- [ ] `tasks/phase-10-llm-rag/10-04-qwen3-demo-smoke.md`: 補齊 Qwen3 demo smoke 與 UI answer source。
+- [ ] `tasks/phase-10-llm-rag/10-01-qwen3-ollama-provider-decision.md`: 依 `goal.md` 固定 Ollama `qwen3.5:4b` LLM / VLM provider 決策。
+- [ ] `tasks/phase-10-llm-rag/10-02-ollama-qwen3-client.md`: 新增 Ollama `qwen3.5:4b` LLM client。
+- [ ] `tasks/phase-10-llm-rag/10-03-qwen3-rag-generation.md`: 在既有 citations contract 上加入 `qwen3.5:4b` answer generation。
+- [ ] `tasks/phase-10-llm-rag/10-04-qwen3-demo-smoke.md`: 補齊 Qwen3.5 demo smoke 與 UI answer source。
 
 ## Release Verification Status
 

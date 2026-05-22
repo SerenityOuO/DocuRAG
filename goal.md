@@ -587,8 +587,8 @@ Redis 用途：
 
 | 角色 | 初始 provider | 初始模型 / 工具 | 用途 |
 |---|---|---|---|
-| LLM | Ollama | `qwen3:8b` | RAG 回答、query rewrite、摘要、Agent planning |
-| VLM | Ollama | `qwen3-vl:8b` | 掃描 PDF、圖片、發票與表格理解、JSON 欄位抽取 |
+| LLM | Ollama | `qwen3.5:4b` | RAG 回答、query rewrite、摘要、Agent planning |
+| VLM | Ollama | `qwen3.5:4b` | 掃描 PDF、圖片、發票與表格理解、JSON 欄位抽取 |
 | Embedding | FastEmbed | `BAAI/bge-m3` | 文件 chunk 與 query 向量化，寫入 Qdrant |
 | Reranker | FastEmbed | `BAAI/bge-reranker-v2-m3` | 對 retrieval top K 重新排序，支援 Hit Rate / MRR 比較 |
 | OCR | Local engine | `paddleocr` | 先產生文字層與版面基礎，VLM 作為 parser 或補強 |
@@ -596,10 +596,10 @@ Redis 用途：
 模型設定範例：
 
 ```env
-LLM_PROVIDER=ollama
-LLM_MODEL=qwen3:8b
-VLM_PROVIDER=ollama
-VLM_MODEL=qwen3-vl:8b
+DOCURAG_LLM_PROVIDER=ollama
+DOCURAG_LLM_MODEL=qwen3.5:4b
+DOCURAG_VLM_PROVIDER=ollama
+DOCURAG_VLM_MODEL=qwen3.5:4b
 EMBEDDING_PROVIDER=fastembed
 EMBEDDING_MODEL=BAAI/bge-m3
 RERANKER_PROVIDER=fastembed
@@ -610,6 +610,8 @@ OCR_ENGINE=paddleocr
 設計原則：
 
 - LLM 與 VLM 概念上分工，但可由同一套 OpenAI-compatible client 抽象呼叫。
+- 第一版本機 demo 以 `qwen3.5:4b` 作為 LLM / VLM 共同目標，降低 RTX 5070 Ti 16GB VRAM 下同時搭配 PaddleOCR 的壓力。
+- 較新的大型 Qwen 系列可保留為 OpenAI-compatible API 或後續 serving fallback；未公開或未上架的 4B 型號不寫入預設路線。
 - Embedding 與 Reranker 保持獨立，方便在 eval run 中比較檢索策略。
 - vLLM 保留為後續 LLMOps / serving / latency 展示，第一版優先用 Ollama 降低本地整合成本。
 
@@ -1140,8 +1142,8 @@ Final Answer
   "reranker_model": "BAAI/bge-reranker-v2-m3",
   "retrieval_top_k": 30,
   "rerank_top_k": 5,
-  "llm_model": "qwen3:8b",
-  "vlm_model": "qwen3-vl:8b"
+  "llm_model": "qwen3.5:4b",
+  "vlm_model": "qwen3.5:4b"
 }
 ```
 
