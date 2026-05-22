@@ -14,13 +14,20 @@ from app.schemas.documents import DocumentChunk, DocumentMetadata, DocumentStatu
 from app.schemas.rag import RagQueryResponse, RetrievedChunk
 from app.services.embedding import create_embedding_provider
 from app.services.rag import KeywordRagProvider, RagProvider, VectorRagProvider
-from app.services.rerank import RerankService, create_rerank_service
+from app.services.rerank import RerankResult, RerankService, create_rerank_service
 from app.services.vector_indexing import VectorIndexingService
 from app.services.vector_store import create_qdrant_vector_store
 
 
-EvalStrategy = Literal["keyword", "vector", "vector_rerank", "hybrid"]
-ResultStrategy = Literal["keyword", "vector", "vector_rerank", "hybrid", "vector_unavailable_fallback"]
+EvalStrategy = Literal["keyword", "vector", "vector_rerank", "hybrid", "hybrid_rerank"]
+ResultStrategy = Literal[
+    "keyword",
+    "vector",
+    "vector_rerank",
+    "hybrid",
+    "hybrid_rerank",
+    "vector_unavailable_fallback",
+]
 
 
 @dataclass(frozen=True)
@@ -430,6 +437,66 @@ class HybridEvalProvider:
         return 1 / (rank + self._fusion_rank_offset)
 
 
+class HybridRerankEvalProvider:
+    name = "hybrid_rerank"
+
+    def __init__(
+        self,
+        hybrid_provider: HybridEvalProvider,
+        response_builder: KeywordRagProvider,
+        rerank_service: RerankService,
+    ) -> None:
+        self.hybrid_provider = hybrid_provider
+        self.response_builder = response_builder
+        self.rerank_service = rerank_service
+
+    def query(
+        self,
+        query: str,
+        top_k: int,
+        documents: list[DocumentMetadata],
+    ) -> RagQueryResponse:
+        hybrid_response = self.hybrid_provider.query(query, top_k, documents)
+        rerank_result = self.rerank_service.rerank(query, hybrid_response.retrieved_chunks)
+        reranked_chunks = self._annotate_hybrid_rerank_chunks(rerank_result)
+        return self.response_builder.build_response(query, reranked_chunks)
+
+    def _annotate_hybrid_rerank_chunks(self, rerank_result: RerankResult) -> list[RetrievedChunk]:
+        annotated_chunks = []
+        for chunk in rerank_result.chunks:
+            fallback_state = self._fallback_state(chunk, rerank_result.status)
+            annotated_chunks.append(
+                chunk.model_copy(
+                    update={
+                        "metadata": {
+                            **chunk.metadata,
+                            "strategy_label": "hybrid_rerank",
+                            "candidate_flow": "keyword+vector -> hybrid_merge -> rerank",
+                            "hybrid_candidate_count": str(rerank_result.input_candidate_count),
+                            "rerank_input_count": str(rerank_result.input_candidate_count),
+                            "final_candidate_count": str(len(rerank_result.chunks)),
+                            "rerank_provider": rerank_result.provider,
+                            "rerank_model": str(rerank_result.model or ""),
+                            "rerank_status": rerank_result.status,
+                            "rerank_top_k": str(rerank_result.rerank_top_k),
+                            "fallback_state": fallback_state,
+                        },
+                    }
+                )
+            )
+
+        return annotated_chunks
+
+    def _fallback_state(self, chunk: RetrievedChunk, rerank_status: str) -> str:
+        if rerank_status == "disabled":
+            return "reranker_disabled"
+        if rerank_status == "failed":
+            return "reranker_unavailable"
+        if chunk.metadata.get("vector_retrieval_status") == "failed":
+            return "vector_unavailable"
+        return "none"
+
+
 def evaluate_retrieval_response(
     case: RetrievalEvalCase,
     response: RagQueryResponse,
@@ -560,13 +627,14 @@ def create_eval_provider(
     if strategy == "vector":
         return vector_provider, environment
 
-    if strategy == "hybrid":
+    if strategy in {"hybrid", "hybrid_rerank"}:
         environment.update(
             {
                 "merge_policy": "rank_based_fusion",
                 "dedupe_key": "document_id_chunk_id",
             }
         )
+    if strategy == "hybrid":
         return HybridEvalProvider(keyword_provider, vector_provider), environment
 
     rerank_service = create_rerank_service(settings)
@@ -578,6 +646,13 @@ def create_eval_provider(
             "rerank_timeout_seconds": rerank_service.timeout_seconds,
         }
     )
+    if strategy == "hybrid_rerank":
+        return HybridRerankEvalProvider(
+            HybridEvalProvider(keyword_provider, vector_provider),
+            keyword_provider,
+            rerank_service,
+        ), environment
+
     return VectorRerankEvalProvider(vector_provider, keyword_provider, rerank_service), environment
 
 

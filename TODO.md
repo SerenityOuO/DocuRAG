@@ -66,7 +66,7 @@
 18. `tasks/phase-18-hybrid-rerank-planning/18-02-hybrid-rerank-eval-dataset-plan.md` 已完成，規劃 future eval dataset case 類型、demo-safe 資料邊界與 metrics 摘要使用方式。
 19. `tasks/phase-18-hybrid-rerank-planning/18-03-hybrid-rerank-trace-report-plan.md` 已完成，規劃 future trace / report visibility、report fields 與 missing metadata behavior。
 20. `tasks/phase-18-hybrid-rerank-planning/18-04-phase-18-demo-release-plan.md` 已完成，規劃 future demo validation、release sync checklist 與 deferred items。
-21. `tasks/phase-19-hybrid-rerank-runtime/19-01-hybrid-rerank-eval-provider.md`：實作 optional `hybrid_rerank` eval provider，將 hybrid candidates 交給 rerank service 重新排序。
+21. `tasks/phase-19-hybrid-rerank-runtime/19-01-hybrid-rerank-eval-provider.md` 已完成，實作 optional `hybrid_rerank` eval provider，將 hybrid candidates 交給 rerank service 重新排序。
 22. `tasks/phase-19-hybrid-rerank-runtime/19-02-hybrid-rerank-smoke-flag.md`：新增 eval runner / smoke script 的 explicit `hybrid_rerank` strategy 與 `-RunHybridRerank` flag。
 23. `tasks/phase-19-hybrid-rerank-runtime/19-03-hybrid-rerank-trace-report-sync.md`：補齊 `hybrid_rerank` trace / report visibility 與文件解讀。
 24. `tasks/phase-19-hybrid-rerank-runtime/19-04-hybrid-rerank-demo-release-sync.md`：重跑 final validation，並在 Phase 19 完成時執行 `v0.19.0` release/version sync。
@@ -479,7 +479,8 @@ Phase 18 guardrails：
 
 ## MVP v0.19.0 Hybrid Rerank Runtime Backlog
 
-- [ ] `tasks/phase-19-hybrid-rerank-runtime/19-01-hybrid-rerank-eval-provider.md`: 實作 disabled-by-default `hybrid_rerank` eval provider，流程為 keyword branch + vector branch -> hybrid merge / dedupe -> rerank reordering。
+- [x] `tasks/phase-19-hybrid-rerank-runtime/19-01-hybrid-rerank-eval-provider.md`: 實作 disabled-by-default `hybrid_rerank` eval provider，流程為 keyword branch + vector branch -> hybrid merge / dedupe -> rerank reordering。
+- [x] 19-01 validation：`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Set-Location 'C:/Users/USER/Desktop/DocuRAG'; ./scripts/test-backend.ps1"` 通過，`125 passed`（僅 pytest cache 權限警告）；`rg -n "hybrid_rerank|HybridRerank|rerank_fallback_reason|strategy_label" backend/app/services/evaluation.py backend/tests/test_evaluation.py TODO.md docs/ROADMAP.md` 通過；`git diff --check` 通過。
 - [ ] `tasks/phase-19-hybrid-rerank-runtime/19-02-hybrid-rerank-smoke-flag.md`: 將 `hybrid_rerank` 接入 eval runner CLI 與 `scripts/retrieval-eval-smoke.ps1 -RunHybridRerank`。
 - [ ] `tasks/phase-19-hybrid-rerank-runtime/19-03-hybrid-rerank-trace-report-sync.md`: 補齊 `hybrid_rerank` trace / report visibility，確保 branch score、merged score 與 rerank score 可區分。
 - [ ] `tasks/phase-19-hybrid-rerank-runtime/19-04-hybrid-rerank-demo-release-sync.md`: 重跑 final validation，確認 baseline / optional smoke 狀態，並完成 `v0.19.0` release/version sync。

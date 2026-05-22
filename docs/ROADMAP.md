@@ -927,7 +927,7 @@ Goal：把 Phase 18 planning 中的 `hybrid_rerank` 落地為 disabled-by-defaul
 
 Tickets：
 
-- [ ] `tasks/phase-19-hybrid-rerank-runtime/19-01-hybrid-rerank-eval-provider.md`
+- [x] `tasks/phase-19-hybrid-rerank-runtime/19-01-hybrid-rerank-eval-provider.md`
 - [ ] `tasks/phase-19-hybrid-rerank-runtime/19-02-hybrid-rerank-smoke-flag.md`
 - [ ] `tasks/phase-19-hybrid-rerank-runtime/19-03-hybrid-rerank-trace-report-sync.md`
 - [ ] `tasks/phase-19-hybrid-rerank-runtime/19-04-hybrid-rerank-demo-release-sync.md`
@@ -938,6 +938,15 @@ Expected Outcome：
 - 19-02 新增 eval runner / smoke script 的 explicit `hybrid_rerank` strategy 與 `-RunHybridRerank` flag。
 - 19-03 補齊 `hybrid_rerank` trace / report visibility，讓 branch score、merged score 與 rerank score 可被清楚解讀。
 - 19-04 重跑 final validation，完成 backend / frontend / Docker Compose / README / TODO / ROADMAP 的 `v0.19.0` release sync。
+
+19-01 Provider Flow Status：
+
+- `EvalStrategy` / result strategy 已識別 `hybrid_rerank`，預設策略仍維持 `keyword`。
+- `HybridRerankEvalProvider` 先重用既有 `HybridEvalProvider` 產生 keyword + vector -> hybrid merge / dedupe candidates，再交給既有 `RerankService` 排序。
+- Rerank success 會輸出 `strategy_label=hybrid_rerank`、`rerank_score`、`rerank_rank`、branch metadata 與 hybrid merge metadata。
+- Rerank unavailable 時保留 hybrid candidates，記錄 `rerank_status`、`rerank_fallback_reason` 與 fallback state。
+- Vector branch unavailable 時沿用 hybrid keyword-only fallback metadata，不讓 `hybrid_rerank` eval result 變成 hard failure。
+- 19-01 validation：`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Set-Location 'C:/Users/USER/Desktop/DocuRAG'; ./scripts/test-backend.ps1"` 通過，`125 passed`（僅 pytest cache 權限警告）；`rg -n "hybrid_rerank|HybridRerank|rerank_fallback_reason|strategy_label" backend/app/services/evaluation.py backend/tests/test_evaluation.py TODO.md docs/ROADMAP.md` 通過；`git diff --check` 通過。
 
 Acceptance Criteria：
 

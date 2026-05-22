@@ -1,6 +1,7 @@
 from app.schemas.rag import RagQueryResponse, RetrievedChunk
 from app.services.evaluation import (
     HybridEvalProvider,
+    HybridRerankEvalProvider,
     RetrievalEvalCase,
     VectorRerankEvalProvider,
     evaluate_retrieval_response,
@@ -192,6 +193,27 @@ def test_evaluate_retrieval_response_does_not_count_hybrid_vector_fallback_as_fa
     assert result.hit is True
 
 
+def test_evaluate_retrieval_response_does_not_count_hybrid_rerank_vector_fallback_as_failure() -> None:
+    response = make_response(
+        [
+            make_chunk(
+                "Payment terms: Net 15",
+                metadata={
+                    "strategy_label": "hybrid_rerank",
+                    "vector_retrieval_status": "failed",
+                    "vector_retrieval_error": "Cannot connect to Qdrant",
+                },
+            )
+        ]
+    )
+
+    result = evaluate_retrieval_response(make_case(), response, "hybrid_rerank", latency_ms=1.0)
+
+    assert result.strategy == "hybrid_rerank"
+    assert result.error is None
+    assert result.hit is True
+
+
 def test_hybrid_eval_provider_merges_and_dedupes_keyword_and_vector_candidates() -> None:
     provider = HybridEvalProvider(
         keyword_provider=StubKeywordProvider(
@@ -254,6 +276,115 @@ def test_hybrid_eval_provider_falls_back_to_keyword_when_vector_branch_fails() -
     assert metadata["branch_failures"] == "vector"
     assert metadata["fallback_reason"] == "Qdrant unavailable"
     assert response.citations[0].trace_metadata["fallback_reason"] == "Qdrant unavailable"
+
+
+def test_hybrid_rerank_eval_provider_reranks_hybrid_candidates() -> None:
+    rerank_provider = StaticRerankProvider([0.1, 0.9, 0.2])
+    hybrid_provider = HybridEvalProvider(
+        keyword_provider=StubKeywordProvider(
+            [
+                make_chunk("Payment terms: Net 15", "chunk-001"),
+                make_chunk("Amount due: USD 1,248.50", "chunk-002"),
+            ]
+        ),
+        vector_provider=StubVectorProvider(
+            make_response(
+                [
+                    make_chunk("Payment terms: Net 15", "chunk-001", metadata={"vector_score": "0.900000"}),
+                    make_chunk("Line items include monitor arms.", "chunk-003", metadata={"vector_score": "0.500000"}),
+                ]
+            )
+        ),
+    )
+    provider = HybridRerankEvalProvider(
+        hybrid_provider=hybrid_provider,
+        response_builder=KeywordRagProvider(),
+        rerank_service=RerankService(provider=rerank_provider, top_k=3, timeout_seconds=30),
+    )
+
+    response = provider.query("amount due", 3, [])
+
+    assert rerank_provider.documents == [
+        "Payment terms: Net 15",
+        "Amount due: USD 1,248.50",
+        "Line items include monitor arms.",
+    ]
+    assert [chunk.chunk_id for chunk in response.retrieved_chunks] == ["chunk-002", "chunk-003", "chunk-001"]
+    metadata = response.retrieved_chunks[0].metadata
+    assert metadata["strategy_label"] == "hybrid_rerank"
+    assert metadata["candidate_flow"] == "keyword+vector -> hybrid_merge -> rerank"
+    assert metadata["rerank_enabled"] == "true"
+    assert metadata["rerank_status"] == "completed"
+    assert metadata["rerank_score"] == "0.900000"
+    assert metadata["rerank_rank"] == "1"
+    assert metadata["merged_score"] == "0.016129"
+    assert metadata["hybrid_candidate_count"] == "3"
+    assert metadata["rerank_input_count"] == "3"
+    assert metadata["fallback_state"] == "none"
+    assert response.citations[0].trace_metadata["strategy_label"] == "hybrid_rerank"
+
+
+def test_hybrid_rerank_eval_provider_preserves_hybrid_candidates_on_rerank_failure() -> None:
+    provider = HybridRerankEvalProvider(
+        hybrid_provider=HybridEvalProvider(
+            keyword_provider=StubKeywordProvider(
+                [
+                    make_chunk("Payment terms: Net 15", "chunk-001"),
+                    make_chunk("Amount due: USD 1,248.50", "chunk-002"),
+                ]
+            ),
+            vector_provider=StubVectorProvider(make_response([])),
+        ),
+        response_builder=KeywordRagProvider(),
+        rerank_service=RerankService(provider=RaisingRerankProvider(), top_k=2, timeout_seconds=30),
+    )
+
+    response = provider.query("amount due", 2, [])
+
+    assert [chunk.chunk_id for chunk in response.retrieved_chunks] == ["chunk-001", "chunk-002"]
+    metadata = response.retrieved_chunks[0].metadata
+    assert metadata["strategy_label"] == "hybrid_rerank"
+    assert metadata["rerank_enabled"] == "false"
+    assert metadata["rerank_status"] == "failed"
+    assert metadata["rerank_fallback_reason"] == "reranker unavailable"
+    assert metadata["merge_policy"] == "rank_based_fusion"
+    assert metadata["fallback_state"] == "reranker_unavailable"
+
+
+def test_hybrid_rerank_eval_provider_keeps_vector_branch_fallback_metadata() -> None:
+    rerank_provider = StaticRerankProvider([0.9])
+    provider = HybridRerankEvalProvider(
+        hybrid_provider=HybridEvalProvider(
+            keyword_provider=StubKeywordProvider([make_chunk("Payment terms: Net 15", "chunk-001")]),
+            vector_provider=StubVectorProvider(
+                make_response(
+                    [
+                        make_chunk(
+                            "Payment terms: Net 15",
+                            "chunk-001",
+                            metadata={
+                                "vector_retrieval_status": "failed",
+                                "vector_retrieval_error": "Qdrant unavailable",
+                            },
+                        )
+                    ]
+                )
+            ),
+        ),
+        response_builder=KeywordRagProvider(),
+        rerank_service=RerankService(provider=rerank_provider, top_k=2, timeout_seconds=30),
+    )
+
+    response = provider.query("payment terms", 2, [])
+
+    assert [chunk.chunk_id for chunk in response.retrieved_chunks] == ["chunk-001"]
+    metadata = response.retrieved_chunks[0].metadata
+    assert metadata["strategy_label"] == "hybrid_rerank"
+    assert metadata["branch_failures"] == "vector"
+    assert metadata["fallback_reason"] == "Qdrant unavailable"
+    assert metadata["vector_retrieval_status"] == "failed"
+    assert metadata["rerank_status"] == "completed"
+    assert metadata["fallback_state"] == "vector_unavailable"
 
 
 def test_vector_rerank_eval_provider_reranks_vector_candidates() -> None:
