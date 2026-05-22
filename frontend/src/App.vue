@@ -52,7 +52,7 @@ const latestResponse = ref<
   | null
 >(null);
 
-const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.10.0"));
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.11.0"));
 
 const healthLabel = computed(() => {
   if (healthState.value === "success" && health.value?.status === "ok") {
@@ -108,6 +108,32 @@ const ragAnswerSourceClass = computed(() => {
   }
 
   if (ragAnswerSource.value === "deterministic baseline") {
+    return "status-ready";
+  }
+
+  return "status-success";
+});
+
+const ragRetrievalSource = computed(() => {
+  const trace = ragResult.value?.citations[0]?.trace_metadata ?? ragResult.value?.retrieved_chunks[0]?.metadata;
+
+  if (trace?.vector_retrieval_status === "completed") {
+    return `${trace.retrieval_provider ?? "vector"}/${trace.vector_store ?? "qdrant"}`;
+  }
+
+  if (trace?.vector_retrieval_status === "failed") {
+    return "vector unavailable fallback";
+  }
+
+  return "keyword baseline";
+});
+
+const ragRetrievalSourceClass = computed(() => {
+  if (ragRetrievalSource.value === "vector unavailable fallback") {
+    return "status-failed";
+  }
+
+  if (ragRetrievalSource.value === "keyword baseline") {
     return "status-ready";
   }
 
@@ -310,7 +336,7 @@ onMounted(() => {
       <h1>DocuRAG AgentOps</h1>
       <p class="hero-copy">
         Backend health、本機文件上傳、metadata 保存、PaddleOCR PP-OCRv4 Chinese provider、mock override、local keyword RAG、
-        optional Ollama Qwen3.5 answer source 與 citation trace 驗證。
+        optional Ollama Qwen3.5 answer source、optional vector retrieval fallback 與 citation trace 驗證。
       </p>
     </header>
 
@@ -604,7 +630,10 @@ onMounted(() => {
         <section v-if="ragResult" class="rag-result">
           <div class="answer-heading">
             <h3>Answer</h3>
-            <span class="status-pill" :class="ragAnswerSourceClass">{{ ragAnswerSource }}</span>
+            <div class="answer-badges">
+              <span class="status-pill" :class="ragAnswerSourceClass">{{ ragAnswerSource }}</span>
+              <span class="status-pill" :class="ragRetrievalSourceClass">{{ ragRetrievalSource }}</span>
+            </div>
           </div>
           <pre class="answer-text">{{ ragResult.answer }}</pre>
 

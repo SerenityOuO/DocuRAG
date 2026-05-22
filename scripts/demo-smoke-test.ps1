@@ -5,7 +5,12 @@ param(
     [string]$RealOcrSamplePath = "",
     [switch]$RunLlm,
     [string]$LlmBaseUrl = "http://127.0.0.1:11434",
-    [string]$LlmModel = "qwen3.5:4b"
+    [string]$LlmModel = "qwen3.5:4b",
+    [switch]$RunVector,
+    [string]$EmbeddingBaseUrl = "http://127.0.0.1:11434",
+    [string]$EmbeddingModel = "qwen3-embedding:0.6b",
+    [string]$QdrantUrl = "http://127.0.0.1:6333",
+    [string]$QdrantCollection = "docurag_chunks_v1"
 )
 
 Set-StrictMode -Version Latest
@@ -102,6 +107,50 @@ function Get-RagAnswerSource {
     return "deterministic baseline"
 }
 
+function Get-RagRetrievalSource {
+    param([object]$Rag)
+
+    $trace = $null
+    if ($null -ne $Rag -and $null -ne $Rag.citations -and $Rag.citations.Count -gt 0) {
+        $trace = $Rag.citations[0].trace_metadata
+    }
+    elseif ($null -ne $Rag -and $null -ne $Rag.retrieved_chunks -and $Rag.retrieved_chunks.Count -gt 0) {
+        $trace = $Rag.retrieved_chunks[0].metadata
+    }
+
+    if ($null -eq $trace) {
+        return "keyword baseline"
+    }
+
+    $statusProperty = $trace.PSObject.Properties["vector_retrieval_status"]
+    if ($null -eq $statusProperty) {
+        return "keyword baseline"
+    }
+
+    if ($statusProperty.Value -eq "completed") {
+        $provider = "vector"
+        $store = "qdrant"
+        $providerProperty = $trace.PSObject.Properties["retrieval_provider"]
+        $storeProperty = $trace.PSObject.Properties["vector_store"]
+
+        if ($null -ne $providerProperty -and -not [string]::IsNullOrWhiteSpace([string]$providerProperty.Value)) {
+            $provider = [string]$providerProperty.Value
+        }
+
+        if ($null -ne $storeProperty -and -not [string]::IsNullOrWhiteSpace([string]$storeProperty.Value)) {
+            $store = [string]$storeProperty.Value
+        }
+
+        return "$provider/$store"
+    }
+
+    if ($statusProperty.Value -eq "failed") {
+        return "vector unavailable fallback"
+    }
+
+    return "keyword baseline"
+}
+
 function Invoke-FileUpload {
     param(
         [string]$Url,
@@ -153,6 +202,31 @@ if ($RunLlm) {
     Assert-Condition ($modelNames -contains $LlmModel) "Ollama model '$LlmModel' was not found. Available models: $($modelNames -join ', ')"
 }
 
+if ($RunVector) {
+    $embeddingTagsUrl = "$($EmbeddingBaseUrl.TrimEnd('/'))/api/tags"
+    $qdrantCollectionsUrl = "$($QdrantUrl.TrimEnd('/'))/collections"
+    Write-Host "Vector smoke enabled"
+    Write-Host "Ollama embedding tags: $embeddingTagsUrl"
+    Write-Host "Qdrant collections: $qdrantCollectionsUrl"
+
+    try {
+        $embeddingTags = Invoke-RestMethod -Method Get -Uri $embeddingTagsUrl
+    }
+    catch {
+        throw "Ollama embedding service is required for -RunVector but $embeddingTagsUrl was unavailable. Start Ollama and pull $EmbeddingModel first. $($_.Exception.Message)"
+    }
+
+    $embeddingModelNames = @($embeddingTags.models | ForEach-Object { $_.name })
+    Assert-Condition ($embeddingModelNames -contains $EmbeddingModel) "Ollama embedding model '$EmbeddingModel' was not found. Available models: $($embeddingModelNames -join ', ')"
+
+    try {
+        Invoke-RestMethod -Method Get -Uri $qdrantCollectionsUrl | Out-Null
+    }
+    catch {
+        throw "Qdrant is required for -RunVector but $qdrantCollectionsUrl was unavailable. Start docker-compose Qdrant first. $($_.Exception.Message)"
+    }
+}
+
 $health = Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/health"
 Assert-Condition ($health.status -eq "ok") "Expected /health status ok."
 Assert-Condition (-not [string]::IsNullOrWhiteSpace($health.version)) "Expected /health version."
@@ -178,6 +252,7 @@ Assert-Condition ($rag.citations.Count -gt 0) "RAG did not return citations."
 Assert-Condition ($rag.retrieved_chunks.Count -gt 0) "RAG did not return retrieved chunks."
 Assert-Condition (($rag.retrieved_chunks | ConvertTo-Json -Depth 8) -match "AUR-2026-051") "Retrieved chunks did not include expected invoice evidence."
 $ragAnswerSource = Get-RagAnswerSource $rag
+$ragRetrievalSource = Get-RagRetrievalSource $rag
 
 if ($RunLlm) {
     $expectedSource = "ollama/$LlmModel"
@@ -190,7 +265,14 @@ else {
     Assert-Condition ($ragAnswerSource -eq "deterministic baseline") "Expected deterministic baseline answer source. Got '$ragAnswerSource'."
 }
 
-Write-Host "RAG query OK: source $ragAnswerSource"
+if ($RunVector) {
+    Assert-Condition ($ragRetrievalSource -eq "vector/qdrant") "Expected vector retrieval source 'vector/qdrant'. Got '$ragRetrievalSource'. Start backend with DOCURAG_RAG_RETRIEVAL_PROVIDER=vector, DOCURAG_EMBEDDING_PROVIDER=ollama, DOCURAG_EMBEDDING_MODEL=$EmbeddingModel, DOCURAG_QDRANT_URL=$QdrantUrl, and DOCURAG_QDRANT_COLLECTION=$QdrantCollection."
+}
+else {
+    Assert-Condition ($ragRetrievalSource -eq "keyword baseline") "Expected keyword baseline retrieval source. Got '$ragRetrievalSource'."
+}
+
+Write-Host "RAG query OK: answer source $ragAnswerSource; retrieval source $ragRetrievalSource"
 
 if ($RunRealOcr) {
     Write-Host "Real OCR check"

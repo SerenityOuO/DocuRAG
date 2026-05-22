@@ -8,7 +8,7 @@ services:
         DOCURAG_INSTALL_REAL_OCR: ${DOCURAG_INSTALL_REAL_OCR:-false}
     environment:
       DOCURAG_APP_NAME: DocuRAG AgentOps Backend
-      DOCURAG_VERSION: 0.10.0
+      DOCURAG_VERSION: 0.11.0
       DOCURAG_ENVIRONMENT: docker
       DOCURAG_DATA_DIR: /app/data
       DOCURAG_OCR_PROVIDER: ${DOCURAG_OCR_PROVIDER:-paddleocr}
@@ -16,3 +16,14 @@ services:
       - ../data:/app/data
     ports:
       - "8000:8000"
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+volumes:
+  qdrant_storage:

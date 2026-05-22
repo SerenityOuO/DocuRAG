@@ -11,9 +11,16 @@ from app.core.config import get_settings
 from app.main import app
 from app.schemas.documents import BoundingBox, DocumentChunk, DocumentMetadata, DocumentStatus
 from app.schemas.rag import RagCitation, RagQueryResponse
+from app.services.embedding import EmbeddingProviderError, EmbeddingResult
 from app.services.document_storage import DocumentStorage
 from app.services.llm import LlmGeneration, LlmProviderError
-from app.services.rag import KeywordRagProvider
+from app.services.rag import KeywordRagProvider, VectorRagProvider
+from app.services.vector_store import (
+    QdrantCollectionStatus,
+    QdrantPoint,
+    QdrantSearchResult,
+    QdrantVectorStoreError,
+)
 
 
 @pytest.fixture
@@ -299,6 +306,265 @@ def test_keyword_rag_provider_falls_back_when_llm_generation_fails() -> None:
     assert response.citations[0].trace_metadata["llm_error"] == "Cannot connect to Ollama"
 
 
+def test_vector_rag_provider_uses_embedding_and_qdrant_results() -> None:
+    class StubEmbeddingProvider:
+        name = "ollama"
+        model = "qwen3-embedding:0.6b"
+
+        def __init__(self) -> None:
+            self.inputs: list[str] = []
+
+        def embed(self, text: str) -> EmbeddingResult:
+            self.inputs.append(text)
+            return EmbeddingResult(embedding=[float(len(text)), 1.0], model=self.model)
+
+    class StubVectorStore:
+        collection_name = "docurag_chunks_v1"
+        vector_size = 1024
+
+        def __init__(self) -> None:
+            self.collection_checked = False
+            self.points: list[QdrantPoint] = []
+
+        def get_collection(self) -> QdrantCollectionStatus:
+            self.collection_checked = True
+            return QdrantCollectionStatus(
+                collection_name=self.collection_name,
+                exists=True,
+                vector_size=1024,
+                distance="Cosine",
+            )
+
+        def upsert_points(self, points: list[QdrantPoint]) -> None:
+            self.points = points
+
+        def search(self, vector: list[float], limit: int) -> list[QdrantSearchResult]:
+            assert vector == [float(len("payment due date Net 15")), 1.0]
+            assert limit == 3
+            return [
+                QdrantSearchResult(
+                    point_id=self.points[0].point_id,
+                    score=0.88,
+                    payload=self.points[0].payload,
+                )
+            ]
+
+    document = DocumentMetadata(
+        document_id="doc-001",
+        filename="invoice-a.txt",
+        stored_filename="doc-001-invoice-a.txt",
+        file_type="txt",
+        content_type="text/plain",
+        size=100,
+        status=DocumentStatus.READY,
+        created_at="2026-05-20T00:00:00Z",
+        chunks=[
+            DocumentChunk(
+                chunk_id="chunk-001",
+                document_id="doc-001",
+                text="Payment terms are Net 15.",
+                source="ocr_mock",
+                created_at="2026-05-20T00:00:00Z",
+                source_type="ocr_mock",
+                metadata={"origin": "ocr_text", "provider": "ocr_mock"},
+            )
+        ],
+    )
+    embedding_provider = StubEmbeddingProvider()
+    vector_store = StubVectorStore()
+    provider = VectorRagProvider(
+        keyword_provider=KeywordRagProvider(),
+        embedding_provider=embedding_provider,
+        vector_store=vector_store,
+    )
+
+    response = provider.query("payment due date Net 15", 3, [document])
+
+    assert vector_store.collection_checked is True
+    assert embedding_provider.inputs == ["Payment terms are Net 15.", "payment due date Net 15"]
+    assert response.answer.startswith("Local OCR chunks matched the query")
+    assert response.retrieved_chunks[0].score == 0.88
+    assert response.retrieved_chunks[0].metadata["retrieval_provider"] == "vector"
+    assert response.retrieved_chunks[0].metadata["vector_retrieval_status"] == "completed"
+    assert response.retrieved_chunks[0].metadata["embedding_model"] == "qwen3-embedding:0.6b"
+    assert response.citations[0].trace_metadata["retrieval_provider"] == "vector"
+    assert response.citations[0].trace_metadata["vector_store"] == "qdrant"
+    assert response.citations[0].trace_metadata["vector_score"] == "0.880000"
+
+
+def test_vector_rag_provider_falls_back_to_keyword_when_embedding_fails() -> None:
+    class FailingEmbeddingProvider:
+        name = "ollama"
+        model = "qwen3-embedding:0.6b"
+
+        def embed(self, text: str) -> EmbeddingResult:
+            raise EmbeddingProviderError("Cannot connect to Ollama")
+
+    class StubVectorStore:
+        collection_name = "docurag_chunks_v1"
+        vector_size = 1024
+
+        def get_collection(self) -> QdrantCollectionStatus:
+            return QdrantCollectionStatus(
+                collection_name=self.collection_name,
+                exists=True,
+                vector_size=1024,
+                distance="Cosine",
+            )
+
+        def upsert_points(self, points: list[QdrantPoint]) -> None:
+            pass
+
+        def search(self, vector: list[float], limit: int) -> list[QdrantSearchResult]:
+            return []
+
+    document = DocumentMetadata(
+        document_id="doc-001",
+        filename="invoice-a.txt",
+        stored_filename="doc-001-invoice-a.txt",
+        file_type="txt",
+        content_type="text/plain",
+        size=100,
+        status=DocumentStatus.READY,
+        created_at="2026-05-20T00:00:00Z",
+        chunks=[
+            DocumentChunk(
+                chunk_id="chunk-001",
+                document_id="doc-001",
+                text="Payment terms are Net 15.",
+                source="ocr_mock",
+                created_at="2026-05-20T00:00:00Z",
+                source_type="ocr_mock",
+                metadata={"origin": "ocr_text", "provider": "ocr_mock"},
+            )
+        ],
+    )
+    provider = VectorRagProvider(
+        keyword_provider=KeywordRagProvider(),
+        embedding_provider=FailingEmbeddingProvider(),
+        vector_store=StubVectorStore(),
+    )
+
+    response = provider.query("payment terms", 3, [document])
+
+    assert "Local OCR chunks matched the query" in response.answer
+    assert "Vector retrieval unavailable; fallback to keyword retrieval" in response.answer
+    assert response.citations[0].trace_metadata["retrieval_provider"] == "keyword"
+    assert response.citations[0].trace_metadata["vector_retrieval_status"] == "failed"
+    assert response.citations[0].trace_metadata["vector_retrieval_error"] == "Cannot connect to Ollama"
+    assert response.retrieved_chunks[0].metadata["retrieval_provider"] == "keyword"
+
+
+def test_vector_rag_provider_falls_back_to_keyword_when_qdrant_fails() -> None:
+    class StubEmbeddingProvider:
+        name = "ollama"
+        model = "qwen3-embedding:0.6b"
+
+        def embed(self, text: str) -> EmbeddingResult:
+            return EmbeddingResult(embedding=[1.0, 2.0], model=self.model)
+
+    class FailingVectorStore:
+        collection_name = "docurag_chunks_v1"
+
+        def get_collection(self) -> QdrantCollectionStatus:
+            raise QdrantVectorStoreError("Cannot connect to Qdrant")
+
+        def upsert_points(self, points: list[QdrantPoint]) -> None:
+            pass
+
+        def search(self, vector: list[float], limit: int) -> list[QdrantSearchResult]:
+            return []
+
+    document = DocumentMetadata(
+        document_id="doc-001",
+        filename="invoice-a.txt",
+        stored_filename="doc-001-invoice-a.txt",
+        file_type="txt",
+        content_type="text/plain",
+        size=100,
+        status=DocumentStatus.READY,
+        created_at="2026-05-20T00:00:00Z",
+        chunks=[
+            DocumentChunk(
+                chunk_id="chunk-001",
+                document_id="doc-001",
+                text="Payment terms are Net 15.",
+                source="ocr_mock",
+                created_at="2026-05-20T00:00:00Z",
+            )
+        ],
+    )
+    provider = VectorRagProvider(
+        keyword_provider=KeywordRagProvider(),
+        embedding_provider=StubEmbeddingProvider(),
+        vector_store=FailingVectorStore(),
+    )
+
+    response = provider.query("payment terms", 3, [document])
+
+    assert "Vector retrieval unavailable; fallback to keyword retrieval" in response.answer
+    assert response.citations[0].trace_metadata["vector_retrieval_error"] == "Cannot connect to Qdrant"
+
+
+def test_vector_rag_provider_falls_back_to_keyword_when_collection_missing() -> None:
+    class StubEmbeddingProvider:
+        name = "ollama"
+        model = "qwen3-embedding:0.6b"
+
+        def embed(self, text: str) -> EmbeddingResult:
+            return EmbeddingResult(embedding=[1.0, 2.0], model=self.model)
+
+    class MissingCollectionVectorStore:
+        collection_name = "docurag_chunks_v1"
+        vector_size = 1024
+
+        def get_collection(self) -> QdrantCollectionStatus:
+            return QdrantCollectionStatus(
+                collection_name=self.collection_name,
+                exists=False,
+            )
+
+        def upsert_points(self, points: list[QdrantPoint]) -> None:
+            raise AssertionError("Vector fallback should not upsert when collection is missing.")
+
+        def search(self, vector: list[float], limit: int) -> list[QdrantSearchResult]:
+            raise AssertionError("Vector fallback should not search when collection is missing.")
+
+    document = DocumentMetadata(
+        document_id="doc-001",
+        filename="invoice-a.txt",
+        stored_filename="doc-001-invoice-a.txt",
+        file_type="txt",
+        content_type="text/plain",
+        size=100,
+        status=DocumentStatus.READY,
+        created_at="2026-05-20T00:00:00Z",
+        chunks=[
+            DocumentChunk(
+                chunk_id="chunk-001",
+                document_id="doc-001",
+                text="Payment terms are Net 15.",
+                source="ocr_mock",
+                created_at="2026-05-20T00:00:00Z",
+            )
+        ],
+    )
+    provider = VectorRagProvider(
+        keyword_provider=KeywordRagProvider(),
+        embedding_provider=StubEmbeddingProvider(),
+        vector_store=MissingCollectionVectorStore(),
+    )
+
+    response = provider.query("payment terms", 3, [document])
+
+    assert "Vector retrieval unavailable; fallback to keyword retrieval" in response.answer
+    assert response.citations[0].trace_metadata["retrieval_provider"] == "keyword"
+    assert response.citations[0].trace_metadata["vector_retrieval_status"] == "failed"
+    assert response.citations[0].trace_metadata["vector_retrieval_error"] == (
+        "Qdrant collection 'docurag_chunks_v1' is missing."
+    )
+
+
 def test_get_rag_provider_enables_ollama_from_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DOCURAG_LLM_PROVIDER", "ollama")
     monkeypatch.setenv("DOCURAG_LLM_MODEL", "qwen3.5:4b")
@@ -313,6 +579,22 @@ def test_get_rag_provider_enables_ollama_from_settings(monkeypatch: pytest.Monke
     assert isinstance(provider, KeywordRagProvider)
     assert provider.llm_provider is not None
     assert provider.llm_provider.name == "ollama"
+
+
+def test_get_rag_provider_enables_vector_from_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DOCURAG_RAG_RETRIEVAL_PROVIDER", "vector")
+    monkeypatch.setenv("DOCURAG_EMBEDDING_PROVIDER", "ollama")
+    monkeypatch.setenv("DOCURAG_QDRANT_URL", "http://127.0.0.1:6333")
+    get_settings.cache_clear()
+
+    try:
+        provider = get_rag_provider()
+    finally:
+        get_settings.cache_clear()
+
+    assert isinstance(provider, VectorRagProvider)
+    assert provider.embedding_provider.name == "ollama"
+    assert provider.vector_store.collection_name == "docurag_chunks_v1"
 
 
 def test_rag_query_backfills_chunks_from_existing_ocr_text(

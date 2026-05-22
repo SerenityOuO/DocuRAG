@@ -1,12 +1,12 @@
 {
   "name": "docurag-agentops-frontend",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
-    "preview": "vite preview",
+    "dev": "node scripts/dev.mjs",
+    "build": "vue-tsc --noEmit && node scripts/build.mjs",
+    "preview": "node scripts/preview.mjs",
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {

@@ -378,6 +378,13 @@ td {
   margin: 0;
 }
 
+.answer-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .answer-text {
   min-height: 120px;
 }

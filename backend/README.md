@@ -1,6 +1,6 @@
 # Backend
 
-DocuRAG AgentOps backend MVP v0.10.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、local RAG query API、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，目前 RAG 仍以 `KeywordRagProvider` 做 keyword retrieval 與 citation contract。v0.7 的 real OCR spike 已選定 PaddleOCR，v0.8 將 PaddleOCR runtime 收斂到 Python 3.12、PaddleOCR 2.10.0 與 PaddlePaddle 3.0.0 sample flow；v0.9.0 runtime baseline 開始 provider-selected real OCR 只支援 PaddlePaddle GPU / CUDA build，且預設使用 PP-OCRv4 mobile 中文 / 中英混合模型設定。v0.9.1 補上 backend startup preload、provider / engine reuse、OCR timing metadata 與小範圍效能 baseline。v0.10.0 加入最小 Ollama `qwen3.5:4b` LLM client、可選 `/rag/query` generation path 與 demo smoke；未設定 LLM provider 時既有 `/rag/query` 預設仍是 deterministic baseline。此階段不接資料庫、OpenAI API、vLLM、embedding、Qdrant、rerank、Redis、NATS 或登入權限。
+DocuRAG AgentOps backend MVP v0.11.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、local RAG query API、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，RAG 預設仍以 `KeywordRagProvider` 做 keyword retrieval 與 citation contract。v0.10.0 加入最小 Ollama `qwen3.5:4b` LLM client、可選 `/rag/query` generation path 與 demo smoke；v0.11.0 加入 disabled-by-default Ollama embedding client、optional Qdrant runtime 與 fallback-safe vector retrieval path。未設定 vector retrieval 或 LLM provider 時既有 `/rag/query` 預設仍是 deterministic keyword baseline。此階段不接資料庫、OpenAI API、vLLM、rerank、Redis、NATS、worker 或登入權限。
 
 ## Install
 
@@ -152,6 +152,53 @@ Phase 10 Ollama LLM RAG：
 - Ollama 未啟動、模型不存在或 request timeout 時，answer 會明確標示 LLM generation unavailable，並 fallback 到 retrieved OCR chunks；不會讓模型捏造未檢索內容。
 - `scripts/demo-smoke-test.ps1 -RunLlm` 會檢查 Ollama `/api/tags`、確認 `qwen3.5:4b` 存在，並要求 RAG answer source 為 `ollama/qwen3.5:4b`。
 
+Phase 11 Ollama embedding client：
+
+- `DOCURAG_EMBEDDING_PROVIDER` 預設未設定，embedding provider 為 disabled；既有 `/rag/query` 仍維持 keyword retrieval baseline。
+- 設定 `DOCURAG_EMBEDDING_PROVIDER=ollama`、`DOCURAG_EMBEDDING_BASE_URL=http://127.0.0.1:11434` 與 `DOCURAG_EMBEDDING_MODEL=qwen3-embedding:0.6b` 後，`OllamaEmbeddingProvider` 會使用 native `POST /api/embed`。
+- `DOCURAG_EMBEDDING_TIMEOUT_SECONDS` 預設為 `30`。
+- `scripts/ollama-embedding-smoke.ps1` 可檢查 Ollama `/api/tags` 並呼叫 `/api/embed`，用於輸出本機實際 vector dimension。
+- 2026-05-22 follow-up 本機 smoke 結果：Ollama service 可連線，已 pull `qwen3-embedding:0.6b`；`scripts/ollama-embedding-smoke.ps1` 通過並確認實際 vector dimension 為 `1024`。Mock HTTP tests 仍覆蓋 request / response / timeout / HTTP error / malformed response。
+- 此 building block 預設 disabled，也不移除 optional `qwen3.5:4b` generation path。
+
+Phase 11 Qdrant local runtime：
+
+- `DOCURAG_QDRANT_URL` 預設 `http://127.0.0.1:6333`。
+- `DOCURAG_QDRANT_COLLECTION` 預設 `docurag_chunks_v1`。
+- `DOCURAG_QDRANT_VECTOR_SIZE` 預設 `1024`，對應本機 `qwen3-embedding:0.6b` smoke 確認的實際 vector dimension；外部 runtime 不可用時仍可用 mock tests 與明確 env 重跑。
+- `DOCURAG_QDRANT_TIMEOUT_SECONDS` 預設 `10`。
+- `QdrantVectorStore.ensure_collection()` 只建立或檢查 collection，不會被 backend startup 或 `/rag/query` 預設 path 呼叫。
+- `scripts/qdrant-collection-smoke.ps1` 會檢查或建立 `docurag_chunks_v1`，distance 固定 `Cosine`。
+
+```powershell
+docker-compose -f infra/docker-compose.yml up -d qdrant
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\qdrant-collection-smoke.ps1
+docker-compose -f infra/docker-compose.yml down
+```
+
+2026-05-22 follow-up 本機 validation：Qdrant mock tests 通過；Docker Desktop 已啟動，Docker Compose 已啟動 `qdrant` service，`qdrant-collection-smoke.ps1` 通過並確認 `docurag_chunks_v1` collection，vector size `1024`、distance `Cosine`。這不改變既有 keyword RAG baseline 預設。
+
+Phase 11 optional Vector RAG：
+
+- `DOCURAG_RAG_RETRIEVAL_PROVIDER` 預設為 `keyword`；只有設定為 `vector` 時才會嘗試 embedding + Qdrant。
+- Vector path 會在 query request 內以最小實作將 local chunks embed 後 upsert 到 Qdrant，再 embed query 並用 Qdrant search 取回 chunks。
+- Embedding unavailable、Qdrant unavailable、collection mismatch、payload malformed 或 vector search 無結果時，response 會明確 fallback 到 keyword retrieval。
+- Fallback 或成功狀態會寫入 citation `trace_metadata` 與 retrieved chunk `metadata`：`retrieval_provider`、`vector_retrieval_status`、`vector_store`、`qdrant_collection`、`embedding_provider`、`embedding_model` 與錯誤訊息或 vector score。
+- LLM generation path 仍可接在 retrieved chunks 後；vector retrieval 成功時可由 `ollama/qwen3.5:4b` 生成回答，vector 失敗時仍可對 keyword fallback chunks 生成回答。
+
+```powershell
+$env:DOCURAG_RAG_RETRIEVAL_PROVIDER="vector"
+$env:DOCURAG_EMBEDDING_PROVIDER="ollama"
+$env:DOCURAG_EMBEDDING_MODEL="qwen3-embedding:0.6b"
+$env:DOCURAG_QDRANT_URL="http://127.0.0.1:6333"
+$env:DOCURAG_QDRANT_COLLECTION="docurag_chunks_v1"
+py -3.12 -m uvicorn app.main:app --reload
+```
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunVector
+```
+
 ## Local Storage
 
 上傳 API 會將原始檔案保存到 repo root 的 `data/uploads/`，並將 metadata 寫入 `data/documents.json`。`filename` 會先安全化，避免 `../` 或 Windows path separator 造成 path traversal。
@@ -162,7 +209,7 @@ document metadata 會包含 `processing` contract，明確記錄 `upload`、`ocr
 
 document metadata 也會保存 `processing_jobs` history 與 `latest_job` summary。同步 upload 會記錄 completed upload job；mock OCR 成功會記錄 completed OCR 與 local indexing job；provider failed 會記錄 failed OCR job。這些 job metadata 只是 contract，不代表已引入 worker、queue、Redis 或 NATS。
 
-v0.5.1 chunks 由 OCR mock text 產生，每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。v0.6 chunk / citation schema 另外補齊 optional `page_number`、`bbox`、`confidence`、`source_type`、chunk `metadata` 與 citation `trace_metadata` 欄位；mock OCR chunk 只填 `source_type=ocr_mock` 與 metadata safe default，不產生真正 OCR bbox 或 confidence。v0.7 real OCR output 先正規化到 `OcrResult.lines`，再將 line-level page、bbox、confidence 與 metadata 寫入 `DocumentChunk`，讓 citations 與 retrieved chunks 不依賴 PaddleOCR 私有格式。`POST /rag/query` 透過 `KeywordRagProvider` 做本機 keyword retrieval，並用 deterministic template 回傳 answer、citations 與 retrieved chunks。對 `text/plain`、`.txt`、`.md`、`.csv` sample，OCR mock 會把上傳文字納入 deterministic mock OCR text，方便 demo query 引用具體欄位；這不是 embedding、Qdrant、rerank 或 LLM。
+v0.5.1 chunks 由 OCR mock text 產生，每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。v0.6 chunk / citation schema 另外補齊 optional `page_number`、`bbox`、`confidence`、`source_type`、chunk `metadata` 與 citation `trace_metadata` 欄位；mock OCR chunk 只填 `source_type=ocr_mock` 與 metadata safe default，不產生真正 OCR bbox 或 confidence。v0.7 real OCR output 先正規化到 `OcrResult.lines`，再將 line-level page、bbox、confidence 與 metadata 寫入 `DocumentChunk`，讓 citations 與 retrieved chunks 不依賴 PaddleOCR 私有格式。`POST /rag/query` 預設透過 `KeywordRagProvider` 做本機 keyword retrieval，設定 `DOCURAG_RAG_RETRIEVAL_PROVIDER=vector` 時才改用 `VectorRagProvider` 嘗試 Ollama embedding + Qdrant search。對 `text/plain`、`.txt`、`.md`、`.csv` sample，OCR mock 會把上傳文字納入 deterministic mock OCR text，方便 demo query 引用具體欄位；這不是 rerank、hybrid search 或 eval runner。
 
 可用環境變數覆寫資料目錄：
 
@@ -272,3 +319,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 
 - v0.9.0: GPU Runtime、PaddlePaddle GPU-only guard、PP-OCRv4 mobile 中文 / 中英混合模型設定與模型目錄文件已完成；本機 Python 3.12 + CUDA PaddlePaddle GPU runtime、sample invoice 與繁中 provider-selected OCR smoke 已通過。
 - v0.9.1: OCR Performance Hardening、backend startup preload、provider / engine reuse、OCR timing log / metadata、`cls=False` baseline 與文件版本同步已完成。
 - v0.10.0: LLM RAG Backlog、Ollama `qwen3.5:4b` provider decision、最小 client、optional `/rag/query` generation path、demo smoke `-RunLlm`、frontend answer source 與文件版本同步已完成。
+- v0.11.0: Vector RAG Backlog、Ollama `qwen3-embedding:0.6b` embedding client、Qdrant local runtime / collection smoke、optional vector retrieval path、fallback trace metadata、demo smoke `-RunVector` 與文件版本同步已完成。

@@ -1,10 +1,13 @@
 import re
 from time import perf_counter
 from typing import Protocol
+from uuid import NAMESPACE_URL, uuid5
 
 from app.schemas.documents import DocumentMetadata
 from app.schemas.rag import RagCitation, RagQueryResponse, RetrievedChunk
+from app.services.embedding import EmbeddingProvider, EmbeddingProviderError
 from app.services.llm import LlmGeneration, LlmProvider, LlmProviderError
+from app.services.vector_store import QdrantPoint, QdrantVectorStore, QdrantVectorStoreError
 
 
 class RagProvider(Protocol):
@@ -32,6 +35,13 @@ class KeywordRagProvider:
         documents: list[DocumentMetadata],
     ) -> RagQueryResponse:
         retrieved_chunks = self.retrieve(query, top_k, documents)
+        return self.build_response(query, retrieved_chunks)
+
+    def build_response(
+        self,
+        query: str,
+        retrieved_chunks: list[RetrievedChunk],
+    ) -> RagQueryResponse:
         citations = [
             RagCitation(
                 document_id=chunk.document_id,
@@ -219,3 +229,157 @@ class KeywordRagProvider:
             fields["llm_model"] = str(model)
 
         return fields
+
+
+class VectorRagProvider:
+    name = "vector"
+
+    def __init__(
+        self,
+        keyword_provider: KeywordRagProvider,
+        embedding_provider: EmbeddingProvider,
+        vector_store: QdrantVectorStore,
+    ) -> None:
+        self.keyword_provider = keyword_provider
+        self.embedding_provider = embedding_provider
+        self.vector_store = vector_store
+
+    def query(
+        self,
+        query: str,
+        top_k: int,
+        documents: list[DocumentMetadata],
+    ) -> RagQueryResponse:
+        try:
+            retrieved_chunks = self.retrieve(query, top_k, documents)
+            if not retrieved_chunks:
+                raise QdrantVectorStoreError("Vector search returned no chunks.")
+        except (EmbeddingProviderError, QdrantVectorStoreError, TimeoutError, ValueError) as exc:
+            return self._fallback_to_keyword(query, top_k, documents, str(exc))
+
+        return self.keyword_provider.build_response(query, retrieved_chunks)
+
+    def retrieve(
+        self,
+        query: str,
+        top_k: int,
+        documents: list[DocumentMetadata],
+    ) -> list[RetrievedChunk]:
+        chunks = [
+            (document, chunk)
+            for document in documents
+            for chunk in document.chunks
+        ]
+        if not chunks:
+            return []
+
+        collection_status = self.vector_store.get_collection()
+        if not collection_status.exists:
+            raise QdrantVectorStoreError(f"Qdrant collection '{self.vector_store.collection_name}' is missing.")
+        if collection_status.vector_size != self.vector_store.vector_size:
+            raise QdrantVectorStoreError(
+                f"Qdrant collection '{self.vector_store.collection_name}' vector size is {collection_status.vector_size}; expected {self.vector_store.vector_size}."
+            )
+
+        points = []
+        for document, chunk in chunks:
+            embedding = self.embedding_provider.embed(chunk.text)
+            points.append(
+                QdrantPoint(
+                    point_id=str(uuid5(NAMESPACE_URL, chunk.chunk_id)),
+                    vector=embedding.embedding,
+                    payload={
+                        **chunk.model_dump(mode="json"),
+                        "filename": document.filename,
+                        "ocr_provider": chunk.metadata.get("provider", chunk.source_type),
+                    },
+                )
+            )
+
+        self.vector_store.upsert_points(points)
+        query_embedding = self.embedding_provider.embed(query)
+        search_results = self.vector_store.search(query_embedding.embedding, top_k)
+        return [self._retrieved_chunk_from_payload(result.payload, result.score) for result in search_results]
+
+    def _retrieved_chunk_from_payload(self, payload: dict[str, object], score: float) -> RetrievedChunk:
+        required_fields = ["chunk_id", "document_id", "filename", "text", "source", "created_at"]
+        missing_fields = [field for field in required_fields if field not in payload]
+        if missing_fields:
+            raise QdrantVectorStoreError(
+                f"Qdrant payload missing required chunk fields: {', '.join(missing_fields)}."
+            )
+
+        metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+        return RetrievedChunk(
+            chunk_id=str(payload["chunk_id"]),
+            document_id=str(payload["document_id"]),
+            filename=str(payload["filename"]),
+            text=str(payload["text"]),
+            source=str(payload["source"]),
+            created_at=payload["created_at"],
+            page_number=payload.get("page_number"),
+            bbox=payload.get("bbox"),
+            confidence=payload.get("confidence"),
+            source_type=str(payload.get("source_type") or payload["source"]),
+            metadata={
+                **{str(key): str(value) for key, value in metadata.items()},
+                "retrieval_provider": "vector",
+                "vector_retrieval_status": "completed",
+                "vector_store": "qdrant",
+                "qdrant_collection": self.vector_store.collection_name,
+                "embedding_provider": self.embedding_provider.name,
+                "embedding_model": str(getattr(self.embedding_provider, "model", "unknown")),
+                "vector_score": f"{score:.6f}",
+            },
+            score=score,
+        )
+
+    def _fallback_to_keyword(
+        self,
+        query: str,
+        top_k: int,
+        documents: list[DocumentMetadata],
+        error: str,
+    ) -> RagQueryResponse:
+        response = self.keyword_provider.query(query, top_k, documents)
+        fallback_metadata = {
+            "retrieval_provider": "keyword",
+            "vector_retrieval_status": "failed",
+            "vector_store": "qdrant",
+            "qdrant_collection": self.vector_store.collection_name,
+            "embedding_provider": self.embedding_provider.name,
+            "embedding_model": str(getattr(self.embedding_provider, "model", "unknown")),
+            "vector_retrieval_error": error[:500],
+        }
+        citations = [
+            citation.model_copy(
+                update={
+                    "trace_metadata": {
+                        **citation.trace_metadata,
+                        **fallback_metadata,
+                    }
+                }
+            )
+            for citation in response.citations
+        ]
+        retrieved_chunks = [
+            chunk.model_copy(
+                update={
+                    "metadata": {
+                        **chunk.metadata,
+                        **fallback_metadata,
+                    }
+                }
+            )
+            for chunk in response.retrieved_chunks
+        ]
+        return response.model_copy(
+            update={
+                "answer": (
+                    f"{response.answer}\n\n"
+                    f"Vector retrieval unavailable; fallback to keyword retrieval. Error: {error}"
+                ),
+                "citations": citations,
+                "retrieved_chunks": retrieved_chunks,
+            }
+        )

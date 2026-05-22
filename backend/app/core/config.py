@@ -19,7 +19,7 @@ def default_data_dir() -> Path:
 
 class Settings(BaseSettings):
     app_name: str = "DocuRAG AgentOps Backend"
-    version: str = "0.10.0"
+    version: str = "0.11.0"
     environment: str = "local"
     data_dir: Path = Field(default_factory=default_data_dir)
     ocr_provider: str = "paddleocr"
@@ -38,6 +38,15 @@ class Settings(BaseSettings):
     llm_base_url: str = "http://127.0.0.1:11434"
     llm_model: str = "qwen3.5:4b"
     llm_timeout_seconds: float = 30.0
+    embedding_provider: str | None = None
+    embedding_base_url: str = "http://127.0.0.1:11434"
+    embedding_model: str = "qwen3-embedding:0.6b"
+    embedding_timeout_seconds: float = 30.0
+    qdrant_url: str = "http://127.0.0.1:6333"
+    qdrant_collection: str = "docurag_chunks_v1"
+    qdrant_vector_size: int = 1024
+    qdrant_timeout_seconds: float = 10.0
+    rag_retrieval_provider: str = "keyword"
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

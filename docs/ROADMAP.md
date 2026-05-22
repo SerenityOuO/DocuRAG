@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.10.0 的已交付切片。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.11.0 的已交付切片，並追蹤下一階段 v0.12.0 backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.10.0 checklist。
+- TODO 包含 Phase 00 到 v0.11.0 checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -69,7 +69,8 @@ Expected Outcome：
 - v0.9.0 只做 PaddleOCR GPU runtime 與模型選擇 backlog，不接 LLM、embedding、Qdrant、worker、DB、登入或 RBAC。
 - v0.9.1 只做 PaddleOCR engine lifecycle、backend startup preload、provider reuse、timing log、baseline 與小範圍 OCR 參數調校，不接 worker、Redis、NATS、資料庫 schema、PDF pipeline、登入或 RBAC。
 - v0.10.0 只做 LLM RAG provider / client / demo smoke，不接 embedding、Qdrant、rerank、worker、DB、登入或 RBAC。
-- v0.11.0 先做 vector RAG provider decision、embedding client、Qdrant local runtime 與 optional vector retrieval demo；每張 ticket 需保留 keyword RAG fallback，未完成 release ticket 前不替換預設 `/rag/query`。
+- v0.11.0 只做 vector RAG provider decision、embedding client、Qdrant local runtime 與 optional vector retrieval demo；保留 keyword RAG fallback，不實作 rerank、hybrid search、eval runner、worker、DB、登入或 RBAC。
+- v0.12.0 只做 optional vector indexing contract、manual indexing service / API 與 demo smoke hardening；不實作 rerank、hybrid search、eval runner、worker、DB、登入或 RBAC。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -337,9 +338,9 @@ Goal：在 v0.10.0 LLM generation path 穩定後，逐步把 local keyword retri
 Tickets：
 
 - [x] `tasks/phase-11-vector-rag/11-01-embedding-qdrant-provider-decision.md`
-- [ ] `tasks/phase-11-vector-rag/11-02-ollama-embedding-client.md`
-- [ ] `tasks/phase-11-vector-rag/11-03-qdrant-local-runtime.md`
-- [ ] `tasks/phase-11-vector-rag/11-04-vector-retrieval-demo-smoke.md`
+- [x] `tasks/phase-11-vector-rag/11-02-ollama-embedding-client.md`
+- [x] `tasks/phase-11-vector-rag/11-03-qdrant-local-runtime.md`
+- [x] `tasks/phase-11-vector-rag/11-04-vector-retrieval-demo-smoke.md`
 
 11-01 Provider decision：
 
@@ -350,7 +351,7 @@ Tickets：
 - Vector store：Qdrant self-hosted Docker / Docker Compose。
 - Qdrant endpoint：`DOCURAG_QDRANT_URL=http://127.0.0.1:6333`。
 - Collection name：`docurag_chunks_v1`。
-- Vector dimension：11-02 必須以 `qwen3-embedding:0.6b` 實際 `/api/embed` 回傳長度固定，不在 provider decision ticket 硬編碼。
+- Vector dimension：若本機 `qwen3-embedding:0.6b` 可用，11-02 以實際 `/api/embed` 回傳長度固定；若模型不可用，11-03 以可設定 env default 與 mock tests 保持 collection size 可重跑，不在 provider decision ticket 硬編碼。
 - Payload metadata：`document_id`、`filename`、`chunk_id`、`source_type`、`page_number`、`ocr_provider`、`created_at`；project / organization filtering 留到 auth / project scope 排定後。
 
 11-01 Guardrails：
@@ -365,10 +366,42 @@ Tickets：
 - `rg -n "v0.11.0|phase-11|qwen3-embedding|Qdrant" TODO.md docs/ROADMAP.md tasks/phase-11-vector-rag/11-01-embedding-qdrant-provider-decision.md` 通過。
 - `git diff --check` 通過。
 
+11-02 Embedding client：
+
+- 新增 `EmbeddingProvider` interface、`DisabledEmbeddingProvider` 與 `OllamaEmbeddingProvider`。
+- `DOCURAG_EMBEDDING_PROVIDER` 預設未設定，embedding provider disabled，不改 `/rag/query` keyword baseline。
+- `DOCURAG_EMBEDDING_PROVIDER=ollama` 時使用 `POST /api/embed`、`DOCURAG_EMBEDDING_BASE_URL=http://127.0.0.1:11434`、`DOCURAG_EMBEDDING_MODEL=qwen3-embedding:0.6b` 與 `DOCURAG_EMBEDDING_TIMEOUT_SECONDS=30`。
+- `scripts/ollama-embedding-smoke.ps1` 可檢查 `/api/tags` 與 `/api/embed` 並輸出 vector dimension。
+- 2026-05-22 follow-up：已透過 Ollama API pull `qwen3-embedding:0.6b`，`scripts/ollama-embedding-smoke.ps1` 通過並確認實際 vector dimension 為 `1024`。
+- Qwen 官方 model card 記錄 `Qwen3-Embedding-0.6B` embedding dimension up to 1024；本機 smoke 已確認 `qwen3-embedding:0.6b` 與 `DOCURAG_QDRANT_VECTOR_SIZE=1024` 相符。
+- Mock tests 覆蓋 successful embed、connection error、HTTP error、timeout、missing model health 與 malformed response。
+
+11-03 Qdrant local runtime：
+
+- Docker Compose 已新增 optional `qdrant` service，映射 `6333` / `6334`，使用 named volume `qdrant_storage`。
+- Backend settings 已新增 `DOCURAG_QDRANT_URL=http://127.0.0.1:6333`、`DOCURAG_QDRANT_COLLECTION=docurag_chunks_v1`、`DOCURAG_QDRANT_VECTOR_SIZE=1024` 與 `DOCURAG_QDRANT_TIMEOUT_SECONDS=10`。
+- 新增 `QdrantVectorStore.ensure_collection()`，只建立/檢查 collection，不掛到 backend startup 或 `/rag/query` 預設 path。
+- 新增 `scripts/qdrant-collection-smoke.ps1`，用於檢查或建立 `docurag_chunks_v1`，distance 固定 `Cosine`。
+- Mock tests 覆蓋 collection exists、create collection、vector size mismatch、connection error、timeout 與 malformed response。
+- 2026-05-22 follow-up：已啟動 Docker Desktop、用 Docker Compose 啟動 Qdrant，並跑通 `scripts/qdrant-collection-smoke.ps1`；`docurag_chunks_v1` collection 已建立/確認，vector size `1024`、distance `Cosine`。
+
 Next Candidate Milestone：
 
-- v0.11.0 已開始；下一步執行 `tasks/phase-11-vector-rag/11-02-ollama-embedding-client.md`，只新增 disabled-by-default embedding client building block。
-- Future Embedding / Qdrant Indexing Spike：在 11-02 / 11-03 分別完成 embedding client 與 Qdrant local runtime 後，再用 11-04 加入 optional vector retrieval demo。
+- v0.11.0 已完成 disabled-by-default embedding client building block、optional Qdrant local runtime、fallback-safe optional vector retrieval demo 與 release/version sync。
+- Future Vector RAG hardening：後續若要做 persistent indexing、hybrid search、rerank 或 eval runner，必須另開 Phase ticket，不在 v0.11.0 回頭擴張。
+
+11-04 Optional vector retrieval demo：
+
+- 新增 `DOCURAG_RAG_RETRIEVAL_PROVIDER=keyword|vector`，預設 `keyword`，未設定時 `/rag/query` 行為維持 deterministic keyword baseline。
+- `VectorRagProvider` 只在明確設定 `vector` 時啟用，會在 request 內以最小實作 embed local chunks、upsert Qdrant，再 embed query 並執行 vector search。
+- Vector success 會在 citation trace metadata / retrieved chunk metadata 記錄 `retrieval_provider=vector`、`vector_retrieval_status=completed`、`vector_store=qdrant`、`qdrant_collection`、`embedding_provider`、`embedding_model` 與 `vector_score`。
+- Embedding unavailable、Qdrant unavailable、collection missing、collection mismatch、payload malformed 或 vector search no result 時，會明確 fallback 到 keyword retrieval，answer 與 trace metadata 記錄 `vector_retrieval_status=failed` 與 error。
+- Existing optional Ollama `qwen3.5:4b` generation path 保留，可接在 vector retrieved chunks 或 keyword fallback chunks 後。
+- Frontend RAG result 追加 retrieval source pill：`keyword baseline`、`vector/qdrant` 或 `vector unavailable fallback`。
+- `scripts/demo-smoke-test.ps1` 新增 `-RunVector`，會先檢查 Ollama embedding model 與 Qdrant availability，再要求 retrieval source 為 `vector/qdrant`。
+- Backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.11.0`。
+- 2026-05-22 validation：backend test script 通過，`84 passed`；frontend `npm.cmd run build` 通過；baseline demo smoke 通過，answer source 為 `deterministic baseline`、retrieval source 為 `keyword baseline`。
+- 2026-05-22 follow-up optional vector smoke：已在本機準備 Ollama `qwen3-embedding:0.6b` 與 Qdrant，並以 vector-enabled backend 跑通 `scripts/demo-smoke-test.ps1 -RunVector`；answer source 為 `deterministic baseline`，retrieval source 為 `vector/qdrant`。
 
 ## Release Verification
 
@@ -385,4 +418,33 @@ Next Candidate Milestone：
 - v0.9.0: GPU Runtime 已完成；PaddleOCR real OCR 收斂為 GPU-only，PP-OCRv4 mobile 中文 / 中英混合模型設定、模型目錄文件與繁中 sample 已補齊；本機 real OCR GPU validation、sample invoice 與繁中 provider-selected OCR smoke 已通過。
 - v0.9.1: OCR Performance Hardening 已完成；backend startup preload、provider / engine reuse、OCR timing log / metadata、`cls=False` baseline、v0.9.1 version / README / TODO / ROADMAP 同步與 provider-selected real OCR smoke 已通過。
 - v0.10.0: LLM RAG Backlog 已完成；Ollama `qwen3.5:4b` provider decision、最小 client、optional `/rag/query` generation path、demo smoke `-RunLlm`、frontend answer source、v0.10.0 version / README / TODO / ROADMAP 同步已完成。
-- v0.11.0: Vector RAG Backlog 已開始；11-01 已固定 Ollama `qwen3-embedding:0.6b` 與 Qdrant provider decision，尚未完成 runtime release。
+- v0.11.0: Vector RAG Backlog 已完成；Ollama `qwen3-embedding:0.6b` embedding client、Qdrant local runtime / collection smoke、optional vector retrieval path、fallback trace metadata、demo smoke `-RunVector`、v0.11.0 version / README / TODO / ROADMAP 同步已完成。
+
+## v0.12.0 Vector Indexing Hardening Backlog
+
+Goal：把 Phase 11 的 request-time vector retrieval demo 收斂成明確、可重跑、可檢查的 local vector indexing flow。Phase 12 只做 manual / synchronous indexing hardening，不引入 worker、DB、rerank、hybrid search 或 eval runner。
+
+Tickets：
+
+- [ ] `tasks/phase-12-vector-indexing/12-01-vector-indexing-contract.md`
+- [ ] `tasks/phase-12-vector-indexing/12-02-vector-indexing-service.md`
+- [ ] `tasks/phase-12-vector-indexing/12-03-vector-indexing-api.md`
+- [ ] `tasks/phase-12-vector-indexing/12-04-vector-indexing-demo-smoke.md`
+
+Expected Outcome：
+
+- 已完成 OCR 且已有 chunks 的 documents 可以被明確手動 index 到 Qdrant。
+- Vector indexing 使用 stable point id，讓重跑 indexing 是 idempotent upsert。
+- Qdrant payload metadata 保留 chunk / citation trace 所需欄位：`document_id`、`filename`、`chunk_id`、`text`、`source`、`source_type`、`page_number`、`bbox`、`confidence`、`created_at` 與 chunk metadata。
+- Baseline keyword RAG 不依賴 Qdrant 或 embedding；optional vector indexing / retrieval 需明確 env 與手動 action。
+- Optional vector demo smoke 會呈現 upload -> OCR -> chunks -> manual vector indexing -> vector retrieval query。
+- External runtime unavailable 時有清楚錯誤或 fallback，不破壞 baseline demo。
+
+Out of Scope：
+
+- 不實作 rerank。
+- 不實作 hybrid search。
+- 不實作 eval runner。
+- 不新增 Redis、NATS、worker、async queue 或 PostgreSQL schema。
+- 不新增登入、RBAC、VLM parser、PDF rendering 或 production OCR pipeline。
+- 不讓 vector indexing 或 vector retrieval 成為 default-on path。

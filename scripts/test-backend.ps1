@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $backendRoot = Join-Path $repoRoot "backend"
-$pytestTemp = Join-Path $repoRoot ".tmp/backend-pytest"
+$pytestTemp = Join-Path $repoRoot ".tmp/backend-pytest-$([guid]::NewGuid().ToString("N"))"
 $venvRoot = Join-Path $backendRoot ".venv"
 $venvPython = Join-Path $venvRoot "Scripts/python.exe"
 
