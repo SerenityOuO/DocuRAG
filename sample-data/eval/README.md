@@ -36,6 +36,8 @@
 
 Baseline eval 不依賴 Ollama embedding、Qdrant 或 FastEmbed runtime。Optional runtime 不可用時，baseline keyword smoke 仍應可重跑；vector-backed optional smoke 會在 preflight 階段停止並回報缺少的 local runtime。
 
+`hybrid_rerank` candidate metadata 會刻意分開 score source：`keyword_score` / `vector_score` 是 branch score，`merged_score` / `merged_rank` 是 hybrid merge 後的分數與排名，`rerank_score` / `rerank_rank` 是 reranker 結果，`final_score_source` 說明最後排序使用的是 rerank 或 fallback 分數。缺少 optional metadata 時，report 應顯示 `metadata unavailable` 或明確 fallback state，而不是把缺值當成錯誤。
+
 ## Summary Output
 
 Eval result JSON 的 `summary` 會輸出：

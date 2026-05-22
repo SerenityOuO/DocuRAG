@@ -33,7 +33,7 @@ DocuRAG AgentOps 要展示三件事：
 - v0.15.0 已新增 disabled-by-default FastEmbed rerank adapter building block、optional `vector_rerank` eval strategy、rerank trace metadata 與 `-RunVectorRerank` smoke flag；未啟用 rerank provider 時會保留 vector candidates 並記錄 fallback reason。
 - v0.16.0 已將公開 retrieval eval dataset 擴充到 12 筆，新增 optional `hybrid` eval strategy 與 `-RunHybrid` smoke flag；`hybrid` 只用於 eval runner，不接 `/rag/query` 或 frontend UI。
 - v0.17.0 已新增 frontend compact retrieval trace panel，並改善 retrieval eval summary visibility；UI 只讀既有 RAG response metadata，eval summary 顯示 fallback count、trace metadata count 與 result strategy counts，不新增 backend API 或 production eval dashboard。
-- v0.18.0 已完成 `hybrid_rerank` planning backlog；這是 Markdown-only planning，不代表 runtime、eval runner、frontend UI 或 smoke flag 已可用。
+- v0.18.0 已完成 `hybrid_rerank` planning backlog；Phase 19 目前已接入 optional eval runner provider、smoke flag 與 trace metadata 命名，但完整 `v0.19.0` release sync 留到 `19-04`。
 - Vue 3 + Vite frontend，可操作 upload、document list/detail、selected OCR、mock override、OCR result 與 RAG chat。
 - Python 3.12 backend runtime；real OCR 只支援 PaddlePaddle GPU / CUDA runtime，dependency 收斂在 `backend[real-ocr]` optional extra。
 - Dockerfile / Docker Compose backend runtime，real OCR GPU dependency 可透過 build arg 開啟。
@@ -41,7 +41,7 @@ DocuRAG AgentOps 要展示三件事：
 目前仍刻意不實作：
 
 - PDF rendering、image preprocessing、版面分析、多頁文件處理或 OCR accuracy tuning。
-- Default-on vector retrieval、default-on rerank、default-on hybrid retrieval、`hybrid_rerank`、LLM-as-judge、answer faithfulness scoring、eval dashboard、LLM generation default-on path、streaming UI、OpenAI API 或 vLLM serving。
+- Default-on vector retrieval、default-on rerank、default-on hybrid retrieval、default-on `hybrid_rerank` chat path、LLM-as-judge、answer faithfulness scoring、eval dashboard、LLM generation default-on path、streaming UI、OpenAI API 或 vLLM serving。
 - Redis、NATS、async worker、queue、PostgreSQL、資料庫 schema、登入、權限或 RBAC。
 - Production-grade K8s deployment。
 
@@ -127,6 +127,12 @@ Optional `hybrid` eval 需要同樣的 Ollama embedding、Qdrant collection 與 
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1 -RunHybrid
+```
+
+Optional `hybrid_rerank` eval 也只屬於 retrieval eval runner。它先輸出 hybrid candidates，再交給 optional reranker 重新排序；JSON metadata 會區分 `keyword_score`、`vector_score`、`merged_score`、`rerank_score`、`final_score_source`、`fallback_count` 與 `trace_metadata_count`。
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1 -RunHybridRerank
 ```
 
 使用 Node.js / npm 啟動 frontend：

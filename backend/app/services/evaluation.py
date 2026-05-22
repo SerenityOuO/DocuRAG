@@ -463,8 +463,17 @@ class HybridRerankEvalProvider:
 
     def _annotate_hybrid_rerank_chunks(self, rerank_result: RerankResult) -> list[RetrievedChunk]:
         annotated_chunks = []
-        for chunk in rerank_result.chunks:
+        for final_rank, chunk in enumerate(rerank_result.chunks, start=1):
             fallback_state = self._fallback_state(chunk, rerank_result.status)
+            merged_rank = chunk.metadata.get("final_rank", "")
+            if chunk.metadata.get("rerank_score"):
+                final_score_source = "rerank_score"
+            elif chunk.metadata.get("merged_score"):
+                final_score_source = "merged_score"
+            elif chunk.metadata.get("keyword_score"):
+                final_score_source = "keyword_score"
+            else:
+                final_score_source = "candidate_score"
             annotated_chunks.append(
                 chunk.model_copy(
                     update={
@@ -475,6 +484,10 @@ class HybridRerankEvalProvider:
                             "hybrid_candidate_count": str(rerank_result.input_candidate_count),
                             "rerank_input_count": str(rerank_result.input_candidate_count),
                             "final_candidate_count": str(len(rerank_result.chunks)),
+                            "merged_rank": str(merged_rank),
+                            "final_rank": str(final_rank),
+                            "final_score": f"{chunk.score:.6f}",
+                            "final_score_source": final_score_source,
                             "rerank_provider": rerank_result.provider,
                             "rerank_model": str(rerank_result.model or ""),
                             "rerank_status": rerank_result.status,

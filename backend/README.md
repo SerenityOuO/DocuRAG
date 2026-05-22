@@ -253,7 +253,9 @@ Phase 19 optional hybrid rerank eval：
 - `hybrid_rerank` strategy 只接入 retrieval eval runner，不接 `/rag/query`、frontend chat、production eval dashboard 或 default demo path。
 - `hybrid_rerank` 先重用 `hybrid` 的 keyword + vector branch merge / dedupe candidates，再對 hybrid candidates 呼叫 rerank adapter。
 - `-RunHybridRerank` 沿用 vector preflight、manual vector indexing API preflight 與 rerank fallback behavior；FastEmbed runtime 不可用時會保留 hybrid candidates 並記錄 `rerank_status` / `rerank_fallback_reason`。
-- 輸出 `.tmp/retrieval-eval-result-hybrid-rerank.json`，summary 會保留 fallback count、trace metadata count 與 result strategy counts。
+- 輸出 `.tmp/retrieval-eval-result-hybrid-rerank.json`，summary 會保留 `fallback_count`、`fallback_reasons`、`trace_metadata_count` 與 `result_strategy_counts`。
+- Candidate metadata 會區分 branch score、merge score 與 rerank score：`keyword_score` / `vector_score` 是 branch score，`merged_score` / `merged_rank` 是 hybrid merge 結果，`rerank_score` / `rerank_rank` 是 reranker 結果，`final_score_source` 說明目前排序使用哪一種分數。
+- 缺少 optional metadata 時維持可讀 fallback state，例如 `vector_unavailable`、`reranker_disabled` 或 `reranker_unavailable`，不讓 keyword baseline 或 baseline eval 因 metadata 缺失失敗。
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1 -RunHybridRerank
@@ -269,7 +271,7 @@ document metadata 會包含 `processing` contract，明確記錄 `upload`、`ocr
 
 document metadata 也會保存 `processing_jobs` history 與 `latest_job` summary。同步 upload 會記錄 completed upload job；mock OCR 成功會記錄 completed OCR 與 local indexing job；provider failed 會記錄 failed OCR job。這些 job metadata 只是 contract，不代表已引入 worker、queue、Redis 或 NATS。
 
-v0.5.1 chunks 由 OCR mock text 產生，每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。v0.6 chunk / citation schema 另外補齊 optional `page_number`、`bbox`、`confidence`、`source_type`、chunk `metadata` 與 citation `trace_metadata` 欄位；mock OCR chunk 只填 `source_type=ocr_mock` 與 metadata safe default，不產生真正 OCR bbox 或 confidence。v0.7 real OCR output 先正規化到 `OcrResult.lines`，再將 line-level page、bbox、confidence 與 metadata 寫入 `DocumentChunk`，讓 citations 與 retrieved chunks 不依賴 PaddleOCR 私有格式。`POST /rag/query` 預設透過 `KeywordRagProvider` 做本機 keyword retrieval，設定 `DOCURAG_RAG_RETRIEVAL_PROVIDER=vector` 時才改用 `VectorRagProvider` 嘗試 Ollama embedding + Qdrant search。對 `text/plain`、`.txt`、`.md`、`.csv` sample，OCR mock 會把上傳文字納入 deterministic mock OCR text，方便 demo query 引用具體欄位；`hybrid` 目前只在 retrieval eval runner 裡比較 keyword / vector candidates，這不是 `/rag/query` hybrid search、`hybrid_rerank`、LLM-as-judge 或 answer quality evaluation。
+v0.5.1 chunks 由 OCR mock text 產生，每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。v0.6 chunk / citation schema 另外補齊 optional `page_number`、`bbox`、`confidence`、`source_type`、chunk `metadata` 與 citation `trace_metadata` 欄位；mock OCR chunk 只填 `source_type=ocr_mock` 與 metadata safe default，不產生真正 OCR bbox 或 confidence。v0.7 real OCR output 先正規化到 `OcrResult.lines`，再將 line-level page、bbox、confidence 與 metadata 寫入 `DocumentChunk`，讓 citations 與 retrieved chunks 不依賴 PaddleOCR 私有格式。`POST /rag/query` 預設透過 `KeywordRagProvider` 做本機 keyword retrieval，設定 `DOCURAG_RAG_RETRIEVAL_PROVIDER=vector` 時才改用 `VectorRagProvider` 嘗試 Ollama embedding + Qdrant search。對 `text/plain`、`.txt`、`.md`、`.csv` sample，OCR mock 會把上傳文字納入 deterministic mock OCR text，方便 demo query 引用具體欄位；`hybrid` 與 `hybrid_rerank` 目前只在 retrieval eval runner 裡比較 keyword / vector / rerank candidates，這不是 `/rag/query` hybrid search、LLM-as-judge 或 answer quality evaluation。
 
 可用環境變數覆寫資料目錄：
 

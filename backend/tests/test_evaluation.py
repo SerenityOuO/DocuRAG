@@ -318,6 +318,10 @@ def test_hybrid_rerank_eval_provider_reranks_hybrid_candidates() -> None:
     assert metadata["rerank_score"] == "0.900000"
     assert metadata["rerank_rank"] == "1"
     assert metadata["merged_score"] == "0.016129"
+    assert metadata["merged_rank"] == "2"
+    assert metadata["final_rank"] == "1"
+    assert metadata["final_score"] == "0.900000"
+    assert metadata["final_score_source"] == "rerank_score"
     assert metadata["hybrid_candidate_count"] == "3"
     assert metadata["rerank_input_count"] == "3"
     assert metadata["fallback_state"] == "none"
@@ -348,6 +352,9 @@ def test_hybrid_rerank_eval_provider_preserves_hybrid_candidates_on_rerank_failu
     assert metadata["rerank_status"] == "failed"
     assert metadata["rerank_fallback_reason"] == "reranker unavailable"
     assert metadata["merge_policy"] == "rank_based_fusion"
+    assert metadata["merged_rank"] == "1"
+    assert metadata["final_rank"] == "1"
+    assert metadata["final_score_source"] == "merged_score"
     assert metadata["fallback_state"] == "reranker_unavailable"
 
 
@@ -384,6 +391,9 @@ def test_hybrid_rerank_eval_provider_keeps_vector_branch_fallback_metadata() -> 
     assert metadata["fallback_reason"] == "Qdrant unavailable"
     assert metadata["vector_retrieval_status"] == "failed"
     assert metadata["rerank_status"] == "completed"
+    assert metadata["merged_rank"] == "1"
+    assert metadata["final_rank"] == "1"
+    assert metadata["final_score_source"] == "rerank_score"
     assert metadata["fallback_state"] == "vector_unavailable"
 
 
@@ -527,3 +537,33 @@ def test_summarize_results_counts_hybrid_branch_fallback_without_failure() -> No
         {"reason": "Qdrant unavailable", "count": 1},
         {"reason": "branch_failures=vector", "count": 1},
     ]
+
+
+def test_summarize_results_counts_hybrid_rerank_fallback_metadata() -> None:
+    hybrid_rerank_fallback = evaluate_retrieval_response(
+        make_case(),
+        make_response(
+            [
+                make_chunk(
+                    "Payment terms: Net 15",
+                    metadata={
+                        "strategy_label": "hybrid_rerank",
+                        "merged_score": "0.016393",
+                        "rerank_status": "failed",
+                        "rerank_fallback_reason": "reranker unavailable",
+                        "fallback_state": "reranker_unavailable",
+                    },
+                )
+            ]
+        ),
+        "hybrid_rerank",
+        latency_ms=10.0,
+    )
+
+    summary = summarize_results([hybrid_rerank_fallback])
+
+    assert summary.failure_count == 0
+    assert summary.fallback_count == 1
+    assert summary.trace_metadata_count == 1
+    assert summary.result_strategy_counts == {"hybrid_rerank": 1}
+    assert summary.fallback_reasons == [{"reason": "reranker unavailable", "count": 1}]
