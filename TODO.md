@@ -150,6 +150,11 @@
 - [ ] LLM-based RAG generation / rerank / citation trace evaluation。
 - [ ] vLLM / Ollama / OpenAI-compatible provider。
 
+## Phase 09 - GPU Runtime Backlog
+
+- [ ] `tasks/phase-09-gpu-runtime/09-01-paddleocr-chinese-language.md`: PaddleOCR 中文 / 中英混合 language 設定。
+- [ ] `tasks/phase-09-gpu-runtime/09-02-paddleocr-gpu-runtime.md`: PaddleOCR GPU runtime baseline。
+
 ## Release Verification Status
 
 - [x] v0.0: repo structure、docs、tasks 已完成。
