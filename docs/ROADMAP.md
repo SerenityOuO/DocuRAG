@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，並追蹤 v0.18.0 hybrid rerank planning backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.17.0 release checklist。
+- TODO 包含 Phase 00 到 v0.18.0 planning checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -76,6 +76,7 @@ Expected Outcome：
 - v0.15.0 只做 disabled-by-default `vector_rerank` runtime spike；保留 keyword baseline fallback，不實作 hybrid search、worker、DB、登入或 RBAC。
 - v0.16.0 只做公開 eval dataset expansion 與 optional `hybrid` eval strategy；不做 default-on hybrid、不新增 BM25 dependency、frontend trace UI、worker、DB、登入或 RBAC。
 - v0.17.0 只做 retrieval trace UI / eval visibility；frontend 只讀既有 response，不新增 API，不做 production eval dashboard、`hybrid_rerank`、worker、DB、登入或 RBAC。
+- v0.18.0 planning backlog 只做 `hybrid_rerank` planning tickets；不實作 runtime、不 bump version、不新增 API、frontend UI、eval dashboard、BM25、worker、DB、登入或 RBAC。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -429,6 +430,7 @@ Next Candidate Milestone：
 - v0.15.0: Rerank Runtime Spike 已完成；FastEmbed provider decision、disabled-by-default rerank adapter、optional `vector_rerank` eval strategy、rerank trace metadata、baseline smoke 與 v0.15.0 version / README / TODO / ROADMAP 同步已完成。
 - v0.16.0: Hybrid Retrieval Slice 已完成；hybrid contract、12 筆 eval dataset JSON expansion、optional hybrid eval integration、demo / release sync 與 version / README / TODO / ROADMAP 同步已完成。
 - v0.17.0: Retrieval Trace UI / Eval Visibility 已完成；frontend trace panel、eval summary fallback / trace metadata reporting、baseline demo smoke、baseline eval smoke、optional vector / `vector_rerank` / `hybrid` smoke 與 version / README / TODO / ROADMAP 同步已完成。
+- v0.18.0: Hybrid Rerank Planning 已建立；`hybrid_rerank` boundary、eval dataset plan、trace report plan 與 future demo / release checklist 已拆成 Markdown-only tickets，不執行 version bump。
 
 ## v0.12.0 Vector Indexing Hardening Backlog
 
@@ -841,5 +843,47 @@ Release Impact：
 Out of Scope：
 
 - 不實作 `hybrid_rerank`、production eval dashboard、BM25 dependency、LLM-as-judge、answer faithfulness、citation quality scoring 或 query rewriting。
+- 不新增 backend API endpoint、外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入或 RBAC。
+- 不新增 VLM parser、PDF rendering、production OCR pipeline、deployment 設定或 release tag。
+
+## v0.18.0 Hybrid Rerank Planning Backlog
+
+Goal：規劃 future `hybrid_rerank` slice，先把 candidate flow、dataset needs、trace / report visibility 與 future release checklist 拆成可單獨執行的小 ticket。Phase 18 planning 不修改 runtime、不新增 dependency、不 bump version。
+
+Tickets：
+
+- [ ] `tasks/phase-18-hybrid-rerank-planning/18-01-hybrid-rerank-boundary-contract.md`
+- [ ] `tasks/phase-18-hybrid-rerank-planning/18-02-hybrid-rerank-eval-dataset-plan.md`
+- [ ] `tasks/phase-18-hybrid-rerank-planning/18-03-hybrid-rerank-trace-report-plan.md`
+- [ ] `tasks/phase-18-hybrid-rerank-planning/18-04-phase-18-demo-release-plan.md`
+
+Expected Outcome：
+
+- 18-01 固定 `hybrid_rerank` planning boundary：candidate flow、strategy label、fallback states、provider metadata 與 disabled-by-default guardrails。
+- 18-02 規劃 future eval dataset case 類型：lexical-heavy、semantic-heavy、branch disagreement、rerank improves ordering 與 rerank fallback。
+- 18-03 規劃 future trace / report visibility：branch counts、merge policy、rerank provider / status / score、fallback reason 與 missing metadata behavior。
+- 18-04 規劃 future demo / release checklist：backend tests、frontend build、baseline smoke、optional strategy smoke 與若 implementation 完成時的 `v0.18.0` version sync 檔案。
+
+Acceptance Criteria：
+
+- Phase 18 tickets 都包含 Goal、Scope、Out of Scope、Files likely to change、Acceptance Criteria、Validation 與 Release Impact。
+- 每張 Phase 18 planning ticket 都明確寫 `Version bump required: no`，並說明不 bump 的原因。
+- Phase 18 只做 Markdown planning，不修改 backend、frontend、sample data、eval runner、smoke script、Docker Compose 或 package version。
+- `hybrid_rerank`、production eval dashboard、BM25、worker、DB、auth 與 deployment 都不得在 planning commit 內實作。
+
+Validation：
+
+- `rg -n "v0.18.0|Phase 18|hybrid_rerank|Version bump required: no|release sync" TODO.md docs/ROADMAP.md tasks/phase-18-hybrid-rerank-planning/*.md`
+- `git diff --check`
+
+Release Impact：
+
+- Target version: `v0.18.0` planning backlog。
+- Version bump required: no。
+- 原因：本次只建立 Phase 18 planning backlog；後續若完成 `hybrid_rerank` implementation 並形成 release artifact，才由 release sync ticket bump backend / frontend / Docker Compose / docs 到 `v0.18.0`。
+
+Out of Scope：
+
+- 不實作 `hybrid_rerank` runtime、BM25 dependency、score fusion code、rerank invocation、backend API、frontend UI 或 production eval dashboard。
 - 不新增 backend API endpoint、外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入或 RBAC。
 - 不新增 VLM parser、PDF rendering、production OCR pipeline、deployment 設定或 release tag。

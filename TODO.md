@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.17 planning backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.18 planning backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -17,6 +17,7 @@
 - Phase 15 -> `v0.15.0`
 - Phase 16 -> `v0.16.0`
 - Phase 17 -> `v0.17.0`
+- Phase 18 -> `v0.18.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -59,6 +60,10 @@
 14. `tasks/phase-17-retrieval-trace-ui/17-02-frontend-retrieval-trace-panel.md` 已完成，在既有 RAG result UI 實作 frontend trace panel。
 15. `tasks/phase-17-retrieval-trace-ui/17-03-eval-result-report-summary.md` 已完成，改善 eval result summary 與 fallback visibility。
 16. `tasks/phase-17-retrieval-trace-ui/17-04-trace-ui-demo-release-sync.md` 已完成，補齊 trace UI / eval visibility demo validation 並執行 `v0.17.0` release/version sync。
+17. `tasks/phase-18-hybrid-rerank-planning/18-01-hybrid-rerank-boundary-contract.md` 尚未開始，下一步固定 `hybrid_rerank` planning boundary。
+18. `tasks/phase-18-hybrid-rerank-planning/18-02-hybrid-rerank-eval-dataset-plan.md` 尚未開始，需在 18-01 完成後才執行。
+19. `tasks/phase-18-hybrid-rerank-planning/18-03-hybrid-rerank-trace-report-plan.md` 尚未開始，需在 18-02 完成後才執行。
+20. `tasks/phase-18-hybrid-rerank-planning/18-04-phase-18-demo-release-plan.md` 尚未開始，需在 18-03 完成後才執行。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -413,6 +418,26 @@ Phase 17 guardrails：
 - 不實作 `hybrid_rerank`、production eval dashboard、LLM-as-judge、answer faithfulness、citation quality scoring、query rewriting 或 BM25 dependency，除非後續 ticket 明確要求。
 - 不新增外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC、VLM parser、PDF rendering、production OCR pipeline 或 deployment 設定。
 
+## MVP v0.18.0 Hybrid Rerank Planning Backlog
+
+- [ ] `tasks/phase-18-hybrid-rerank-planning/18-01-hybrid-rerank-boundary-contract.md`: 規劃 `hybrid_rerank` candidate flow、disabled-by-default 邊界、trace metadata 與 fallback states；文件 ticket，不 bump version。
+- [ ] `tasks/phase-18-hybrid-rerank-planning/18-02-hybrid-rerank-eval-dataset-plan.md`: 規劃 future `hybrid_rerank` eval dataset case 類型與 metrics 摘要使用方式；文件 ticket，不 bump version。
+- [ ] `tasks/phase-18-hybrid-rerank-planning/18-03-hybrid-rerank-trace-report-plan.md`: 規劃 future `hybrid_rerank` trace / report visibility 與 missing metadata behavior；文件 ticket，不 bump version。
+- [ ] `tasks/phase-18-hybrid-rerank-planning/18-04-phase-18-demo-release-plan.md`: 規劃 future `v0.18.0` demo validation 與 release sync checklist；文件 ticket，不 bump version。
+- [x] Phase 18 planning validation：`rg -n "v0.18.0|Phase 18|hybrid_rerank|Version bump required: no|release sync" TODO.md docs/ROADMAP.md tasks/phase-18-hybrid-rerank-planning/*.md` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
+
+Phase 18 goal：
+
+- 只做 `hybrid_rerank` planning backlog，讓後續 implementation 能清楚區分 hybrid merge、rerank reordering、fallback metadata 與 demo / release validation。
+- 本次規劃不修改 backend、frontend、sample data、eval runner、smoke script、版本號或 Docker Compose。
+- 若後續 Phase 18 implementation 形成 release artifact，目標版本號才使用 `v0.18.0`。
+
+Phase 18 guardrails：
+
+- 18-01 到 18-04 都是 Markdown-only planning ticket，`Release Impact` 必須寫 `Version bump required: no`。
+- 不實作 `hybrid_rerank` runtime、BM25 dependency、score fusion code、rerank invocation、backend API、frontend UI 或 production eval dashboard。
+- 不新增外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC、VLM parser、PDF rendering、production OCR pipeline 或 deployment 設定。
+
 ## Release Verification Status
 
 - [x] v0.0: repo structure、docs、tasks 已完成。
@@ -437,3 +462,4 @@ Phase 17 guardrails：
 - [x] v0.15.0: Rerank Runtime Spike 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.15.0`，FastEmbed provider decision、disabled-by-default rerank adapter、optional `vector_rerank` eval strategy、rerank trace metadata 與 baseline smoke 已補齊。
 - [x] v0.16.0: Hybrid Retrieval Slice 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.16.0`，公開 eval dataset 擴充到 12 筆、optional `hybrid` eval strategy、hybrid trace metadata、baseline smoke 與 optional `-RunHybrid` smoke 已補齊。
 - [x] v0.17.0: Retrieval Trace UI / Eval Visibility 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.17.0`，frontend trace panel、eval summary fallback / trace metadata reporting、baseline demo smoke、baseline eval smoke、optional `-RunVector` / `-RunVectorRerank` / `-RunHybrid` smoke 與 Browser trace UI 檢查已補齊。
+- [ ] v0.18.0: Hybrid Rerank Planning 已建立；本次只新增 Markdown planning tickets / TODO / ROADMAP，不 bump backend、frontend、health test 或 Docker Compose version。
