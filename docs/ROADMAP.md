@@ -547,7 +547,7 @@ Goal：在 Phase 13 retrieval evaluation baseline 完成後，先規劃 rerank /
 Tickets：
 
 - [x] `tasks/phase-14-retrieval-quality/14-01-rerank-provider-decision.md`
-- [ ] `tasks/phase-14-retrieval-quality/14-02-retrieval-quality-contract.md`
+- [x] `tasks/phase-14-retrieval-quality/14-02-retrieval-quality-contract.md`
 - [ ] `tasks/phase-14-retrieval-quality/14-03-eval-dataset-expansion-plan.md`
 - [ ] `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md`
 
@@ -569,7 +569,9 @@ Expected Outcome：
 14-02 Retrieval Quality Contract：
 
 - 定義 planned strategy labels：`keyword`、`vector`、`vector_rerank`、`hybrid`、`hybrid_rerank`。
-- 定義 planned trace metadata：candidate rank、rerank score、rerank latency、merge policy、fallback reason。
+- 定義 rerank trace metadata：`strategy_label`、`rerank_enabled`、provider、model、input candidate count、rerank top K、rerank score、rerank latency、fallback reason 與 candidate rank。
+- 定義 hybrid trace metadata：keyword / vector candidate count、merge policy、dedupe rule、merged candidate count、branch failures、merged rank 與 merged score。
+- Failure / fallback contract：reranker disabled / unavailable 時保留原 retrieval candidates；future hybrid 的 vector branch 失敗時退回 keyword-only result；keyword baseline 不受 optional strategy 失敗影響。
 - 所有 future labels 只作文件 contract，不代表 runtime 已存在。
 
 14-03 Eval Dataset Expansion Plan：
