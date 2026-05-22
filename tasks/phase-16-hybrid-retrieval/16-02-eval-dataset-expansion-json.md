@@ -12,6 +12,14 @@
 - 若新增 metadata 欄位，補齊必要的 schema / runner 測試，確保 baseline keyword eval 仍可執行。
 - 更新 `TODO.md` 與 `docs/ROADMAP.md` 的 Phase 16 dataset expansion 狀態。
 
+## Dataset Expansion Summary
+
+- Dataset case count：從 `6` 筆擴充到 `12` 筆。
+- 新增 cases 只引用既有公開虛構 sample documents：`mock-invoice-aurora.txt` 與 `mock-contract-support.txt`。
+- 新增 tags 覆蓋 `lexical_mismatch`、`multi_evidence`、`near_duplicate`、`cross_document_ambiguity` 與 `numeric_table_lookup`。
+- 未新增 sample documents、真實個資、真實合約或敏感業務資料。
+- Dataset schema 保持向後相容；未新增必填欄位。
+
 ## Out of Scope
 
 - 不新增 sample documents、PDF、image、真實個資、真實合約或敏感業務資料。
@@ -36,11 +44,11 @@
 
 ## Acceptance Criteria
 
-- [ ] Dataset 總 cases 數至少為 `12`。
-- [ ] 新增 cases 至少覆蓋 lexical mismatch、multi-evidence、near-duplicate chunks、cross-document ambiguity 與 numeric / table lookup 中的四類。
-- [ ] Dataset 仍只使用公開虛構資料，且不新增 sample documents。
-- [ ] Baseline keyword retrieval eval smoke 仍可執行。
-- [ ] 必要測試已覆蓋 dataset schema 或 runner 相容性。
+- [x] Dataset 總 cases 數至少為 `12`。
+- [x] 新增 cases 至少覆蓋 lexical mismatch、multi-evidence、near-duplicate chunks、cross-document ambiguity 與 numeric / table lookup 中的四類。
+- [x] Dataset 仍只使用公開虛構資料，且不新增 sample documents。
+- [x] Baseline keyword retrieval eval smoke 仍可執行。
+- [x] 必要測試已覆蓋 dataset schema 或 runner 相容性。
 
 ## Validation
 

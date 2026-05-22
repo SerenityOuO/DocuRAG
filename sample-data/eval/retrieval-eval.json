@@ -66,5 +66,71 @@
     "expected_terms": ["99.5 percent", "5 percent service credit"],
     "tags": ["contract", "support", "credit", "sla"],
     "notes": "Checks threshold and service-credit evidence for the fictional contract."
+  },
+  {
+    "id": "invoice_office_supplies_customer",
+    "query": "Which customer is tied to the AUR-2026-051 office supplies order?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-invoice-aurora.txt"],
+    "expected_chunk_hints": ["Customer: Northstar Analytics Demo Team"],
+    "expected_terms": ["Northstar Analytics Demo Team"],
+    "tags": ["invoice", "customer", "lexical_mismatch"],
+    "notes": "Uses order-style wording while expecting the invoice customer evidence."
+  },
+  {
+    "id": "invoice_payment_window_and_amount",
+    "query": "What payment window and amount due are listed for AUR-2026-051?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-invoice-aurora.txt"],
+    "expected_chunk_hints": ["Payment terms: Net 15", "Amount due: USD 1,248.50"],
+    "expected_terms": ["Net 15", "USD 1,248.50"],
+    "tags": ["invoice", "payment", "amount", "multi_evidence"],
+    "notes": "Requires retrieving two invoice evidence lines for payment window and amount."
+  },
+  {
+    "id": "invoice_line_item_quantities",
+    "query": "How many ergonomic chair kits and monitor arm bundles are on invoice AUR-2026-051?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-invoice-aurora.txt"],
+    "expected_chunk_hints": [
+      "6 ergonomic chair kits at USD 149.00 each",
+      "2 monitor arm bundles at USD 137.25 each"
+    ],
+    "expected_terms": ["6 ergonomic chair kits", "2 monitor arm bundles"],
+    "tags": ["invoice", "line_item", "numeric_table_lookup", "multi_evidence"],
+    "notes": "Covers numeric line-item lookup across multiple invoice rows."
+  },
+  {
+    "id": "support_contract_effective_date",
+    "query": "What effective date starts agreement SUP-2026-ALPHA?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-contract-support.txt"],
+    "expected_chunk_hints": ["Effective date: 2026-04-01"],
+    "expected_terms": ["2026-04-01"],
+    "tags": ["contract", "support", "date", "near_duplicate"],
+    "notes": "Distinguishes effective date from the nearby renewal date evidence."
+  },
+  {
+    "id": "support_customer_not_invoice_customer",
+    "query": "Which customer belongs to the support agreement rather than the invoice?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-contract-support.txt"],
+    "expected_chunk_hints": ["Customer: Atlas Ops Demo Workspace"],
+    "expected_terms": ["Atlas Ops Demo Workspace"],
+    "tags": ["contract", "support", "customer", "cross_document_ambiguity"],
+    "notes": "Forces retrieval to prefer the support contract customer over the invoice customer line."
+  },
+  {
+    "id": "support_hours_and_response_target",
+    "query": "What weekday support hours and critical response target are in the support summary?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-contract-support.txt"],
+    "expected_chunk_hints": [
+      "weekday support coverage from 09:00 to 18:00 local time",
+      "Critical incidents target a first response within 4 business hours"
+    ],
+    "expected_terms": ["09:00 to 18:00", "4 business hours"],
+    "tags": ["contract", "support", "sla", "numeric_table_lookup", "multi_evidence"],
+    "notes": "Covers numeric time-window and SLA response evidence in one support-summary line."
   }
 ]

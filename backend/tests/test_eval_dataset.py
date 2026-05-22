@@ -27,7 +27,7 @@ def load_dataset() -> list[dict[str, object]]:
 def test_retrieval_eval_dataset_follows_contract() -> None:
     dataset = load_dataset()
 
-    assert len(dataset) >= 4
+    assert len(dataset) >= 12
     assert len({case["id"] for case in dataset}) == len(dataset)
 
     covered_tags: set[str] = set()
@@ -67,6 +67,14 @@ def test_retrieval_eval_dataset_follows_contract() -> None:
     assert "invoice" in covered_tags
     assert "contract" in covered_tags
     assert "support" in covered_tags
+    phase_16_tags = {
+        "lexical_mismatch",
+        "multi_evidence",
+        "near_duplicate",
+        "cross_document_ambiguity",
+        "numeric_table_lookup",
+    }
+    assert phase_16_tags.issubset(covered_tags)
 
 
 def test_retrieval_eval_expected_terms_are_backed_by_sample_documents() -> None:
