@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.13 ticket backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.14 planning backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -13,6 +13,7 @@
 - Phase 11 -> `v0.11.0`
 - Phase 12 -> `v0.12.0`
 - Phase 13 -> `v0.13.0`
+- Phase 14 -> `v0.14.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -39,7 +40,10 @@
 
 下一步優先順序：
 
-1. Phase 14 規劃與 ticket 草案，需先由 Codex 提案並等使用者確認後才寫入。
+1. `tasks/phase-14-retrieval-quality/14-01-rerank-provider-decision.md` 待執行，先固定 Phase 14 retrieval quality planning boundary。
+2. `tasks/phase-14-retrieval-quality/14-02-retrieval-quality-contract.md` 待執行，規劃 future rerank / hybrid trace contract。
+3. `tasks/phase-14-retrieval-quality/14-03-eval-dataset-expansion-plan.md` 待執行，規劃 eval dataset 擴充方向。
+4. `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md` 待執行，規劃 future demo / validation / release checklist。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -259,6 +263,21 @@ Phase 13 guardrails：
 - Optional vector eval 必須明確 env、Qdrant collection 與 manual vector indexing；不可讓 eval、vector retrieval 或 vector indexing 成為 default-on path。
 - Eval dataset 只使用公開虛構 sample data，不新增真實文件或敏感資料。
 - 不新增 Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC、VLM parser、PDF rendering 或 production OCR pipeline。
+
+## MVP v0.14.0 Retrieval Quality Planning Backlog
+
+- [ ] `tasks/phase-14-retrieval-quality/14-01-rerank-provider-decision.md`: 固定 Phase 14 rerank provider decision 與 retrieval quality planning boundary，只做文件決策，不新增 runtime。
+- [ ] `tasks/phase-14-retrieval-quality/14-02-retrieval-quality-contract.md`: 定義 future rerank / hybrid strategy labels、trace metadata 與 fallback contract，只做 Markdown contract。
+- [ ] `tasks/phase-14-retrieval-quality/14-03-eval-dataset-expansion-plan.md`: 規劃 retrieval eval dataset 擴充方向，只做文件計畫，不修改 dataset JSON。
+- [ ] `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md`: 規劃 future demo smoke、validation 與 release sync checklist，不執行 version bump。
+
+Phase 14 guardrails：
+
+- Phase 14 目前只做 retrieval quality planning 與 ticket 草案，不實作 rerank、hybrid search 或任何 runtime。
+- 所有 Phase 14 ticket 都必須包含 `Release Impact`，且目前皆為 `Version bump required: no`。
+- 不新增 backend / frontend 程式碼、外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC、VLM parser、PDF rendering 或 production OCR pipeline。
+- 不修改 `sample-data/eval/retrieval-eval.json`，dataset 擴充只先做 Markdown planning。
+- 不變更 keyword / vector retrieval 預設行為，不讓 future strategy 成為 default-on path。
 
 ## Release Verification Status
 

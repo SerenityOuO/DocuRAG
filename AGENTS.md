@@ -14,6 +14,7 @@
 - 每次完成後更新 `TODO.md` 中對應 checklist，執行 ticket 指定的 validation，並再次檢查 `GOAL.md`，確認本次修改沒有偏離目標、沒有超出 ticket scope，也沒有提前實作未排定功能。
 - 文件 ticket 只改 Markdown；程式 ticket 才能新增或修改程式碼。
 - 優先最小改動、貼合既有風格，不為未來擴充提前抽象化。
+- 當使用者已在當前對話明確確認某個 Phase 的 ticket 草案、文件更新清單或規劃寫入後，Codex 可直接寫入該次已確認的 Markdown / ticket / TODO / ROADMAP 變更，後續同類文件寫入不需要重複詢問；但仍必須遵守 ticket-first、Scope / Out of Scope、validation、git 流程與安全限制，不得因此自動新增外部依賴、資料庫 schema、認證權限、部署設定或程式碼實作。
 
 版本與文件同步規範：
 

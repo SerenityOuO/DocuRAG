@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.13.0 的已交付切片，並追蹤下一階段 backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.13.0 的已交付切片，並追蹤 v0.14.0 planning backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.13.0 checklist。
+- TODO 包含 Phase 00 到 v0.14.0 planning checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -72,6 +72,7 @@ Expected Outcome：
 - v0.11.0 只做 vector RAG provider decision、embedding client、Qdrant local runtime 與 optional vector retrieval demo；保留 keyword RAG fallback，不實作 rerank、hybrid search、eval runner、worker、DB、登入或 RBAC。
 - v0.12.0 只做 optional vector indexing contract、manual indexing service / API 與 demo smoke hardening；不實作 rerank、hybrid search、eval runner、worker、DB、登入或 RBAC。
 - v0.13.0 只做 retrieval evaluation baseline、公開 eval dataset、metrics runner 與 demo smoke；不實作 rerank、hybrid search、LLM-as-judge、worker、DB、登入或 RBAC。
+- v0.14.0 目前只做 retrieval quality planning、rerank / hybrid contract 草案、dataset expansion plan 與 future demo / release plan；不實作 runtime、外部依賴、worker、DB、登入或 RBAC。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -538,3 +539,56 @@ Out of Scope：
 - 不新增 Redis、NATS、worker、async queue 或 PostgreSQL schema。
 - 不新增登入、RBAC、VLM parser、PDF rendering 或 production OCR pipeline。
 - 不讓 eval runner、vector retrieval 或 vector indexing 成為 default-on path。
+
+## v0.14.0 Retrieval Quality Planning Backlog
+
+Goal：在 Phase 13 retrieval evaluation baseline 完成後，先規劃 rerank / hybrid search 的品質改進邊界、trace contract、dataset expansion 與 future demo / release checklist。Phase 14 目前只做 Markdown planning 與 ticket 草案，不實作 runtime。
+
+Tickets：
+
+- [ ] `tasks/phase-14-retrieval-quality/14-01-rerank-provider-decision.md`
+- [ ] `tasks/phase-14-retrieval-quality/14-02-retrieval-quality-contract.md`
+- [ ] `tasks/phase-14-retrieval-quality/14-03-eval-dataset-expansion-plan.md`
+- [ ] `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md`
+
+Expected Outcome：
+
+- Phase 13 keyword / optional vector eval metrics 會成為 Phase 14 retrieval quality planning 的 input。
+- Rerank provider decision criteria 會先文件化，不新增 provider 或模型 client。
+- Future rerank / hybrid strategy labels、trace metadata 與 fallback contract 會先固定成 Markdown。
+- Eval dataset expansion 只先規劃 case 類型與 quality gates，不修改 dataset JSON。
+- Future demo smoke、validation 與 release sync checklist 會先規劃，不執行 version bump。
+
+14-01 Rerank Provider Decision：
+
+- 回顧 Phase 13 metrics，固定 rerank provider decision criteria。
+- 明確規劃 rerank 與 hybrid search 的先後順序建議。
+- 不新增 runtime、不下載模型、不修改 backend / frontend。
+
+14-02 Retrieval Quality Contract：
+
+- 定義 planned strategy labels：`keyword`、`vector`、`vector_rerank`、`hybrid`、`hybrid_rerank`。
+- 定義 planned trace metadata：candidate rank、rerank score、rerank latency、merge policy、fallback reason。
+- 所有 future labels 只作文件 contract，不代表 runtime 已存在。
+
+14-03 Eval Dataset Expansion Plan：
+
+- 規劃 lexical mismatch、multi-evidence、near-duplicate chunks、cross-document ambiguity 等 future eval case。
+- 保持公開虛構資料原則，不新增真實文件或敏感資料。
+- 不修改 `sample-data/eval/retrieval-eval.json`。
+
+14-04 Demo and Release Plan：
+
+- 規劃 future rerank / hybrid demo smoke preflight、expected output 與 validation checklist。
+- 記錄若 future implementation 完成 `v0.14.0` runtime release 時需要同步的檔案。
+- 此 planning ticket 不修改版本號、不 push tag、不建立 release note。
+
+Out of Scope：
+
+- 不實作 rerank。
+- 不實作 hybrid search。
+- 不新增 model client、score fusion、BM25 或 ranking pipeline。
+- 不新增 LLM-as-judge、answer faithfulness、citation quality scoring 或 eval dashboard。
+- 不新增外部依賴、Docker service、Redis、NATS、worker、async queue 或 PostgreSQL schema。
+- 不新增登入、RBAC、VLM parser、PDF rendering 或 production OCR pipeline。
+- 不變更 keyword / vector retrieval 預設行為，不讓 future strategy 成為 default-on path。
