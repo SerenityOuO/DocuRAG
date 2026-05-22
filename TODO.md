@@ -50,7 +50,7 @@
 6. `tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md` 已完成，新增 disabled-by-default FastEmbed rerank adapter building block。
 7. `tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md` 已完成，將 optional `vector_rerank` 接入 retrieval eval runner。
 8. `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md` 已完成，補齊 rerank demo / eval smoke 文件並完成 `v0.15.0` release/version sync。
-9. `tasks/phase-16-hybrid-retrieval/16-01-hybrid-retrieval-contract.md` 待執行，先固定 optional `hybrid` retrieval contract。
+9. `tasks/phase-16-hybrid-retrieval/16-01-hybrid-retrieval-contract.md` 已完成，固定 optional `hybrid` retrieval contract、merge policy、dedupe key 與 fallback trace metadata。
 10. `tasks/phase-16-hybrid-retrieval/16-02-eval-dataset-expansion-json.md` 待執行，擴充公開 retrieval eval dataset JSON。
 11. `tasks/phase-16-hybrid-retrieval/16-03-hybrid-eval-strategy-integration.md` 待執行，將 optional `hybrid` 接入 retrieval eval runner。
 12. `tasks/phase-16-hybrid-retrieval/16-04-hybrid-demo-release-sync.md` 待執行，補齊 hybrid demo / eval smoke 並執行 `v0.16.0` release/version sync。
@@ -323,7 +323,7 @@ Phase 15 guardrails：
 
 ## MVP v0.16.0 Hybrid Retrieval Planning Backlog
 
-- [ ] `tasks/phase-16-hybrid-retrieval/16-01-hybrid-retrieval-contract.md`: 固定 optional `hybrid` strategy、candidate source、merge policy、dedupe key 與 trace metadata contract；文件 ticket，不 bump version。
+- [x] `tasks/phase-16-hybrid-retrieval/16-01-hybrid-retrieval-contract.md`: 固定 optional `hybrid` strategy、candidate source、merge policy、dedupe key 與 trace metadata contract；文件 ticket，不 bump version。
 - [ ] `tasks/phase-16-hybrid-retrieval/16-02-eval-dataset-expansion-json.md`: 依 Phase 14 plan 擴充公開 retrieval eval dataset JSON，至少讓總 cases 達到 `12`，並保留 baseline keyword eval 可重跑。
 - [ ] `tasks/phase-16-hybrid-retrieval/16-03-hybrid-eval-strategy-integration.md`: 將 optional `hybrid` strategy 接入 retrieval eval runner，沿用 Phase 13 metrics 並保留 fallback trace metadata。
 - [ ] `tasks/phase-16-hybrid-retrieval/16-04-hybrid-demo-release-sync.md`: 補齊 optional hybrid demo / eval smoke，並在 implementation 完成時執行 `v0.16.0` release/version sync。
@@ -343,6 +343,15 @@ Phase 16 guardrails：
 - 不實作 `hybrid_rerank`、frontend trace UI、LLM-as-judge、answer faithfulness、citation quality scoring 或 eval dashboard，除非後續 ticket 明確要求。
 - 不新增外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC、VLM parser、PDF rendering、production OCR pipeline 或 deployment 設定。
 - Dataset expansion 只能使用公開虛構資料；若既有 sample documents 不足，必須停止並回報，不可自行加入真實或敏感資料。
+
+16-01 contract status：
+
+- Strategy label 固定為 `hybrid`，只作為 retrieval eval runner 的 optional strategy，不接 `/rag/query` 或 frontend UI。
+- Candidate sources 固定為 existing keyword branch + optional vector branch；`vector_rerank` / `hybrid_rerank` 不屬於第一版 hybrid source。
+- Dedupe key 優先使用 `(document_id, chunk_id)`；欄位不足時必須記錄 dedupe fallback metadata。
+- Merge policy 固定為 deterministic `rank_based_fusion`，保留 branch rank / score，不直接相加 keyword score 與 vector similarity。
+- Vector branch unavailable 時 fallback 到 keyword-only candidates，並記錄 branch failure / fallback reason，keyword baseline 不受影響。
+- 16-01 validation：`rg -n "v0.16.0|Phase 16|hybrid retrieval|merge policy|dedupe" TODO.md docs/ROADMAP.md tasks/phase-16-hybrid-retrieval/16-01-hybrid-retrieval-contract.md` 通過；`git diff --check` 通過。
 
 ## Release Verification Status
 
