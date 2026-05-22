@@ -132,5 +132,94 @@
     "expected_terms": ["09:00 to 18:00", "4 business hours"],
     "tags": ["contract", "support", "sla", "numeric_table_lookup", "multi_evidence"],
     "notes": "Covers numeric time-window and SLA response evidence in one support-summary line."
+  },
+  {
+    "id": "orion_invoice_due_date",
+    "query": "When is invoice ORN-2026-118 due?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-invoice-orion.txt"],
+    "expected_chunk_hints": ["Invoice number: ORN-2026-118", "Due date: 2026-06-30"],
+    "expected_terms": ["ORN-2026-118", "2026-06-30"],
+    "tags": ["invoice", "date", "payment"],
+    "notes": "Adds a second synthetic invoice so demo questions can distinguish similar due-date evidence."
+  },
+  {
+    "id": "orion_invoice_tax_total",
+    "query": "What tax and amount due are listed for ORN-2026-118?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-invoice-orion.txt"],
+    "expected_chunk_hints": ["Tax: USD 288.00", "Amount due: USD 3,888.00"],
+    "expected_terms": ["USD 288.00", "USD 3,888.00"],
+    "tags": ["invoice", "amount", "numeric_lookup", "multi_evidence"],
+    "notes": "Covers tax and total amount lookup on the synthetic SaaS invoice."
+  },
+  {
+    "id": "orion_invoice_seats_workshop",
+    "query": "How many analytics seats and onboarding workshops are included in invoice ORN-2026-118?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-invoice-orion.txt"],
+    "expected_chunk_hints": [
+      "12 analytics seats at USD 250.00 each",
+      "1 onboarding workshop at USD 600.00"
+    ],
+    "expected_terms": ["12 analytics seats", "1 onboarding workshop"],
+    "tags": ["invoice", "line_item", "numeric_table_lookup", "multi_evidence"],
+    "notes": "Adds another numeric line-item case for interview demo coverage."
+  },
+  {
+    "id": "harbor_contract_notice_confidentiality",
+    "query": "What termination notice and confidentiality period are in DPA-2026-HARBOR?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-contract-harbor.txt"],
+    "expected_chunk_hints": [
+      "Termination notice: 45 days before renewal",
+      "Confidentiality period: 3 years after termination"
+    ],
+    "expected_terms": ["45 days before renewal", "3 years after termination"],
+    "tags": ["contract", "date", "multi_evidence"],
+    "notes": "Covers contract obligation lookup without introducing real legal content."
+  },
+  {
+    "id": "harbor_data_export_acknowledgement",
+    "query": "How quickly are customer export requests acknowledged in the Harbor data processing addendum?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-contract-harbor.txt"],
+    "expected_chunk_hints": ["Customer export requests are acknowledged within 2 business days"],
+    "expected_terms": ["Customer export requests", "2 business days"],
+    "tags": ["contract", "support", "lexical_mismatch", "data_processing"],
+    "notes": "Uses data-processing wording while expecting a specific synthetic contract evidence line."
+  },
+  {
+    "id": "incident_playbook_p1_escalation",
+    "query": "For INC-2026-BETA, what P1 response target and escalation channel should be used?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-support-playbook.txt"],
+    "expected_chunk_hints": ["P1 response target: 15 minutes", "Escalation channel: #demo-sev1-bridge"],
+    "expected_terms": ["15 minutes", "#demo-sev1-bridge"],
+    "tags": ["support", "incident", "numeric_lookup", "multi_evidence", "demo_safe_trace"],
+    "notes": "Adds interview-friendly trace evidence for incident response routing."
+  },
+  {
+    "id": "incident_playbook_updates_report",
+    "query": "How often are customers updated during active P1 incidents and when is the post-incident report due?",
+    "top_k": 3,
+    "expected_document_filenames": ["mock-support-playbook.txt"],
+    "expected_chunk_hints": [
+      "Customer update cadence: every 30 minutes during active P1 incidents",
+      "Post-incident report due: 5 business days after resolution"
+    ],
+    "expected_terms": ["every 30 minutes", "5 business days after resolution"],
+    "tags": ["support", "incident", "numeric_lookup", "multi_evidence"],
+    "notes": "Covers multi-evidence incident communication facts from a synthetic playbook."
+  },
+  {
+    "id": "cross_invoice_due_date_ambiguity",
+    "query": "Which June 2026 due dates belong to AUR-2026-051 and ORN-2026-118?",
+    "top_k": 5,
+    "expected_document_filenames": ["mock-invoice-aurora.txt", "mock-invoice-orion.txt"],
+    "expected_chunk_hints": ["Due date: 2026-06-15", "Due date: 2026-06-30"],
+    "expected_terms": ["2026-06-15", "2026-06-30"],
+    "tags": ["invoice", "date", "cross_document_ambiguity", "multi_evidence"],
+    "notes": "Checks cross-document ambiguity between two synthetic invoices with nearby due dates."
   }
 ]

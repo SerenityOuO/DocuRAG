@@ -1,0 +1,12 @@
+Fictitious Demo Incident Playbook
+
+Playbook ID: INC-2026-BETA
+Owner: Northstar Reliability Demo Team
+Escalation channel: #demo-sev1-bridge
+P1 response target: 15 minutes
+P2 response target: 1 business hour
+Customer update cadence: every 30 minutes during active P1 incidents
+Post-incident report due: 5 business days after resolution
+
+Trace note:
+Use this synthetic sample to explain demo-safe trace behavior, fallback states, and why retrieved chunks should remain inspectable during interviews.

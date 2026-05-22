@@ -1,0 +1,18 @@
+Fictitious Demo SaaS Invoice
+
+Invoice number: ORN-2026-118
+Vendor: Orion Analytics Demo Software
+Customer: Harbor Retail Demo Group
+Issue date: 2026-06-01
+Due date: 2026-06-30
+Payment terms: Net 30
+Subtotal: USD 3,600.00
+Tax: USD 288.00
+Amount due: USD 3,888.00
+
+Line items:
+- 12 analytics seats at USD 250.00 each
+- 1 onboarding workshop at USD 600.00
+
+Notes:
+This is public synthetic sample data for DocuRAG AgentOps. It is fictional and does not identify a real customer, employee, or supplier.

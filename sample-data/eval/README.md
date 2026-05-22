@@ -1,19 +1,22 @@
 # Sample Eval Data
 
-此目錄提供 DocuRAG AgentOps 的公開 evaluation fixture。Phase 13 先建立 retrieval evaluation baseline，用固定 query set 驗證 keyword baseline 與 optional vector retrieval 的命中率、MRR 與 recall。
+此目錄提供 DocuRAG AgentOps 的公開 evaluation fixture。Phase 13 先建立 retrieval evaluation baseline，用固定 query set 驗證 keyword baseline 與 optional vector retrieval 的命中率、MRR 與 recall。Phase 20 將 dataset 擴充到至少 20 筆 demo-safe synthetic cases，方便面試展示 invoice、contract / support、cross-document ambiguity、numeric lookup、multi-evidence、lexical mismatch 與 trace 說明。
 
 目前資料集：
 
-- `retrieval-eval.json`：最小 retrieval eval dataset，使用 `sample-data/documents/` 既有虛構 invoice 與 support contract sample。
+- `retrieval-eval.json`：retrieval eval dataset，使用 `sample-data/documents/` 既有虛構 invoice、support contract、data processing addendum 與 incident playbook sample。
 
 ## Data Safety
 
 資料集只引用公開虛構 sample documents：
 
 - `mock-invoice-aurora.txt`
+- `mock-invoice-orion.txt`
 - `mock-contract-support.txt`
+- `mock-contract-harbor.txt`
+- `mock-support-playbook.txt`
 
-內容不包含真實個資、真實客戶資料、真實供應商資料或公司敏感資訊。請勿在此目錄提交真實文件或私有資料。
+內容不包含真實個資、真實客戶資料、真實供應商資料或公司敏感資訊。請勿在此目錄提交真實文件、外部下載資料或私有資料。新增 cases 必須能從公開 sample documents 找到 expected evidence。
 
 ## Dataset Schema
 

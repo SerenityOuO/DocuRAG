@@ -1,0 +1,15 @@
+Fictitious Demo Data Processing Addendum
+
+Agreement ID: DPA-2026-HARBOR
+Provider: Harbor Compliance Demo Services
+Customer: Orion Retail Demo Lab
+Effective date: 2026-07-01
+Renewal date: 2027-07-01
+Termination notice: 45 days before renewal
+Confidentiality period: 3 years after termination
+
+Data handling:
+Customer export requests are acknowledged within 2 business days. Security review evidence is provided quarterly by email.
+
+Notes:
+This sample is synthetic and safe for public GitHub demos. It does not contain real contract terms, private data, or confidential customer information.

@@ -27,7 +27,7 @@ def load_dataset() -> list[dict[str, object]]:
 def test_retrieval_eval_dataset_follows_contract() -> None:
     dataset = load_dataset()
 
-    assert len(dataset) >= 12
+    assert len(dataset) >= 20
     assert len({case["id"] for case in dataset}) == len(dataset)
 
     covered_tags: set[str] = set()
@@ -75,6 +75,19 @@ def test_retrieval_eval_dataset_follows_contract() -> None:
         "numeric_table_lookup",
     }
     assert phase_16_tags.issubset(covered_tags)
+    phase_20_tags = {
+        "demo_safe_trace",
+        "incident",
+        "numeric_lookup",
+        "data_processing",
+    }
+    assert phase_20_tags.issubset(covered_tags)
+
+
+def test_sample_documents_include_interview_mvp_text_fixtures() -> None:
+    sample_text_files = sorted(SAMPLE_DOCUMENTS_DIR.glob("*.txt"))
+
+    assert len(sample_text_files) >= 5
 
 
 def test_retrieval_eval_expected_terms_are_backed_by_sample_documents() -> None:
