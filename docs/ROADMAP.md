@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.12.0 的已交付切片，並追蹤後續候選 backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.12.0 的已交付切片，並追蹤下一階段 v0.13.0 backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -71,6 +71,7 @@ Expected Outcome：
 - v0.10.0 只做 LLM RAG provider / client / demo smoke，不接 embedding、Qdrant、rerank、worker、DB、登入或 RBAC。
 - v0.11.0 只做 vector RAG provider decision、embedding client、Qdrant local runtime 與 optional vector retrieval demo；保留 keyword RAG fallback，不實作 rerank、hybrid search、eval runner、worker、DB、登入或 RBAC。
 - v0.12.0 只做 optional vector indexing contract、manual indexing service / API 與 demo smoke hardening；不實作 rerank、hybrid search、eval runner、worker、DB、登入或 RBAC。
+- v0.13.0 只做 retrieval evaluation baseline、公開 eval dataset、metrics runner 與 demo smoke；不實作 rerank、hybrid search、LLM-as-judge、worker、DB、登入或 RBAC。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -477,3 +478,56 @@ Out of Scope：
 - 不新增 Redis、NATS、worker、async queue 或 PostgreSQL schema。
 - 不新增登入、RBAC、VLM parser、PDF rendering 或 production OCR pipeline。
 - 不讓 vector indexing 或 vector retrieval 成為 default-on path。
+
+## v0.13.0 Retrieval Evaluation Baseline Backlog
+
+Goal：在 keyword retrieval、optional vector retrieval 與 manual vector indexing 穩定後，建立第一版本機 retrieval evaluation baseline。Phase 13 只做公開 eval dataset、metrics contract、runner 與 demo smoke，讓後續 rerank / hybrid search 有可量化比較基準。
+
+Tickets：
+
+- [ ] `tasks/phase-13-retrieval-eval/13-01-retrieval-eval-contract.md`
+- [ ] `tasks/phase-13-retrieval-eval/13-02-retrieval-eval-dataset.md`
+- [ ] `tasks/phase-13-retrieval-eval/13-03-retrieval-eval-runner.md`
+- [ ] `tasks/phase-13-retrieval-eval/13-04-retrieval-eval-demo-smoke.md`
+
+Expected Outcome：
+
+- `sample-data/eval/` 有最小公開 retrieval eval dataset，使用既有虛構 sample documents。
+- Eval case contract 包含 `query`、`top_k`、expected document / chunk hints、expected terms 與 tags。
+- Runner 可輸出 per-query results 與 summary metrics。
+- Summary metrics 至少包含 `Hit Rate@K`、`MRR@K`、`Recall@K`、平均 latency 與 failure count。
+- Baseline keyword eval 不依賴 Qdrant 或 embedding。
+- Optional vector eval 需明確 env、manual vector indexing 與 Qdrant runtime。
+- Phase 13 demo smoke 能展示 keyword baseline metrics 與 optional vector metrics。
+
+13-01 Contract：
+
+- 固定 eval dataset schema、metrics 定義、strategy labels 與 result output contract。
+- Strategy labels 第一版只包含 `keyword`、`vector` 與 vector unavailable fallback；不引入 hybrid 或 rerank。
+- Result output 需同時支援人可讀 summary 與 machine-readable JSON。
+
+13-02 Dataset：
+
+- 新增 retrieval eval dataset，至少涵蓋 invoice 與 contract / support sample。
+- Dataset 不包含真實個資或公司敏感資料。
+- Dataset schema 需有最小測試或文件驗證，避免後續 runner 讀取格式漂移。
+
+13-03 Runner：
+
+- 新增本機 runner 或 script，計算 `Hit Rate@K`、`MRR@K`、`Recall@K`、latency 與 failure count。
+- Keyword baseline 可直接執行。
+- Optional vector eval 需明確檢查 Ollama embedding model、Qdrant collection 與 manual vector indexing。
+
+13-04 Demo smoke：
+
+- 補齊 baseline retrieval eval smoke 與 optional vector retrieval eval smoke。
+- 完成 backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 的 `v0.13.0` release sync。
+
+Out of Scope：
+
+- 不實作 rerank。
+- 不實作 hybrid search。
+- 不實作 LLM-as-judge、answer faithfulness 或 citation quality scoring。
+- 不新增 Redis、NATS、worker、async queue 或 PostgreSQL schema。
+- 不新增登入、RBAC、VLM parser、PDF rendering 或 production OCR pipeline。
+- 不讓 eval runner、vector retrieval 或 vector indexing 成為 default-on path。

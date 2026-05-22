@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.12 ticket backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.13 ticket backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -12,6 +12,7 @@
 - Phase 10 -> `v0.10.0`
 - Phase 11 -> `v0.11.0`
 - Phase 12 -> `v0.12.0`
+- Phase 13 -> `v0.13.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -34,7 +35,10 @@
 
 下一步優先順序：
 
-1. Phase 12 已完成；後續若要做 hybrid search、rerank、eval runner、worker、DB、登入或 RBAC，需先另開小 ticket 並更新 roadmap。
+1. `tasks/phase-13-retrieval-eval/13-01-retrieval-eval-contract.md`
+2. `tasks/phase-13-retrieval-eval/13-02-retrieval-eval-dataset.md`
+3. `tasks/phase-13-retrieval-eval/13-03-retrieval-eval-runner.md`
+4. `tasks/phase-13-retrieval-eval/13-04-retrieval-eval-demo-smoke.md`
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -235,6 +239,21 @@ Phase 12 guardrails：
 - Stable vector point id 規則固定為 `uuid5(NAMESPACE_URL, f"docurag:{document_id}:{chunk_id}")`，重跑 manual indexing 只能 idempotently upsert 同一 chunk。
 - Qdrant payload 必須保留 `document_id`、`filename`、`chunk_id`、`text`、`source`、`source_type`、`page_number`、`bbox`、`confidence`、`created_at` 與 chunk `metadata`。
 - Empty chunks、embedding disabled / unavailable、Qdrant unavailable、collection missing 或 vector size mismatch 必須回傳清楚 skipped / failed result，不修改 local metadata，不影響 keyword RAG baseline。
+
+## MVP v0.13.0 Retrieval Evaluation Baseline Backlog
+
+- [ ] `tasks/phase-13-retrieval-eval/13-01-retrieval-eval-contract.md`: 固定 retrieval evaluation dataset schema、metrics、result output contract 與 Phase 13 guardrails；文件 ticket，不 bump version。
+- [ ] `tasks/phase-13-retrieval-eval/13-02-retrieval-eval-dataset.md`: 新增最小公開 retrieval eval dataset，使用既有虛構 sample documents，不新增 runner 或 runtime API。
+- [ ] `tasks/phase-13-retrieval-eval/13-03-retrieval-eval-runner.md`: 新增本機 retrieval eval runner，計算 keyword baseline 與 optional vector retrieval 的 Hit Rate@K、MRR@K、Recall@K、latency 與 failure count。
+- [ ] `tasks/phase-13-retrieval-eval/13-04-retrieval-eval-demo-smoke.md`: 補齊 retrieval eval demo smoke，完成 `v0.13.0` release/version sync。
+
+Phase 13 guardrails：
+
+- Phase 13 只建立 retrieval evaluation baseline，不實作 rerank、hybrid search、LLM-as-judge、answer faithfulness 或 citation quality scoring。
+- Baseline eval 必須可在沒有 Ollama embedding 或 Qdrant 時執行 keyword retrieval 評估。
+- Optional vector eval 必須明確 env、Qdrant collection 與 manual vector indexing；不可讓 eval、vector retrieval 或 vector indexing 成為 default-on path。
+- Eval dataset 只使用公開虛構 sample data，不新增真實文件或敏感資料。
+- 不新增 Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC、VLM parser、PDF rendering 或 production OCR pipeline。
 
 ## Release Verification Status
 
