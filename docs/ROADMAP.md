@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，並追蹤 v0.18.0 hybrid rerank planning backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 interview MVP packaging backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.18.0 planning checklist。
+- TODO 包含 Phase 00 到 v0.19.0 interview MVP packaging checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -77,6 +77,7 @@ Expected Outcome：
 - v0.16.0 只做公開 eval dataset expansion 與 optional `hybrid` eval strategy；不做 default-on hybrid、不新增 BM25 dependency、frontend trace UI、worker、DB、登入或 RBAC。
 - v0.17.0 只做 retrieval trace UI / eval visibility；frontend 只讀既有 response，不新增 API，不做 production eval dashboard、`hybrid_rerank`、worker、DB、登入或 RBAC。
 - v0.18.0 planning backlog 只做 `hybrid_rerank` planning tickets；不實作 runtime、不 bump version、不新增 API、frontend UI、eval dashboard、BM25、worker、DB、登入或 RBAC。
+- v0.19.0 interview MVP packaging backlog 只做 demo readiness、文件敘事、sample / eval coverage、demo media 與 final validation；不實作 `hybrid_rerank` runtime、production eval dashboard、worker、DB、登入或 RBAC。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -918,3 +919,45 @@ Out of Scope：
 - 不實作 `hybrid_rerank` runtime、BM25 dependency、score fusion code、rerank invocation、backend API、frontend UI 或 production eval dashboard。
 - 不新增 backend API endpoint、外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入或 RBAC。
 - 不新增 VLM parser、PDF rendering、production OCR pipeline、deployment 設定或 release tag。
+
+## v0.19.0 Interview MVP Packaging Backlog
+
+Goal：把目前已完成的受控 MVP 收斂成面試可展示版本，優先補齊 demo 文件、sample / eval coverage、截圖或 GIF 與 final validation。Phase 19 不新增企業級 runtime，不把 Auth、DB、Redis、NATS、worker 或 deployment 提前塞進 MVP。
+
+Tickets：
+
+- [ ] `tasks/phase-19-interview-mvp-packaging/19-01-interview-demo-doc-refresh.md`
+- [ ] `tasks/phase-19-interview-mvp-packaging/19-02-sample-eval-coverage-expansion.md`
+- [ ] `tasks/phase-19-interview-mvp-packaging/19-03-demo-media-and-readme-polish.md`
+- [ ] `tasks/phase-19-interview-mvp-packaging/19-04-final-interview-mvp-validation.md`
+
+Expected Outcome：
+
+- 19-01 更新面試 demo 文件，使 README、demo script、PRD 與 architecture 對齊 `v0.17.0` runtime 與 `v0.18.0` planning-only 狀態。
+- 19-02 補齊公開虛構 sample / eval coverage，目標至少 5 份 sample documents 與 20 筆 retrieval eval cases。
+- 19-03 補齊 README 5 到 10 分鐘面試導覽，以及展示 frontend trace / citation / eval 可觀測性的截圖或 GIF。
+- 19-04 重跑 final validation，完成 backend / frontend / Docker Compose / README / TODO / ROADMAP 的 `v0.19.0` release sync。
+
+Acceptance Criteria：
+
+- Phase 19 tickets 都包含 Goal、Scope、Out of Scope、Files likely to change、Acceptance Criteria、Validation 與 Release Impact。
+- Phase 19 目標明確聚焦 interview MVP packaging，不把 `hybrid_rerank` runtime、production eval dashboard、DB、worker、auth 或 deployment 混進同一階段。
+- `19-04` 才允許 `v0.19.0` version bump；前置 tickets 若未完成完整 release artifact，必須寫 `Version bump required: no`。
+- Phase 19 完成後，README 與 demo script 應能讓面試官在 5 到 10 分鐘內看懂 upload -> OCR -> RAG -> citation -> trace -> eval 的核心價值。
+
+Validation：
+
+- `rg -n "v0.19.0|Phase 19|interview MVP|面試 MVP" README.md TODO.md docs/ROADMAP.md tasks/phase-19-interview-mvp-packaging/*.md`
+- `git diff --check`
+
+Release Impact：
+
+- Target version: `v0.19.0`。
+- Version bump required: yes for `19-04`; no for `19-01` to `19-03`。
+- 原因：Phase 19 需要在 demo docs、sample/eval coverage、demo media 與 final validation 都完成後，才形成 `v0.19.0` interview MVP packaging release artifact。
+
+Out of Scope：
+
+- 不實作 `hybrid_rerank` runtime、BM25 dependency、query rewriting、LLM-as-judge、answer faithfulness scoring、citation quality scoring 或 production eval dashboard。
+- 不新增 backend API endpoint、frontend route、外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC 或 Agent runtime。
+- 不新增 VLM parser、PDF rendering、production OCR pipeline、K8s、deployment 設定或 release tag。
