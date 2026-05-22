@@ -389,6 +389,87 @@ td {
   min-height: 120px;
 }
 
+.trace-panel {
+  border-top: 1px solid #e5eaf2;
+  display: grid;
+  gap: 12px;
+  padding-top: 14px;
+}
+
+.trace-facts {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin: 0;
+}
+
+.trace-facts div {
+  border-left: 3px solid #0f766e;
+  min-width: 0;
+  padding-left: 10px;
+}
+
+.trace-facts dt {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.trace-facts dd {
+  color: #172033;
+  font-weight: 800;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.trace-ready {
+  color: #166534 !important;
+}
+
+.trace-success {
+  color: #0f766e !important;
+}
+
+.trace-failed {
+  color: #b42318 !important;
+}
+
+.trace-table-wrap {
+  overflow-x: auto;
+}
+
+.trace-table th {
+  white-space: nowrap;
+}
+
+.trace-table td {
+  min-width: 90px;
+}
+
+.trace-table td:first-child,
+.trace-table td:nth-child(2) {
+  white-space: nowrap;
+}
+
+.trace-table strong {
+  display: block;
+  margin-bottom: 6px;
+  overflow-wrap: anywhere;
+}
+
+.trace-preview {
+  min-width: 220px;
+}
+
+.trace-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 220px;
+}
+
 .citation-list {
   display: grid;
   gap: 8px;

@@ -17,10 +17,27 @@ import {
   type HealthResponse,
   type OcrResultResponse,
   type RagQueryResponse,
+  type RetrievedChunk,
   type UploadResponse,
 } from "./api/client";
 
 type RequestState = "idle" | "loading" | "success" | "error";
+
+type TraceFact = {
+  label: string;
+  value: string;
+  tone?: "default" | "failed" | "ready" | "success";
+};
+
+type TraceCandidateRow = {
+  rank: number;
+  score: string;
+  documentId: string;
+  chunkId: string;
+  filename: string;
+  preview: string;
+  traceSummary: string[];
+};
 
 const healthState = ref<RequestState>("idle");
 const documentsState = ref<RequestState>("idle");
@@ -88,8 +105,18 @@ const selectedOcrText = computed(() =>
   selectedDocument.value?.ocr.text ? selectedDocument.value.ocr.text : "尚未執行 OCR。",
 );
 
+const ragTraceMetadata = computed(() => {
+  const citationTrace = ragResult.value?.citations[0]?.trace_metadata ?? {};
+  const chunkMetadata = ragResult.value?.retrieved_chunks[0]?.metadata ?? {};
+
+  return {
+    ...chunkMetadata,
+    ...citationTrace,
+  };
+});
+
 const ragAnswerSource = computed(() => {
-  const trace = ragResult.value?.citations[0]?.trace_metadata;
+  const trace = ragTraceMetadata.value;
 
   if (trace?.llm_generation_status === "completed") {
     return `${trace.llm_provider ?? "ollama"}/${trace.llm_model ?? "qwen3.5:4b"}`;
@@ -115,7 +142,7 @@ const ragAnswerSourceClass = computed(() => {
 });
 
 const ragRetrievalSource = computed(() => {
-  const trace = ragResult.value?.citations[0]?.trace_metadata ?? ragResult.value?.retrieved_chunks[0]?.metadata;
+  const trace = ragTraceMetadata.value;
 
   if (trace?.vector_retrieval_status === "completed") {
     return `${trace.retrieval_provider ?? "vector"}/${trace.vector_store ?? "qdrant"}`;
@@ -140,6 +167,89 @@ const ragRetrievalSourceClass = computed(() => {
   return "status-success";
 });
 
+const ragStrategyLabel = computed(() => {
+  const metadata = ragTraceMetadata.value;
+
+  if (metadata.strategy_label) {
+    return metadata.strategy_label;
+  }
+
+  if (metadata.vector_retrieval_status === "completed") {
+    return "vector";
+  }
+
+  if (metadata.vector_retrieval_status === "failed") {
+    return "keyword fallback";
+  }
+
+  return "keyword";
+});
+
+const ragTraceFacts = computed<TraceFact[]>(() => {
+  if (!ragResult.value) {
+    return [];
+  }
+
+  const metadata = ragTraceMetadata.value;
+  const facts: TraceFact[] = [
+    { label: "Strategy", value: ragStrategyLabel.value, tone: "ready" },
+    { label: "Answer source", value: ragAnswerSource.value, tone: sourceTone(ragAnswerSource.value) },
+    { label: "Retrieval source", value: ragRetrievalSource.value, tone: sourceTone(ragRetrievalSource.value) },
+    { label: "Candidates", value: String(ragResult.value.retrieved_chunks.length) },
+  ];
+
+  const vectorStatus = metadata.vector_retrieval_status;
+  if (vectorStatus) {
+    facts.push({ label: "Vector status", value: vectorStatus, tone: vectorStatus === "failed" ? "failed" : "success" });
+  }
+
+  const rerankStatus = metadata.rerank_status;
+  if (rerankStatus) {
+    facts.push({
+      label: "Rerank",
+      value: [metadata.rerank_provider, rerankStatus].filter(Boolean).join(" / "),
+      tone: rerankStatus === "failed" || rerankStatus === "disabled" ? "failed" : "success",
+    });
+  }
+
+  if (metadata.merge_policy) {
+    facts.push({ label: "Merge policy", value: metadata.merge_policy });
+  }
+
+  const latency = firstMetadataValue(metadata, ["rerank_latency_ms", "llm_generation_latency_ms"]);
+  if (latency) {
+    facts.push({ label: "Latency", value: `${latency} ms` });
+  }
+
+  const fallback = firstMetadataValue(metadata, [
+    "fallback_reason",
+    "rerank_fallback_reason",
+    "vector_retrieval_error",
+    "llm_error",
+  ]);
+  facts.push({
+    label: "Fallback",
+    value: fallback ?? "none",
+    tone: fallback ? "failed" : "ready",
+  });
+
+  return facts;
+});
+
+const ragTraceRows = computed<TraceCandidateRow[]>(() =>
+  ragResult.value
+    ? ragResult.value.retrieved_chunks.map((chunk, index) => ({
+        rank: index + 1,
+        score: formatScore(chunk.score),
+        documentId: chunk.document_id,
+        chunkId: chunk.chunk_id,
+        filename: chunk.filename,
+        preview: previewText(chunk.text),
+        traceSummary: candidateTraceSummary(chunk),
+      }))
+    : [],
+);
+
 function formatBytes(size: number): string {
   return `${size.toLocaleString()} bytes`;
 }
@@ -154,6 +264,62 @@ function formatBbox(bbox: BoundingBox): string {
 
 function metadataEntries(metadata: Record<string, string>): [string, string][] {
   return Object.entries(metadata);
+}
+
+function firstMetadataValue(metadata: Record<string, string>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = metadata[key];
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function sourceTone(source: string): TraceFact["tone"] {
+  if (source.toLowerCase().includes("fallback") || source.toLowerCase().includes("unavailable")) {
+    return "failed";
+  }
+
+  if (source.toLowerCase().includes("baseline")) {
+    return "ready";
+  }
+
+  return "success";
+}
+
+function formatScore(score: number | string): string {
+  const numericScore = typeof score === "number" ? score : Number(score);
+
+  return Number.isFinite(numericScore) ? numericScore.toFixed(4) : String(score);
+}
+
+function previewText(text: string): string {
+  return text.length > 180 ? `${text.slice(0, 180)}...` : text;
+}
+
+function candidateTraceSummary(chunk: RetrievedChunk): string[] {
+  const metadata = chunk.metadata;
+  const summary = [
+    chunk.source_type ? `source ${chunk.source_type}` : `source ${chunk.source}`,
+    metadata.strategy_label ? `strategy ${metadata.strategy_label}` : "",
+    metadata.retrieval_provider ? `provider ${metadata.retrieval_provider}` : "",
+    metadata.branches ? `branches ${metadata.branches}` : "",
+    metadata.final_rank ? `final rank ${metadata.final_rank}` : "",
+    metadata.keyword_rank ? `keyword rank ${metadata.keyword_rank}` : "",
+    metadata.vector_rank ? `vector rank ${metadata.vector_rank}` : "",
+    metadata.merged_score ? `merged ${formatScore(metadata.merged_score)}` : "",
+    metadata.rerank_status ? `rerank ${metadata.rerank_status}` : "",
+    metadata.rerank_rank ? `rerank rank ${metadata.rerank_rank}` : "",
+    metadata.rerank_score ? `rerank ${formatScore(metadata.rerank_score)}` : "",
+    firstMetadataValue(metadata, ["fallback_reason", "rerank_fallback_reason", "vector_retrieval_error"])
+      ? `fallback ${firstMetadataValue(metadata, ["fallback_reason", "rerank_fallback_reason", "vector_retrieval_error"])}`
+      : "",
+  ].filter(Boolean);
+
+  return summary.length ? summary : ["metadata unavailable"];
 }
 
 async function checkHealth(): Promise<void> {
@@ -636,6 +802,48 @@ onMounted(() => {
             </div>
           </div>
           <pre class="answer-text">{{ ragResult.answer }}</pre>
+
+          <section class="trace-panel" aria-label="Retrieval trace">
+            <h3>Retrieval trace</h3>
+            <dl class="trace-facts">
+              <div v-for="fact in ragTraceFacts" :key="fact.label">
+                <dt>{{ fact.label }}</dt>
+                <dd :class="fact.tone ? `trace-${fact.tone}` : ''">{{ fact.value }}</dd>
+              </div>
+            </dl>
+
+            <div v-if="ragTraceRows.length" class="trace-table-wrap">
+              <table class="trace-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Score</th>
+                    <th>Source</th>
+                    <th>Candidate</th>
+                    <th>Trace</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in ragTraceRows" :key="`${row.documentId}-${row.chunkId}`">
+                    <td>{{ row.rank }}</td>
+                    <td>{{ row.score }}</td>
+                    <td>
+                      <strong>{{ row.filename }}</strong>
+                      <code>{{ row.documentId }}</code>
+                      <code>{{ row.chunkId }}</code>
+                    </td>
+                    <td class="trace-preview">{{ row.preview }}</td>
+                    <td>
+                      <div class="trace-summary">
+                        <code v-for="item in row.traceSummary" :key="`${row.chunkId}-${item}`">{{ item }}</code>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p v-else class="muted">metadata unavailable</p>
+          </section>
 
           <h3>Citations</h3>
           <ul v-if="ragResult.citations.length" class="citation-list">

@@ -769,14 +769,14 @@ Goal：把 Phase 13-16 已建立的 retrieval eval output、rerank metadata 與 
 Tickets：
 
 - [x] `tasks/phase-17-retrieval-trace-ui/17-01-retrieval-trace-ui-contract.md`
-- [ ] `tasks/phase-17-retrieval-trace-ui/17-02-frontend-retrieval-trace-panel.md`
+- [x] `tasks/phase-17-retrieval-trace-ui/17-02-frontend-retrieval-trace-panel.md`
 - [ ] `tasks/phase-17-retrieval-trace-ui/17-03-eval-result-report-summary.md`
 - [ ] `tasks/phase-17-retrieval-trace-ui/17-04-trace-ui-demo-release-sync.md`
 
 Expected Outcome：
 
 - 17-01 已固定 trace UI contract，涵蓋 keyword、vector、`vector_rerank`、`hybrid`、fallback 與 missing metadata display。
-- 17-02 在既有 RAG result UI 加入 compact trace panel，只讀既有 response，不新增 backend endpoint。
+- 17-02 已在既有 RAG result UI 加入 compact trace panel，只讀既有 response，不新增 backend endpoint。
 - 17-03 改善 retrieval eval smoke / summary output，讓 strategy metrics、fallback count 與 trace metadata 更適合 demo / README 摘錄。
 - 17-04 補齊 `v0.17.0` version / docs / TODO / ROADMAP release sync，並執行 backend、frontend、demo smoke 與 eval smoke validation。
 
@@ -796,12 +796,13 @@ Acceptance Criteria：
 - Missing metadata behavior 已固定：graceful hidden 或顯示 `metadata unavailable`；不得讓 keyword baseline demo 因缺少 optional metadata 失效。
 - Contract boundary：文件 ticket，不修改 runtime、不新增 API、不新增 frontend implementation。
 
-17-02 Frontend Trace Panel Plan：
+17-02 Frontend Trace Panel Status：
 
-- 在既有 RAG result UI 中加入 compact trace panel / table。
-- Baseline keyword result 必須仍可讀；metadata 缺失不可造成 UI error。
-- UI 顯示應支援 keyword、vector、`vector_rerank` 與 `hybrid` metadata，但不得接 live eval runner 或新增 comparison dashboard。
-- Validation 以 `npm.cmd run build` 為基本門檻；若 dev server 可用，需用 Browser 檢查 trace UI 不重疊、不破版。
+- 已在既有 RAG result UI 中加入 compact trace panel / table，顯示 strategy、answer source、retrieval source、candidate count、fallback state 與 candidate trace。
+- Baseline keyword result 仍可讀；metadata 缺失時顯示 `metadata unavailable` 或 `fallback none`，不造成 UI error。
+- Candidate table 顯示 rank、score、document id、chunk id、filename、text preview、rerank metadata 與 hybrid branch metadata。
+- UI 只讀既有 response，不接 live eval runner、不新增 backend endpoint、不建立 comparison dashboard。
+- Validation status：`npm.cmd run build` 通過；Browser 檢查 localhost RAG result trace panel 可顯示 baseline answer / retrieval source、candidate table、fallback state，且無水平溢出；`git diff --check` 通過。
 
 17-03 Eval Summary Plan：
 

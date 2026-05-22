@@ -11,6 +11,14 @@
 - 保留既有 upload、OCR、document list、RAG chat 與 deterministic baseline flow。
 - 更新 frontend README、`TODO.md` 與 `docs/ROADMAP.md` 的 Phase 17 status。
 
+## Implementation Notes
+
+- `frontend/src/App.vue` 已在 RAG result 區塊新增 compact retrieval trace panel，資料來源只包含 `citations[0].trace_metadata` 與 `retrieved_chunks[].metadata`。
+- Run-level display 顯示 strategy、answer source、retrieval source、candidate count、vector status、rerank status、merge policy、latency 與 fallback state。
+- Candidate table 顯示 rank、score、filename、document id、chunk id、text preview，以及 strategy / provider / branch / rerank / fallback metadata summary。
+- Missing metadata 顯示 `metadata unavailable` 或 `fallback none`，不會讓 baseline keyword response 產生 UI error。
+- 此 ticket 未修改 backend API、未新增 endpoint，也未接 live eval runner。
+
 ## Out of Scope
 
 - 不修改 backend API 或 response schema；不得為了 UI 新增 endpoint。
@@ -30,11 +38,11 @@
 
 ## Acceptance Criteria
 
-- [ ] RAG result UI 可顯示 answer source 與 retrieval source。
-- [ ] Retrieved chunks / candidates 可顯示 rank、score、document id、chunk id、filename 與 text preview。
-- [ ] 若 response 帶有 rerank metadata，UI 可顯示 rerank provider、rerank status、rerank score 或 fallback reason。
-- [ ] 若 response 帶有 hybrid metadata，UI 可顯示 merge policy、branches、branch ranks、merged score、dedupe count 或 branch failure。
-- [ ] Missing metadata 不造成 UI error，baseline keyword demo 仍可使用。
+- [x] RAG result UI 可顯示 answer source 與 retrieval source。
+- [x] Retrieved chunks / candidates 可顯示 rank、score、document id、chunk id、filename 與 text preview。
+- [x] 若 response 帶有 rerank metadata，UI 可顯示 rerank provider、rerank status、rerank score 或 fallback reason。
+- [x] 若 response 帶有 hybrid metadata，UI 可顯示 merge policy、branches、branch ranks、merged score、dedupe count 或 branch failure。
+- [x] Missing metadata 不造成 UI error，baseline keyword demo 仍可使用。
 
 ## Validation
 
