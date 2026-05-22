@@ -2,7 +2,7 @@
 
 ## Goal
 
-規劃 future Phase 18 demo / release checklist，明確定義若後續完成 `hybrid_rerank` implementation，應如何驗證、同步文件與形成 `v0.18.0` release artifact；本 ticket 不執行版本 bump。
+規劃 future `hybrid_rerank` demo / release checklist，明確定義若後續完成 implementation，應如何驗證、同步文件與形成 release artifact；本 ticket 不執行版本 bump。後續 implementation 已排入 Phase 19 / `v0.19.0`。
 
 ## Scope
 
@@ -20,9 +20,9 @@
 
 ## Release Impact
 
-- Target version: `v0.18.0` future release sync。
+- Target version: `v0.18.0` planning backlog；implementation release target is now `v0.19.0`。
 - Version bump required: no。
-- 原因：本 ticket 只建立 future release checklist；實際 `v0.18.0` 版本同步必須等後續 implementation ticket 完成並通過 validation 後才可執行。
+- 原因：本 ticket 只建立 future release checklist；實際 `v0.19.0` 版本同步必須等 Phase 19 implementation ticket 完成並通過 validation 後才可執行。
 
 ## Future Validation Checklist
 
@@ -42,7 +42,7 @@ Optional smoke 若需要 Ollama embedding、Qdrant collection 或 rerank runtime
 
 ## Future Release Sync Files
 
-若後續 implementation 形成 `v0.18.0` release artifact，release sync ticket 應同步檢查：
+若後續 implementation 形成 `v0.19.0` release artifact，release sync ticket 應同步檢查：
 
 - backend version
 - frontend `package.json` version

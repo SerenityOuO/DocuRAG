@@ -22,7 +22,7 @@
 
 - Target version: `v0.18.0` planning backlog。
 - Version bump required: no。
-- 原因：本 ticket 只建立 Phase 18 邊界 contract 與 guardrails，不產生 runtime release artifact；若後續 implementation 形成 release，才由 release sync ticket bump 到 `v0.18.0`。
+- 原因：本 ticket 只建立 Phase 18 邊界 contract 與 guardrails，不產生 runtime release artifact；後續 implementation 已排入 Phase 19，才由 release sync ticket bump 到 `v0.19.0`。
 
 ## Planned Boundary Contract
 

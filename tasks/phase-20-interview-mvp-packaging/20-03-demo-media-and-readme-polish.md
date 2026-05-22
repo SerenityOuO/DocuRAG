@@ -1,4 +1,4 @@
-# 19-03 Demo Media and README Polish
+# 20-03 Demo Media and README Polish
 
 ## Goal
 
@@ -21,9 +21,9 @@
 
 ## Release Impact
 
-- Target version: `v0.19.0` interview MVP packaging backlog。
+- Target version: `v0.20.0` interview MVP packaging backlog。
 - Version bump required: no。
-- 原因：本 ticket 補齊 demo media / README polish；完整 Phase 19 release sync 留到 `19-04`。
+- 原因：本 ticket 補齊 demo media / README polish；完整 Phase 20 release sync 留到 `20-04`。
 
 ## Files likely to change
 

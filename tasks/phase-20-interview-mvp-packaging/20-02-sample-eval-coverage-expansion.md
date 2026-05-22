@@ -1,4 +1,4 @@
-# 19-02 Sample Eval Coverage Expansion
+# 20-02 Sample Eval Coverage Expansion
 
 ## Goal
 
@@ -21,9 +21,9 @@
 
 ## Release Impact
 
-- Target version: `v0.19.0` interview MVP packaging backlog。
+- Target version: `v0.20.0` interview MVP packaging backlog。
 - Version bump required: no。
-- 原因：本 ticket 擴充 demo/eval fixtures，但 Phase 19 的完整 release sync 留到 `19-04`。
+- 原因：本 ticket 擴充 demo/eval fixtures，但 Phase 20 的完整 release sync 留到 `20-04`。
 
 ## Files likely to change
 

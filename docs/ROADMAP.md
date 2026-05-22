@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 interview MVP packaging backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime backlog 與 v0.20.0 interview MVP packaging backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.19.0 interview MVP packaging checklist。
+- TODO 包含 Phase 00 到 v0.20.0 interview MVP packaging checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -77,7 +77,8 @@ Expected Outcome：
 - v0.16.0 只做公開 eval dataset expansion 與 optional `hybrid` eval strategy；不做 default-on hybrid、不新增 BM25 dependency、frontend trace UI、worker、DB、登入或 RBAC。
 - v0.17.0 只做 retrieval trace UI / eval visibility；frontend 只讀既有 response，不新增 API，不做 production eval dashboard、`hybrid_rerank`、worker、DB、登入或 RBAC。
 - v0.18.0 planning backlog 只做 `hybrid_rerank` planning tickets；不實作 runtime、不 bump version、不新增 API、frontend UI、eval dashboard、BM25、worker、DB、登入或 RBAC。
-- v0.19.0 interview MVP packaging backlog 只做 demo readiness、文件敘事、sample / eval coverage、demo media 與 final validation；不實作 `hybrid_rerank` runtime、production eval dashboard、worker、DB、登入或 RBAC。
+- v0.19.0 hybrid rerank runtime backlog 只做 optional eval runner strategy、smoke flag、trace / report visibility 與 release sync；不接 default `/rag/query`、production eval dashboard、worker、DB、登入或 RBAC。
+- v0.20.0 interview MVP packaging backlog 只做 demo readiness、文件敘事、sample / eval coverage、demo media 與 final validation；不實作 production eval dashboard、worker、DB、登入或 RBAC。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -863,7 +864,7 @@ Expected Outcome：
 - 18-01 固定 `hybrid_rerank` planning boundary：candidate flow、strategy label、fallback states、provider metadata 與 disabled-by-default guardrails。
 - 18-02 規劃 future eval dataset case 類型：lexical-heavy、semantic-heavy、branch disagreement、rerank improves ordering 與 rerank fallback。
 - 18-03 規劃 future trace / report visibility：branch counts、merge policy、rerank provider / status / score、fallback reason 與 missing metadata behavior。
-- 18-04 規劃 future demo / release checklist：backend tests、frontend build、baseline smoke、optional strategy smoke 與若 implementation 完成時的 `v0.18.0` version sync 檔案。
+- 18-04 規劃 future demo / release checklist：backend tests、frontend build、baseline smoke、optional strategy smoke 與若 implementation 完成時的 version sync 檔案；implementation 已排入 Phase 19 / `v0.19.0`。
 
 18-01 Boundary Contract Status：
 
@@ -912,7 +913,7 @@ Release Impact：
 
 - Target version: `v0.18.0` planning backlog。
 - Version bump required: no。
-- 原因：本次只建立 Phase 18 planning backlog；後續若完成 `hybrid_rerank` implementation 並形成 release artifact，才由 release sync ticket bump backend / frontend / Docker Compose / docs 到 `v0.18.0`。
+- 原因：本次只建立 Phase 18 planning backlog；`hybrid_rerank` implementation 已排入 Phase 19，後續由 release sync ticket bump backend / frontend / Docker Compose / docs 到 `v0.19.0`。
 
 Out of Scope：
 
@@ -920,44 +921,86 @@ Out of Scope：
 - 不新增 backend API endpoint、外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入或 RBAC。
 - 不新增 VLM parser、PDF rendering、production OCR pipeline、deployment 設定或 release tag。
 
-## v0.19.0 Interview MVP Packaging Backlog
+## v0.19.0 Hybrid Rerank Runtime Backlog
 
-Goal：把目前已完成的受控 MVP 收斂成面試可展示版本，優先補齊 demo 文件、sample / eval coverage、截圖或 GIF 與 final validation。Phase 19 不新增企業級 runtime，不把 Auth、DB、Redis、NATS、worker 或 deployment 提前塞進 MVP。
+Goal：把 Phase 18 planning 中的 `hybrid_rerank` 落地為 disabled-by-default optional eval runner strategy。Phase 19 只接 eval provider、smoke flag、trace / report visibility 與 release sync，不接 default `/rag/query` 或 production dashboard。
 
 Tickets：
 
-- [ ] `tasks/phase-19-interview-mvp-packaging/19-01-interview-demo-doc-refresh.md`
-- [ ] `tasks/phase-19-interview-mvp-packaging/19-02-sample-eval-coverage-expansion.md`
-- [ ] `tasks/phase-19-interview-mvp-packaging/19-03-demo-media-and-readme-polish.md`
-- [ ] `tasks/phase-19-interview-mvp-packaging/19-04-final-interview-mvp-validation.md`
+- [ ] `tasks/phase-19-hybrid-rerank-runtime/19-01-hybrid-rerank-eval-provider.md`
+- [ ] `tasks/phase-19-hybrid-rerank-runtime/19-02-hybrid-rerank-smoke-flag.md`
+- [ ] `tasks/phase-19-hybrid-rerank-runtime/19-03-hybrid-rerank-trace-report-sync.md`
+- [ ] `tasks/phase-19-hybrid-rerank-runtime/19-04-hybrid-rerank-demo-release-sync.md`
 
 Expected Outcome：
 
-- 19-01 更新面試 demo 文件，使 README、demo script、PRD 與 architecture 對齊 `v0.17.0` runtime 與 `v0.18.0` planning-only 狀態。
-- 19-02 補齊公開虛構 sample / eval coverage，目標至少 5 份 sample documents 與 20 筆 retrieval eval cases。
-- 19-03 補齊 README 5 到 10 分鐘面試導覽，以及展示 frontend trace / citation / eval 可觀測性的截圖或 GIF。
+- 19-01 新增 `hybrid_rerank` eval provider flow：keyword branch + vector branch -> hybrid merge / dedupe -> rerank reordering。
+- 19-02 新增 eval runner / smoke script 的 explicit `hybrid_rerank` strategy 與 `-RunHybridRerank` flag。
+- 19-03 補齊 `hybrid_rerank` trace / report visibility，讓 branch score、merged score 與 rerank score 可被清楚解讀。
 - 19-04 重跑 final validation，完成 backend / frontend / Docker Compose / README / TODO / ROADMAP 的 `v0.19.0` release sync。
 
 Acceptance Criteria：
 
 - Phase 19 tickets 都包含 Goal、Scope、Out of Scope、Files likely to change、Acceptance Criteria、Validation 與 Release Impact。
-- Phase 19 目標明確聚焦 interview MVP packaging，不把 `hybrid_rerank` runtime、production eval dashboard、DB、worker、auth 或 deployment 混進同一階段。
+- Phase 19 目標明確聚焦 `hybrid_rerank` optional eval strategy，不把 production eval dashboard、DB、worker、auth 或 deployment 混進同一階段。
 - `19-04` 才允許 `v0.19.0` version bump；前置 tickets 若未完成完整 release artifact，必須寫 `Version bump required: no`。
-- Phase 19 完成後，README 與 demo script 應能讓面試官在 5 到 10 分鐘內看懂 upload -> OCR -> RAG -> citation -> trace -> eval 的核心價值。
+- Phase 19 完成後，eval runner / smoke script 可 explicit opt-in 執行 `hybrid_rerank`，且 baseline keyword demo 不受影響。
 
 Validation：
 
-- `rg -n "v0.19.0|Phase 19|interview MVP|面試 MVP" README.md TODO.md docs/ROADMAP.md tasks/phase-19-interview-mvp-packaging/*.md`
+- `rg -n "v0.19.0|Phase 19|hybrid_rerank|RunHybridRerank" README.md TODO.md docs/ROADMAP.md tasks/phase-19-hybrid-rerank-runtime/*.md`
 - `git diff --check`
 
 Release Impact：
 
 - Target version: `v0.19.0`。
 - Version bump required: yes for `19-04`; no for `19-01` to `19-03`。
-- 原因：Phase 19 需要在 demo docs、sample/eval coverage、demo media 與 final validation 都完成後，才形成 `v0.19.0` interview MVP packaging release artifact。
+- 原因：Phase 19 需要在 `hybrid_rerank` eval provider、smoke flag、trace / report visibility 與 final validation 都完成後，才形成 `v0.19.0` release artifact。
 
 Out of Scope：
 
-- 不實作 `hybrid_rerank` runtime、BM25 dependency、query rewriting、LLM-as-judge、answer faithfulness scoring、citation quality scoring 或 production eval dashboard。
+- 不接 default `/rag/query`、frontend live chat、backend API endpoint、BM25 dependency、query rewriting、LLM-as-judge、answer faithfulness scoring、citation quality scoring 或 production eval dashboard。
+- 不新增 backend API endpoint、frontend route、外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC 或 Agent runtime。
+- 不新增 VLM parser、PDF rendering、production OCR pipeline、K8s、deployment 設定或 release tag。
+
+## v0.20.0 Interview MVP Packaging Backlog
+
+Goal：把目前已完成的受控 MVP 收斂成面試可展示版本，優先補齊 demo 文件、sample / eval coverage、截圖或 GIF 與 final validation。Phase 20 不新增企業級 runtime，不把 Auth、DB、Redis、NATS、worker 或 deployment 提前塞進 MVP。
+
+Tickets：
+
+- [ ] `tasks/phase-20-interview-mvp-packaging/20-01-interview-demo-doc-refresh.md`
+- [ ] `tasks/phase-20-interview-mvp-packaging/20-02-sample-eval-coverage-expansion.md`
+- [ ] `tasks/phase-20-interview-mvp-packaging/20-03-demo-media-and-readme-polish.md`
+- [ ] `tasks/phase-20-interview-mvp-packaging/20-04-final-interview-mvp-validation.md`
+
+Expected Outcome：
+
+- 20-01 更新面試 demo 文件，使 README、demo script、PRD 與 architecture 對齊 `v0.17.0` runtime、`v0.18.0` planning-only 與 `v0.19.0` `hybrid_rerank` implementation 狀態。
+- 20-02 補齊公開虛構 sample / eval coverage，目標至少 5 份 sample documents 與 20 筆 retrieval eval cases。
+- 20-03 補齊 README 5 到 10 分鐘面試導覽，以及展示 frontend trace / citation / eval 可觀測性的截圖或 GIF。
+- 20-04 重跑 final validation，完成 backend / frontend / Docker Compose / README / TODO / ROADMAP 的 `v0.20.0` release sync。
+
+Acceptance Criteria：
+
+- Phase 20 tickets 都包含 Goal、Scope、Out of Scope、Files likely to change、Acceptance Criteria、Validation 與 Release Impact。
+- Phase 20 目標明確聚焦 interview MVP packaging，不把 production eval dashboard、DB、worker、auth 或 deployment 混進同一階段。
+- `20-04` 才允許 `v0.20.0` version bump；前置 tickets 若未完成完整 release artifact，必須寫 `Version bump required: no`。
+- Phase 20 完成後，README 與 demo script 應能讓面試官在 5 到 10 分鐘內看懂 upload -> OCR -> RAG -> citation -> trace -> eval 的核心價值。
+
+Validation：
+
+- `rg -n "v0.20.0|Phase 20|interview MVP|面試 MVP" README.md TODO.md docs/ROADMAP.md tasks/phase-20-interview-mvp-packaging/*.md`
+- `git diff --check`
+
+Release Impact：
+
+- Target version: `v0.20.0`。
+- Version bump required: yes for `20-04`; no for `20-01` to `20-03`。
+- 原因：Phase 20 需要在 demo docs、sample/eval coverage、demo media 與 final validation 都完成後，才形成 `v0.20.0` interview MVP packaging release artifact。
+
+Out of Scope：
+
+- 不實作 production eval dashboard、BM25 dependency、query rewriting、LLM-as-judge、answer faithfulness scoring 或 citation quality scoring。
 - 不新增 backend API endpoint、frontend route、外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC 或 Agent runtime。
 - 不新增 VLM parser、PDF rendering、production OCR pipeline、K8s、deployment 設定或 release tag。
