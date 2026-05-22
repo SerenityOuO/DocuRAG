@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.14 planning backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.15 planning backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -14,6 +14,7 @@
 - Phase 12 -> `v0.12.0`
 - Phase 13 -> `v0.13.0`
 - Phase 14 -> `v0.14.0`
+- Phase 15 -> `v0.15.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -44,7 +45,10 @@
 2. `tasks/phase-14-retrieval-quality/14-02-retrieval-quality-contract.md` 已完成，規劃 future rerank / hybrid trace contract。
 3. `tasks/phase-14-retrieval-quality/14-03-eval-dataset-expansion-plan.md` 已完成，規劃 eval dataset 擴充方向。
 4. `tasks/phase-14-retrieval-quality/14-04-phase-14-demo-and-release-plan.md` 已完成，規劃 future demo / validation / release checklist。
-5. Phase 14 planning tickets 已完成；下一步只規劃 Phase 15，不直接實作 runtime。
+5. `tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md` 待執行，先決定 `v0.15.0` rerank runtime provider 與依賴邊界。
+6. `tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md` 待執行，規劃後續 disabled-by-default rerank adapter。
+7. `tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md` 待執行，規劃後續 `vector_rerank` eval integration。
+8. `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md` 待執行，規劃後續 demo / release sync。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -283,6 +287,28 @@ Phase 14 guardrails：
 - 不新增 backend / frontend 程式碼、外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC、VLM parser、PDF rendering 或 production OCR pipeline。
 - 不修改 `sample-data/eval/retrieval-eval.json`，dataset 擴充只先做 Markdown planning。
 - 不變更 keyword / vector retrieval 預設行為，不讓 future strategy 成為 default-on path。
+
+## MVP v0.15.0 Rerank Runtime Spike Backlog
+
+- [ ] `tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md`: 決定 Phase 15 local-first rerank provider / model、dependency / model download 邊界與 `vector_rerank` 優先順序；文件票，不新增 runtime。
+- [ ] `tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md`: 後續實作 disabled-by-default rerank provider adapter，保留 keyword baseline 與 vector retrieval fallback。
+- [ ] `tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md`: 後續將 optional `vector_rerank` 接入 retrieval eval runner，輸出 Phase 13 metrics 與 rerank trace metadata。
+- [ ] `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md`: 後續補齊 optional rerank demo / eval smoke 並執行 `v0.15.0` release/version sync。
+- [x] Phase 15 planning validation：`rg -n "v0.15.0|Phase 15|15-01|15-04|rerank runtime" TODO.md docs/ROADMAP.md tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
+
+Phase 15 goal：
+
+- 以 Phase 14 planning 為基礎，優先做 disabled-by-default `vector_rerank` runtime spike。
+- 保留 keyword baseline 可在無 external runtime 時執行。
+- 使用 Phase 13 eval metrics 比較 `vector` 與 `vector_rerank`，先不實作 hybrid search。
+
+Phase 15 guardrails：
+
+- 先執行 `15-01` provider decision，再開始任何 code implementation。
+- 不讓 rerank、vector retrieval 或 eval strategy default-on。
+- 不實作 hybrid search、BM25、score fusion、merge / dedupe policy 或 frontend trace UI，除非後續 ticket 明確要求。
+- 不新增 Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC、VLM parser、PDF rendering 或 production OCR pipeline。
+- 若需要外部依賴、模型下載或 Docker runtime，必須由 ticket 明確列出，並依工具要求取得 approval。
 
 ## Release Verification Status
 

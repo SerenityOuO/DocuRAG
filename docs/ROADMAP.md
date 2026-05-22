@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.13.0 的已交付切片，並追蹤 v0.14.0 planning backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.14.0 planning backlog 的已交付切片，並追蹤 v0.15.0 rerank runtime spike backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.14.0 planning checklist。
+- TODO 包含 Phase 00 到 v0.15.0 planning checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -73,6 +73,7 @@ Expected Outcome：
 - v0.12.0 只做 optional vector indexing contract、manual indexing service / API 與 demo smoke hardening；不實作 rerank、hybrid search、eval runner、worker、DB、登入或 RBAC。
 - v0.13.0 只做 retrieval evaluation baseline、公開 eval dataset、metrics runner 與 demo smoke；不實作 rerank、hybrid search、LLM-as-judge、worker、DB、登入或 RBAC。
 - v0.14.0 目前只做 retrieval quality planning、rerank / hybrid contract 草案、dataset expansion plan 與 future demo / release plan；不實作 runtime、外部依賴、worker、DB、登入或 RBAC。
+- v0.15.0 規劃為 disabled-by-default `vector_rerank` runtime spike；必須先做 provider decision，保留 keyword baseline fallback，不實作 hybrid search、worker、DB、登入或 RBAC。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -601,3 +602,46 @@ Out of Scope：
 - 不新增外部依賴、Docker service、Redis、NATS、worker、async queue 或 PostgreSQL schema。
 - 不新增登入、RBAC、VLM parser、PDF rendering 或 production OCR pipeline。
 - 不變更 keyword / vector retrieval 預設行為，不讓 future strategy 成為 default-on path。
+
+## v0.15.0 Rerank Runtime Spike Backlog
+
+Goal：在 Phase 14 retrieval quality planning 完成後，規劃下一階段 disabled-by-default `vector_rerank` runtime spike。Phase 15 優先處理 rerank provider decision、provider adapter、eval integration 與 demo / release sync；hybrid search 延後到後續 Phase。
+
+Tickets：
+
+- [ ] `tasks/phase-15-rerank-runtime/15-01-rerank-runtime-provider-decision.md`
+- [ ] `tasks/phase-15-rerank-runtime/15-02-rerank-provider-adapter.md`
+- [ ] `tasks/phase-15-rerank-runtime/15-03-vector-rerank-eval-integration.md`
+- [ ] `tasks/phase-15-rerank-runtime/15-04-rerank-demo-release-sync.md`
+
+Expected Outcome：
+
+- 15-01 先決定 local-first rerank provider / model、dependency / model download 邊界與 approval 需求，不新增 runtime。
+- 15-02 後續實作 disabled-by-default rerank adapter，輸入 query + vector candidates，輸出保留 citation metadata 的 reranked candidates。
+- 15-03 後續新增 optional `vector_rerank` eval strategy，沿用 Phase 13 Hit Rate@K、MRR@K、Recall@K、latency 與 failure count。
+- 15-04 後續補齊 optional rerank demo / eval smoke，並在 runtime spike 完成時執行 `v0.15.0` version / docs / TODO / ROADMAP release sync。
+
+Acceptance Criteria：
+
+- Phase 15 tickets 都包含 Goal、Scope、Out of Scope、Files likely to change、Acceptance Criteria、Validation 與 Release Impact。
+- Phase 15 目標明確聚焦 `vector_rerank`，不把 hybrid search 混進同一階段。
+- 所有 tickets 都保留 keyword baseline fallback，並明確避免 default-on optional strategy。
+- `15-04` 才允許 `v0.15.0` version bump；前置 tickets 若未完成 release artifact，必須寫 `Version bump required: no`。
+
+Validation：
+
+- Phase 15 planning validation 使用 `rg` 檢查 `v0.15.0`、`Phase 15`、`15-01`、`15-04` 與 `rerank runtime` 是否同步到 TODO、ROADMAP 與 tickets。
+- `git diff --check`
+
+Release Impact：
+
+- Target version: `v0.15.0`。
+- Planning version bump required: no。
+- 原因：目前只建立 Phase 15 ticket / roadmap / TODO 規劃，不執行 Phase 15 runtime implementation；實際版本同步留到 `15-04`。
+
+Out of Scope：
+
+- 不直接實作 Phase 15。
+- 不實作 hybrid search、BM25、score fusion、merge / dedupe policy 或 frontend trace UI。
+- 不新增 eval dataset JSON、sample documents、Redis、NATS、worker、async queue、PostgreSQL schema、登入或 RBAC。
+- 不新增 VLM parser、PDF rendering、production OCR pipeline、Docker service 或 release tag。
