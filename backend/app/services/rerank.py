@@ -267,7 +267,7 @@ def create_rerank_provider(settings: Settings) -> RerankProvider:
         return FastEmbedRerankProvider(model=settings.rerank_model)
 
     return DisabledRerankProvider(
-        f"Unsupported DOCURAG_RERANK_PROVIDER='{settings.rerank_provider}'. Supported value for v0.15.0 is 'fastembed'."
+        f"Unsupported DOCURAG_RERANK_PROVIDER='{settings.rerank_provider}'. Supported value for v0.16.0 is 'fastembed'."
     )
 
 

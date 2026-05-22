@@ -53,7 +53,7 @@
 9. `tasks/phase-16-hybrid-retrieval/16-01-hybrid-retrieval-contract.md` 已完成，固定 optional `hybrid` retrieval contract、merge policy、dedupe key 與 fallback trace metadata。
 10. `tasks/phase-16-hybrid-retrieval/16-02-eval-dataset-expansion-json.md` 已完成，公開 retrieval eval dataset 已擴充到 12 筆並覆蓋 Phase 16 retrieval quality case tags。
 11. `tasks/phase-16-hybrid-retrieval/16-03-hybrid-eval-strategy-integration.md` 已完成，將 optional `hybrid` 接入 retrieval eval runner 並新增 explicit `-RunHybrid` smoke flag。
-12. `tasks/phase-16-hybrid-retrieval/16-04-hybrid-demo-release-sync.md` 待執行，補齊 hybrid demo / eval smoke 並執行 `v0.16.0` release/version sync。
+12. `tasks/phase-16-hybrid-retrieval/16-04-hybrid-demo-release-sync.md` 已完成，補齊 hybrid demo / eval smoke 並執行 `v0.16.0` release/version sync。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -326,7 +326,7 @@ Phase 15 guardrails：
 - [x] `tasks/phase-16-hybrid-retrieval/16-01-hybrid-retrieval-contract.md`: 固定 optional `hybrid` strategy、candidate source、merge policy、dedupe key 與 trace metadata contract；文件 ticket，不 bump version。
 - [x] `tasks/phase-16-hybrid-retrieval/16-02-eval-dataset-expansion-json.md`: 依 Phase 14 plan 擴充公開 retrieval eval dataset JSON，至少讓總 cases 達到 `12`，並保留 baseline keyword eval 可重跑。
 - [x] `tasks/phase-16-hybrid-retrieval/16-03-hybrid-eval-strategy-integration.md`: 將 optional `hybrid` strategy 接入 retrieval eval runner，沿用 Phase 13 metrics 並保留 fallback trace metadata。
-- [ ] `tasks/phase-16-hybrid-retrieval/16-04-hybrid-demo-release-sync.md`: 補齊 optional hybrid demo / eval smoke，並在 implementation 完成時執行 `v0.16.0` release/version sync。
+- [x] `tasks/phase-16-hybrid-retrieval/16-04-hybrid-demo-release-sync.md`: 補齊 optional hybrid demo / eval smoke，並在 implementation 完成時執行 `v0.16.0` release/version sync。
 - [x] Phase 16 planning validation：`rg -n "v0.16.0|Phase 16|16-01|16-04|hybrid retrieval" TODO.md docs/ROADMAP.md tasks/phase-16-hybrid-retrieval/*.md` 通過；`git diff --check` 通過（僅顯示既有 Windows LF/CRLF 提示）。
 
 Phase 16 goal：
@@ -370,6 +370,17 @@ Phase 16 guardrails：
 - `scripts/retrieval-eval-smoke.ps1 -RunHybrid` 已可執行 optional hybrid eval smoke；本機 vector preflight 可用時已跑通，Hit Rate@K `0.5833`、MRR@K `0.5`、Recall@K `0.5833`、failure count `0`。
 - 16-03 validation：`scripts/test-backend.ps1` 通過，`120 passed`；baseline `scripts/retrieval-eval-smoke.ps1` 通過，keyword Hit Rate@K `0.6667`、MRR@K `0.4861`、Recall@K `0.625`、failure count `0`；optional `scripts/retrieval-eval-smoke.ps1 -RunHybrid` 通過；`git diff --check` 通過。
 
+16-04 release sync status：
+
+- Backend version、frontend package version、frontend fallback version、health test 與 Docker Compose `DOCURAG_VERSION` 已同步到 `0.16.0`。
+- README、backend README、frontend README、TODO 與 ROADMAP 已補齊 `v0.16.0` release status。
+- Baseline demo smoke 通過，version `0.16.0`、answer source `deterministic baseline`、retrieval source `keyword baseline`。
+- Baseline retrieval eval smoke 通過，Hit Rate@K `0.6667`、MRR@K `0.4861`、Recall@K `0.625`、failure count `0`。
+- Optional vector eval smoke 在本機 vector preflight 可用時通過，Hit Rate@K `0.5`、MRR@K `0.4167`、Recall@K `0.4583`、failure count `0`。
+- Optional `vector_rerank` eval smoke 在本機 vector preflight 可用時通過，Hit Rate@K `0.5`、MRR@K `0.4167`、Recall@K `0.4583`、failure count `0`。
+- Optional hybrid eval smoke 在本機 vector preflight 可用時通過，Hit Rate@K `0.5833`、MRR@K `0.5`、Recall@K `0.5833`、failure count `0`。
+- `hybrid_rerank`、frontend trace UI、worker、DB、auth 與 deployment 仍留到後續 Phase。
+
 ## Release Verification Status
 
 - [x] v0.0: repo structure、docs、tasks 已完成。
@@ -392,3 +403,4 @@ Phase 16 guardrails：
 - [x] v0.12.0: Vector Indexing Hardening 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.12.0`，manual vector indexing contract、同步 indexing service、`POST /documents/{document_id}/index/vector`、optional vector indexing smoke 與 fallback-safe vector retrieval 已補齊。
 - [x] v0.13.0: Retrieval Evaluation Baseline 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.13.0`，公開 eval dataset、retrieval eval runner、baseline eval smoke、optional vector eval smoke 與 metrics output 已補齊。
 - [x] v0.15.0: Rerank Runtime Spike 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.15.0`，FastEmbed provider decision、disabled-by-default rerank adapter、optional `vector_rerank` eval strategy、rerank trace metadata 與 baseline smoke 已補齊。
+- [x] v0.16.0: Hybrid Retrieval Slice 已完成；backend / frontend / health test / Docker Compose / README / backend README / frontend README / TODO / ROADMAP 已同步到 `v0.16.0`，公開 eval dataset 擴充到 12 筆、optional `hybrid` eval strategy、hybrid trace metadata、baseline smoke 與 optional `-RunHybrid` smoke 已補齊。

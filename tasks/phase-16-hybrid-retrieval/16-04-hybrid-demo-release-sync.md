@@ -12,6 +12,13 @@
 - 記錄 `v0.16.0` Release Status，且 README 只列版本號，不用裸 Phase 條目。
 - 明確記錄 frontend trace UI、`hybrid_rerank`、Redis、NATS、worker、DB、auth 與 production deployment 留到後續 Phase。
 
+## Release Sync Summary
+
+- Backend version、frontend package version、frontend fallback version、health test 與 Docker Compose `DOCURAG_VERSION` 已同步到 `0.16.0`。
+- README、backend README、frontend README、TODO 與 ROADMAP 已補齊 `v0.16.0` release status。
+- Baseline keyword demo / eval smoke 維持可執行；optional vector、`vector_rerank` 與 `hybrid` eval smoke 已在本機 vector preflight 可用時跑通。
+- `hybrid` 仍只屬於 eval runner optional strategy，不接 `/rag/query`、frontend UI 或 default demo path。
+
 ## Out of Scope
 
 - 不實作 `hybrid_rerank`、BM25 dependency、LLM-as-judge、answer faithfulness、citation quality scoring 或 eval dashboard。
@@ -42,11 +49,11 @@
 
 ## Acceptance Criteria
 
-- [ ] Baseline keyword demo / eval smoke 仍可執行。
-- [ ] Optional `hybrid` eval smoke 有明確 preflight、env 與 fallback 行為。
-- [ ] `v0.16.0` version / docs / TODO / ROADMAP release sync 已完成。
-- [ ] README Release Status 只列版本號。
-- [ ] `hybrid_rerank`、frontend trace UI、worker、DB、auth 與 deployment 明確留到後續 Phase。
+- [x] Baseline keyword demo / eval smoke 仍可執行。
+- [x] Optional `hybrid` eval smoke 有明確 preflight、env 與 fallback 行為。
+- [x] `v0.16.0` version / docs / TODO / ROADMAP release sync 已完成。
+- [x] README Release Status 只列版本號。
+- [x] `hybrid_rerank`、frontend trace UI、worker、DB、auth 與 deployment 明確留到後續 Phase。
 
 ## Validation
 

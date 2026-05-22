@@ -1,6 +1,6 @@
 # Backend
 
-DocuRAG AgentOps backend MVP v0.15.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、manual vector indexing API、local RAG query API、retrieval evaluation runner、disabled-by-default rerank adapter、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，RAG 預設仍以 `KeywordRagProvider` 做 keyword retrieval 與 citation contract。v0.10.0 加入最小 Ollama `qwen3.5:4b` LLM client、可選 `/rag/query` generation path 與 demo smoke；v0.11.0 加入 disabled-by-default Ollama embedding client、optional Qdrant runtime 與 fallback-safe vector retrieval path；v0.12.0 加入 manual vector indexing service / API，讓 vector retrieval 查詢已明確索引的 chunks；v0.13.0 加入公開 eval dataset 與 Hit Rate@K / MRR@K / Recall@K metrics runner；v0.15.0 加入 optional `vector_rerank` eval strategy 與 rerank trace metadata。未設定 vector retrieval、rerank 或 LLM provider 時既有 `/rag/query` 預設仍是 deterministic keyword baseline。此階段不接資料庫、OpenAI API、vLLM、hybrid search、Redis、NATS、worker 或登入權限。
+DocuRAG AgentOps backend MVP v0.16.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、manual vector indexing API、local RAG query API、retrieval evaluation runner、disabled-by-default rerank adapter、optional hybrid eval strategy、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，RAG 預設仍以 `KeywordRagProvider` 做 keyword retrieval 與 citation contract。v0.10.0 加入最小 Ollama `qwen3.5:4b` LLM client、可選 `/rag/query` generation path 與 demo smoke；v0.11.0 加入 disabled-by-default Ollama embedding client、optional Qdrant runtime 與 fallback-safe vector retrieval path；v0.12.0 加入 manual vector indexing service / API，讓 vector retrieval 查詢已明確索引的 chunks；v0.13.0 加入公開 eval dataset 與 Hit Rate@K / MRR@K / Recall@K metrics runner；v0.15.0 加入 optional `vector_rerank` eval strategy 與 rerank trace metadata；v0.16.0 加入 12 筆 eval dataset 與 optional `hybrid` eval strategy。未設定 vector retrieval、rerank 或 LLM provider 時既有 `/rag/query` 預設仍是 deterministic keyword baseline。此階段不接資料庫、OpenAI API、vLLM、default-on hybrid、Redis、NATS、worker 或登入權限。
 
 ## Install
 
@@ -236,6 +236,18 @@ $env:DOCURAG_RERANK_TOP_K="5"
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1 -RunVectorRerank
 ```
 
+Phase 16 optional hybrid eval：
+
+- `sample-data/eval/retrieval-eval.json` 已擴充到 12 筆公開虛構 eval cases，並覆蓋 lexical mismatch、multi-evidence、near-duplicate、cross-document ambiguity 與 numeric / table lookup tags。
+- `hybrid` strategy 只接入 retrieval eval runner，不接 `/rag/query`、frontend UI 或 default demo path。
+- Hybrid eval 使用 existing keyword branch + optional vector branch，依 deterministic `rank_based_fusion` merge / dedupe candidates，並保留 branch rank、branch score、merged score、dedupe count 與 fallback reason。
+- Vector branch unavailable 時會 fallback 到 keyword-only candidates；此 fallback 會留在 chunk / citation trace metadata，不讓 baseline eval 失敗。
+- `hybrid` 不代表 `hybrid_rerank`、BM25 dependency、frontend trace UI、eval dashboard 或 answer faithfulness scoring 已完成。
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smoke.ps1 -RunHybrid
+```
+
 ## Local Storage
 
 上傳 API 會將原始檔案保存到 repo root 的 `data/uploads/`，並將 metadata 寫入 `data/documents.json`。`filename` 會先安全化，避免 `../` 或 Windows path separator 造成 path traversal。
@@ -246,7 +258,7 @@ document metadata 會包含 `processing` contract，明確記錄 `upload`、`ocr
 
 document metadata 也會保存 `processing_jobs` history 與 `latest_job` summary。同步 upload 會記錄 completed upload job；mock OCR 成功會記錄 completed OCR 與 local indexing job；provider failed 會記錄 failed OCR job。這些 job metadata 只是 contract，不代表已引入 worker、queue、Redis 或 NATS。
 
-v0.5.1 chunks 由 OCR mock text 產生，每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。v0.6 chunk / citation schema 另外補齊 optional `page_number`、`bbox`、`confidence`、`source_type`、chunk `metadata` 與 citation `trace_metadata` 欄位；mock OCR chunk 只填 `source_type=ocr_mock` 與 metadata safe default，不產生真正 OCR bbox 或 confidence。v0.7 real OCR output 先正規化到 `OcrResult.lines`，再將 line-level page、bbox、confidence 與 metadata 寫入 `DocumentChunk`，讓 citations 與 retrieved chunks 不依賴 PaddleOCR 私有格式。`POST /rag/query` 預設透過 `KeywordRagProvider` 做本機 keyword retrieval，設定 `DOCURAG_RAG_RETRIEVAL_PROVIDER=vector` 時才改用 `VectorRagProvider` 嘗試 Ollama embedding + Qdrant search。對 `text/plain`、`.txt`、`.md`、`.csv` sample，OCR mock 會把上傳文字納入 deterministic mock OCR text，方便 demo query 引用具體欄位；這不是 rerank、hybrid search、LLM-as-judge 或 answer quality evaluation。
+v0.5.1 chunks 由 OCR mock text 產生，每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。v0.6 chunk / citation schema 另外補齊 optional `page_number`、`bbox`、`confidence`、`source_type`、chunk `metadata` 與 citation `trace_metadata` 欄位；mock OCR chunk 只填 `source_type=ocr_mock` 與 metadata safe default，不產生真正 OCR bbox 或 confidence。v0.7 real OCR output 先正規化到 `OcrResult.lines`，再將 line-level page、bbox、confidence 與 metadata 寫入 `DocumentChunk`，讓 citations 與 retrieved chunks 不依賴 PaddleOCR 私有格式。`POST /rag/query` 預設透過 `KeywordRagProvider` 做本機 keyword retrieval，設定 `DOCURAG_RAG_RETRIEVAL_PROVIDER=vector` 時才改用 `VectorRagProvider` 嘗試 Ollama embedding + Qdrant search。對 `text/plain`、`.txt`、`.md`、`.csv` sample，OCR mock 會把上傳文字納入 deterministic mock OCR text，方便 demo query 引用具體欄位；`hybrid` 目前只在 retrieval eval runner 裡比較 keyword / vector candidates，這不是 `/rag/query` hybrid search、`hybrid_rerank`、LLM-as-judge 或 answer quality evaluation。
 
 可用環境變數覆寫資料目錄：
 
@@ -373,3 +385,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 
 - v0.12.0: Vector Indexing Hardening、manual vector indexing contract、同步 indexing service、`POST /documents/{document_id}/index/vector`、optional vector indexing smoke 與文件版本同步已完成。
 - v0.13.0: Retrieval Evaluation Baseline、公開 eval dataset、retrieval eval runner、Hit Rate@K / MRR@K / Recall@K / latency / failure count metrics、baseline eval smoke 與 optional vector eval smoke 已完成。
 - v0.15.0: Rerank Runtime Spike、FastEmbed provider decision、disabled-by-default rerank adapter、optional `vector_rerank` eval strategy、rerank trace metadata 與文件版本同步已完成。
+- v0.16.0: Hybrid Retrieval Slice、12 筆公開 eval dataset、optional `hybrid` eval strategy、hybrid trace metadata、baseline eval smoke 與 optional `-RunHybrid` smoke 已完成。
