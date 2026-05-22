@@ -361,3 +361,38 @@ def test_summarize_results_averages_metrics_and_counts_failures() -> None:
     assert summary.recall_at_k == 0.5
     assert summary.average_latency_ms == 20.0
     assert summary.failure_count == 1
+    assert summary.fallback_count == 1
+    assert summary.trace_metadata_count == 1
+    assert summary.result_strategy_counts == {"keyword": 1, "vector_unavailable_fallback": 1}
+    assert summary.fallback_reasons == [{"reason": "Vector search returned no chunks.", "count": 1}]
+
+
+def test_summarize_results_counts_hybrid_branch_fallback_without_failure() -> None:
+    hybrid_fallback = evaluate_retrieval_response(
+        make_case(),
+        make_response(
+            [
+                make_chunk(
+                    "Payment terms: Net 15",
+                    metadata={
+                        "strategy_label": "hybrid",
+                        "branch_failures": "vector",
+                        "fallback_reason": "Qdrant unavailable",
+                    },
+                )
+            ]
+        ),
+        "hybrid",
+        latency_ms=10.0,
+    )
+
+    summary = summarize_results([hybrid_fallback])
+
+    assert summary.failure_count == 0
+    assert summary.fallback_count == 1
+    assert summary.trace_metadata_count == 1
+    assert summary.result_strategy_counts == {"hybrid": 1}
+    assert summary.fallback_reasons == [
+        {"reason": "Qdrant unavailable", "count": 1},
+        {"reason": "branch_failures=vector", "count": 1},
+    ]

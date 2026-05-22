@@ -112,19 +112,29 @@ class RetrievalEvalResult:
 
 @dataclass(frozen=True)
 class RetrievalEvalSummary:
+    case_count: int
     hit_rate_at_k: float
     mrr_at_k: float
     recall_at_k: float
     average_latency_ms: float
     failure_count: int
+    fallback_count: int
+    trace_metadata_count: int
+    result_strategy_counts: dict[str, int] = field(default_factory=dict)
+    fallback_reasons: list[dict[str, object]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, object]:
         return {
+            "case_count": self.case_count,
             "hit_rate_at_k": round(self.hit_rate_at_k, 4),
             "mrr_at_k": round(self.mrr_at_k, 4),
             "recall_at_k": round(self.recall_at_k, 4),
             "average_latency_ms": round(self.average_latency_ms, 2),
             "failure_count": self.failure_count,
+            "fallback_count": self.fallback_count,
+            "trace_metadata_count": self.trace_metadata_count,
+            "result_strategy_counts": self.result_strategy_counts,
+            "fallback_reasons": self.fallback_reasons,
         }
 
 
@@ -468,20 +478,47 @@ def evaluate_retrieval_response(
 def summarize_results(results: list[RetrievalEvalResult]) -> RetrievalEvalSummary:
     if not results:
         return RetrievalEvalSummary(
+            case_count=0,
             hit_rate_at_k=0.0,
             mrr_at_k=0.0,
             recall_at_k=0.0,
             average_latency_ms=0.0,
             failure_count=0,
+            fallback_count=0,
+            trace_metadata_count=0,
         )
 
     count = len(results)
+    result_strategy_counts: dict[str, int] = {}
+    fallback_reason_counts: dict[str, int] = {}
+    fallback_count = 0
+    trace_metadata_count = 0
+
+    for result in results:
+        result_strategy_counts[result.strategy] = result_strategy_counts.get(result.strategy, 0) + 1
+        trace_metadata_count += _trace_metadata_count(result)
+        fallback_reasons = _result_fallback_reasons(result)
+
+        if fallback_reasons:
+            fallback_count += 1
+
+        for reason in fallback_reasons:
+            fallback_reason_counts[reason] = fallback_reason_counts.get(reason, 0) + 1
+
     return RetrievalEvalSummary(
+        case_count=count,
         hit_rate_at_k=sum(1 for result in results if result.hit) / count,
         mrr_at_k=sum(result.reciprocal_rank for result in results) / count,
         recall_at_k=sum(result.recall_at_k for result in results) / count,
         average_latency_ms=sum(result.latency_ms for result in results) / count,
         failure_count=sum(1 for result in results if result.error),
+        fallback_count=fallback_count,
+        trace_metadata_count=trace_metadata_count,
+        result_strategy_counts=dict(sorted(result_strategy_counts.items())),
+        fallback_reasons=[
+            {"reason": reason, "count": fallback_reason_counts[reason]}
+            for reason in sorted(fallback_reason_counts)
+        ],
     )
 
 
@@ -574,8 +611,13 @@ def main() -> int:
         f"mrr_at_k={summary['mrr_at_k']}, "
         f"recall_at_k={summary['recall_at_k']}, "
         f"average_latency_ms={summary['average_latency_ms']}, "
-        f"failure_count={summary['failure_count']}"
+        f"failure_count={summary['failure_count']}, "
+        f"fallback_count={summary['fallback_count']}, "
+        f"trace_metadata_count={summary['trace_metadata_count']}, "
+        f"result_strategy_counts={summary['result_strategy_counts']}"
     )
+    if summary["fallback_reasons"]:
+        print(f"Fallback reasons: {summary['fallback_reasons']}")
     print(f"Result JSON: {args.output}")
     return 0
 
@@ -669,6 +711,44 @@ def _retrieved_chunks_output(chunks: list[RetrievedChunk]) -> list[dict[str, obj
         }
         for rank, chunk in enumerate(chunks, start=1)
     ]
+
+
+def _trace_metadata_count(result: RetrievalEvalResult) -> int:
+    return sum(
+        1
+        for chunk in result.retrieved_chunks
+        if isinstance(chunk.get("metadata"), dict) and bool(chunk["metadata"])
+    )
+
+
+def _result_fallback_reasons(result: RetrievalEvalResult) -> list[str]:
+    reasons: list[str] = []
+
+    if result.error:
+        reasons.append(result.error)
+
+    for chunk in result.retrieved_chunks:
+        metadata = chunk.get("metadata")
+        if not isinstance(metadata, dict):
+            continue
+
+        for key in ("fallback_reason", "rerank_fallback_reason", "vector_retrieval_error"):
+            value = metadata.get(key)
+            if value:
+                reasons.append(str(value))
+
+        branch_failures = metadata.get("branch_failures")
+        if branch_failures:
+            reasons.append(f"branch_failures={branch_failures}")
+
+        if metadata.get("vector_retrieval_status") == "failed" and not metadata.get("vector_retrieval_error"):
+            reasons.append("vector retrieval unavailable")
+
+        rerank_status = metadata.get("rerank_status")
+        if rerank_status in {"disabled", "failed"} and not metadata.get("rerank_fallback_reason"):
+            reasons.append(f"rerank_status={rerank_status}")
+
+    return list(dict.fromkeys(reasons))
 
 
 def _failed_result(

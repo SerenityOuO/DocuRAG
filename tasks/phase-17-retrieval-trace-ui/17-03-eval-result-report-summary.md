@@ -12,6 +12,14 @@
 - 補充 eval dataset / smoke 文件，說明 metrics 如何解讀與哪些 optional runtime 不可用時會被略過或 fallback。
 - 更新 `TODO.md` 與 `docs/ROADMAP.md` 的 Phase 17 status。
 
+## Implementation Notes
+
+- `RetrievalEvalSummary` 已新增 `case_count`、`fallback_count`、`trace_metadata_count`、`result_strategy_counts` 與 `fallback_reasons`。
+- CLI summary 會直接輸出 strategy、case count、Hit Rate@K、MRR@K、Recall@K、latency、failure count、fallback count、trace metadata count 與 result strategy counts。
+- `retrieval-eval-smoke.ps1` 已檢查新增 summary 欄位，並在 smoke 結尾輸出 failure / fallback / trace metadata summary。
+- `sample-data/eval/README.md` 已補充 summary metrics 解讀、optional runtime preflight 與 fallback 欄位用途。
+- Optional vector / `vector_rerank` / `hybrid` 仍只在 explicit flag 與 local preflight 可用時執行；本 ticket 未新增 API、dashboard 或外部依賴。
+
 ## Out of Scope
 
 - 不新增 production eval dashboard、frontend comparison page 或 API endpoint。
@@ -31,11 +39,11 @@
 
 ## Acceptance Criteria
 
-- [ ] Eval summary 包含 strategy、case count、Hit Rate@K、MRR@K、Recall@K、latency 與 failure count。
-- [ ] Optional branch fallback / unavailable 狀態可在 summary 中被辨識。
-- [ ] Baseline keyword eval smoke 在無 Ollama embedding、Qdrant 或 FastEmbed runtime 時仍可執行。
-- [ ] Optional vector / `vector_rerank` / `hybrid` summary 只在 explicit flag 與 preflight 可用時執行。
-- [ ] 既有 Phase 13-16 eval metrics contract 不被破壞。
+- [x] Eval summary 包含 strategy、case count、Hit Rate@K、MRR@K、Recall@K、latency 與 failure count。
+- [x] Optional branch fallback / unavailable 狀態可在 summary 中被辨識。
+- [x] Baseline keyword eval smoke 在無 Ollama embedding、Qdrant 或 FastEmbed runtime 時仍可執行。
+- [x] Optional vector / `vector_rerank` / `hybrid` summary 只在 explicit flag 與 preflight 可用時執行。
+- [x] 既有 Phase 13-16 eval metrics contract 不被破壞。
 
 ## Validation
 

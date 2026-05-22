@@ -770,14 +770,14 @@ Tickets：
 
 - [x] `tasks/phase-17-retrieval-trace-ui/17-01-retrieval-trace-ui-contract.md`
 - [x] `tasks/phase-17-retrieval-trace-ui/17-02-frontend-retrieval-trace-panel.md`
-- [ ] `tasks/phase-17-retrieval-trace-ui/17-03-eval-result-report-summary.md`
+- [x] `tasks/phase-17-retrieval-trace-ui/17-03-eval-result-report-summary.md`
 - [ ] `tasks/phase-17-retrieval-trace-ui/17-04-trace-ui-demo-release-sync.md`
 
 Expected Outcome：
 
 - 17-01 已固定 trace UI contract，涵蓋 keyword、vector、`vector_rerank`、`hybrid`、fallback 與 missing metadata display。
 - 17-02 已在既有 RAG result UI 加入 compact trace panel，只讀既有 response，不新增 backend endpoint。
-- 17-03 改善 retrieval eval smoke / summary output，讓 strategy metrics、fallback count 與 trace metadata 更適合 demo / README 摘錄。
+- 17-03 已改善 retrieval eval smoke / summary output，讓 strategy metrics、fallback count 與 trace metadata 更適合 demo / README 摘錄。
 - 17-04 補齊 `v0.17.0` version / docs / TODO / ROADMAP release sync，並執行 backend、frontend、demo smoke 與 eval smoke validation。
 
 Acceptance Criteria：
@@ -804,10 +804,12 @@ Acceptance Criteria：
 - UI 只讀既有 response，不接 live eval runner、不新增 backend endpoint、不建立 comparison dashboard。
 - Validation status：`npm.cmd run build` 通過；Browser 檢查 localhost RAG result trace panel 可顯示 baseline answer / retrieval source、candidate table、fallback state，且無水平溢出；`git diff --check` 通過。
 
-17-03 Eval Summary Plan：
+17-03 Eval Summary Status：
 
-- Retrieval eval summary 應清楚列出 strategy、case count、Hit Rate@K、MRR@K、Recall@K、latency、failure count 與 fallback count。
-- Optional vector / `vector_rerank` / `hybrid` 仍需 explicit flag 與 local preflight；baseline keyword eval smoke 不依賴 external runtime。
+- Retrieval eval summary 已新增 `case_count`、`fallback_count`、`trace_metadata_count`、`result_strategy_counts` 與 `fallback_reasons`，run-level 仍保留 strategy、dataset path 與 case count。
+- CLI summary 會列出 strategy、case count、Hit Rate@K、MRR@K、Recall@K、average latency、failure count、fallback count、trace metadata count 與 result strategy counts。
+- Baseline keyword eval smoke 不依賴 external runtime，已通過：case count `12`、Hit Rate@K `0.6667`、MRR@K `0.4861`、Recall@K `0.625`、failure count `0`、fallback count `0`、trace metadata count `34`。
+- Optional vector / `vector_rerank` / `hybrid` 仍需 explicit flag 與 local preflight；本機 Ollama / Qdrant 可連線，但 backend upload preflight 因 Windows data dir `PermissionError` 不完整，未執行 optional smoke。
 - 不新增真實資料、不新增 dashboard、不新增 DB 或 external dependency。
 
 17-04 Demo and Release Plan：

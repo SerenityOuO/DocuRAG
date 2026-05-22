@@ -251,6 +251,10 @@ Assert-Condition ($null -ne $result.summary.mrr_at_k) "Missing MRR@K summary."
 Assert-Condition ($null -ne $result.summary.recall_at_k) "Missing Recall@K summary."
 Assert-Condition ($null -ne $result.summary.average_latency_ms) "Missing latency summary."
 Assert-Condition ($null -ne $result.summary.failure_count) "Missing failure count summary."
+Assert-Condition ($null -ne $result.summary.fallback_count) "Missing fallback count summary."
+Assert-Condition ($null -ne $result.summary.trace_metadata_count) "Missing trace metadata count summary."
+Assert-Condition ($null -ne $result.summary.result_strategy_counts) "Missing result strategy counts summary."
+Assert-Condition ($null -ne $result.summary.fallback_reasons) "Missing fallback reasons summary."
 
 if ($RunVector) {
     Assert-Condition ($result.summary.failure_count -eq 0) "Vector eval reported failures. Check Ollama embedding, Qdrant, and manual indexing readiness."
@@ -283,3 +287,12 @@ Write-Host "Hit Rate@K: $($result.summary.hit_rate_at_k)"
 Write-Host "MRR@K: $($result.summary.mrr_at_k)"
 Write-Host "Recall@K: $($result.summary.recall_at_k)"
 Write-Host "Average latency ms: $($result.summary.average_latency_ms)"
+Write-Host "Failure count: $($result.summary.failure_count)"
+Write-Host "Fallback count: $($result.summary.fallback_count)"
+Write-Host "Trace metadata count: $($result.summary.trace_metadata_count)"
+Write-Host "Result strategy counts:"
+$result.summary.result_strategy_counts | ConvertTo-Json -Depth 8
+if ($result.summary.fallback_reasons.Count -gt 0) {
+    Write-Host "Fallback reasons:"
+    $result.summary.fallback_reasons | ConvertTo-Json -Depth 8
+}

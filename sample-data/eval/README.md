@@ -30,6 +30,23 @@
 
 ## Runner Usage
 
-後續 `13-03` runner 會讀取此 dataset，對每筆 case 執行 keyword baseline retrieval；optional vector mode 必須在明確 env、Qdrant collection 與 manual vector indexing 完成後才執行。
+`retrieval-eval-smoke.ps1` 會讀取此 dataset，對每筆 case 執行 keyword baseline retrieval；optional vector、`vector_rerank` 與 `hybrid` mode 必須透過 explicit flag、embedding / Qdrant preflight 與 manual vector indexing 完成後才執行。
 
-Baseline eval 不依賴 Ollama embedding 或 Qdrant。Phase 13 不使用此 dataset 評估 answer faithfulness、citation quality、rerank 或 hybrid search。
+Baseline eval 不依賴 Ollama embedding、Qdrant 或 FastEmbed runtime。Optional runtime 不可用時，baseline keyword smoke 仍應可重跑；vector-backed optional smoke 會在 preflight 階段停止並回報缺少的 local runtime。
+
+## Summary Output
+
+Eval result JSON 的 `summary` 會輸出：
+
+- `case_count`：本次 eval cases 數量。
+- `hit_rate_at_k`：top K 內至少命中一個 expected evidence 的比例。
+- `mrr_at_k`：第一個 relevant chunk 的 reciprocal rank 平均值。
+- `recall_at_k`：expected terms 或 expected evidence 覆蓋比例。
+- `average_latency_ms`：每筆 case 的平均 retrieval latency。
+- `failure_count`：真正讓該 strategy 失敗的 case 數；keyword baseline 應維持 `0`。
+- `fallback_count`：有 optional branch fallback、rerank fallback 或 unavailable metadata 的 case 數。
+- `trace_metadata_count`：retrieved chunks 中帶有 metadata 的筆數，方便確認 trace metadata 是否仍存在。
+- `result_strategy_counts`：實際 result strategy 分布，例如 `keyword`、`vector_unavailable_fallback` 或 `hybrid`。
+- `fallback_reasons`：fallback / unavailable 原因與出現次數，用於 demo 摘錄與 regression 檢查。
+
+此 dataset 不評估 answer faithfulness、citation quality、LLM-as-judge、`hybrid_rerank` 或 production eval dashboard。
