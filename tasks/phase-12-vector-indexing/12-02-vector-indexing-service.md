@@ -41,12 +41,12 @@
 
 ## Acceptance Criteria
 
-- [ ] 有可由 API 或 smoke script 重用的 vector indexing service/helper。
-- [ ] Indexing 成功時會 upsert stable point ids 與完整 chunk payload。
-- [ ] Empty chunks 不會造成 crash，會回傳明確 skipped result。
-- [ ] Embedding / Qdrant / collection failure 不會破壞 keyword RAG baseline。
-- [ ] 單元測試覆蓋主要 success 與 failure path。
-- [ ] 不改 `/rag/query` 預設行為。
+- [x] 有可由 API 或 smoke script 重用的 vector indexing service/helper。
+- [x] Indexing 成功時會 upsert stable point ids 與完整 chunk payload。
+- [x] Empty chunks 不會造成 crash，會回傳明確 skipped result。
+- [x] Embedding / Qdrant / collection failure 不會破壞 keyword RAG baseline。
+- [x] 單元測試覆蓋主要 success 與 failure path。
+- [x] 不改 `/rag/query` 預設行為。
 
 ## Validation
 

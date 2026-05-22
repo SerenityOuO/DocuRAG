@@ -218,7 +218,8 @@
 
 - [x] `tasks/phase-12-vector-indexing/12-01-vector-indexing-contract.md`: 固定 local vector indexing contract、Qdrant payload metadata、stable point id、failure / fallback 行為與 Phase 12 guardrails；文件 ticket，不 bump version。
 - [x] 12-01 validation：`rg -n "v0.12.0|phase-12|Vector Indexing|docurag_chunks_v1" TODO.md docs/ROADMAP.md tasks/phase-12-vector-indexing/12-01-vector-indexing-contract.md` 通過；`git diff --check` 通過。
-- [ ] `tasks/phase-12-vector-indexing/12-02-vector-indexing-service.md`: 新增最小同步 vector indexing service/helper，將 existing document chunks idempotently embed + upsert 到 Qdrant；不新增 API、worker、DB 或 default-on vector path。
+- [x] `tasks/phase-12-vector-indexing/12-02-vector-indexing-service.md`: 新增最小同步 vector indexing service/helper，將 existing document chunks idempotently embed + upsert 到 Qdrant；不新增 API、worker、DB 或 default-on vector path。
+- [x] 12-02 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`91 passed`（本機 PowerShell PATH 需臨時補上 Codex bundled Python 3.12）；`git diff --check` 通過。單元測試覆蓋 stable point id、payload metadata、empty chunks skipped、embedding failure、Qdrant failure、collection size mismatch 與 embedding dimension mismatch。
 - [ ] `tasks/phase-12-vector-indexing/12-03-vector-indexing-api.md`: 新增手動 vector indexing API，例如 `POST /documents/{document_id}/index/vector`，讓 demo 可明確執行 indexing；不新增 batch indexing、frontend 大改版或 async queue。
 - [ ] `tasks/phase-12-vector-indexing/12-04-vector-indexing-demo-smoke.md`: 更新 optional vector demo smoke，先手動 vector indexing 再 vector retrieval query，並完成 `v0.12.0` release/version sync。
 
