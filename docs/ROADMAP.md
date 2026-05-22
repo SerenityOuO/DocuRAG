@@ -930,7 +930,7 @@ Tickets：
 - [x] `tasks/phase-19-hybrid-rerank-runtime/19-01-hybrid-rerank-eval-provider.md`
 - [x] `tasks/phase-19-hybrid-rerank-runtime/19-02-hybrid-rerank-smoke-flag.md`
 - [x] `tasks/phase-19-hybrid-rerank-runtime/19-03-hybrid-rerank-trace-report-sync.md`
-- [ ] `tasks/phase-19-hybrid-rerank-runtime/19-04-hybrid-rerank-demo-release-sync.md`
+- [x] `tasks/phase-19-hybrid-rerank-runtime/19-04-hybrid-rerank-demo-release-sync.md`
 
 Expected Outcome：
 
@@ -962,6 +962,14 @@ Expected Outcome：
 - README、backend README、frontend README 與 sample eval README 已說明 `hybrid_rerank` 是 optional eval runner strategy，不是 default chat retrieval，缺少 metadata 時沿用 graceful hidden / `metadata unavailable` / fallback state。
 - 19-03 validation：backend tests 通過，`126 passed`（僅 pytest cache 權限警告）；baseline retrieval eval smoke 通過，keyword summary `case_count=12`、Hit Rate@K `0.6667`、MRR@K `0.4861`、Recall@K `0.625`、failure count `0`、fallback count `0`、trace metadata count `34`；optional `-RunHybridRerank` 仍因本機 Qdrant collection / Docker daemon 未啟動停在 vector preflight；`rg` 與 `git diff --check` 通過。
 
+19-04 Demo Release Sync Status：
+
+- Backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.19.0`。
+- Baseline demo smoke 通過，health version `0.19.0`，answer source `deterministic baseline`，retrieval source `keyword baseline`。
+- Baseline retrieval eval smoke 通過，keyword summary `case_count=12`、Hit Rate@K `0.6667`、MRR@K `0.4861`、Recall@K `0.625`、failure count `0`、fallback count `0`、trace metadata count `34`。
+- Optional `-RunVector`、`-RunVectorRerank`、`-RunHybrid` 與 `-RunHybridRerank` 均已執行 preflight；本機 Qdrant collection `docurag_chunks_v1` 不可用而停止，需先啟動 Qdrant 並重跑 `scripts/qdrant-collection-smoke.ps1`，不影響 baseline `v0.19.0` release。
+- 19-04 validation：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/test-backend.ps1` 通過，`126 passed`（僅 pytest cache 權限警告）；`npm.cmd run build` 通過；baseline demo smoke 與 baseline retrieval eval smoke 通過；optional vector-backed smoke preflight 狀態已記錄。
+
 Acceptance Criteria：
 
 - Phase 19 tickets 都包含 Goal、Scope、Out of Scope、Files likely to change、Acceptance Criteria、Validation 與 Release Impact。
@@ -971,7 +979,7 @@ Acceptance Criteria：
 
 Validation：
 
-- `rg -n "v0.19.0|Phase 19|hybrid_rerank|RunHybridRerank" README.md TODO.md docs/ROADMAP.md tasks/phase-19-hybrid-rerank-runtime/*.md`
+- `rg -n "v0.19.0|Phase 19|hybrid_rerank|RunHybridRerank" README.md backend/README.md frontend/README.md TODO.md docs/ROADMAP.md scripts backend/app backend/tests`
 - `git diff --check`
 
 Release Impact：
