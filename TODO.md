@@ -503,7 +503,8 @@ Phase 19 guardrails：
 
 ## MVP v0.20.0 Interview MVP Packaging Backlog
 
-- [ ] `tasks/phase-20-interview-mvp-packaging/20-01-interview-demo-doc-refresh.md`: 更新 README / demo script / PRD / architecture 的面試 demo 敘事，對齊 `v0.17.0` runtime、`v0.18.0` planning-only 與 `v0.19.0` `hybrid_rerank` implementation 狀態；文件 ticket，不 bump version。
+- [x] `tasks/phase-20-interview-mvp-packaging/20-01-interview-demo-doc-refresh.md`: 更新 README / demo script / PRD / architecture 的面試 demo 敘事，對齊 `v0.17.0` runtime、`v0.18.0` planning-only 與 `v0.19.0` `hybrid_rerank` implementation 狀態；文件 ticket，不 bump version。
+- [x] 20-01 validation：`rg -n "v0.17.0|v0.18.0|v0.19.0|Phase 20|interview MVP|面試" README.md docs/demo-script.md docs/PRD.md docs/architecture.md TODO.md docs/ROADMAP.md` 通過；`git diff --check` 通過。
 - [ ] `tasks/phase-20-interview-mvp-packaging/20-02-sample-eval-coverage-expansion.md`: 補齊公開虛構 sample documents 與 retrieval eval cases，目標至少 5 份 sample documents、20 筆 eval cases；不改 retrieval algorithm。
 - [ ] `tasks/phase-20-interview-mvp-packaging/20-03-demo-media-and-readme-polish.md`: 補齊 README 5 到 10 分鐘面試導覽、截圖或 GIF 等 demo media；不新增 production UI 或 API。
 - [ ] `tasks/phase-20-interview-mvp-packaging/20-04-final-interview-mvp-validation.md`: 重跑 final validation，確認 baseline / optional smoke 狀態，並完成 `v0.20.0` release/version sync。

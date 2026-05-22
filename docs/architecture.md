@@ -1,59 +1,67 @@
 # MVP Architecture
 
-本文件只描述 DocuRAG AgentOps 的 MVP 架構。長期目標中的 OCR、RAG、Qdrant、Redis、NATS、vLLM 與 Agent worker 都先保留擴充位置，不在 Phase 00 文件交付中實作。
+本文件描述 DocuRAG AgentOps 目前的受控 MVP 架構。到 v0.19.0 為止，專案已完成 backend / frontend demo、provider-selected OCR、local RAG、citation trace、retrieval eval runner、optional vector / rerank / hybrid / `hybrid_rerank` eval strategy。Phase 20 只做 interview MVP packaging，不新增 production runtime。
 
 ## MVP Shape
 
 ```text
-Documentation
+Vue Demo UI
     |
-    |-- README / PRD / Architecture / Roadmap
-    |-- TODO / task tickets
-    |
-Future Backend
-    |
-    |-- healthcheck
-    |-- document upload API
-    |-- document metadata schema
-```
-
-Phase 00 的交付是文件與任務票，不建立 runtime app。Phase 01 才會建立最小 backend healthcheck。Phase 02 才會建立文件上傳與 metadata 基礎。
-
-## Near-Term Runtime Boundary
-
-Phase 01 到 Phase 02 的最小 runtime 邊界如下：
-
-```text
-Client or API tester
+    |-- upload / document detail / OCR result
+    |-- RAG answer / citations / retrieved chunks / trace panel
     |
 FastAPI Backend
     |
-Document metadata model
+    |-- health / document API / OCR API / RAG API
+    |-- manual vector indexing API
+    |-- retrieval eval runner CLI
+    |
+Local Data Store
+    |
+    |-- uploads / metadata JSON / OCR results / chunks
+    |
+Optional Local AI Runtime
+    |
+    |-- PaddleOCR GPU provider
+    |-- Ollama generation / embedding
+    |-- Qdrant vector collection
+    |-- FastEmbed rerank adapter
 ```
 
-這個階段只需要確認服務可啟動、`/health` 可驗證、文件上傳 API 與 metadata contract 清楚。是否接資料庫、storage、worker 或向量資料庫，要由後續 ticket 決定。
+MVP 的預設路徑保持 local keyword RAG baseline，確保沒有 optional runtime 時也能重跑 demo。vector retrieval、rerank、hybrid 與 `hybrid_rerank` 都必須 explicit opt-in；`hybrid_rerank` 目前只在 retrieval eval runner 裡使用，不接 default `/rag/query` 或 frontend chat route。
 
-## Deferred Components
+## Near-Term Runtime Boundary
 
-以下元件是目標架構的一部分，但不屬於目前 MVP bootstrap：
+Phase 20 的 runtime 邊界如下：
 
-- Vue frontend。
-- OCR worker。
-- VLM / parser pipeline。
-- Embedding 與 chunking pipeline。
-- Qdrant vector database。
+```text
+Browser / PowerShell smoke scripts
+    |
+FastAPI Backend
+    |
+Local JSON store and optional local model services
+```
+
+這個階段只整理 demo readiness、sample / eval coverage、README media 與 final validation。不得新增 backend API、frontend route、database schema、worker、auth、queue 或 deployment 設定。
+
+## Deferred Or Explicitly Optional Components
+
+以下能力是長期目標或 optional local runtime，不屬於目前 production-ready MVP：
+
+- VLM / parser pipeline、PDF rendering、image preprocessing、多頁 production OCR pipeline。
+- Default-on vector retrieval、default-on rerank、default-on hybrid / `hybrid_rerank` chat path。
+- Production eval dashboard、strategy comparison UI、LLM-as-judge、answer faithfulness scoring、citation quality scoring。
+- PostgreSQL schema、multi-user tenancy、login、RBAC。
 - Redis session、cache、rate limit。
 - NATS event bus。
-- Rerank 與 RAG generation。
-- Eval runner。
 - Agent tool-use runtime。
-- vLLM / Ollama / OpenAI-compatible serving。
-- K8s manifests。
+- vLLM / OpenAI-compatible serving。
+- K8s manifests and deployment hardening。
 
 ## Design Rules
 
 - 先完成可驗收的最小切片，再擴充 AI pipeline。
 - API contract 先保持清楚，不提前建立複雜抽象。
-- metadata 欄位要能支援後續 OCR / RAG 狀態，但不在當前階段實作資料庫 schema。
+- metadata 欄位要能支援 OCR / RAG / eval trace 狀態，但不在目前 MVP 實作資料庫 schema。
 - 每次只依 ticket 修改必要檔案。
 - 文件與 TODO 要跟 ticket 狀態同步。

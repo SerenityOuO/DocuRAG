@@ -4,38 +4,45 @@
 
 ## 1. Project Intro
 
-DocuRAG AgentOps 是一個 AI 文件平台，展示文件解析、RAG citation、RAG evaluation 與 AgentOps 的端到端產品能力。
+DocuRAG AgentOps 是一個面試展示用的 AI 文件平台，展示文件上傳、OCR、local RAG、citation trace、retrieval evaluation 與 AgentOps 產品思維。
+
+目前可展示的是受控 single-user / local-demo MVP：v0.17.0 已完成 frontend trace visibility，v0.18.0 是 `hybrid_rerank` planning-only，v0.19.0 已把 `hybrid_rerank` 落地成 optional eval runner strategy。Phase 20 的目標是把這條主線包裝成面試可快速理解的 demo，而不是宣稱已是 production-ready 平台。
 
 ## 2. Architecture
 
-說明 MVP 先用 fixture-driven flow 跑通產品與 API 邊界，後續再逐步接 OCR、Qdrant、Redis、NATS 與 LLM provider。
+說明目前架構分成四層：
+
+- FastAPI backend：health、document upload/list/detail、OCR、RAG query、manual vector indexing 與 retrieval eval runner。
+- Local persistence：以 repo-local `data/` 保存 metadata、uploads、OCR result 與 chunks，避免在 MVP 階段提前加入 database schema。
+- Optional AI runtime：PaddleOCR GPU provider、Ollama generation / embedding、Qdrant vector retrieval、FastEmbed rerank adapter 都採 explicit opt-in。
+- Vue demo UI：支援 upload、document detail、OCR result、RAG answer、citations、retrieved chunks 與 compact trace panel。
+
+要講清楚的取捨：`/rag/query` 預設仍是 deterministic keyword baseline；`vector`、`vector_rerank`、`hybrid` 與 `hybrid_rerank` 用於 optional demo / eval runner，不是 default production retrieval。
 
 ## 3. Demo Flow
 
 ```text
-Login
-Create Project
-View Documents
-Open Document Detail
-Show OCR Text / Extracted Fields / Chunks
-Ask Question
-Show Answer + Citation
-Show RAG Trace
-Compare Eval Metrics
+00:00 - 01:00  Project intro: document AI platform, not just a chatbot.
+01:00 - 02:30  Upload a sample document and show metadata / document detail.
+02:30 - 04:00  Run OCR or mock override, then show OCR text and generated chunks.
+04:00 - 05:30  Ask a RAG question and show deterministic answer, citations and retrieved chunks.
+05:30 - 07:00  Open trace panel and explain retrieval source, candidate rows and fallback states.
+07:00 - 08:30  Run retrieval eval smoke and explain Hit Rate@K, MRR@K, Recall@K and trace metadata count.
+08:30 - 10:00  Explain optional strategies: vector, vector_rerank, hybrid and hybrid_rerank.
 ```
 
 ## 4. Interview Talking Points
 
 - 不只做 Chatbot，而是設計可觀測、可評估的 RAG 平台。
 - Citation 與 trace 是文件型 AI 系統可信度的核心。
-- MVP 刻意控制 scope，先完成可展示 thin slice。
-- 架構預留 Redis、NATS、Qdrant、workers 與推論後端，但不在第一階段過度實作。
+- MVP 刻意控制 scope：single-user、本機 demo、explicit opt-in runtime、每張 ticket 可單獨驗證。
+- Phase 18 是 `hybrid_rerank` planning-only，Phase 19 才是 optional `hybrid_rerank` eval implementation。
+- 已完成 provider-selected PaddleOCR、optional vector retrieval、optional vector rerank eval、optional hybrid eval、optional hybrid rerank eval 與 frontend trace visibility。
+- 仍未完成 production eval dashboard、Auth/RBAC、PostgreSQL、Redis、NATS、worker、Agent runtime、VLM parser、PDF rendering 或 deployment hardening。
 
-## 5. Deferred Demo Items
+## 5. Demo Guardrails
 
-- 真 OCR
-- 真 embeddings
-- 真 Qdrant retrieval
-- 真 rerank
-- Agent tool-use
-- Docker Compose full stack
+- 不把 optional eval strategy 說成 default `/rag/query` production path。
+- 不把 local JSON storage 說成 production database。
+- 不把 PaddleOCR provider-selected flow 說成完整 production OCR pipeline。
+- 不把 Phase 20 packaging 說成新增 runtime feature；Phase 20 只補 demo readiness、sample / eval coverage、media 與 final validation。
