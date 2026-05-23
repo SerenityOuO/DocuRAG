@@ -529,11 +529,13 @@ Phase 20 guardrails：
 
 - [x] `tasks/phase-20-interview-mvp-packaging/20-05-frontend-demo-ui-polish.md`: 改善既有 Vue demo UI 的第一屏資訊層次、workflow 狀態、卡片 / 表格 / trace 視覺質感；不新增 route、API、外部依賴或 backend runtime。
 - [x] 20-05 validation：`npm.cmd run build` 於 `frontend/` 通過；Browser 檢查 `http://localhost:5173/` local frontend demo view，desktop viewport 無 horizontal overflow；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+- [x] `tasks/phase-20-interview-mvp-packaging/20-06-readme-demo-media-refresh.md`: 用 20-05 polish 後的 local frontend demo 與 baseline eval summary 重新覆蓋 README 引用的三張 demo 圖；不新增 route、API、外部依賴或 backend runtime。
+- [x] 20-06 validation：`npm.cmd run build` 於 `frontend/` 通過；Browser 重新截取 `docs/demo-media/frontend-overview.png` 與 `docs/demo-media/frontend-trace.png`；baseline `scripts/retrieval-eval-smoke.ps1` 通過，keyword summary `case_count=20`、Hit Rate@K `0.7`、MRR@K `0.475`、Recall@K `0.625`、failure count `0`、fallback count `0`、trace metadata count `62`；重新產生 `docs/demo-media/eval-summary.png`；`rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 Phase 20.1 goal：
 
 - 讓面試 demo 的 frontend 第一眼更像成熟 AI application dashboard，清楚呈現 backend health、文件數、目前選取文件、RAG answer source 與 upload -> OCR -> index -> trace workflow。
-- 只做展示質感加分，不改 API contract、不新增功能範圍、不 bump version。
+- 只做展示質感與 README demo media 加分，不改 API contract、不新增功能範圍、不 bump version。
 
 Phase 20.1 guardrails：
 
