@@ -1063,6 +1063,12 @@ Expected Outcome：
 - Scope 只限既有 Vue single-page UI 的靜態文案、狀態顯示 helper 與瀏覽器標題，不新增 i18n framework、route、API、外部依賴、backend runtime 或 release version bump。
 - Validation：`npm.cmd run build` 通過；local frontend demo view 檢查標題、主要中文 panel、舊英文可見標籤與 desktop horizontal overflow 通過；ticket 指定 `rg` 已執行，剩餘命中僅 `listDocuments` / `refreshDocuments` 程式識別符；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
+20-08 README Zh-TW Demo Media Refresh Status：
+
+- 新增 README Zh-TW demo media refresh ticket，目標是讓 README 引用的前端截圖跟上 20-07 繁中 UI。
+- Scope 只限覆蓋既有 `frontend-overview.png` 與 `frontend-trace.png`，不新增 README 圖片路徑、frontend route、backend API、外部依賴、runtime 或 release version bump。
+- Validation：`npm.cmd run build` 通過；local frontend demo view 重新截取 overview / trace 圖，確認中文標題 / panel / trace、舊英文可見標籤與 desktop horizontal overflow 通過；`rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
 Acceptance Criteria：
 
 - Phase 20 tickets 都包含 Goal、Scope、Out of Scope、Files likely to change、Acceptance Criteria、Validation 與 Release Impact。
