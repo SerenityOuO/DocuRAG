@@ -525,6 +525,21 @@ Phase 20 guardrails：
 - 不新增 backend API、frontend route、外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC、Agent runtime、VLM parser、PDF rendering、production OCR pipeline、K8s 或 deployment 設定。
 - `20-04` 才允許 `v0.20.0` version bump；`20-01` 到 `20-03` 若未形成完整 release artifact，必須寫 `Version bump required: no`。
 
+## MVP v0.20.1 Frontend Demo UI Polish
+
+- [x] `tasks/phase-20-interview-mvp-packaging/20-05-frontend-demo-ui-polish.md`: 改善既有 Vue demo UI 的第一屏資訊層次、workflow 狀態、卡片 / 表格 / trace 視覺質感；不新增 route、API、外部依賴或 backend runtime。
+- [x] 20-05 validation：`npm.cmd run build` 於 `frontend/` 通過；Browser 檢查 `http://localhost:5173/` local frontend demo view，desktop viewport 無 horizontal overflow；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+Phase 20.1 goal：
+
+- 讓面試 demo 的 frontend 第一眼更像成熟 AI application dashboard，清楚呈現 backend health、文件數、目前選取文件、RAG answer source 與 upload -> OCR -> index -> trace workflow。
+- 只做展示質感加分，不改 API contract、不新增功能範圍、不 bump version。
+
+Phase 20.1 guardrails：
+
+- 不新增 production eval dashboard、strategy comparison page、live eval runner、backend API、frontend route、外部依賴、DB、auth、Redis、NATS、worker、Agent runtime 或 deployment。
+- 不改 retrieval algorithm、eval runner、smoke script、sample data 或 backend service。
+
 ## Release Verification Status
 
 - [x] v0.0: repo structure、docs、tasks 已完成。

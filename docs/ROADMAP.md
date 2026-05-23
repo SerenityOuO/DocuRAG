@@ -1045,6 +1045,12 @@ Expected Outcome：
 - Optional `-RunVector`、`-RunVectorRerank` 與 `-RunHybrid` 已執行 preflight；本機 Qdrant collection `docurag_chunks_v1` 不可用，因此 optional vector-backed eval 需先啟動 Qdrant 並重跑 `scripts/qdrant-collection-smoke.ps1`。
 - Phase 20 沒有新增 out-of-scope runtime、infra、auth、DB 或 deployment 功能。
 
+20-05 Frontend Demo UI Polish Status：
+
+- 新增 frontend demo UI polish ticket，目標是改善第一屏 MVP status overview、workflow status、selected document summary 與 trace / citation 視覺層次。
+- Scope 只限既有 Vue single-page UI 與 CSS，不新增 route、API、外部依賴、backend runtime 或 release version bump。
+- Validation：`npm.cmd run build` 通過；Browser 檢查 `http://localhost:5173/` desktop local view 無 horizontal overflow；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
 Acceptance Criteria：
 
 - Phase 20 tickets 都包含 Goal、Scope、Out of Scope、Files likely to change、Acceptance Criteria、Validation 與 Release Impact。

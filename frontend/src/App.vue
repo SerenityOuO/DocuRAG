@@ -39,6 +39,19 @@ type TraceCandidateRow = {
   traceSummary: string[];
 };
 
+type DemoStat = {
+  label: string;
+  value: string;
+  detail: string;
+  tone?: "default" | "failed" | "ready" | "success";
+};
+
+type WorkflowStep = {
+  label: string;
+  detail: string;
+  state: "idle" | "loading" | "ready" | "success" | "failed";
+};
+
 const healthState = ref<RequestState>("idle");
 const documentsState = ref<RequestState>("idle");
 const detailState = ref<RequestState>("idle");
@@ -71,6 +84,49 @@ const latestResponse = ref<
 
 const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.20.0"));
 
+const readyDocumentCount = computed(() => documents.value.filter((document) => document.processing.ready).length);
+
+const completedOcrCount = computed(
+  () => documents.value.filter((document) => document.ocr.status === "completed").length,
+);
+
+const selectedDocumentLabel = computed(() => selectedDocument.value?.filename ?? "No document selected");
+
+const latestJobLabel = computed(() => {
+  if (!selectedDocument.value?.latest_job) {
+    return "No job yet";
+  }
+
+  return `${selectedDocument.value.latest_job.job_type} / ${selectedDocument.value.latest_job.status}`;
+});
+
+const demoStats = computed<DemoStat[]>(() => [
+  {
+    label: "Backend",
+    value: healthLabel.value,
+    detail: health.value?.version ? `version ${health.value.version}` : API_BASE_URL,
+    tone: healthState.value === "error" ? "failed" : healthState.value === "success" ? "success" : "ready",
+  },
+  {
+    label: "Documents",
+    value: String(documents.value.length),
+    detail: `${completedOcrCount.value} OCR completed / ${readyDocumentCount.value} ready`,
+    tone: documents.value.length > 0 ? "success" : "ready",
+  },
+  {
+    label: "Selected",
+    value: selectedDocument.value ? selectedDocument.value.status : "none",
+    detail: selectedDocumentLabel.value,
+    tone: selectedDocument.value?.processing.ready ? "success" : selectedDocument.value ? "ready" : "default",
+  },
+  {
+    label: "Answer",
+    value: ragResult.value ? ragAnswerSource.value : "waiting",
+    detail: ragResult.value ? ragRetrievalSource.value : "Ask after OCR",
+    tone: ragResult.value ? sourceTone(ragAnswerSource.value) : "default",
+  },
+]);
+
 const healthLabel = computed(() => {
   if (healthState.value === "success" && health.value?.status === "ok") {
     return "Backend online";
@@ -86,6 +142,59 @@ const healthLabel = computed(() => {
 
   return "Not checked";
 });
+
+const workflowSteps = computed<WorkflowStep[]>(() => [
+  {
+    label: "Upload",
+    detail: selectedDocument.value ? selectedDocument.value.filename : "Local JSON store",
+    state:
+      uploadState.value === "loading"
+        ? "loading"
+        : selectedDocument.value
+          ? "success"
+          : uploadState.value === "error"
+            ? "failed"
+            : "idle",
+  },
+  {
+    label: "OCR",
+    detail: selectedDocument.value?.ocr.status ?? "Provider selected",
+    state:
+      ocrState.value === "loading"
+        ? "loading"
+        : selectedDocument.value?.ocr.status === "completed"
+          ? "success"
+          : selectedDocument.value?.ocr.status === "failed"
+            ? "failed"
+            : selectedDocument.value
+              ? "ready"
+              : "idle",
+  },
+  {
+    label: "Index",
+    detail: selectedDocument.value?.processing.indexing ?? "Local chunks",
+    state:
+      selectedDocument.value?.processing.indexing === "completed"
+        ? "success"
+        : selectedDocument.value?.processing.indexing === "failed"
+          ? "failed"
+          : selectedDocument.value
+            ? "ready"
+            : "idle",
+  },
+  {
+    label: "Trace",
+    detail: ragResult.value ? `${ragResult.value.retrieved_chunks.length} candidates` : "Citation metadata",
+    state:
+      chatState.value === "loading"
+        ? "loading"
+        : ragResult.value
+          ? "success"
+          : chatState.value === "error"
+            ? "failed"
+            : "idle",
+  },
+]);
 
 const latestResponseJson = computed(() =>
   latestResponse.value ? JSON.stringify(latestResponse.value, null, 2) : "尚未取得 API response。",
@@ -498,12 +607,39 @@ onMounted(() => {
 <template>
   <main class="page">
     <header class="hero">
-      <p class="eyebrow">{{ currentVersionLabel }}</p>
-      <h1>DocuRAG AgentOps</h1>
-      <p class="hero-copy">
-        Backend health、本機文件上傳、metadata 保存、PaddleOCR PP-OCRv4 Chinese provider、mock override、local keyword RAG、
-        optional Ollama Qwen3.5 answer source、manual vector indexing、optional vector retrieval fallback、retrieval eval metrics 與 citation trace 驗證。
-      </p>
+      <div class="hero-shell">
+        <div class="hero-main">
+          <div class="hero-kicker">
+            <span class="eyebrow">{{ currentVersionLabel }}</span>
+            <span class="status-pill" :class="`status-${healthState}`">{{ healthLabel }}</span>
+          </div>
+          <h1>DocuRAG AgentOps</h1>
+          <p class="hero-copy">
+            Local document intelligence demo with OCR, citation-grounded RAG, retrieval trace, and evaluation-ready metadata.
+          </p>
+        </div>
+
+        <div class="hero-side">
+          <span>Selected document</span>
+          <strong>{{ selectedDocumentLabel }}</strong>
+          <small>{{ latestJobLabel }}</small>
+        </div>
+      </div>
+
+      <section class="metric-strip" aria-label="MVP status overview">
+        <article v-for="stat in demoStats" :key="stat.label" class="metric-card" :class="stat.tone ? `metric-${stat.tone}` : ''">
+          <span>{{ stat.label }}</span>
+          <strong>{{ stat.value }}</strong>
+          <small>{{ stat.detail }}</small>
+        </article>
+      </section>
+
+      <ol class="workflow-strip" aria-label="Document workflow status">
+        <li v-for="step in workflowSteps" :key="step.label" :class="`workflow-${step.state}`">
+          <span>{{ step.label }}</span>
+          <strong>{{ step.detail }}</strong>
+        </li>
+      </ol>
     </header>
 
     <section class="layout" aria-label="Demo controls">
@@ -553,7 +689,7 @@ onMounted(() => {
         </label>
 
         <p v-if="selectedFile" class="selected-file">
-          {{ selectedFile.name }} - {{ selectedFile.size }} bytes
+          {{ selectedFile.name }} - {{ formatBytes(selectedFile.size) }}
         </p>
         <p v-else class="muted">尚未選擇檔案。</p>
 
