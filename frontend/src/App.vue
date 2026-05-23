@@ -82,6 +82,38 @@ const latestResponse = ref<
   | null
 >(null);
 
+const requestStateLabels: Record<RequestState, string> = {
+  idle: "待命",
+  loading: "處理中",
+  success: "成功",
+  error: "錯誤",
+};
+
+const statusLabels: Record<string, string> = {
+  idle: "待命",
+  loading: "處理中",
+  success: "成功",
+  error: "錯誤",
+  uploaded: "已上傳",
+  pending: "待處理",
+  processing: "處理中",
+  running: "執行中",
+  completed: "已完成",
+  ready: "可查詢",
+  failed: "失敗",
+  disabled: "停用",
+  local_indexing: "本機索引",
+  vector_indexing: "向量索引",
+  ocr: "OCR",
+  ocr_mock: "模擬 OCR",
+  upload: "上傳",
+  keyword: "關鍵字",
+  vector: "向量",
+  hybrid: "混合檢索",
+  vector_rerank: "向量重排",
+  hybrid_rerank: "混合重排",
+};
+
 const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.20.0"));
 
 const readyDocumentCount = computed(() => documents.value.filter((document) => document.processing.ready).length);
@@ -90,63 +122,63 @@ const completedOcrCount = computed(
   () => documents.value.filter((document) => document.ocr.status === "completed").length,
 );
 
-const selectedDocumentLabel = computed(() => selectedDocument.value?.filename ?? "No document selected");
+const selectedDocumentLabel = computed(() => selectedDocument.value?.filename ?? "尚未選擇文件");
 
 const latestJobLabel = computed(() => {
   if (!selectedDocument.value?.latest_job) {
-    return "No job yet";
+    return "尚無處理工作";
   }
 
-  return `${selectedDocument.value.latest_job.job_type} / ${selectedDocument.value.latest_job.status}`;
+  return formatProcessingJob(selectedDocument.value.latest_job);
 });
 
 const demoStats = computed<DemoStat[]>(() => [
   {
-    label: "Backend",
+    label: "後端",
     value: healthLabel.value,
-    detail: health.value?.version ? `version ${health.value.version}` : API_BASE_URL,
+    detail: health.value?.version ? `版本 ${health.value.version}` : API_BASE_URL,
     tone: healthState.value === "error" ? "failed" : healthState.value === "success" ? "success" : "ready",
   },
   {
-    label: "Documents",
+    label: "文件",
     value: String(documents.value.length),
-    detail: `${completedOcrCount.value} OCR completed / ${readyDocumentCount.value} ready`,
+    detail: `${completedOcrCount.value} 份 OCR 已完成 / ${readyDocumentCount.value} 份可查詢`,
     tone: documents.value.length > 0 ? "success" : "ready",
   },
   {
-    label: "Selected",
-    value: selectedDocument.value ? selectedDocument.value.status : "none",
+    label: "已選文件",
+    value: selectedDocument.value ? displayStatus(selectedDocument.value.status) : "無",
     detail: selectedDocumentLabel.value,
     tone: selectedDocument.value?.processing.ready ? "success" : selectedDocument.value ? "ready" : "default",
   },
   {
-    label: "Answer",
-    value: ragResult.value ? ragAnswerSource.value : "waiting",
-    detail: ragResult.value ? ragRetrievalSource.value : "Ask after OCR",
+    label: "回答",
+    value: ragResult.value ? ragAnswerSource.value : "待提問",
+    detail: ragResult.value ? ragRetrievalSource.value : "OCR 後可提問",
     tone: ragResult.value ? sourceTone(ragAnswerSource.value) : "default",
   },
 ]);
 
 const healthLabel = computed(() => {
   if (healthState.value === "success" && health.value?.status === "ok") {
-    return "Backend online";
+    return "後端在線";
   }
 
   if (healthState.value === "loading") {
-    return "Checking";
+    return "檢查中";
   }
 
   if (healthState.value === "error") {
-    return "Unavailable";
+    return "無法連線";
   }
 
-  return "Not checked";
+  return "尚未檢查";
 });
 
 const workflowSteps = computed<WorkflowStep[]>(() => [
   {
-    label: "Upload",
-    detail: selectedDocument.value ? selectedDocument.value.filename : "Local JSON store",
+    label: "上傳",
+    detail: selectedDocument.value ? selectedDocument.value.filename : "本機 JSON 儲存",
     state:
       uploadState.value === "loading"
         ? "loading"
@@ -158,7 +190,7 @@ const workflowSteps = computed<WorkflowStep[]>(() => [
   },
   {
     label: "OCR",
-    detail: selectedDocument.value?.ocr.status ?? "Provider selected",
+    detail: selectedDocument.value?.ocr.status ? displayStatus(selectedDocument.value.ocr.status) : "依 OCR 供應器執行",
     state:
       ocrState.value === "loading"
         ? "loading"
@@ -171,8 +203,8 @@ const workflowSteps = computed<WorkflowStep[]>(() => [
               : "idle",
   },
   {
-    label: "Index",
-    detail: selectedDocument.value?.processing.indexing ?? "Local chunks",
+    label: "索引",
+    detail: selectedDocument.value?.processing.indexing ? displayStatus(selectedDocument.value.processing.indexing) : "本機片段",
     state:
       selectedDocument.value?.processing.indexing === "completed"
         ? "success"
@@ -183,8 +215,8 @@ const workflowSteps = computed<WorkflowStep[]>(() => [
             : "idle",
   },
   {
-    label: "Trace",
-    detail: ragResult.value ? `${ragResult.value.retrieved_chunks.length} candidates` : "Citation metadata",
+    label: "追蹤",
+    detail: ragResult.value ? `${ragResult.value.retrieved_chunks.length} 個候選片段` : "引用中繼資料",
     state:
       chatState.value === "loading"
         ? "loading"
@@ -197,7 +229,7 @@ const workflowSteps = computed<WorkflowStep[]>(() => [
 ]);
 
 const latestResponseJson = computed(() =>
-  latestResponse.value ? JSON.stringify(latestResponse.value, null, 2) : "尚未取得 API response。",
+  latestResponse.value ? JSON.stringify(latestResponse.value, null, 2) : "尚未取得 API 回應。",
 );
 
 const selectedDocumentJson = computed(() =>
@@ -232,18 +264,18 @@ const ragAnswerSource = computed(() => {
   }
 
   if (trace?.llm_generation_status === "failed") {
-    return "LLM unavailable fallback";
+    return "LLM 不可用，改用備援";
   }
 
-  return "deterministic baseline";
+  return "確定性基準回答";
 });
 
 const ragAnswerSourceClass = computed(() => {
-  if (ragAnswerSource.value === "LLM unavailable fallback") {
+  if (sourceTone(ragAnswerSource.value) === "failed") {
     return "status-failed";
   }
 
-  if (ragAnswerSource.value === "deterministic baseline") {
+  if (sourceTone(ragAnswerSource.value) === "ready") {
     return "status-ready";
   }
 
@@ -258,18 +290,18 @@ const ragRetrievalSource = computed(() => {
   }
 
   if (trace?.vector_retrieval_status === "failed") {
-    return "vector unavailable fallback";
+    return "向量檢索不可用，改用備援";
   }
 
-  return "keyword baseline";
+  return "關鍵字基準檢索";
 });
 
 const ragRetrievalSourceClass = computed(() => {
-  if (ragRetrievalSource.value === "vector unavailable fallback") {
+  if (sourceTone(ragRetrievalSource.value) === "failed") {
     return "status-failed";
   }
 
-  if (ragRetrievalSource.value === "keyword baseline") {
+  if (sourceTone(ragRetrievalSource.value) === "ready") {
     return "status-ready";
   }
 
@@ -280,18 +312,18 @@ const ragStrategyLabel = computed(() => {
   const metadata = ragTraceMetadata.value;
 
   if (metadata.strategy_label) {
-    return metadata.strategy_label;
+    return displayStatus(metadata.strategy_label);
   }
 
   if (metadata.vector_retrieval_status === "completed") {
-    return "vector";
+    return "向量";
   }
 
   if (metadata.vector_retrieval_status === "failed") {
-    return "keyword fallback";
+    return "關鍵字備援";
   }
 
-  return "keyword";
+  return "關鍵字";
 });
 
 const ragTraceFacts = computed<TraceFact[]>(() => {
@@ -301,33 +333,33 @@ const ragTraceFacts = computed<TraceFact[]>(() => {
 
   const metadata = ragTraceMetadata.value;
   const facts: TraceFact[] = [
-    { label: "Strategy", value: ragStrategyLabel.value, tone: "ready" },
-    { label: "Answer source", value: ragAnswerSource.value, tone: sourceTone(ragAnswerSource.value) },
-    { label: "Retrieval source", value: ragRetrievalSource.value, tone: sourceTone(ragRetrievalSource.value) },
-    { label: "Candidates", value: String(ragResult.value.retrieved_chunks.length) },
+    { label: "策略", value: ragStrategyLabel.value, tone: "ready" },
+    { label: "回答來源", value: ragAnswerSource.value, tone: sourceTone(ragAnswerSource.value) },
+    { label: "檢索來源", value: ragRetrievalSource.value, tone: sourceTone(ragRetrievalSource.value) },
+    { label: "候選片段", value: String(ragResult.value.retrieved_chunks.length) },
   ];
 
   const vectorStatus = metadata.vector_retrieval_status;
   if (vectorStatus) {
-    facts.push({ label: "Vector status", value: vectorStatus, tone: vectorStatus === "failed" ? "failed" : "success" });
+    facts.push({ label: "向量狀態", value: displayStatus(vectorStatus), tone: vectorStatus === "failed" ? "failed" : "success" });
   }
 
   const rerankStatus = metadata.rerank_status;
   if (rerankStatus) {
     facts.push({
-      label: "Rerank",
-      value: [metadata.rerank_provider, rerankStatus].filter(Boolean).join(" / "),
+      label: "重排",
+      value: [metadata.rerank_provider, displayStatus(rerankStatus)].filter(Boolean).join(" / "),
       tone: rerankStatus === "failed" || rerankStatus === "disabled" ? "failed" : "success",
     });
   }
 
   if (metadata.merge_policy) {
-    facts.push({ label: "Merge policy", value: metadata.merge_policy });
+    facts.push({ label: "合併策略", value: metadata.merge_policy });
   }
 
   const latency = firstMetadataValue(metadata, ["rerank_latency_ms", "llm_generation_latency_ms"]);
   if (latency) {
-    facts.push({ label: "Latency", value: `${latency} ms` });
+    facts.push({ label: "延遲", value: `${latency} ms` });
   }
 
   const fallback = firstMetadataValue(metadata, [
@@ -337,8 +369,8 @@ const ragTraceFacts = computed<TraceFact[]>(() => {
     "llm_error",
   ]);
   facts.push({
-    label: "Fallback",
-    value: fallback ?? "none",
+    label: "備援",
+    value: fallback ?? "無",
     tone: fallback ? "failed" : "ready",
   });
 
@@ -360,15 +392,27 @@ const ragTraceRows = computed<TraceCandidateRow[]>(() =>
 );
 
 function formatBytes(size: number): string {
-  return `${size.toLocaleString()} bytes`;
+  return `${size.toLocaleString()} 位元組`;
 }
 
 function statusClass(status: string): string {
   return `status-${status.replace(/_/g, "-")}`;
 }
 
+function displayStatus(status: string): string {
+  return statusLabels[status] ?? status.replace(/_/g, " ");
+}
+
+function displayRequestState(state: RequestState): string {
+  return requestStateLabels[state];
+}
+
+function formatProcessingJob(job: { job_type: string; status: string }): string {
+  return `${displayStatus(job.job_type)} / ${displayStatus(job.status)}`;
+}
+
 function formatBbox(bbox: BoundingBox): string {
-  return `bbox ${bbox.x_min},${bbox.y_min},${bbox.x_max},${bbox.y_max}`;
+  return `座標 ${bbox.x_min},${bbox.y_min},${bbox.x_max},${bbox.y_max}`;
 }
 
 function metadataEntries(metadata: Record<string, string>): [string, string][] {
@@ -388,11 +432,16 @@ function firstMetadataValue(metadata: Record<string, string>, keys: string[]): s
 }
 
 function sourceTone(source: string): TraceFact["tone"] {
-  if (source.toLowerCase().includes("fallback") || source.toLowerCase().includes("unavailable")) {
+  if (
+    source.toLowerCase().includes("fallback") ||
+    source.toLowerCase().includes("unavailable") ||
+    source.includes("備援") ||
+    source.includes("不可用")
+  ) {
     return "failed";
   }
 
-  if (source.toLowerCase().includes("baseline")) {
+  if (source.toLowerCase().includes("baseline") || source.includes("基準")) {
     return "ready";
   }
 
@@ -412,23 +461,23 @@ function previewText(text: string): string {
 function candidateTraceSummary(chunk: RetrievedChunk): string[] {
   const metadata = chunk.metadata;
   const summary = [
-    chunk.source_type ? `source ${chunk.source_type}` : `source ${chunk.source}`,
-    metadata.strategy_label ? `strategy ${metadata.strategy_label}` : "",
-    metadata.retrieval_provider ? `provider ${metadata.retrieval_provider}` : "",
-    metadata.branches ? `branches ${metadata.branches}` : "",
-    metadata.final_rank ? `final rank ${metadata.final_rank}` : "",
-    metadata.keyword_rank ? `keyword rank ${metadata.keyword_rank}` : "",
-    metadata.vector_rank ? `vector rank ${metadata.vector_rank}` : "",
-    metadata.merged_score ? `merged ${formatScore(metadata.merged_score)}` : "",
-    metadata.rerank_status ? `rerank ${metadata.rerank_status}` : "",
-    metadata.rerank_rank ? `rerank rank ${metadata.rerank_rank}` : "",
-    metadata.rerank_score ? `rerank ${formatScore(metadata.rerank_score)}` : "",
+    chunk.source_type ? `來源 ${chunk.source_type}` : `來源 ${chunk.source}`,
+    metadata.strategy_label ? `策略 ${displayStatus(metadata.strategy_label)}` : "",
+    metadata.retrieval_provider ? `供應器 ${metadata.retrieval_provider}` : "",
+    metadata.branches ? `分支 ${metadata.branches}` : "",
+    metadata.final_rank ? `最終排名 ${metadata.final_rank}` : "",
+    metadata.keyword_rank ? `關鍵字排名 ${metadata.keyword_rank}` : "",
+    metadata.vector_rank ? `向量排名 ${metadata.vector_rank}` : "",
+    metadata.merged_score ? `合併分數 ${formatScore(metadata.merged_score)}` : "",
+    metadata.rerank_status ? `重排 ${displayStatus(metadata.rerank_status)}` : "",
+    metadata.rerank_rank ? `重排排名 ${metadata.rerank_rank}` : "",
+    metadata.rerank_score ? `重排分數 ${formatScore(metadata.rerank_score)}` : "",
     firstMetadataValue(metadata, ["fallback_reason", "rerank_fallback_reason", "vector_retrieval_error"])
-      ? `fallback ${firstMetadataValue(metadata, ["fallback_reason", "rerank_fallback_reason", "vector_retrieval_error"])}`
+      ? `備援 ${firstMetadataValue(metadata, ["fallback_reason", "rerank_fallback_reason", "vector_retrieval_error"])}`
       : "",
   ].filter(Boolean);
 
-  return summary.length ? summary : ["metadata unavailable"];
+  return summary.length ? summary : ["無中繼資料"];
 }
 
 async function checkHealth(): Promise<void> {
@@ -442,7 +491,7 @@ async function checkHealth(): Promise<void> {
     healthState.value = "success";
   } catch (error) {
     health.value = null;
-    healthError.value = error instanceof Error ? error.message : "Health check failed";
+    healthError.value = error instanceof Error ? error.message : "後端健康檢查失敗";
     healthState.value = "error";
   }
 }
@@ -458,7 +507,7 @@ async function refreshDocuments(): Promise<void> {
     documentsState.value = "success";
   } catch (error) {
     documents.value = [];
-    documentsError.value = error instanceof Error ? error.message : "Load documents failed";
+    documentsError.value = error instanceof Error ? error.message : "載入文件列表失敗";
     documentsState.value = "error";
   }
 }
@@ -480,7 +529,7 @@ async function selectDocument(documentId: string): Promise<void> {
     ocrError.value = "";
   } catch (error) {
     selectedDocument.value = null;
-    detailError.value = error instanceof Error ? error.message : "Load document failed";
+    detailError.value = error instanceof Error ? error.message : "載入文件失敗";
     detailState.value = "error";
   }
 }
@@ -505,7 +554,7 @@ async function runOcrForSelectedDocument(): Promise<void> {
     latestResponse.value = response;
     ocrState.value = "success";
   } catch (error) {
-    ocrError.value = error instanceof Error ? error.message : "Run OCR failed";
+    ocrError.value = error instanceof Error ? error.message : "執行 OCR 失敗";
     ocrState.value = "error";
   }
 }
@@ -537,10 +586,10 @@ async function runSelectedOcrForSelectedDocument(): Promise<void> {
         document.document_id === documentId ? updatedDocument : document,
       );
     } catch {
-      // Keep the original API error visible when refreshing failed metadata is unavailable.
+      // 無法刷新失敗 metadata 時，保留原始 API 錯誤。
     }
 
-    ocrError.value = error instanceof Error ? error.message : "Run selected OCR failed";
+    ocrError.value = error instanceof Error ? error.message : "執行預設 OCR 失敗";
     ocrState.value = "error";
   }
 }
@@ -563,7 +612,7 @@ async function submitRagQuery(): Promise<void> {
     chatState.value = "success";
   } catch (error) {
     ragResult.value = null;
-    ragError.value = error instanceof Error ? error.message : "RAG query failed";
+    ragError.value = error instanceof Error ? error.message : "RAG 查詢失敗";
     chatState.value = "error";
   }
 }
@@ -593,7 +642,7 @@ async function submitUpload(): Promise<void> {
     await selectDocument(response.document_id);
   } catch (error) {
     uploadResult.value = null;
-    uploadError.value = error instanceof Error ? error.message : "Upload failed";
+    uploadError.value = error instanceof Error ? error.message : "上傳失敗";
     uploadState.value = "error";
   }
 }
@@ -615,18 +664,18 @@ onMounted(() => {
           </div>
           <h1>DocuRAG AgentOps</h1>
           <p class="hero-copy">
-            Local document intelligence demo with OCR, citation-grounded RAG, retrieval trace, and evaluation-ready metadata.
+            本機文件智能展示，整合 OCR、具引用來源的 RAG、檢索追蹤與可評估的中繼資料。
           </p>
         </div>
 
         <div class="hero-side">
-          <span>Selected document</span>
+          <span>目前選取文件</span>
           <strong>{{ selectedDocumentLabel }}</strong>
           <small>{{ latestJobLabel }}</small>
         </div>
       </div>
 
-      <section class="metric-strip" aria-label="MVP status overview">
+      <section class="metric-strip" aria-label="MVP 狀態總覽">
         <article v-for="stat in demoStats" :key="stat.label" class="metric-card" :class="stat.tone ? `metric-${stat.tone}` : ''">
           <span>{{ stat.label }}</span>
           <strong>{{ stat.value }}</strong>
@@ -634,7 +683,7 @@ onMounted(() => {
         </article>
       </section>
 
-      <ol class="workflow-strip" aria-label="Document workflow status">
+      <ol class="workflow-strip" aria-label="文件流程狀態">
         <li v-for="step in workflowSteps" :key="step.label" :class="`workflow-${step.state}`">
           <span>{{ step.label }}</span>
           <strong>{{ step.detail }}</strong>
@@ -642,11 +691,11 @@ onMounted(() => {
       </ol>
     </header>
 
-    <section class="layout" aria-label="Demo controls">
+    <section class="layout" aria-label="展示操作區">
       <article class="panel">
         <div class="panel-heading">
           <div>
-            <h2>Backend health</h2>
+            <h2>後端健康狀態</h2>
             <p>GET /health</p>
           </div>
           <span class="status-pill" :class="`status-${healthState}`">{{ healthLabel }}</span>
@@ -654,37 +703,37 @@ onMounted(() => {
 
         <dl v-if="health" class="facts">
           <div>
-            <dt>Service</dt>
+            <dt>服務</dt>
             <dd>{{ health.service }}</dd>
           </div>
           <div>
-            <dt>Status</dt>
-            <dd>{{ health.status }}</dd>
+            <dt>狀態</dt>
+            <dd>{{ displayStatus(health.status) }}</dd>
           </div>
           <div>
-            <dt>Version</dt>
+            <dt>版本</dt>
             <dd>{{ health.version }}</dd>
           </div>
         </dl>
 
         <p v-if="healthError" class="error">{{ healthError }}</p>
-        <p class="api-base">API base URL: {{ API_BASE_URL }}</p>
+        <p class="api-base">API 基底 URL：{{ API_BASE_URL }}</p>
 
         <button type="button" class="button" :disabled="healthState === 'loading'" @click="checkHealth">
-          {{ healthState === "loading" ? "Checking..." : "Refresh health" }}
+          {{ healthState === "loading" ? "檢查中..." : "重新檢查後端" }}
         </button>
       </article>
 
       <article class="panel">
         <div class="panel-heading">
           <div>
-            <h2>Upload document</h2>
+            <h2>上傳文件</h2>
             <p>POST /documents/upload</p>
           </div>
         </div>
 
         <label class="file-picker">
-          <span>Select file</span>
+          <span>選擇檔案</span>
           <input type="file" @change="handleFileChange" />
         </label>
 
@@ -701,34 +750,34 @@ onMounted(() => {
           :disabled="!selectedFile || uploadState === 'loading'"
           @click="submitUpload"
         >
-          {{ uploadState === "loading" ? "Uploading..." : "Upload to backend" }}
+          {{ uploadState === "loading" ? "上傳中..." : "上傳到後端" }}
         </button>
       </article>
 
       <article class="panel">
         <div class="panel-heading">
           <div>
-            <h2>Upload result</h2>
-            <p>Latest saved metadata</p>
+            <h2>上傳結果</h2>
+            <p>最新保存的中繼資料</p>
           </div>
-          <span v-if="uploadResult" class="status-pill status-success">{{ uploadResult.status }}</span>
+          <span v-if="uploadResult" class="status-pill status-success">{{ displayStatus(uploadResult.status) }}</span>
         </div>
 
         <dl v-if="uploadResult" class="facts">
           <div>
-            <dt>Document ID</dt>
+            <dt>文件 ID</dt>
             <dd>{{ uploadResult.document_id }}</dd>
           </div>
           <div>
-            <dt>Filename</dt>
+            <dt>檔名</dt>
             <dd>{{ uploadResult.filename }}</dd>
           </div>
           <div>
-            <dt>Content type</dt>
+            <dt>內容類型</dt>
             <dd>{{ uploadResult.content_type }}</dd>
           </div>
           <div>
-            <dt>Size</dt>
+            <dt>大小</dt>
             <dd>{{ formatBytes(uploadResult.size) }}</dd>
           </div>
         </dl>
@@ -739,7 +788,7 @@ onMounted(() => {
       <article class="panel documents-panel">
         <div class="panel-heading">
           <div>
-            <h2>Documents</h2>
+            <h2>文件列表</h2>
             <p>GET /documents</p>
           </div>
           <button
@@ -748,7 +797,7 @@ onMounted(() => {
             :disabled="documentsState === 'loading'"
             @click="refreshDocuments"
           >
-            {{ documentsState === "loading" ? "Loading..." : "Refresh list" }}
+            {{ documentsState === "loading" ? "載入中..." : "重新整理列表" }}
           </button>
         </div>
 
@@ -758,14 +807,14 @@ onMounted(() => {
           <table>
             <thead>
               <tr>
-                <th>Filename</th>
-                <th>Status</th>
+                <th>檔名</th>
+                <th>狀態</th>
                 <th>OCR</th>
-                <th>Indexing</th>
-                <th>Latest job</th>
-                <th>Size</th>
-                <th>Created at</th>
-                <th>Content type</th>
+                <th>索引</th>
+                <th>最新工作</th>
+                <th>大小</th>
+                <th>建立時間</th>
+                <th>內容類型</th>
               </tr>
             </thead>
             <tbody>
@@ -784,18 +833,18 @@ onMounted(() => {
                     {{ document.filename }}
                   </button>
                 </td>
-                <td><span class="status-pill" :class="statusClass(document.status)">{{ document.status }}</span></td>
-                <td><span class="status-pill" :class="statusClass(document.ocr.status)">{{ document.ocr.status }}</span></td>
+                <td><span class="status-pill" :class="statusClass(document.status)">{{ displayStatus(document.status) }}</span></td>
+                <td><span class="status-pill" :class="statusClass(document.ocr.status)">{{ displayStatus(document.ocr.status) }}</span></td>
                 <td>
                   <span class="status-pill" :class="statusClass(document.processing.indexing)">
-                    {{ document.processing.indexing }}
+                    {{ displayStatus(document.processing.indexing) }}
                   </span>
                 </td>
                 <td>
                   <span v-if="document.latest_job" class="status-pill" :class="statusClass(document.latest_job.status)">
-                    {{ document.latest_job.job_type }} / {{ document.latest_job.status }}
+                    {{ formatProcessingJob(document.latest_job) }}
                   </span>
-                  <span v-else class="muted">none</span>
+                  <span v-else class="muted">無</span>
                 </td>
                 <td>{{ formatBytes(document.size) }}</td>
                 <td>{{ document.created_at }}</td>
@@ -811,8 +860,8 @@ onMounted(() => {
       <article class="panel ocr-panel">
         <div class="panel-heading">
           <div>
-            <h2>OCR result</h2>
-            <p>Default /ocr provider: GPU-only PaddleOCR PP-OCRv4；mock override: /ocr/mock</p>
+            <h2>OCR 結果</h2>
+            <p>預設 /ocr 供應器：GPU-only PaddleOCR PP-OCRv4；模擬覆寫：/ocr/mock</p>
           </div>
           <div class="button-row">
             <button
@@ -821,7 +870,7 @@ onMounted(() => {
               :disabled="!selectedDocument || ocrState === 'loading'"
               @click="runOcrForSelectedDocument"
             >
-              {{ ocrState === "loading" ? "Running..." : "Run Mock Override" }}
+              {{ ocrState === "loading" ? "執行中..." : "執行模擬 OCR" }}
             </button>
             <button
               type="button"
@@ -829,7 +878,7 @@ onMounted(() => {
               :disabled="!selectedDocument || ocrState === 'loading'"
               @click="runSelectedOcrForSelectedDocument"
             >
-              {{ ocrState === "loading" ? "Running..." : "Run Selected OCR" }}
+              {{ ocrState === "loading" ? "執行中..." : "執行預設 OCR" }}
             </button>
           </div>
         </div>
@@ -838,57 +887,57 @@ onMounted(() => {
 
         <dl v-if="selectedDocument" class="facts">
           <div>
-            <dt>Document status</dt>
+            <dt>文件狀態</dt>
             <dd>
               <span class="status-pill" :class="statusClass(selectedDocument.status)">
-                {{ selectedDocument.status }}
+                {{ displayStatus(selectedDocument.status) }}
               </span>
             </dd>
           </div>
           <div>
-            <dt>OCR status</dt>
+            <dt>OCR 狀態</dt>
             <dd>
               <span class="status-pill" :class="statusClass(selectedDocument.ocr.status)">
-                {{ selectedDocument.ocr.status }}
+                {{ displayStatus(selectedDocument.ocr.status) }}
               </span>
             </dd>
           </div>
           <div>
-            <dt>Indexing status</dt>
+            <dt>索引狀態</dt>
             <dd>
               <span class="status-pill" :class="statusClass(selectedDocument.processing.indexing)">
-                {{ selectedDocument.processing.indexing }}
+                {{ displayStatus(selectedDocument.processing.indexing) }}
               </span>
             </dd>
           </div>
           <div>
-            <dt>Ready</dt>
-            <dd>{{ selectedDocument.processing.ready ? "yes" : "no" }}</dd>
+            <dt>可查詢</dt>
+            <dd>{{ selectedDocument.processing.ready ? "是" : "否" }}</dd>
           </div>
           <div v-if="selectedDocument.processing.failed_reason">
-            <dt>Failed reason</dt>
+            <dt>失敗原因</dt>
             <dd>{{ selectedDocument.processing.failed_reason }}</dd>
           </div>
           <div v-if="selectedDocument.latest_job">
-            <dt>Latest job</dt>
+            <dt>最新工作</dt>
             <dd>
-              {{ selectedDocument.latest_job.job_type }} / {{ selectedDocument.latest_job.status }}
+              {{ formatProcessingJob(selectedDocument.latest_job) }}
             </dd>
           </div>
           <div>
-            <dt>Updated at</dt>
-            <dd>{{ selectedDocument.processing.updated_at ?? selectedDocument.ocr.updated_at ?? "Not run" }}</dd>
+            <dt>更新時間</dt>
+            <dd>{{ selectedDocument.processing.updated_at ?? selectedDocument.ocr.updated_at ?? "尚未執行" }}</dd>
           </div>
         </dl>
 
         <div v-if="selectedDocument" class="ocr-grid">
           <section>
-            <h3>OCR text</h3>
+            <h3>OCR 文字</h3>
             <pre class="ocr-text">{{ selectedOcrText }}</pre>
           </section>
 
           <section>
-            <h3>Extracted fields</h3>
+            <h3>擷取欄位</h3>
             <dl v-if="selectedOcrEntries.length" class="field-list">
               <div v-for="[field, value] in selectedOcrEntries" :key="field">
                 <dt>{{ field }}</dt>
@@ -905,25 +954,25 @@ onMounted(() => {
       <article class="panel chat-panel">
         <div class="panel-heading">
           <div>
-            <h2>RAG chat</h2>
+            <h2>RAG 問答</h2>
             <p>POST /rag/query</p>
           </div>
-          <span class="status-pill" :class="`status-${chatState}`">{{ chatState }}</span>
+          <span class="status-pill" :class="`status-${chatState}`">{{ displayRequestState(chatState) }}</span>
         </div>
 
         <form class="chat-form" @submit.prevent="submitRagQuery">
           <label>
-            <span>Query</span>
-            <textarea v-model="ragQuery" rows="3" placeholder="例如：payment due date Net 15" />
+            <span>問題</span>
+            <textarea v-model="ragQuery" rows="3" placeholder="例如：付款期限是 Net 15 嗎？" />
           </label>
 
           <label>
-            <span>Top K</span>
+            <span>候選數 Top K</span>
             <input v-model.number="ragTopK" type="number" min="1" max="10" />
           </label>
 
           <button type="submit" class="button" :disabled="chatState === 'loading'">
-            {{ chatState === "loading" ? "Querying..." : "Ask RAG" }}
+            {{ chatState === "loading" ? "查詢中..." : "詢問 RAG" }}
           </button>
         </form>
 
@@ -931,7 +980,7 @@ onMounted(() => {
 
         <section v-if="ragResult" class="rag-result">
           <div class="answer-heading">
-            <h3>Answer</h3>
+            <h3>回答</h3>
             <div class="answer-badges">
               <span class="status-pill" :class="ragAnswerSourceClass">{{ ragAnswerSource }}</span>
               <span class="status-pill" :class="ragRetrievalSourceClass">{{ ragRetrievalSource }}</span>
@@ -939,8 +988,8 @@ onMounted(() => {
           </div>
           <pre class="answer-text">{{ ragResult.answer }}</pre>
 
-          <section class="trace-panel" aria-label="Retrieval trace">
-            <h3>Retrieval trace</h3>
+          <section class="trace-panel" aria-label="檢索追蹤">
+            <h3>檢索追蹤</h3>
             <dl class="trace-facts">
               <div v-for="fact in ragTraceFacts" :key="fact.label">
                 <dt>{{ fact.label }}</dt>
@@ -952,11 +1001,11 @@ onMounted(() => {
               <table class="trace-table">
                 <thead>
                   <tr>
-                    <th>Rank</th>
-                    <th>Score</th>
-                    <th>Source</th>
-                    <th>Candidate</th>
-                    <th>Trace</th>
+                    <th>排名</th>
+                    <th>分數</th>
+                    <th>來源</th>
+                    <th>候選內容</th>
+                    <th>追蹤</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -978,37 +1027,37 @@ onMounted(() => {
                 </tbody>
               </table>
             </div>
-            <p v-else class="muted">metadata unavailable</p>
+            <p v-else class="muted">無中繼資料</p>
           </section>
 
-          <h3>Citations</h3>
+          <h3>引用來源</h3>
           <ul v-if="ragResult.citations.length" class="citation-list">
             <li v-for="citation in ragResult.citations" :key="`${citation.document_id}-${citation.chunk_id}`">
               <span>{{ citation.filename }}</span>
               <code>{{ citation.document_id }}</code>
               <code>{{ citation.chunk_id }}</code>
               <code v-if="citation.source_type">{{ citation.source_type }}</code>
-              <code v-if="citation.page_number">page {{ citation.page_number }}</code>
-              <code v-if="citation.confidence != null">conf {{ citation.confidence }}</code>
+              <code v-if="citation.page_number">頁 {{ citation.page_number }}</code>
+              <code v-if="citation.confidence != null">信心 {{ citation.confidence }}</code>
               <code v-if="citation.bbox">{{ formatBbox(citation.bbox) }}</code>
               <code v-for="[key, value] in metadataEntries(citation.trace_metadata)" :key="`${citation.chunk_id}-${key}`">
                 {{ key }}={{ value }}
               </code>
             </li>
           </ul>
-          <p v-else class="muted">沒有 citation。</p>
+          <p v-else class="muted">沒有引用來源。</p>
 
-          <h3>Retrieved chunks</h3>
+          <h3>檢索片段</h3>
           <div v-if="ragResult.retrieved_chunks.length" class="chunk-list">
             <article v-for="chunk in ragResult.retrieved_chunks" :key="chunk.chunk_id" class="chunk-item">
               <div class="chunk-meta">
                 <span>{{ chunk.filename }}</span>
                 <code>{{ chunk.chunk_id }}</code>
                 <span v-if="chunk.source_type">{{ chunk.source_type }}</span>
-                <span v-if="chunk.page_number">page {{ chunk.page_number }}</span>
-                <span v-if="chunk.confidence != null">confidence {{ chunk.confidence }}</span>
+                <span v-if="chunk.page_number">頁 {{ chunk.page_number }}</span>
+                <span v-if="chunk.confidence != null">信心 {{ chunk.confidence }}</span>
                 <span v-if="chunk.bbox">{{ formatBbox(chunk.bbox) }}</span>
-                <span>score {{ chunk.score }}</span>
+                <span>分數 {{ chunk.score }}</span>
               </div>
               <div v-if="metadataEntries(chunk.metadata).length" class="chunk-meta trace-meta">
                 <code v-for="[key, value] in metadataEntries(chunk.metadata)" :key="`${chunk.chunk_id}-${key}`">
@@ -1018,7 +1067,7 @@ onMounted(() => {
               <pre>{{ chunk.text }}</pre>
             </article>
           </div>
-          <p v-else class="muted">沒有 retrieved chunk。</p>
+          <p v-else class="muted">沒有檢索片段。</p>
         </section>
 
         <p v-else class="muted">請先上傳文件並執行 OCR，再輸入問題。</p>
@@ -1027,7 +1076,7 @@ onMounted(() => {
       <article class="panel response-panel">
         <div class="panel-heading">
           <div>
-            <h2>Document metadata JSON</h2>
+            <h2>文件中繼資料 JSON</h2>
             <p>GET /documents/{{ "{document_id}" }}</p>
           </div>
         </div>
@@ -1038,8 +1087,8 @@ onMounted(() => {
       <article class="panel response-panel">
         <div class="panel-heading">
           <div>
-            <h2>API response JSON</h2>
-            <p>Latest API response</p>
+            <h2>API 回應 JSON</h2>
+            <p>最新 API 回應</p>
           </div>
         </div>
         <pre>{{ latestResponseJson }}</pre>
