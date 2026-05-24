@@ -13,16 +13,18 @@ Admin / Analyst Ingestion Surface
     |
     |-- upload / provider-selected OCR / processing status
     |-- OCR result / local chunks / metadata debug links
+    |-- Phase 24 parser contract: OCR text -> structured fields
     |
 FastAPI Backend
     |
     |-- health / document API / OCR API / RAG API
+    |-- future parse / fields API
     |-- manual vector indexing API
     |-- retrieval eval runner CLI
     |
 Local Data Store
     |
-    |-- uploads / metadata JSON / OCR results / chunks
+    |-- uploads / metadata JSON / OCR results / chunks / future parser results
     |
 Optional Local AI Runtime
     |
@@ -35,6 +37,47 @@ Optional Local AI Runtime
 MVP 的預設路徑保持 local keyword RAG baseline，確保沒有 optional runtime 時也能重跑 demo。vector retrieval、rerank、hybrid 與 `hybrid_rerank` 都必須 explicit opt-in；`hybrid_rerank` 目前只在 retrieval eval runner 裡使用，不接 default `/rag/query` 或 frontend chat route。
 
 Phase 23 的 role split 是 demo surface 與產品敘事邊界，不是正式權限系統。Viewer Chat 不提供上傳或 OCR 操作；Admin / Analyst ingestion surface 可以呼叫既有 backend upload / OCR API，但仍使用 local JSON、provider-selected OCR 與 local chunks，不包含 VLM parser、worker、DB 或 production indexing。
+
+## Phase 24 Parser Contract Boundary
+
+`24-01` 只固定 VLM-compatible parser contract，不實作 runtime。Phase 24 的目標是讓後續 tickets 可以用 deterministic invoice parser fallback 展示 OCR 後的 structured fields，同時保留 future LLM / VLM parser 替換位置。
+
+```text
+Admin / Analyst Ingestion Surface
+    |
+    |-- upload document
+    |-- run provider-selected OCR
+    |-- run parser explicitly
+    |
+FastAPI Backend
+    |
+    |-- OCR text / OCR lines
+    |-- ParserResult(status, fields, fallback metadata)
+    |
+Local JSON Store
+    |
+    |-- document metadata
+    |-- OCR result / chunks
+    |-- future fields result
+```
+
+Parser contract model：
+
+- `DocumentFields` 固定 invoice MVP 欄位：`document_type`、`vendor_name`、`invoice_number`、`issue_date`、`total_amount`、`tax_amount`、`currency` 與 `line_items`。
+- `ExtractedField` 保留欄位值、`confidence`、`source_text`、`source_page`、`source_bbox`、`parser_source` 與 `fallback_reason`。
+- `ParserResult` 保留 document id、parser status、schema version、fields、source OCR status、updated time 與 trace metadata。
+- Parser status 使用 `pending`、`parsing`、`parsed`、`failed`；後續若接 document processing metadata，才新增可選 `processing.parser=pending/running/completed/failed`。
+- Parser failure 不覆蓋 OCR / indexing 狀態，也不影響 Viewer Chat 的 default RAG path。
+
+Parser source boundary：
+
+| Parser source | Input | Runtime boundary |
+|---|---|---|
+| `deterministic_invoice` | OCR text / OCR lines | Phase 24 MVP fallback，規則式抽取，不新增外部依賴。 |
+| `llm_invoice` | OCR text / OCR lines | Future text-only parser，不屬於 `24-01`。 |
+| `vlm_invoice` | 原始圖片、layout trace 或 OCR trace | Future VLM parser，不屬於 `24-01`，不在 MVP 中宣稱 production-ready。 |
+
+Viewer Chat surface 仍只查詢已建立知識庫，不顯示 upload、OCR 或 parse 操作。Parser result 先服務 Admin / Analyst ingestion flow 的 structured fields 摘要，不提前接 SQL query tool、Agent tool、default vector metadata filtering 或 production parser dashboard。
 
 ## Near-Term Runtime Boundary
 

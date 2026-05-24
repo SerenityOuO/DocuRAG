@@ -1297,7 +1297,7 @@ Goal：補上 OCR 後的 structured extraction demo slice。Phase 24 先以 VLM-
 
 Tickets：
 
-- [ ] `tasks/phase-24-vlm-parser-mvp/24-01-parser-contract.md`
+- [x] `tasks/phase-24-vlm-parser-mvp/24-01-parser-contract.md`
 - [ ] `tasks/phase-24-vlm-parser-mvp/24-02-invoice-parser-service.md`
 - [ ] `tasks/phase-24-vlm-parser-mvp/24-03-document-fields-api.md`
 - [ ] `tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md`
@@ -1314,7 +1314,11 @@ Expected Outcome：
 
 24-01 Parser Contract Status：
 
-- 待執行。需先固定 invoice structured fields contract、parser status、source trace、fallback metadata 與 future VLM / LLM parser 邊界。
+- 已完成。已在 `docs/api.md` 與 `docs/architecture.md` 固定 invoice structured fields contract、parser status、source trace、fallback metadata 與 future VLM / LLM parser 邊界；本 ticket 不 bump version。
+- `DocumentFields` MVP 欄位：`document_type`、`vendor_name`、`invoice_number`、`issue_date`、`total_amount`、`tax_amount`、`currency` 與 `line_items`。
+- `ExtractedField` 欄位 metadata：`confidence`、`source_text`、`source_page`、`source_bbox`、`parser_source` 與 `fallback_reason`。
+- `ParserResult.status` 使用 `pending`、`parsing`、`parsed`、`failed`；parser failure 不覆蓋既有 OCR / indexing 狀態，也不影響 Viewer Chat default RAG path。
+- Parser source 明確分成 Phase 24 MVP 的 `deterministic_invoice`、future text-only `llm_invoice` 與 future `vlm_invoice`；目前不宣稱 production VLM parser。
 
 24-02 Invoice Parser Service Status：
 
