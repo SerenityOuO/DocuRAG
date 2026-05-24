@@ -9,6 +9,24 @@ from app.services.llm import LlmGeneration, LlmProvider, LlmProviderError
 from app.services.vector_store import QdrantVectorStore, QdrantVectorStoreError
 
 
+QUERY_ALIASES = {
+    "付款期限": ["payment", "due", "date", "terms", "net"],
+    "付款日期": ["payment", "due", "date", "terms", "net"],
+    "何時付款": ["payment", "due", "date", "terms", "net"],
+    "什麼時候付款": ["payment", "due", "date", "terms", "net"],
+    "繳款期限": ["payment", "due", "date", "terms", "net"],
+    "付款條件": ["payment", "terms", "net"],
+    "總金額": ["total", "amount", "invoice"],
+    "金額多少": ["total", "amount", "invoice"],
+    "發票號碼": ["invoice", "number"],
+    "發票編號": ["invoice", "number"],
+    "續約日期": ["renewal", "date"],
+    "續約日": ["renewal", "date"],
+    "回覆時間": ["sla", "response", "target"],
+    "客服目標": ["sla", "response", "target"],
+}
+
+
 class RagProvider(Protocol):
     name: str
 
@@ -125,7 +143,21 @@ class KeywordRagProvider:
         )[:top_k]
 
     def _tokenize(self, text: str) -> list[str]:
-        return re.findall(r"[a-z0-9]+", text.lower())
+        lowered_text = text.lower()
+        tokens = re.findall(r"[a-z0-9]+", lowered_text)
+
+        for cjk_text in re.findall(r"[\u3400-\u9fff]+", text):
+            if len(cjk_text) == 1:
+                tokens.append(cjk_text)
+                continue
+
+            tokens.extend(cjk_text[index : index + 2] for index in range(len(cjk_text) - 1))
+
+        for phrase, aliases in QUERY_ALIASES.items():
+            if phrase in text:
+                tokens.extend(aliases)
+
+        return tokens
 
     def _generate_answer(
         self,

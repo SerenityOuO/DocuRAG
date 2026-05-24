@@ -21,6 +21,7 @@
 - Phase 19 -> `v0.19.0`
 - Phase 20 -> `v0.20.0`
 - Phase 21 -> `v0.21.0`
+- Phase 22 -> `v0.22.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -76,6 +77,7 @@
 27. `tasks/phase-20-interview-mvp-packaging/20-03-demo-media-and-readme-polish.md`：補齊 README 面試導覽、截圖或 GIF 等 demo media。
 28. `tasks/phase-20-interview-mvp-packaging/20-04-final-interview-mvp-validation.md`：重跑 final validation，並在 Phase 20 完成時執行 `v0.20.0` release/version sync。
 29. `tasks/phase-21-real-gpu-ocr-demo/21-01-real-gpu-ocr-frontend-flow.md`：將 frontend upload 面試主線改為 provider-selected real GPU OCR-first，mock OCR 只保留為手動 fallback，並同步 `v0.21.0` release 文件與版本。
+30. `tasks/phase-22-rag-query-hardening/22-01-keyword-query-normalization.md`：強化 default keyword RAG query normalization，讓中文 query 與 demo-safe alias 可命中英文 OCR chunks，並同步 `v0.22.0` release 文件與版本。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -572,6 +574,22 @@ Phase 21 guardrails：
 - 不修改 PaddleOCR provider、engine lifecycle、模型設定、OCR normalization 或 backend OCR API contract。
 - 不新增 PDF rendering、image preprocessing、VLM parser、多頁 production OCR pipeline、DB、Auth、RBAC、Redis、NATS、worker、Agent runtime 或 deployment。
 
+## MVP v0.22.0 RAG Query Hardening
+
+- [x] `tasks/phase-22-rag-query-hardening/22-01-keyword-query-normalization.md`: 強化 `KeywordRagProvider` 的中文 tokenization 與 demo-safe alias，讓 `付款期限是什麼？` 可在 keyword baseline 命中 `Payment terms: Net 15`；同步修正 frontend / README 文案，不宣稱 backend 已有正式知識庫 ingestion / indexing pipeline。
+- [x] 22-01 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`131 passed`（僅 pytest cache 權限警告）；`npm.cmd run build` 於 `frontend/` 通過；baseline `scripts/demo-smoke-test.ps1` 通過，health version `0.22.0`、answer source `LLM unavailable fallback`、retrieval source `keyword baseline`；ticket `rg` 與 knowledge-base copy guard `rg` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+Phase 22 goal：
+
+- 修正中文或近似問法無法觸發 RAG retrieval 的 demo 體感問題。
+- 保留 default `/rag/query` 為 keyword baseline，不把 vector、hybrid、rerank 或 query rewrite 提前變成預設路徑。
+- 同步 `v0.22.0` 版本、README、backend README、frontend README、TODO 與 ROADMAP。
+
+Phase 22 guardrails：
+
+- 不新增 embedding、Qdrant、BM25、rerank、hybrid retrieval、`hybrid_rerank` default chat path 或新外部依賴。
+- 不新增 LLM-as-judge、answer faithfulness scoring、citation quality scoring、DB、Auth、RBAC、Redis、NATS、worker、PDF rendering、image preprocessing 或 production OCR pipeline。
+
 ## Release Verification Status
 
 - [x] v0.0: repo structure、docs、tasks 已完成。
@@ -600,3 +618,4 @@ Phase 21 guardrails：
 - [x] v0.19.0: Hybrid Rerank Runtime 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.19.0`，optional `hybrid_rerank` eval provider、`-RunHybridRerank` smoke flag、trace / report metadata、baseline demo smoke 與 baseline eval smoke 已補齊；optional vector-backed smoke 需待本機 Qdrant collection `docurag_chunks_v1` 可用後重跑。
 - [x] v0.20.0: Interview MVP Packaging 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.20.0`，demo script、sample / eval coverage、demo media、baseline demo smoke、baseline retrieval eval smoke 與 final validation 已補齊；optional vector-backed smoke 需待本機 Qdrant collection `docurag_chunks_v1` 可用後重跑。
 - [x] v0.21.0: Real GPU OCR Interview Demo Path 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO、ROADMAP 與 demo script 已同步到 `v0.21.0`；frontend upload 已改為 provider-selected real OCR-first flow，mock OCR 只作手動 fallback；frontend build、backend tests、baseline demo smoke、real OCR smoke、ticket `rg` 與 `git diff --check` 已通過。
+- [x] v0.22.0: RAG Query Hardening 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.22.0`；keyword query normalization、CJK tokenization、demo-safe 中文 alias、backend tests、frontend build、baseline demo smoke、ticket `rg` 與 `git diff --check` 已通過。

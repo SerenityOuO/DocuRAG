@@ -41,7 +41,7 @@ const suggestedQuestions = [
   "When is the renewal date?",
 ];
 
-const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.21.0"));
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.22.0"));
 
 const healthLabel = computed(() => {
   if (healthState.value === "success" && health.value?.status === "ok") {
@@ -259,7 +259,7 @@ onMounted(() => {
           </div>
           <h1>文件客服助理</h1>
           <p class="hero-copy">
-            前台只負責提問與上傳文件；其餘知識庫流程都由後端處理。
+            前台只負責提問與上傳文件；後端目前接收文件並提供 OCR / demo RAG API。
           </p>
         </div>
 
@@ -381,7 +381,7 @@ onMounted(() => {
           </div>
           <div>
             <dt>狀態</dt>
-            <dd>{{ uploadFallbackAvailable ? "GPU OCR 待處理" : "已送入後端知識庫流程" }}</dd>
+            <dd>{{ uploadFallbackAvailable ? "GPU OCR 待處理" : "OCR 已完成" }}</dd>
           </div>
         </dl>
       </article>

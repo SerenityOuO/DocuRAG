@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging 與 v0.21.0 real GPU OCR interview demo path backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path 與 v0.22.0 RAG query hardening backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.21.0 real GPU OCR interview demo path checklist。
+- TODO 包含 Phase 00 到 v0.22.0 RAG query hardening checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -80,6 +80,7 @@ Expected Outcome：
 - v0.19.0 hybrid rerank runtime backlog 只做 optional eval runner strategy、smoke flag、trace / report visibility 與 release sync；不接 default `/rag/query`、production eval dashboard、worker、DB、登入或 RBAC。
 - v0.20.0 interview MVP packaging backlog 只做 demo readiness、文件敘事、sample / eval coverage、demo media 與 final validation；不實作 production eval dashboard、worker、DB、登入或 RBAC。
 - v0.21.0 real GPU OCR interview demo path 只做 frontend upload real OCR-first flow、manual mock fallback 與 release 文件同步；不修改 PaddleOCR provider、OCR API contract、PDF pipeline、worker、DB、登入或 RBAC。
+- v0.22.0 RAG query hardening 只做 keyword query normalization、CJK tokenization 與 demo-safe alias；不新增 embedding、Qdrant、BM25、rerank、hybrid retrieval、query rewrite、DB、登入或 RBAC。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -1176,3 +1177,53 @@ Out of Scope：
 
 - 不修改 PaddleOCR provider、engine lifecycle、模型設定、OCR normalization 或 backend OCR API contract。
 - 不新增 PDF rendering、image preprocessing、VLM parser、多頁 production OCR pipeline、DB、Auth、RBAC、Redis、NATS、worker、Agent runtime、deployment 或 release tag。
+
+## v0.22.0 RAG Query Hardening
+
+Goal：改善 default `/rag/query` keyword baseline 對中文 query 與常見 demo 問法的命中能力，讓「付款期限是什麼？」可命中既有英文 OCR chunks，並在有 retrieved chunks 時繼續沿用既有 LLM generation path。
+
+Tickets：
+
+- [x] `tasks/phase-22-rag-query-hardening/22-01-keyword-query-normalization.md`
+
+Expected Outcome：
+
+- `KeywordRagProvider` 保留英文 / 數字 token 行為，並新增 CJK bigram tokenization。
+- 常見 demo-safe 中文 alias 可對應到 sample data 的英文 keyword，例如付款期限、付款條件、總金額、發票號碼、續約日期與 SLA 回覆目標。
+- 中文 alias 命中 retrieved chunks 後，既有 Ollama generation path 才會收到 query + retrieved chunks prompt。
+- Backend / frontend / Docker Compose / README / TODO / ROADMAP 同步到 `v0.22.0`。
+
+22-01 Keyword Query Normalization Status：
+
+- `KeywordRagProvider` 已新增 CJK bigram tokenization 與小範圍 `QUERY_ALIASES`，保留既有英文 / 數字 token scoring。
+- Backend tests 已涵蓋中文 query `付款期限是什麼？` 命中英文 `Payment terms: Net 15` chunk，以及中文 alias 命中後 LLM provider 收到 query + retrieved chunks prompt。
+- Frontend 與 release 文件已修正為 upload + OCR / demo RAG API 敘事，不宣稱 backend 已有正式知識庫 ingestion / indexing pipeline。
+- Release sync 已更新 backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 到 `v0.22.0`。
+- Validation 已通過：backend tests `131 passed`、frontend build、baseline demo smoke、ticket `rg` 與 `git diff --check`（僅 Windows LF/CRLF 提示）。
+
+Acceptance Criteria：
+
+- 中文 query `付款期限是什麼？` 能透過 keyword baseline 命中包含 `Payment terms: Net 15` 的英文 OCR chunk。
+- 有中文 alias 命中 retrieved chunks 時，既有 LLM generation path 可收到 query + retrieved chunks prompt。
+- 既有英文 keyword scoring、citations 與 retrieved chunks contract 不被破壞。
+- Frontend 與 release 文件不宣稱 backend 已有正式知識庫 ingestion / indexing pipeline。
+- `v0.22.0` release/version sync 不得引入 out-of-scope runtime。
+
+Validation：
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
+- `npm.cmd run build`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
+- `rg -n "v0.22.0|Phase 22|keyword query normalization|付款期限|QUERY_ALIASES" README.md backend/README.md frontend/README.md TODO.md docs/ROADMAP.md backend/app backend/tests tasks/phase-22-rag-query-hardening/22-01-keyword-query-normalization.md`
+- `git diff --check`
+
+Release Impact：
+
+- Target version: `v0.22.0`。
+- Version bump required: yes。
+- 原因：Phase 22 改變 default keyword retrieval 的 query normalization，讓中文 demo 問法能命中英文 OCR chunks。
+
+Out of Scope：
+
+- 不新增 embedding、Qdrant、BM25、rerank、hybrid retrieval、`hybrid_rerank` default chat path 或新外部依賴。
+- 不新增 query rewrite LLM call、LLM-as-judge、answer faithfulness scoring、citation quality scoring、DB、Auth、RBAC、Redis、NATS、worker、PDF rendering、image preprocessing、production OCR pipeline、deployment 或 release tag。

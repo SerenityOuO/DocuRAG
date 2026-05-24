@@ -125,6 +125,84 @@ def test_rag_query_retrieves_uploaded_text_sample_content(client: TestClient) ->
     assert "Payment terms: Net 15" in body["retrieved_chunks"][0]["text"]
 
 
+def test_keyword_rag_provider_retrieves_english_chunk_from_chinese_payment_query() -> None:
+    document = DocumentMetadata(
+        document_id="doc-001",
+        filename="mock-invoice-aurora.txt",
+        stored_filename="doc-001-mock-invoice-aurora.txt",
+        file_type="txt",
+        content_type="text/plain",
+        size=100,
+        status=DocumentStatus.READY,
+        created_at="2026-05-20T00:00:00Z",
+        chunks=[
+            DocumentChunk(
+                chunk_id="chunk-001",
+                document_id="doc-001",
+                text=(
+                    "Invoice number: AUR-2026-051\n"
+                    "Due date: 2026-06-15\n"
+                    "Payment terms: Net 15"
+                ),
+                source="ocr_mock",
+                created_at="2026-05-20T00:00:00Z",
+                source_type="ocr_mock",
+                metadata={"origin": "ocr_text", "provider": "ocr_mock"},
+            )
+        ],
+    )
+
+    response = KeywordRagProvider().query("付款期限是什麼？", 3, [document])
+
+    assert response.citations[0].filename == "mock-invoice-aurora.txt"
+    assert response.retrieved_chunks[0].chunk_id == "chunk-001"
+    assert response.retrieved_chunks[0].score >= 3
+    assert "Payment terms: Net 15" in response.retrieved_chunks[0].text
+
+
+def test_keyword_rag_provider_sends_chinese_alias_match_to_llm() -> None:
+    class StubLlmProvider:
+        name = "ollama"
+
+        def __init__(self) -> None:
+            self.prompt = ""
+
+        def generate(self, prompt: str, system: str | None = None) -> LlmGeneration:
+            self.prompt = prompt
+            return LlmGeneration(
+                text="付款期限是 Net 15，支援 chunk-001。",
+                model="qwen3.5:4b",
+            )
+
+    llm_provider = StubLlmProvider()
+    document = DocumentMetadata(
+        document_id="doc-001",
+        filename="mock-invoice-aurora.txt",
+        stored_filename="doc-001-mock-invoice-aurora.txt",
+        file_type="txt",
+        content_type="text/plain",
+        size=100,
+        status=DocumentStatus.READY,
+        created_at="2026-05-20T00:00:00Z",
+        chunks=[
+            DocumentChunk(
+                chunk_id="chunk-001",
+                document_id="doc-001",
+                text="Payment terms: Net 15",
+                source="ocr_mock",
+                created_at="2026-05-20T00:00:00Z",
+            )
+        ],
+    )
+
+    response = KeywordRagProvider(llm_provider=llm_provider).query("付款期限是什麼？", 3, [document])
+
+    assert response.answer == "付款期限是 Net 15，支援 chunk-001。"
+    assert "付款期限是什麼？" in llm_provider.prompt
+    assert "Payment terms: Net 15" in llm_provider.prompt
+    assert response.citations[0].trace_metadata["llm_generation_status"] == "completed"
+
+
 def test_keyword_rag_provider_scores_sorts_and_limits_results() -> None:
     documents = [
         DocumentMetadata(
