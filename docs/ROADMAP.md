@@ -1403,7 +1403,11 @@ Expected Outcome：
 
 25-01 Agent Boundary Contract Status：
 
-- 待執行。固定 Agent MVP contract、tool allowlist、planner policy、trace schema、API response shape 與 guardrails。
+- 已完成。`docs/api.md` 已固定 Agent MVP contract、tool allowlist、planner policy、trace schema、future API response shape 與 guardrails；`docs/architecture.md` 已補上 deterministic planner -> allowlisted tools -> trace 的架構邊界。
+- `AgentRun` contract 保留 `run_id`、`status`、`task`、可選 `document_id` / `query`、`plan_steps`、`tool_calls`、`final_answer`、`citations`、`trace`、`created_at` 與 `updated_at`。
+- Allowlisted tools 僅包含 `get_document_fields`、`search_documents` 與 `summarize_invoice_fields`；工具都必須是 read-only，不允許任意 SQL、任意工具執行、delete、reindex、shell / file system command 或 destructive operation。
+- 本 ticket 是 Markdown-only contract，不 bump version；Agent tool adapters、run API、frontend trace surface 與 `v0.25.0` release sync 留給 `25-02` 到 `25-05`。
+- 25-01 validation：ticket 指定 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 25-02 Agent Tool Adapters Status：
 
