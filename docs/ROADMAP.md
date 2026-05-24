@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release 與 v0.24.0 VLM / Parser Minimal MVP backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP 與 v0.25.0 Agent Tool-use Minimal MVP backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.24.0 VLM / Parser Minimal MVP checklist。
+- TODO 包含 Phase 00 到 v0.25.0 Agent Tool-use Minimal MVP checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -83,6 +83,7 @@ Expected Outcome：
 - v0.22.0 RAG query hardening 只做 keyword query normalization、CJK tokenization 與 demo-safe alias；不新增 embedding、Qdrant、BM25、rerank、hybrid retrieval、query rewrite、DB、登入或 RBAC。
 - v0.23.0 Viewer Chat / Admin Ingestion role split 只拆產品入口與 demo surface：Viewer 前台只做 Chat；Admin / Analyst 後台才做 upload、provider-selected OCR 與 ingestion 狀態。不新增 auth、RBAC、DB、worker、VLM parser、production indexing 或 automatic Qdrant ingestion。
 - v0.24.0 VLM / Parser Minimal MVP 只做 parser contract、deterministic invoice parser fallback、parse / fields API、Admin / Analyst structured fields surface 與 release sync；不新增真正 VLM、LLM parser、DB、worker、Agent runtime 或 production parser pipeline。
+- v0.25.0 Agent Tool-use Minimal MVP 只做 deterministic planner、allowlisted tool adapters、Agent run API、frontend trace surface 與 release sync；不新增 LLM autonomous planner、任意 SQL、DB、RBAC、worker、Redis/NATS 或 destructive tools。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -1379,3 +1380,74 @@ Out of Scope：
 - 不修改 PaddleOCR provider、OCR model、OCR preprocessing、RAG retrieval、eval runner、Qdrant indexing 或 default chat path。
 - 不實作人工修正欄位、欄位版本紀錄、audit log、表格完整重建、PDF rendering、多頁 production OCR pipeline 或 production parser dashboard。
 - 不把 structured fields 接成 SQL query tool、Agent tool 或 default vector metadata filtering。
+
+## v0.25.0 Agent Tool-use Minimal MVP
+
+Goal：補上 JD 中 AI Agent 架構、Skill / Tool-use 與 Task Planning 的 demo slice。Phase 25 只做 deterministic planner 與 allowlisted tools，把 Phase 24 structured fields、既有 document search / retrieval 與 deterministic invoice summary 串成可驗證的 plan -> tool calls -> observations -> final answer trace；這不是 production autonomous Agent。
+
+Tickets：
+
+- `tasks/phase-25-agent-tool-use-mvp/25-01-agent-boundary-contract.md`
+- `tasks/phase-25-agent-tool-use-mvp/25-02-agent-tool-adapters.md`
+- `tasks/phase-25-agent-tool-use-mvp/25-03-agent-run-api.md`
+- `tasks/phase-25-agent-tool-use-mvp/25-04-frontend-agent-trace-surface.md`
+- `tasks/phase-25-agent-tool-use-mvp/25-05-agent-demo-release-sync.md`
+
+Expected Outcome：
+
+- Agent MVP boundary 明確定義 run / step / tool call / observation / final answer trace schema。
+- Allowlisted tools 僅包含 `get_document_fields`、`search_documents`、`summarize_invoice_fields`。
+- `POST /agent/run` 可用 deterministic planner 產生可重播的 Agent trace；`GET /agent/runs/{run_id}` 可讀取 run result。
+- Frontend demo surface 可展示 plan、tool calls、observations、final answer 與 citations。
+- README / TODO / ROADMAP / demo docs 在 `25-05` 同步 `v0.25.0` release 狀態。
+
+25-01 Agent Boundary Contract Status：
+
+- 待執行。固定 Agent MVP contract、tool allowlist、planner policy、trace schema、API response shape 與 guardrails。
+
+25-02 Agent Tool Adapters Status：
+
+- 待執行。封裝 existing structured fields、local document search / retrieval 與 deterministic invoice summary；不新增任意 tool registry 或外部執行能力。
+
+25-03 Agent Run API Status：
+
+- 待執行。新增 deterministic Agent run endpoints，保存 run result，並維持 demo-safe error handling。
+
+25-04 Frontend Agent Trace Surface Status：
+
+- 待執行。在 demo UI 呈現 Agent trace；Viewer Chat 預設入口仍維持既有查詢體驗，不顯示 destructive operation 或 production Agent dashboard 暗示。
+
+25-05 Agent Demo Release Sync Status：
+
+- 待執行。執行 backend / frontend / demo smoke / Browser validation，完成 `v0.25.0` version sync 與文件同步。
+
+Acceptance Criteria：
+
+- Phase 25 tickets 都包含 Goal、Scope、Out of Scope、Files likely to change、Acceptance Criteria、Validation 與 Release Impact。
+- Agent trace 必須明確顯示 deterministic plan、tool calls、observations、final answer 與 citations。
+- Tool execution 僅允許 allowlisted read-only tools，不可執行任意 SQL、shell、delete、reindex 或 file system command。
+- 文件不宣稱已完成 production autonomous Agent、LLM planner、正式 RBAC、worker、DB 或 deployment。
+- `25-05` 才允許 `v0.25.0` version bump；前置 tickets 若未完成完整 release artifact，必須寫 `Version bump required: no`。
+
+Validation：
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
+- `npm.cmd run build`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
+- Browser 檢查 local frontend：Viewer Chat first、Admin / Analyst ingestion、Agent trace surface、桌面與手機寬度無 horizontal overflow。
+- `rg -n "v0.25.0|Phase 25|Agent|tool-use|get_document_fields|search_documents|summarize_invoice_fields|deterministic planner|allowlisted" README.md backend/README.md frontend/README.md docs/ROADMAP.md TODO.md docs/api.md backend/app frontend/src tasks/phase-25-agent-tool-use-mvp`
+- `git diff --check`
+
+Release Impact：
+
+- Target version: `v0.25.0`。
+- Version bump required: yes for `25-05`; no for `25-01` to `25-04` unless the ticket explicitly completes the full release sync.
+- 原因：Phase 25 需要在 contract、tool adapters、Agent run API、frontend trace surface 與 final validation 都完成後，才形成 `v0.25.0` Agent Tool-use Minimal MVP release artifact。
+
+Out of Scope：
+
+- 不新增 LLM autonomous planner、OpenAI function calling、Ollama planning call、streaming Agent 或新外部依賴。
+- 不新增任意 SQL、PostgreSQL schema、migration、Redis、NATS、worker、async queue、Auth、RBAC、role guard、project permission 或 multi-user isolation。
+- 不允許 Agent 執行 delete、reindex、file system command、shell command、任意 tool execution 或 destructive operation。
+- 不修改 parser extraction、OCR provider、RAG ranking、eval runner、Qdrant indexing 或 default Viewer Chat path。
+- 不把 Agent trace surface 說成 production Agent dashboard 或正式權限系統。

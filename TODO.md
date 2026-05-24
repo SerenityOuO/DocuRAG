@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.24 VLM / Parser Minimal MVP backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.25 Agent Tool-use Minimal MVP backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -24,6 +24,7 @@
 - Phase 22 -> `v0.22.0`
 - Phase 23 -> `v0.23.0`
 - Phase 24 -> `v0.24.0`
+- Phase 25 -> `v0.25.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -89,6 +90,11 @@
 37. `tasks/phase-24-vlm-parser-mvp/24-03-document-fields-api.md`：新增 parse / fields API，將 parser result 保存到 local JSON metadata store。
 38. `tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md`：在 Admin / Analyst ingestion surface 顯示 structured fields 摘要，Viewer Chat 仍保持只查詢。
 39. `tasks/phase-24-vlm-parser-mvp/24-05-parser-demo-release-sync.md`：補齊 parser demo validation，並在 Phase 24 完成時執行 `v0.24.0` release/version sync。
+40. `tasks/phase-25-agent-tool-use-mvp/25-01-agent-boundary-contract.md`：固定 Agent MVP boundary、allowlisted tools、deterministic planner 與 trace schema；文件 / contract ticket，不 bump version。
+41. `tasks/phase-25-agent-tool-use-mvp/25-02-agent-tool-adapters.md`：實作 `get_document_fields`、`search_documents` 與 `summarize_invoice_fields` allowlisted tool adapters。
+42. `tasks/phase-25-agent-tool-use-mvp/25-03-agent-run-api.md`：新增 `POST /agent/run` 與 `GET /agent/runs/{run_id}`，用 deterministic planner 串接 allowlisted tools。
+43. `tasks/phase-25-agent-tool-use-mvp/25-04-frontend-agent-trace-surface.md`：在 demo UI 顯示 Agent plan、tool calls、observations、final answer 與 citations。
+44. `tasks/phase-25-agent-tool-use-mvp/25-05-agent-demo-release-sync.md`：補齊 Agent demo validation，並在 Phase 25 完成時執行 `v0.25.0` release/version sync。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -681,6 +687,27 @@ Phase 24 guardrails：
 - `README.md`、`backend/README.md`、`frontend/README.md`、`docs/demo-script.md`、`TODO.md` 與 `docs/ROADMAP.md` 已補齊 parser demo wording；文件明確說明 Phase 24 是 deterministic parser MVP / VLM-compatible contract，不是 production VLM parser、LLM parser、worker、DB、Auth/RBAC、Agent runtime 或 deployment。
 - `scripts/demo-smoke-test.ps1` 已加入 upload -> OCR mock -> parser -> fields lookup -> baseline RAG query 驗證，並檢查 `/health` version `0.24.0`、parser source、invoice number、vendor、total、currency 與 source text。
 - [x] 24-05 validation：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/test-backend.ps1` 通過，`143 passed`（僅 pytest cache 權限警告）；`npm.cmd run build` 通過；`powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/demo-smoke-test.ps1` 通過，health version `0.24.0`、parser fields `AUR-2026-051` / `1248.5 USD`、answer source `LLM unavailable fallback`、retrieval source `keyword baseline`；Browser 檢查 `http://localhost:5173` desktop 與 390px mobile 通過，Viewer Chat first 不顯示 parse / upload / OCR，Admin / Analyst ingestion surface 顯示 parser status、欄位解析操作、`AUR-2026-051` 與 structured fields 摘要，且無 horizontal overflow；`rg -n "v0.24.0|Phase 24|Parser|structured fields|欄位解析|VLM-compatible|DocumentFields|ExtractedField" README.md backend/README.md frontend/README.md docs/demo-script.md docs/ROADMAP.md TODO.md backend/app frontend/src tasks/phase-24-vlm-parser-mvp` 通過；`git diff --check` 通過。
+
+## MVP v0.25.0 Agent Tool-use Minimal MVP
+
+- [ ] `tasks/phase-25-agent-tool-use-mvp/25-01-agent-boundary-contract.md`: 固定 Agent MVP boundary、allowlisted tools、deterministic planner、run / step / tool call / observation / final answer trace schema；文件 ticket，不 bump version。
+- [ ] `tasks/phase-25-agent-tool-use-mvp/25-02-agent-tool-adapters.md`: 實作 demo-safe allowlisted tool adapters：`get_document_fields`、`search_documents`、`summarize_invoice_fields`，只封裝既有 structured fields 與 retrieval 能力。
+- [ ] `tasks/phase-25-agent-tool-use-mvp/25-03-agent-run-api.md`: 新增 deterministic Agent run API，支援 `POST /agent/run` 與 `GET /agent/runs/{run_id}`，並輸出 plan、tool calls、observations、final answer 與 citations。
+- [ ] `tasks/phase-25-agent-tool-use-mvp/25-04-frontend-agent-trace-surface.md`: 在 demo UI 新增 Agent trace surface，展示 plan -> tool calls -> observations -> final answer + citations；Viewer Chat 預設入口保持不變。
+- [ ] `tasks/phase-25-agent-tool-use-mvp/25-05-agent-demo-release-sync.md`: 補齊 Agent demo validation、文件同步與 `v0.25.0` release/version bump。
+
+Phase 25 goal：
+- 補上 JD 中「AI Agent 架構、Skill / Tool-use 與 Task Planning」的 demo 證據。
+- 把 Phase 24 structured fields、既有 RAG retrieval 與 citation 串成 deterministic tool-use flow。
+- 讓 demo 展示 plan -> tool calls -> observations -> final answer + citations，並維持 production guardrails。
+
+Phase 25 guardrails：
+- 不新增 LLM autonomous planner、OpenAI function calling、Ollama planning call、streaming agent 或新外部依賴。
+- 不新增任意 SQL、PostgreSQL schema、migration、Redis、NATS、worker、async queue、Auth、RBAC、role guard、project permission 或 multi-user isolation。
+- 不允許 Agent 執行 delete、reindex、file system command、shell command、任意 tool execution 或 destructive operation。
+- 不修改 parser extraction、OCR provider、RAG ranking、eval runner、Qdrant indexing 或 default Viewer Chat path。
+- 不把 Agent trace surface 說成 production Agent dashboard 或正式權限系統。
+- `25-05` 才允許 `v0.25.0` version bump；`25-01` 到 `25-04` 若未形成完整 release artifact，必須寫 `Version bump required: no`。
 
 ## Release Verification Status
 
