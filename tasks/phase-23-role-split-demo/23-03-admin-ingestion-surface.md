@@ -39,11 +39,11 @@
 
 ## Acceptance Criteria
 
-- [ ] 文件上傳與 OCR 操作只出現在明確的 Admin / Analyst ingestion surface。
-- [ ] 後台 ingestion surface 成功上傳後會呼叫 provider-selected OCR，real OCR 失敗時保留手動 mock fallback。
-- [ ] 後台 surface 顯示 document processing / OCR / local chunks 狀態，不宣稱已完成 VLM parser 或 production indexing。
-- [ ] Viewer Chat 與 Admin / Analyst ingestion 有明確導覽或模式切換，但首頁主流程仍是 Viewer Chat。
-- [ ] 既有 API contract 不變，frontend build 通過。
+- [x] 文件上傳與 OCR 操作只出現在明確的 Admin / Analyst ingestion surface。
+- [x] 後台 ingestion surface 成功上傳後會呼叫 provider-selected OCR，real OCR 失敗時保留手動 mock fallback。
+- [x] 後台 surface 顯示 document processing / OCR / local chunks 狀態，不宣稱已完成 VLM parser 或 production indexing。
+- [x] Viewer Chat 與 Admin / Analyst ingestion 有明確導覽或模式切換，但首頁主流程仍是 Viewer Chat。
+- [x] 既有 API contract 不變，frontend build 通過。
 
 ## Validation
 

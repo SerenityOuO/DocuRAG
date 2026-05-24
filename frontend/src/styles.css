@@ -151,6 +151,30 @@ td {
   overflow-wrap: anywhere;
 }
 
+.mode-switch {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr;
+}
+
+.mode-button {
+  background: #f8fafc;
+  border: 1px solid #d7e2ec;
+  border-radius: 8px;
+  color: #475569;
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 38px;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.mode-button-active {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #ffffff;
+}
+
 .metric-strip {
   display: grid;
   gap: 12px;
@@ -269,8 +293,14 @@ td {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.admin-grid {
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1.1fr);
+}
+
 .chat-surface,
-.upload-surface {
+.upload-surface,
+.ingestion-surface,
+.ingestion-status {
   min-height: 360px;
 }
 
@@ -325,6 +355,32 @@ td {
   width: 100%;
 }
 
+.compact-button {
+  min-height: 36px;
+  padding: 8px 11px;
+  white-space: nowrap;
+}
+
+.surface-note {
+  background: #eef6f4;
+  border: 1px solid #b8d8d2;
+  border-radius: 8px;
+  display: grid;
+  gap: 5px;
+  margin-bottom: 14px;
+  padding: 12px;
+}
+
+.surface-note strong {
+  color: #0f766e;
+  font-size: 13px;
+}
+
+.surface-note span {
+  color: #526173;
+  line-height: 1.45;
+}
+
 .success-message {
   color: #166534;
   font-weight: 800;
@@ -357,6 +413,40 @@ td {
   color: #172033;
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+.document-status-list {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.document-status-list li {
+  background: #f8fafc;
+  border: 1px solid #e5edf4;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.document-status-list strong {
+  color: #172033;
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.document-status-list small {
+  color: #64748b;
+  overflow-wrap: anywhere;
+}
+
+.document-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .footer-error {

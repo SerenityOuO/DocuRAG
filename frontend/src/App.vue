@@ -4,12 +4,19 @@ import { computed, onMounted, ref } from "vue";
 import {
   API_BASE_URL,
   getHealth,
+  listDocuments,
   queryRag,
+  runMockOcr,
+  runSelectedOcr,
+  uploadDocument,
+  type DocumentMetadata,
   type HealthResponse,
   type RagQueryResponse,
+  type UploadResponse,
 } from "./api/client";
 
 type RequestState = "idle" | "loading" | "success" | "error";
+type ViewMode = "viewer" | "admin";
 
 type SourceSummary = {
   filename: string;
@@ -18,12 +25,22 @@ type SourceSummary = {
 
 const healthState = ref<RequestState>("idle");
 const chatState = ref<RequestState>("idle");
+const documentsState = ref<RequestState>("idle");
+const uploadState = ref<RequestState>("idle");
+const viewMode = ref<ViewMode>("viewer");
 const health = ref<HealthResponse | null>(null);
 const ragResult = ref<RagQueryResponse | null>(null);
+const documents = ref<DocumentMetadata[]>([]);
+const uploadResult = ref<UploadResponse | null>(null);
+const selectedFile = ref<File | null>(null);
+const uploadFallbackAvailable = ref(false);
 const ragQuery = ref("");
 const ragTopK = ref(3);
 const healthError = ref("");
 const ragError = ref("");
+const documentsError = ref("");
+const uploadError = ref("");
+const uploadMessage = ref("");
 
 const suggestedQuestions = [
   "payment due date Net 15",
@@ -32,6 +49,12 @@ const suggestedQuestions = [
 ];
 
 const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.22.0"));
+
+const heroCopy = computed(() =>
+  viewMode.value === "admin"
+    ? "後台知識庫管理入口，讓 Admin / Analyst 建立可供前台查詢的文件資料。"
+    : "前台查詢入口，只回答後端已建立的文件知識庫；資料建立由後台知識庫管理流程處理。",
+);
 
 const healthLabel = computed(() => {
   if (healthState.value === "success" && health.value?.status === "ok") {
@@ -102,6 +125,8 @@ const citedSources = computed<SourceSummary[]>(() => {
   }));
 });
 
+const latestDocuments = computed(() => documents.value.slice(0, 5));
+
 function sourceTone(source: string): "status-failed" | "status-ready" | "status-success" {
   if (source.includes("備援") || source.includes("不可用")) {
     return "status-failed";
@@ -112,6 +137,50 @@ function sourceTone(source: string): "status-failed" | "status-ready" | "status-
   }
 
   return "status-success";
+}
+
+function openViewerSurface(): void {
+  viewMode.value = "viewer";
+}
+
+function openAdminSurface(): void {
+  viewMode.value = "admin";
+  if (documentsState.value === "idle") {
+    void refreshDocuments();
+  }
+}
+
+function formatBytes(size: number): string {
+  return `${size.toLocaleString()} 位元組`;
+}
+
+function handleFileChange(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  selectedFile.value = input.files?.[0] ?? null;
+  uploadResult.value = null;
+  uploadFallbackAvailable.value = false;
+  uploadMessage.value = "";
+  uploadError.value = "";
+}
+
+function chunkReadiness(document: DocumentMetadata): string {
+  if (document.chunks.length > 0) {
+    return `local chunks ready (${document.chunks.length})`;
+  }
+
+  return "local chunks not ready";
+}
+
+function documentStatusTone(status: string): string {
+  if (["ready", "completed", "success"].includes(status)) {
+    return "status-success";
+  }
+
+  if (["failed", "error"].includes(status)) {
+    return "status-failed";
+  }
+
+  return "status-ready";
 }
 
 function useSuggestedQuestion(question: string): void {
@@ -153,6 +222,93 @@ async function submitRagQuery(): Promise<void> {
   }
 }
 
+async function refreshDocuments(): Promise<void> {
+  documentsState.value = "loading";
+  documentsError.value = "";
+
+  try {
+    const response = await listDocuments();
+    documents.value = response.documents;
+    documentsState.value = "success";
+  } catch (error) {
+    documents.value = [];
+    documentsError.value = error instanceof Error ? error.message : "文件狀態讀取失敗";
+    documentsState.value = "error";
+  }
+}
+
+async function submitUpload(): Promise<void> {
+  if (!selectedFile.value) {
+    uploadError.value = "請先選擇檔案。";
+    return;
+  }
+
+  uploadState.value = "loading";
+  uploadError.value = "";
+  uploadMessage.value = "";
+  uploadFallbackAvailable.value = false;
+
+  let uploadedDocumentId = "";
+
+  try {
+    const response = await uploadDocument(selectedFile.value);
+    uploadResult.value = response;
+    uploadedDocumentId = response.document_id;
+    await refreshDocuments();
+  } catch (error) {
+    uploadResult.value = null;
+    uploadError.value = error instanceof Error ? error.message : "文件上傳失敗";
+    uploadState.value = "error";
+    return;
+  }
+
+  try {
+    const ocrResult = await runSelectedOcr(uploadedDocumentId);
+    const selectedProvider = ocrResult.extracted_fields.provider ?? "";
+
+    if (selectedProvider !== "paddleocr") {
+      uploadFallbackAvailable.value = true;
+      uploadError.value = selectedProvider
+        ? `GPU OCR 未完成：目前後端 selected OCR provider 是 ${selectedProvider}。`
+        : "GPU OCR 未完成：目前後端 selected OCR provider 不是 paddleocr。";
+      uploadState.value = "error";
+      await refreshDocuments();
+      return;
+    }
+
+    uploadMessage.value = "文件已完成 provider-selected OCR，並產生 local chunks。";
+    uploadState.value = "success";
+    await refreshDocuments();
+  } catch (error) {
+    uploadFallbackAvailable.value = true;
+    uploadError.value = error instanceof Error ? `GPU OCR 未完成：${error.message}` : "GPU OCR 未完成";
+    uploadState.value = "error";
+    await refreshDocuments();
+  }
+}
+
+async function submitMockFallback(): Promise<void> {
+  if (!uploadResult.value) {
+    uploadError.value = "請先完成文件上傳。";
+    return;
+  }
+
+  uploadState.value = "loading";
+  uploadError.value = "";
+  uploadMessage.value = "";
+
+  try {
+    await runMockOcr(uploadResult.value.document_id);
+    uploadFallbackAvailable.value = false;
+    uploadMessage.value = "已改用 mock OCR 完成後台 ingestion 備援處理。";
+    uploadState.value = "success";
+    await refreshDocuments();
+  } catch (error) {
+    uploadError.value = error instanceof Error ? `Mock OCR 備援失敗：${error.message}` : "Mock OCR 備援失敗";
+    uploadState.value = "error";
+  }
+}
+
 onMounted(() => {
   void checkHealth();
 });
@@ -168,20 +324,36 @@ onMounted(() => {
             <span class="status-pill" :class="`status-${healthState}`">{{ healthLabel }}</span>
           </div>
           <h1>文件客服助理</h1>
-          <p class="hero-copy">
-            前台查詢入口，只回答後端已建立的文件知識庫；資料建立由後台知識庫管理流程處理。
-          </p>
+          <p class="hero-copy">{{ heroCopy }}</p>
         </div>
 
         <div class="hero-side">
           <span>服務狀態</span>
           <strong>{{ healthLabel }}</strong>
           <small>{{ health?.version ? `Backend ${health.version}` : API_BASE_URL }}</small>
+          <div class="mode-switch" aria-label="產品入口">
+            <button
+              type="button"
+              class="mode-button"
+              :class="{ 'mode-button-active': viewMode === 'viewer' }"
+              @click="openViewerSurface"
+            >
+              前台查詢
+            </button>
+            <button
+              type="button"
+              class="mode-button"
+              :class="{ 'mode-button-active': viewMode === 'admin' }"
+              @click="openAdminSurface"
+            >
+              後台知識庫管理
+            </button>
+          </div>
         </div>
       </div>
     </header>
 
-    <section class="minimal-grid viewer-grid" aria-label="前台文件客服查詢入口">
+    <section v-if="viewMode === 'viewer'" class="minimal-grid viewer-grid" aria-label="前台文件客服查詢入口">
       <article class="panel chat-surface">
         <div class="panel-heading">
           <div>
@@ -243,6 +415,90 @@ onMounted(() => {
         </section>
 
         <p v-else class="muted">請輸入問題。若尚未有資料，請先由後台知識庫管理流程建立資料。</p>
+      </article>
+    </section>
+
+    <section v-else class="minimal-grid admin-grid" aria-label="後台知識庫管理入口">
+      <article class="panel ingestion-surface">
+        <div class="panel-heading">
+          <div>
+            <h2>後台知識庫管理</h2>
+            <p>Admin / Analyst 在這裡建立前台可查詢的 demo knowledge base。</p>
+          </div>
+        </div>
+
+        <div class="surface-note">
+          <strong>目前階段</strong>
+          <span>backend upload + provider-selected OCR + local chunking。real OCR 失敗時保留文件並提供 mock OCR fallback；尚未完成 VLM parser、worker pipeline、DB 或 production indexing。</span>
+        </div>
+
+        <label class="file-picker">
+          <span>選擇文件</span>
+          <input type="file" @change="handleFileChange" />
+        </label>
+
+        <p v-if="selectedFile" class="selected-file">
+          {{ selectedFile.name }} - {{ formatBytes(selectedFile.size) }}
+        </p>
+        <p v-else class="muted">尚未選擇文件。</p>
+
+        <button
+          type="button"
+          class="button upload-button"
+          :disabled="!selectedFile || uploadState === 'loading'"
+          @click="submitUpload"
+        >
+          {{ uploadState === "loading" ? "後台處理中..." : "建立 demo 知識庫資料" }}
+        </button>
+
+        <p v-if="uploadMessage" class="success-message">{{ uploadMessage }}</p>
+        <p v-if="uploadError" class="error">{{ uploadError }}</p>
+        <button
+          v-if="uploadFallbackAvailable"
+          type="button"
+          class="button secondary-button upload-button"
+          :disabled="uploadState === 'loading'"
+          @click="submitMockFallback"
+        >
+          使用 mock OCR fallback
+        </button>
+      </article>
+
+      <article class="panel ingestion-status">
+        <div class="panel-heading">
+          <div>
+            <h2>Ingestion 狀態</h2>
+            <p>只呈現 local MVP 處理狀態，不代表正式 production indexing。</p>
+          </div>
+          <button type="button" class="button secondary-button compact-button" @click="refreshDocuments">
+            重新整理
+          </button>
+        </div>
+
+        <p v-if="documentsError" class="error">{{ documentsError }}</p>
+        <p v-if="documentsState === 'loading'" class="muted">讀取文件狀態中...</p>
+        <p v-else-if="latestDocuments.length === 0" class="muted">目前沒有後台文件紀錄。</p>
+
+        <ul v-else class="document-status-list">
+          <li v-for="document in latestDocuments" :key="document.document_id">
+            <div>
+              <strong>{{ document.filename }}</strong>
+              <small>{{ document.document_id }}</small>
+            </div>
+            <div class="document-status-row">
+              <span class="status-pill" :class="documentStatusTone(document.status)">
+                document {{ document.status }}
+              </span>
+              <span class="status-pill" :class="documentStatusTone(document.processing.ocr)">
+                OCR {{ document.processing.ocr }}
+              </span>
+              <span class="status-pill" :class="document.processing.ready ? 'status-success' : 'status-ready'">
+                {{ chunkReadiness(document) }}
+              </span>
+            </div>
+            <p v-if="document.processing.failed_reason" class="error">{{ document.processing.failed_reason }}</p>
+          </li>
+        </ul>
       </article>
     </section>
 
