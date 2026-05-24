@@ -53,7 +53,7 @@ npm.cmd run build
 - 文件上傳：呼叫 `POST /documents/upload`，再呼叫既有 `POST /documents/{document_id}/ocr/mock` 完成 demo-safe backend ingestion。
 - 後端健康：只顯示簡短連線狀態與版本，不顯示 raw health JSON。
 - 工程細節：OCR text、extracted fields、document list、metadata JSON、retrieved chunks、trace metadata 與 eval metrics 改由 backend API、`scripts/demo-smoke-test.ps1`、`scripts/retrieval-eval-smoke.ps1` 或 API docs 檢查，不放在 frontend 主畫面。
-- backend 未啟用 LLM provider 時，answer source 顯示 `確定性基準回答`；設定 `DOCURAG_LLM_PROVIDER=ollama` 且 generation 成功時顯示 `ollama/qwen3.5:4b`。
+- backend 預設嘗試 Ollama LLM provider；generation 成功時 answer source 顯示 `ollama/qwen3.5:4b`，Ollama 不可用時顯示 `LLM unavailable fallback`，若以 `DOCURAG_LLM_PROVIDER=` 明確關閉則顯示 `確定性基準回答`。
 - backend 未啟用 vector retrieval 時，retrieval source 顯示 `關鍵字基準檢索`；設定 `DOCURAG_RAG_RETRIEVAL_PROVIDER=vector` 且 Qdrant search 成功時顯示 `vector/qdrant`。
 
 建議面試前先 seed demo knowledge base，讓前台客服聊天一打開就能問：
@@ -70,7 +70,7 @@ payment due date Net 15
 
 在 backend 已執行 `scripts/seed-demo-data.ps1` 後，RAG result 預期會引用 `mock-invoice-aurora.txt`；詳細 chunks 與 trace 可用 smoke script 或 API response 檢查。
 
-目前 frontend 預設展示的是 local keyword RAG baseline，不是 default-on vector retrieval、default-on rerank、default-on hybrid retrieval、default-on `hybrid_rerank`、eval dashboard 或 streaming LLM UI。backend 只在 `DOCURAG_RAG_RETRIEVAL_PROVIDER=vector` 且 document 已透過 manual indexing API 寫入 Qdrant 後，才會讓 vector retrieval 查詢 Qdrant；失敗會 fallback 到 keyword retrieval。`vector_rerank`、`hybrid` 與 `hybrid_rerank` 目前只接入 CLI eval runner。只在 `DOCURAG_LLM_PROVIDER=ollama` 時把 retrieved chunks 與 query 交給 Ollama `qwen3.5:4b` 產生回答。v0.9 provider-selected OCR 預設走 GPU-only PaddleOCR；若 dependency、Python 版本、CUDA build 或模型不可用，backend 會用清楚錯誤與 processing metadata 呈現，不會靜默 fallback 到 mock。frontend upload 目前使用 mock OCR endpoint 做 demo-safe ingestion；這不代表已完成 PDF rendering、image preprocessing、production OCR pipeline、`/rag/query` hybrid search 或 streaming。
+目前 frontend 預設展示的是 local keyword retrieval + default-on Ollama answer generation path，不是 default-on vector retrieval、default-on rerank、default-on hybrid retrieval、default-on `hybrid_rerank`、eval dashboard 或 streaming LLM UI。backend 只在 `DOCURAG_RAG_RETRIEVAL_PROVIDER=vector` 且 document 已透過 manual indexing API 寫入 Qdrant 後，才會讓 vector retrieval 查詢 Qdrant；失敗會 fallback 到 keyword retrieval。`vector_rerank`、`hybrid` 與 `hybrid_rerank` 目前只接入 CLI eval runner。未覆寫 `DOCURAG_LLM_PROVIDER` 時會把 retrieved chunks 與 query 交給 Ollama `qwen3.5:4b` 產生回答；Ollama 不可用時會明確 fallback，若要回到 deterministic baseline 可設定 `DOCURAG_LLM_PROVIDER=`。v0.9 provider-selected OCR 預設走 GPU-only PaddleOCR；若 dependency、Python 版本、CUDA build 或模型不可用，backend 會用清楚錯誤與 processing metadata 呈現，不會靜默 fallback 到 mock。frontend upload 目前使用 mock OCR endpoint 做 demo-safe ingestion；這不代表已完成 PDF rendering、image preprocessing、production OCR pipeline、`/rag/query` hybrid search 或 streaming。
 
 ## Release Status
 

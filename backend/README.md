@@ -1,6 +1,6 @@
 # Backend
 
-DocuRAG AgentOps backend MVP v0.20.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、manual vector indexing API、local RAG query API、retrieval evaluation runner、disabled-by-default rerank adapter、optional hybrid / `hybrid_rerank` eval strategy、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，RAG 預設仍以 `KeywordRagProvider` 做 keyword retrieval 與 citation contract。v0.10.0 加入最小 Ollama `qwen3.5:4b` LLM client、可選 `/rag/query` generation path 與 demo smoke；v0.11.0 加入 disabled-by-default Ollama embedding client、optional Qdrant runtime 與 fallback-safe vector retrieval path；v0.12.0 加入 manual vector indexing service / API，讓 vector retrieval 查詢已明確索引的 chunks；v0.13.0 加入公開 eval dataset 與 Hit Rate@K / MRR@K / Recall@K metrics runner；v0.15.0 加入 optional `vector_rerank` eval strategy 與 rerank trace metadata；v0.16.0 加入 12 筆 eval dataset 與 optional `hybrid` eval strategy；v0.17.0 改善 retrieval eval summary visibility；v0.19.0 加入 optional `hybrid_rerank` eval provider、smoke flag 與 trace / report metadata naming；v0.20.0 完成 interview MVP packaging release sync 與 final validation。未設定 vector retrieval、rerank 或 LLM provider 時既有 `/rag/query` 預設仍是 deterministic keyword baseline。此階段不接資料庫、OpenAI API、vLLM、default-on hybrid / hybrid rerank、production eval dashboard、Redis、NATS、worker 或登入權限。
+DocuRAG AgentOps backend MVP v0.20.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、manual vector indexing API、local RAG query API、retrieval evaluation runner、disabled-by-default rerank adapter、optional hybrid / `hybrid_rerank` eval strategy、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，RAG 預設仍以 `KeywordRagProvider` 做 keyword retrieval 與 citation contract。v0.10.0 加入最小 Ollama `qwen3.5:4b` LLM client、可選 `/rag/query` generation path 與 demo smoke；v0.11.0 加入 disabled-by-default Ollama embedding client、optional Qdrant runtime 與 fallback-safe vector retrieval path；v0.12.0 加入 manual vector indexing service / API，讓 vector retrieval 查詢已明確索引的 chunks；v0.13.0 加入公開 eval dataset 與 Hit Rate@K / MRR@K / Recall@K metrics runner；v0.15.0 加入 optional `vector_rerank` eval strategy 與 rerank trace metadata；v0.16.0 加入 12 筆 eval dataset 與 optional `hybrid` eval strategy；v0.17.0 改善 retrieval eval summary visibility；v0.19.0 加入 optional `hybrid_rerank` eval provider、smoke flag 與 trace / report metadata naming；v0.20.0 完成 interview MVP packaging release sync 與 final validation。未設定 vector retrieval 或 rerank provider 時既有 `/rag/query` 仍維持 keyword retrieval baseline；20-12 local demo follow-up 起，LLM provider 未覆寫時會預設嘗試 Ollama `qwen3.5:4b` generation，Ollama 不可用時 fallback 到 retrieved OCR chunks。此階段不接資料庫、OpenAI API、vLLM、default-on hybrid / hybrid rerank、production eval dashboard、Redis、NATS、worker 或登入權限。
 
 ## Install
 
@@ -143,8 +143,8 @@ curl -X POST http://127.0.0.1:8000/rag/query `
 
 Phase 10 Ollama LLM RAG：
 
-- `DOCURAG_LLM_PROVIDER` 未設定時，LLM provider 是 disabled，既有 `/rag/query` 仍回傳 deterministic keyword baseline。
-- 設定 `DOCURAG_LLM_PROVIDER=ollama`、`DOCURAG_LLM_BASE_URL=http://127.0.0.1:11434` 與 `DOCURAG_LLM_MODEL=qwen3.5:4b` 後，可用 `OllamaLlmProvider` 呼叫 Ollama native `/api/generate`。
+- `DOCURAG_LLM_PROVIDER` 未設定時，LLM provider 預設為 `ollama`，`/rag/query` 會在 retrieval 命中 chunks 後嘗試用 Ollama `qwen3.5:4b` 產生回答。
+- 設定 `DOCURAG_LLM_PROVIDER=ollama`、`DOCURAG_LLM_BASE_URL=http://127.0.0.1:11434` 與 `DOCURAG_LLM_MODEL=qwen3.5:4b` 後，可明確用 `OllamaLlmProvider` 呼叫 Ollama native `/api/generate`；若要關閉 LLM provider，可設定 `DOCURAG_LLM_PROVIDER=`。
 - client 使用 `stream=false`，讓回應維持單一 JSON 物件，方便 backend 測試與後續 RAG generation path 接入。
 - `check_health()` 會呼叫 `/api/tags`，確認 service 可連線且目標模型出現在本機模型清單。
 - 10-03 起 `/rag/query` 在 LLM provider enabled 且 retrieval 有命中 chunks 時，會用 query + retrieved chunks 組 prompt 產生回答；prompt 不包含未檢索內容。
@@ -310,7 +310,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1
 ```
 
-`demo-smoke-test.ps1` 會驗證 `/health`、upload、OCR mock 與 `/rag/query`；預設要求 deterministic baseline answer source。`-RunLlm` 需要 backend 以 `DOCURAG_LLM_PROVIDER=ollama` 啟動，並要求 Ollama service 已載入 `qwen3.5:4b`。`-RunVector` 需要 backend 以 vector / embedding / Qdrant env 啟動，會先呼叫 `POST /documents/{document_id}/index/vector`，再確認 retrieval source 為 `vector/qdrant`。`seed-demo-data.ps1` 會上傳 `sample-data/documents/mock-invoice-aurora.txt`、執行 OCR mock、查詢 `payment due date Net 15`，並輸出 answer、citations、retrieved chunks。
+`demo-smoke-test.ps1` 會驗證 `/health`、upload、OCR mock 與 `/rag/query`；預設模式接受 `ollama/qwen3.5:4b`、`LLM unavailable fallback` 或明確關閉 LLM 時的 `deterministic baseline` answer source。`-RunLlm` 仍要求 Ollama service 已載入 `qwen3.5:4b`，並要求 RAG answer source 為 `ollama/qwen3.5:4b`。`-RunVector` 需要 backend 以 vector / embedding / Qdrant env 啟動，會先呼叫 `POST /documents/{document_id}/index/vector`，再確認 retrieval source 為 `vector/qdrant`。`seed-demo-data.ps1` 會上傳 `sample-data/documents/mock-invoice-aurora.txt`、執行 OCR mock、查詢 `payment due date Net 15`，並輸出 answer、citations、retrieved chunks。
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunLlm

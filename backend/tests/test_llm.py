@@ -38,6 +38,16 @@ def test_create_llm_provider_returns_disabled_provider_without_env() -> None:
         provider.generate("hello")
 
 
+def test_settings_enable_ollama_provider_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("DOCURAG_LLM_PROVIDER", raising=False)
+
+    provider = create_llm_provider(Settings(_env_file=None))
+
+    assert isinstance(provider, OllamaLlmProvider)
+    assert provider.name == "ollama"
+    assert provider.model == "qwen3.5:4b"
+
+
 def test_ollama_generate_sends_non_streaming_request_and_parses_response() -> None:
     captured: dict[str, Any] = {}
 

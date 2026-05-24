@@ -315,7 +315,7 @@ Tickets：
 10-02 Client status：
 
 - 已新增 backend LLM provider interface、disabled provider 與 Ollama native HTTP client。
-- 未設定 `DOCURAG_LLM_PROVIDER` 時，provider 保持 disabled，既有 deterministic `/rag/query` baseline 不受影響。
+- v0.10.0 原始行為是未設定 `DOCURAG_LLM_PROVIDER` 時 provider 保持 disabled；20-12 local demo follow-up 後，程式預設改為 `ollama`，若要關閉 LLM generation 可設定 `DOCURAG_LLM_PROVIDER=`。
 - 設定 `DOCURAG_LLM_PROVIDER=ollama` 時，client 使用 `DOCURAG_LLM_BASE_URL`、`DOCURAG_LLM_MODEL=qwen3.5:4b` 與明確 timeout 呼叫 `POST /api/generate`，並設定 `stream=false`。
 - `check_health()` 使用 `GET /api/tags` 判斷 Ollama service 與本機模型清單是否可用。
 - 測試覆蓋成功回應、timeout、connection error、HTTP error、missing model 與 provider disabled。
@@ -324,7 +324,7 @@ Tickets：
 10-03 Generation status：
 
 - `/rag/query` 仍先使用 existing keyword retrieval 與 citation contract。
-- LLM provider 未設定時，回應保持 deterministic keyword baseline。
+- 20-12 local demo follow-up 後，LLM provider 未設定時預設嘗試 Ollama `qwen3.5:4b` generation；若設定 `DOCURAG_LLM_PROVIDER=`，回應保持 deterministic keyword baseline。
 - LLM provider enabled 且 retrieval 有命中 chunks 時，generation prompt 只包含 user query 與 retrieved chunks，不加入未檢索內容。
 - LLM success 時，answer 使用 `qwen3.5:4b` generation 結果；citations 與 retrieved chunks 保持對齊原 chunk metadata。
 - citation `trace_metadata` 會記錄 `llm_provider=ollama`、`llm_model=qwen3.5:4b`、generation status、latency 與 token usage。
@@ -333,7 +333,7 @@ Tickets：
 
 10-04 Demo smoke status：
 
-- `scripts/demo-smoke-test.ps1` 預設仍驗證 deterministic baseline answer source，確認 non-LLM demo 可重跑。
+- `scripts/demo-smoke-test.ps1` 預設模式接受 `ollama/qwen3.5:4b`、`LLM unavailable fallback` 或明確關閉 LLM 時的 `deterministic baseline` answer source。
 - `scripts/demo-smoke-test.ps1 -RunLlm` 會檢查 Ollama `/api/tags`、確認 `qwen3.5:4b` 存在，並要求 RAG answer source 為 `ollama/qwen3.5:4b`。
 - frontend RAG result 會依 citation `trace_metadata` 顯示 `deterministic baseline`、`ollama/qwen3.5:4b` 或 `LLM unavailable fallback`。
 - backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.10.0`。
@@ -1011,6 +1011,7 @@ Tickets：
 - [x] `tasks/phase-20-interview-mvp-packaging/20-09-frontend-chat-first-demo.md`
 - [x] `tasks/phase-20-interview-mvp-packaging/20-10-readme-chat-first-demo-refresh.md`
 - [x] `tasks/phase-20-interview-mvp-packaging/20-11-frontend-minimal-chat-upload.md`
+- [x] `tasks/phase-20-interview-mvp-packaging/20-12-default-llm-answer.md`
 
 Expected Outcome：
 
@@ -1019,6 +1020,7 @@ Expected Outcome：
 - 20-03 補齊 README 5 到 10 分鐘面試導覽，以及展示 frontend trace / citation / eval 可觀測性的截圖或 GIF。
 - 20-04 重跑 final validation，完成 backend / frontend / Docker Compose / README / TODO / ROADMAP 的 `v0.20.0` release sync。
 - 20-11 將 frontend demo 收斂為客服問答與文件上傳兩個使用者可見入口，其餘 OCR、indexing、document list、raw JSON、trace table 與 eval metrics 留在 backend API / CLI / smoke scripts。
+- 20-12 將 local demo answer generation 預設改為嘗試 Ollama `qwen3.5:4b`，保留 Ollama 不可用 fallback 與 `DOCURAG_LLM_PROVIDER=` deterministic baseline 關閉 path。
 
 20-01 Demo Doc Refresh Status：
 
@@ -1094,6 +1096,14 @@ Expected Outcome：
 - 新增 frontend minimal chat / upload ticket，目標是修正 20-09 的同頁後台管理呈現，讓 frontend demo 只保留客服問答與文件上傳。
 - Scope 只限既有 Vue single-page UI、CSS、README、frontend README、TODO 與 ROADMAP 文件同步；上傳仍呼叫既有 backend upload + mock OCR flow，但不在 frontend 顯示 OCR text、extracted fields、document list、metadata JSON、API response JSON、retrieval trace table 或 retrieved chunks。
 - Validation：`npm.cmd run build` 通過；Browser 檢查 `http://localhost:5174/` local frontend demo view 只有客服問答與文件上傳，未顯示 OCR panel、document list、metadata JSON、API response JSON 或 trace table，desktop horizontal overflow 為 `0`；ticket 指定 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+20-12 Default LLM Answer Status：
+
+- 新增 default LLM answer ticket，將 backend `DOCURAG_LLM_PROVIDER` 程式預設改為 `ollama`，未覆寫 env 時 `/rag/query` 會在 retrieval 命中 chunks 後嘗試 Ollama `qwen3.5:4b` generation。
+- `DOCURAG_LLM_PROVIDER=` 空值仍可明確關閉 LLM provider，保留 deterministic baseline path；Ollama service、model 或 timeout 不可用時仍 fallback 到 retrieved OCR chunks。
+- `scripts/demo-smoke-test.ps1` 預設模式接受 `ollama/qwen3.5:4b`、`LLM unavailable fallback` 或明確關閉時的 `deterministic baseline`；`-RunLlm` 仍要求真正 LLM generation 成功。
+- Release Impact：不 bump version；此 patch 只調整 local demo 預設與 validation，不更新 backend / frontend package version、health test version 或 Docker Compose `DOCURAG_VERSION`。
+- Validation：backend test script 通過，`129 passed`（僅 pytest cache 權限警告）；baseline demo smoke 通過，answer source `LLM unavailable fallback`、retrieval source `keyword baseline`；ticket 相關 `rg` 與 `git diff --check` 通過。
 
 Acceptance Criteria：
 

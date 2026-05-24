@@ -28,6 +28,7 @@ def client(tmp_path: Path) -> TestClient:
     storage = DocumentStorage(tmp_path / "data")
     app.dependency_overrides[get_documents_storage] = lambda: storage
     app.dependency_overrides[get_rag_storage] = lambda: storage
+    app.dependency_overrides[get_rag_provider] = lambda: KeywordRagProvider()
 
     client = TestClient(app)
 
@@ -583,6 +584,20 @@ def test_get_rag_provider_enables_ollama_from_settings(monkeypatch: pytest.Monke
     monkeypatch.setenv("DOCURAG_LLM_PROVIDER", "ollama")
     monkeypatch.setenv("DOCURAG_LLM_MODEL", "qwen3.5:4b")
     monkeypatch.setenv("DOCURAG_LLM_BASE_URL", "http://127.0.0.1:11434")
+    get_settings.cache_clear()
+
+    try:
+        provider = get_rag_provider()
+    finally:
+        get_settings.cache_clear()
+
+    assert isinstance(provider, KeywordRagProvider)
+    assert provider.llm_provider is not None
+    assert provider.llm_provider.name == "ollama"
+
+
+def test_get_rag_provider_enables_default_ollama_from_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("DOCURAG_LLM_PROVIDER", raising=False)
     get_settings.cache_clear()
 
     try:

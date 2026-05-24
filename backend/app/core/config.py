@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     ocr_use_angle_cls: bool = False
     ocr_det_limit_side_len: int = 960
     ocr_rec_batch_num: int = 6
-    llm_provider: str | None = None
+    llm_provider: str | None = "ollama"
     llm_base_url: str = "http://127.0.0.1:11434"
     llm_model: str = "qwen3.5:4b"
     llm_timeout_seconds: float = 30.0

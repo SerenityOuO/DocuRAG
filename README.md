@@ -26,7 +26,7 @@ DocuRAG AgentOps 要展示三件事：
 - PaddleOCR result metadata 會輸出 safe timing 欄位：engine preload / request load / inference / normalization / total duration。
 - v0.9.1 預設 `DOCURAG_OCR_USE_ANGLE_CLS=false`、`DOCURAG_OCR_DET_LIMIT_SIDE_LEN=960`、`DOCURAG_OCR_REC_BATCH_NUM=6`；mock OCR path 不受影響。
 - Local keyword RAG baseline，回傳 deterministic answer、citations 與 retrieved chunks。
-- v0.10.0 已固定 LLM / VLM 第一版目標為 Ollama `qwen3.5:4b`，並新增最小 Ollama LLM client、可選 `/rag/query` generation path、demo smoke `-RunLlm` 與 frontend answer source；未啟用 LLM provider 時預設仍是 deterministic keyword baseline。
+- v0.10.0 已固定 LLM / VLM 第一版目標為 Ollama `qwen3.5:4b`，並新增最小 Ollama LLM client、可選 `/rag/query` generation path、demo smoke `-RunLlm` 與 frontend answer source；20-12 local demo follow-up 起，未覆寫時預設嘗試 Ollama `qwen3.5:4b` generation，Ollama 不可用時回到 retrieved OCR chunks fallback，若要 deterministic baseline 可設定 `DOCURAG_LLM_PROVIDER=`。
 - v0.11.0 已新增 disabled-by-default Ollama embedding client、optional Qdrant local runtime / collection smoke 與 fallback-safe vector retrieval path。
 - v0.12.0 已新增 manual vector indexing service / API；只有明確呼叫 `POST /documents/{document_id}/index/vector` 後，vector retrieval demo 才會查詢已索引到 Qdrant 的 chunks，失敗會回到 keyword baseline。
 - v0.13.0 已新增公開 retrieval eval dataset、本機 evaluation runner、Hit Rate@K / MRR@K / Recall@K / latency / failure count metrics，以及 baseline / optional vector eval smoke。
@@ -43,7 +43,7 @@ DocuRAG AgentOps 要展示三件事：
 目前仍刻意不實作：
 
 - PDF rendering、image preprocessing、版面分析、多頁文件處理或 OCR accuracy tuning。
-- Default-on vector retrieval、default-on rerank、default-on hybrid retrieval、default-on `hybrid_rerank` chat path、LLM-as-judge、answer faithfulness scoring、eval dashboard、LLM generation default-on path、streaming UI、OpenAI API 或 vLLM serving。
+- Default-on vector retrieval、default-on rerank、default-on hybrid retrieval、default-on `hybrid_rerank` chat path、LLM-as-judge、answer faithfulness scoring、eval dashboard、streaming UI、OpenAI API 或 vLLM serving。
 - Redis、NATS、async worker、queue、PostgreSQL、資料庫 schema、登入、權限或 RBAC。
 - Production-grade K8s deployment。
 
@@ -52,7 +52,7 @@ DocuRAG AgentOps 要展示三件事：
 5 到 10 分鐘面試導覽建議：
 
 1. Demo 前先用 `scripts/seed-demo-data.ps1` 或 backend API 預載公開 synthetic sample，讓前台像客服機器人一樣直接提問。
-2. 第一屏用 `payment due date Net 15` 詢問 RAG，展示 deterministic baseline answer 與簡化引用來源。
+2. 第一屏用 `payment due date Net 15` 詢問 RAG，展示 answer source、retrieval source 與簡化引用來源。
 3. 說明 frontend 只負責問問題與上傳文件；OCR、chunking、indexing、metadata 與 detailed trace 都在 backend / CLI 層處理。
 4. 若面試官想看工程細節，再切到 API docs、smoke script output 或 eval CLI 說明 strategy、fallback state 與 trace metadata。
 5. 切到 retrieval eval smoke summary，說明 `case_count=20`、Hit Rate@K、MRR@K、Recall@K、failure count 與 trace metadata count。
@@ -94,7 +94,7 @@ payment due date Net 15
 
 5. 展示回答與簡化引用來源：
 
-- `answer source`：未啟用 LLM 時是 deterministic baseline。
+- `answer source`：預設會嘗試 `ollama/qwen3.5:4b`；Ollama 不可用時是 `LLM unavailable fallback`；若以 `DOCURAG_LLM_PROVIDER=` 明確關閉則是 deterministic baseline。
 - `retrieval source`：未啟用 vector 時是 keyword baseline。
 - `引用來源`：回答對應的來源文件與引用片段數。
 - detailed trace / retrieved chunks：由 backend response、smoke script 或 eval CLI 檢查，不在 frontend 主畫面攤開。
@@ -131,7 +131,7 @@ http://127.0.0.1:8000
 http://127.0.0.1:8000/docs
 ```
 
-可選 Ollama RAG generation demo 需要先啟動 Ollama 並確認 `qwen3.5:4b` 在本機模型清單中，再用 LLM env 啟動 backend：
+Ollama RAG generation 預設會在 backend 啟動時嘗試使用 `DOCURAG_LLM_PROVIDER=ollama`；若要確認完整 LLM demo，先啟動 Ollama 並確認 `qwen3.5:4b` 在本機模型清單中，再用下列 env 明確啟動 backend。若要關閉 LLM generation，將 `DOCURAG_LLM_PROVIDER` 設為空字串。
 
 ```powershell
 $env:DOCURAG_LLM_PROVIDER="ollama"

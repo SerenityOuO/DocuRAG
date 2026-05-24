@@ -541,6 +541,8 @@ Phase 20 guardrails：
 - [x] 20-10 validation：ticket 指定 `rg` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 - [x] `tasks/phase-20-interview-mvp-packaging/20-11-frontend-minimal-chat-upload.md`: 將 frontend demo 收斂成兩個使用者可見入口：客服問答與文件上傳；OCR、indexing、document list、raw JSON、retrieval trace table 與 eval metrics 留在 backend API / CLI / smoke scripts。
 - [x] 20-11 validation：`npm.cmd run build` 於 `frontend/` 通過；Browser 檢查 `http://localhost:5174/` local frontend demo view 只有客服問答與文件上傳，沒有 OCR panel、document list、metadata JSON、API response JSON、trace table，desktop horizontal overflow 為 `0`；ticket 指定 `rg` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+- [x] `tasks/phase-20-interview-mvp-packaging/20-12-default-llm-answer.md`: 將 local demo `/rag/query` 預設改為嘗試 Ollama `qwen3.5:4b` answer generation，Ollama 不可用時保留 retrieved OCR chunks fallback，並保留 `DOCURAG_LLM_PROVIDER=` 關閉 path。
+- [x] 20-12 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`129 passed`（僅 pytest cache 權限警告）；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1` 通過，answer source 為 `LLM unavailable fallback`、retrieval source 為 `keyword baseline`；ticket 相關 `rg` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 Phase 20.1 goal：
 
