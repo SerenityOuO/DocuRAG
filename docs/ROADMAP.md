@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP 與 v0.25.0 Agent Tool-use Minimal MVP backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP 與 v0.26.0 Real VLM Parser Provider Spike backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.25.0 Agent Tool-use Minimal MVP checklist。
+- TODO 包含 Phase 00 到 v0.26.0 Real VLM Parser Provider Spike checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -84,6 +84,7 @@ Expected Outcome：
 - v0.23.0 Viewer Chat / Admin Ingestion role split 只拆產品入口與 demo surface：Viewer 前台只做 Chat；Admin / Analyst 後台才做 upload、provider-selected OCR 與 ingestion 狀態。不新增 auth、RBAC、DB、worker、VLM parser、production indexing 或 automatic Qdrant ingestion。
 - v0.24.0 VLM / Parser Minimal MVP 只做 parser contract、deterministic invoice parser fallback、parse / fields API、Admin / Analyst structured fields surface 與 release sync；不新增真正 VLM、LLM parser、DB、worker、Agent runtime 或 production parser pipeline。
 - v0.25.0 Agent Tool-use Minimal MVP 只做 deterministic planner、allowlisted tool adapters、Agent run API、frontend trace surface 與 release sync；不新增 LLM autonomous planner、任意 SQL、DB、RBAC、worker、Redis/NATS 或 destructive tools。
+- v0.26.0 Real VLM Parser Provider Spike 只做 disabled-by-default VLM provider contract、demo-safe image input resolver、`vlm_invoice` adapter、parser source comparison 與 release sync；不新增 default-on VLM、PDF rendering、多頁 parser pipeline、DB、worker、RBAC 或 Agent 直接呼叫 VLM。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -1465,3 +1466,75 @@ Out of Scope：
 - 不允許 Agent 執行 delete、reindex、file system command、shell command、任意 tool execution 或 destructive operation。
 - 不修改 parser extraction、OCR provider、RAG ranking、eval runner、Qdrant indexing 或 default Viewer Chat path。
 - 不把 Agent trace surface 說成 production Agent dashboard 或正式權限系統。
+
+## v0.26.0 Real VLM Parser Provider Spike
+
+Goal：承接 Phase 24 parser schema 與 Phase 25 Agent tool-use，新增 disabled-by-default VLM parser provider spike。Phase 26 的核心不是讓 Agent 直接呼叫 VLM，而是讓 VLM parser 產生更好的 structured fields，讓既有 `get_document_fields` tool 可以讀取保存後的結果。
+
+Tickets：
+
+- `tasks/phase-26-vlm-parser-provider-spike/26-01-vlm-provider-decision.md`
+- `tasks/phase-26-vlm-parser-provider-spike/26-02-vlm-input-resolver.md`
+- `tasks/phase-26-vlm-parser-provider-spike/26-03-vlm-parser-adapter.md`
+- `tasks/phase-26-vlm-parser-provider-spike/26-04-parser-source-comparison.md`
+- `tasks/phase-26-vlm-parser-provider-spike/26-05-vlm-parser-demo-release-sync.md`
+
+Expected Outcome：
+
+- VLM provider env、input / output contract、fallback policy 與 trace metadata 被固定。
+- Demo-safe image input resolver 可從既有 upload metadata 取得 image input，不做 PDF rendering。
+- Disabled-by-default `vlm_invoice` adapter 可把 fake / configured provider output 正規化成既有 `DocumentFields` / `ParserResult`。
+- API / trace 可顯示 `deterministic_invoice` vs `vlm_invoice`、fallback reason、confidence 與 source input。
+- Phase 25 Agent `get_document_fields` contract 不變；Agent 只消費 parser result，不直接呼叫 VLM。
+
+26-01 VLM Provider Decision Status：
+
+- 待執行。固定 VLM provider env、input / output contract、fallback policy、Agent 承接方式與 guardrails。
+
+26-02 VLM Input Resolver Status：
+
+- 待執行。新增 demo-safe image input resolver，只解析既有上傳檔案，不做 PDF rendering、image preprocessing 或 VLM call。
+
+26-03 VLM Parser Adapter Status：
+
+- 待執行。新增 disabled-by-default `vlm_invoice` adapter；未設定 provider 時保持 deterministic parser fallback。
+
+26-04 Parser Source Comparison Status：
+
+- 待執行。讓 parser source、fallback chain、confidence summary 與 source metadata 可由 API / smoke / demo 文件檢查。
+
+26-05 VLM Parser Demo Release Sync Status：
+
+- 待執行。執行 backend / frontend / demo smoke / Browser validation，完成 `v0.26.0` version sync 與文件同步。
+
+Acceptance Criteria：
+
+- Phase 26 tickets 都包含 Goal、Scope、Out of Scope、Files likely to change、Acceptance Criteria、Validation 與 Release Impact。
+- `vlm_invoice` 必須 disabled-by-default；沒有 VLM provider 時 demo 仍可回到 deterministic parser。
+- VLM output 必須正規化成既有 `DocumentFields` / `ParserResult`，不可新增平行 schema。
+- Agent planner / tool allowlist 不變；Agent 不直接呼叫 VLM。
+- 文件不宣稱已完成 production VLM parser、PDF rendering、多頁 parser pipeline、正式 RBAC、worker、DB 或 deployment。
+- `26-05` 才允許 `v0.26.0` version bump；前置 tickets 若未完成完整 release artifact，必須寫 `Version bump required: no`。
+
+Validation：
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
+- `npm.cmd run build`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
+- Browser 檢查 local frontend：Viewer Chat first、Admin / Analyst ingestion structured fields、Agent trace consumption、桌面與手機寬度無 horizontal overflow。
+- `rg -n "v0.26.0|Phase 26|VLM parser|vlm_invoice|DOCURAG_VLM|parser_source|fallback_reason|get_document_fields" README.md backend/README.md frontend/README.md docs/demo-script.md docs/ROADMAP.md TODO.md backend/app frontend/src tasks/phase-26-vlm-parser-provider-spike`
+- `git diff --check`
+
+Release Impact：
+
+- Target version: `v0.26.0`。
+- Version bump required: yes for `26-05`; no for `26-01` to `26-04` unless the ticket explicitly completes the full release sync.
+- 原因：Phase 26 需要在 provider decision、input resolver、VLM parser adapter、parser source comparison 與 final validation 都完成後，才形成 `v0.26.0` Real VLM Parser Provider Spike release artifact。
+
+Out of Scope：
+
+- 不新增 production VLM parser、default-on vision runtime、OpenAI vision call、Ollama vision call、streaming、function calling 或新外部依賴。
+- 不新增 PDF rendering、image preprocessing、layout analysis、多頁 production parser pipeline、table reconstruction、人工修正 workflow 或 parser dashboard。
+- 不新增 PostgreSQL schema、migration、Redis、NATS、worker、async queue、Auth、RBAC、Agent permission model、K8s 或 deployment 設定。
+- 不修改 Phase 25 Agent planner / tool allowlist；Agent 不直接呼叫 VLM，只透過 `get_document_fields` 消費 parser result。
+- 不修改 RAG ranking、eval runner、Qdrant indexing 或 default Viewer Chat path。

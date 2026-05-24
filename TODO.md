@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.25 Agent Tool-use Minimal MVP backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.26 Real VLM Parser Provider Spike backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -25,6 +25,7 @@
 - Phase 23 -> `v0.23.0`
 - Phase 24 -> `v0.24.0`
 - Phase 25 -> `v0.25.0`
+- Phase 26 -> `v0.26.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -95,6 +96,11 @@
 42. `tasks/phase-25-agent-tool-use-mvp/25-03-agent-run-api.md` 已完成，新增 `POST /agent/run` 與 `GET /agent/runs/{run_id}`，用 deterministic planner 串接 allowlisted tools。
 43. `tasks/phase-25-agent-tool-use-mvp/25-04-frontend-agent-trace-surface.md` 已完成，在 demo UI 顯示 Agent plan、tool calls、observations、final answer 與 citations。
 44. `tasks/phase-25-agent-tool-use-mvp/25-05-agent-demo-release-sync.md`：補齊 Agent demo validation，並在 Phase 25 完成時執行 `v0.25.0` release/version sync。
+45. `tasks/phase-26-vlm-parser-provider-spike/26-01-vlm-provider-decision.md`：固定 VLM provider env、input / output contract、fallback policy 與 Agent 承接方式；文件 / contract ticket，不 bump version。
+46. `tasks/phase-26-vlm-parser-provider-spike/26-02-vlm-input-resolver.md`：新增 demo-safe image input resolver，只解析既有上傳檔案，不做 PDF rendering 或 VLM call。
+47. `tasks/phase-26-vlm-parser-provider-spike/26-03-vlm-parser-adapter.md`：新增 disabled-by-default `vlm_invoice` parser adapter，輸出沿用 Phase 24 `DocumentFields` schema。
+48. `tasks/phase-26-vlm-parser-provider-spike/26-04-parser-source-comparison.md`：在 API / trace 顯示 `deterministic_invoice` vs `vlm_invoice` 的 parser source、fallback reason 與 confidence。
+49. `tasks/phase-26-vlm-parser-provider-spike/26-05-vlm-parser-demo-release-sync.md`：補齊 VLM parser demo validation，並在 Phase 26 完成時執行 `v0.26.0` release/version sync。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -739,6 +745,27 @@ Phase 25 guardrails：
 - Agent trace surface 會顯示 plan、tool calls、observation、final answer、citations、trace metadata 與 fallback state；Viewer Chat 預設入口仍不顯示 upload、OCR、parse 或 Agent operations。
 - 本 ticket 不新增 frontend route、auth / RBAC、role guard、project permission、LLM autonomous planner、streaming UI、worker、DB、tool console 或 production Agent dashboard。
 - [x] 25-04 validation：`npm.cmd run build` 通過；Browser 檢查 `http://localhost:5176`（臨時 backend `http://127.0.0.1:8003`）通過，Viewer Chat first 不顯示 Agent trace / Run Agent / upload 操作，Admin / Analyst Agent trace surface 可執行成功 run 並顯示 final answer / citations / tool trace，fallback run 顯示 `no_retrieved_chunks`，desktop 1280px 與 mobile 390px 均無 horizontal overflow；ticket 指定 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+## MVP v0.26.0 Real VLM Parser Provider Spike
+
+- [ ] `tasks/phase-26-vlm-parser-provider-spike/26-01-vlm-provider-decision.md`: 固定 VLM provider env、input / output contract、fallback policy 與 Agent 承接方式；文件 ticket，不 bump version。
+- [ ] `tasks/phase-26-vlm-parser-provider-spike/26-02-vlm-input-resolver.md`: 新增 demo-safe image input resolver，只解析既有上傳檔案，不做 PDF rendering 或 VLM call。
+- [ ] `tasks/phase-26-vlm-parser-provider-spike/26-03-vlm-parser-adapter.md`: 新增 disabled-by-default `vlm_invoice` parser adapter，輸出沿用 Phase 24 `DocumentFields` schema。
+- [ ] `tasks/phase-26-vlm-parser-provider-spike/26-04-parser-source-comparison.md`: 在 API / trace 顯示 `deterministic_invoice` vs `vlm_invoice` 的 parser source、fallback reason、confidence 與 source input。
+- [ ] `tasks/phase-26-vlm-parser-provider-spike/26-05-vlm-parser-demo-release-sync.md`: 補齊 VLM parser demo validation、文件同步與 `v0.26.0` release/version bump。
+
+Phase 26 goal：
+- 補上 JD 中「多模態與 OCR：熟悉 VLM 與 OCR 流程，能處理複雜單據解析與結構化資料提取」的可展示切片。
+- 承接 Phase 24 parser schema 與 Phase 25 Agent tool-use：VLM parser 產生 structured fields，Agent `get_document_fields` 讀取保存結果。
+- 以 disabled-by-default VLM provider spike 展示 provider boundary、fallback、trace 與 demo-safe validation。
+
+Phase 26 guardrails：
+- 不新增 production VLM parser、default-on vision runtime、OpenAI vision call、Ollama vision call、streaming、function calling 或新外部依賴。
+- 不新增 PDF rendering、image preprocessing、layout analysis、多頁 production parser pipeline、table reconstruction、人工修正 workflow 或 parser dashboard。
+- 不新增 PostgreSQL schema、migration、Redis、NATS、worker、async queue、Auth、RBAC、Agent permission model、K8s 或 deployment 設定。
+- 不修改 Phase 25 Agent planner / tool allowlist；Agent 不直接呼叫 VLM，只透過 `get_document_fields` 消費 parser result。
+- 不修改 RAG ranking、eval runner、Qdrant indexing 或 default Viewer Chat path。
+- `26-05` 才允許 `v0.26.0` version bump；`26-01` 到 `26-04` 若未形成完整 release artifact，必須寫 `Version bump required: no`。
 
 ## Release Verification Status
 
