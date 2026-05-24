@@ -38,7 +38,7 @@ DocuRAG AgentOps 要展示三件事：
 - v0.20.0 已完成 interview MVP packaging：demo script、sample / eval coverage、README demo media、baseline validation 與 release 文件同步；不新增 production eval dashboard、worker、DB、auth 或 deployment。
 - v0.21.0 已將 frontend 文件上傳主線改為 provider-selected real GPU OCR-first；失敗時才顯示手動 mock OCR fallback，不再靜默使用 mock OCR。
 - v0.22.0 已強化 default keyword RAG query normalization：中文查詢與常見 demo alias 可命中既有英文 OCR chunks，例如「付款期限是什麼？」可命中 `Payment terms: Net 15`；這不是 default-on vector、hybrid 或 rerank。
-- Vue 3 + Vite frontend 只暴露客服問答與文件上傳；上傳會觸發 backend provider-selected OCR，OCR detail、document list、raw JSON 與 detailed trace table 可透過 backend API / CLI / smoke scripts 檢查；正式知識庫 ingestion / indexing pipeline 尚未實作。
+- Vue 3 + Vite frontend 目前仍是受控 demo surface；Phase 23 起產品邊界固定為 Viewer Chat 與 Admin / Analyst Ingestion 兩個入口：Viewer 前台只查詢已建立知識庫，文件上傳與 OCR 屬於後台知識庫管理流程。OCR detail、document list、raw JSON 與 detailed trace table 可透過 backend API / CLI / smoke scripts 檢查；正式知識庫 ingestion / indexing pipeline 尚未實作。
 - Python 3.12 backend runtime；real OCR 只支援 PaddlePaddle GPU / CUDA runtime，dependency 收斂在 `backend[real-ocr]` optional extra。
 - Dockerfile / Docker Compose backend runtime，real OCR GPU dependency 可透過 build arg 開啟。
 
@@ -55,14 +55,14 @@ DocuRAG AgentOps 要展示三件事：
 
 1. Demo 前先用 `scripts/seed-demo-data.ps1` 或 backend API 預載公開 synthetic sample，讓前台像客服機器人一樣直接提問。
 2. 第一屏用 `payment due date Net 15` 詢問 RAG，展示 answer source、retrieval source 與簡化引用來源。
-3. 說明 frontend 只負責問問題與上傳文件；文件上傳後預設走 backend provider-selected GPU OCR，OCR detail、metadata 與 detailed trace 可在 backend / CLI 層檢查；正式知識庫 ingestion / indexing pipeline 尚未實作。
+3. 說明產品入口拆分：前台 Viewer Chat 只查詢已建立知識庫；文件上傳與 OCR 是 Admin / Analyst 的後台 ingestion flow，實際 OCR、metadata、chunks 與 detailed trace 由 backend / CLI 層檢查；正式知識庫 ingestion / indexing pipeline 尚未實作。
 4. 若面試官想看工程細節，再切到 API docs、smoke script output 或 eval CLI 說明 strategy、fallback state 與 trace metadata。
 5. 切到 retrieval eval smoke summary，說明 `case_count=20`、Hit Rate@K、MRR@K、Recall@K、failure count 與 trace metadata count。
 6. 補充 optional paths：`vector`、`vector_rerank`、`hybrid` 與 `hybrid_rerank` 都是 explicit eval / demo path；`hybrid_rerank` 不接 default `/rag/query` 或 frontend chat route。
 
-## Recommended Real GPU OCR Chat / Upload Demo
+## Recommended Viewer Chat / Admin Ingestion Demo
 
-這是 Phase 21 後的面試主線：frontend 只提供問問題與上傳文件；文件上傳後預設呼叫 provider-selected real GPU OCR。若 GPU OCR runtime 不可用，frontend 會保留已上傳文件並顯示手動 mock OCR fallback button，mock 不再是上傳主線。
+這是 Phase 23 的產品邊界：Viewer 前台只負責 Chat 查詢既有知識庫；Admin / Analyst 後台才操作文件上傳與 ingestion。現有 backend upload 後可呼叫 provider-selected real GPU OCR；若 GPU OCR runtime 不可用，後台 ingestion flow 可保留已上傳文件並使用手動 mock OCR fallback。mock 不再是上傳主線，也不是 Viewer Chat 體驗的一部分。
 
 1. 啟動 real GPU OCR backend：
 
@@ -89,7 +89,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1 -RunRealOcr
 ```
 
-4. 打開 frontend，先在第一屏客服 chat 提問，再到上傳區選擇 `sample-data/documents/sample-ocr-invoice.png` 驗證 GPU OCR-first upload flow：
+4. 打開 frontend，先展示 Viewer Chat 查詢既有 demo knowledge base；再切到 Admin / Analyst ingestion surface 或 backend API / CLI，使用 `sample-data/documents/sample-ocr-invoice.png` 驗證 GPU OCR-first upload flow：
 
 ```text
 http://localhost:5173
@@ -107,8 +107,8 @@ Frontend / backend demo 分工：
 
 | 區域 | 面試說法 |
 |---|---|
-| 客服問答 | Viewer 只需要聊天與查看簡化引用來源。 |
-| 文件上傳 | Analyst / Admin 可以把文件送到 backend upload + provider-selected GPU OCR flow；正式知識庫 ingestion / indexing pipeline 尚未實作，frontend 只呈現上傳與 OCR 狀態。 |
+| 前台 Viewer Chat | Viewer 只需要詢問已建立的知識庫，並查看回答、answer source、retrieval source 與簡化引用來源。 |
+| 後台 Admin / Analyst Ingestion | Admin / Analyst 可以把文件送到 backend upload + provider-selected GPU OCR flow，檢查 OCR / local chunks / metadata 狀態；正式 parser、worker、DB 與 production indexing pipeline 尚未實作。 |
 | Retrieval eval smoke | 開發者用 CLI 量化 Hit Rate@K、MRR@K、Recall@K、failure count 與 trace metadata count。 |
 
 若要展示 LLM generation、vector retrieval、rerank 或 hybrid，再切到下方 optional paths；CLI smoke 的 mock-safe baseline 仍可在無 GPU 環境驗證 API，但 frontend 上傳主線是 real OCR-first。

@@ -1235,7 +1235,7 @@ Goal：把面試 demo 與產品入口拆回 `goal.md` 的角色模型：前台 V
 
 Tickets：
 
-- [ ] `tasks/phase-23-role-split-demo/23-01-role-boundary-contract.md`
+- [x] `tasks/phase-23-role-split-demo/23-01-role-boundary-contract.md`
 - [ ] `tasks/phase-23-role-split-demo/23-02-viewer-chat-only-surface.md`
 - [ ] `tasks/phase-23-role-split-demo/23-03-admin-ingestion-surface.md`
 - [ ] `tasks/phase-23-role-split-demo/23-04-role-split-demo-release-sync.md`
@@ -1246,6 +1246,13 @@ Expected Outcome：
 - Admin / Analyst ingestion surface 以明確後台語意承接 upload、provider-selected OCR、processing status 與 local chunks readiness。
 - Demo script 先展示 Viewer 查詢已建立知識庫，再切到後台 knowledge base ingestion 說明 backend upload + OCR + local chunking。
 - Release sync 在 `23-04` 完成後同步到 `v0.23.0`。
+
+23-01 Viewer Chat / Admin Ingestion Boundary Contract Status：
+
+- README、frontend README、demo script、architecture、ROADMAP 與 TODO 已固定 Phase 23 role split：Viewer Chat 與 Admin / Analyst Ingestion 是兩個不同產品入口。
+- 文件已明確說明 OCR 屬於 backend ingestion layer，不是前端直接對圖片聊天。
+- 文件保留現況限制：local JSON、provider-selected OCR、local chunks、manual / explicit vector path，尚無正式 parser、worker、DB、auth 或 production indexing。
+- 本 ticket 不修改 frontend / backend runtime、不 bump version；`v0.23.0` release sync 保留給 `23-04`。
 
 Acceptance Criteria：
 

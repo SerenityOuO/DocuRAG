@@ -37,11 +37,11 @@
 
 ## Acceptance Criteria
 
-- [ ] 文件明確寫出「前台 Viewer Chat」與「後台 Admin / Analyst Ingestion」是兩個不同產品入口。
-- [ ] 文件不再把 frontend upload 描述成 Viewer Chat 主線。
-- [ ] 文件說明 OCR 是 backend ingestion layer，不是前端直接對圖片聊天。
-- [ ] 文件保留現況限制：local JSON、local chunks、manual / explicit vector path、無正式 parser / worker / DB / auth。
-- [ ] Phase 23 ticket 順序與 `v0.23.0` release guardrails 已寫入 TODO / ROADMAP。
+- [x] 文件明確寫出「前台 Viewer Chat」與「後台 Admin / Analyst Ingestion」是兩個不同產品入口。
+- [x] 文件不再把 frontend upload 描述成 Viewer Chat 主線。
+- [x] 文件說明 OCR 是 backend ingestion layer，不是前端直接對圖片聊天。
+- [x] 文件保留現況限制：local JSON、local chunks、manual / explicit vector path、無正式 parser / worker / DB / auth。
+- [x] Phase 23 ticket 順序與 `v0.23.0` release guardrails 已寫入 TODO / ROADMAP。
 
 ## Validation
 
