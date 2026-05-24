@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path 與 v0.22.0 RAG query hardening backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening backlog 與 v0.23.0 Viewer Chat / Admin Ingestion role split backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -81,6 +81,7 @@ Expected Outcome：
 - v0.20.0 interview MVP packaging backlog 只做 demo readiness、文件敘事、sample / eval coverage、demo media 與 final validation；不實作 production eval dashboard、worker、DB、登入或 RBAC。
 - v0.21.0 real GPU OCR interview demo path 只做 frontend upload real OCR-first flow、manual mock fallback 與 release 文件同步；不修改 PaddleOCR provider、OCR API contract、PDF pipeline、worker、DB、登入或 RBAC。
 - v0.22.0 RAG query hardening 只做 keyword query normalization、CJK tokenization 與 demo-safe alias；不新增 embedding、Qdrant、BM25、rerank、hybrid retrieval、query rewrite、DB、登入或 RBAC。
+- v0.23.0 Viewer Chat / Admin Ingestion role split 只拆產品入口與 demo surface：Viewer 前台只做 Chat；Admin / Analyst 後台才做 upload、provider-selected OCR 與 ingestion 狀態。不新增 auth、RBAC、DB、worker、VLM parser、production indexing 或 automatic Qdrant ingestion。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -1227,3 +1228,48 @@ Out of Scope：
 
 - 不新增 embedding、Qdrant、BM25、rerank、hybrid retrieval、`hybrid_rerank` default chat path 或新外部依賴。
 - 不新增 query rewrite LLM call、LLM-as-judge、answer faithfulness scoring、citation quality scoring、DB、Auth、RBAC、Redis、NATS、worker、PDF rendering、image preprocessing、production OCR pipeline、deployment 或 release tag。
+
+## v0.23.0 Viewer Chat / Admin Ingestion Role Split
+
+Goal：把面試 demo 與產品入口拆回 `goal.md` 的角色模型：前台 Viewer 只負責 Chat 查詢既有知識庫；後台 Admin / Analyst 才負責上傳文件、觸發 OCR、檢查 ingestion 狀態與後續 indexing 入口。
+
+Tickets：
+
+- [ ] `tasks/phase-23-role-split-demo/23-01-role-boundary-contract.md`
+- [ ] `tasks/phase-23-role-split-demo/23-02-viewer-chat-only-surface.md`
+- [ ] `tasks/phase-23-role-split-demo/23-03-admin-ingestion-surface.md`
+- [ ] `tasks/phase-23-role-split-demo/23-04-role-split-demo-release-sync.md`
+
+Expected Outcome：
+
+- Viewer Chat surface 成為 frontend 預設入口；不顯示 upload、OCR、mock fallback 或 ingestion 操作。
+- Admin / Analyst ingestion surface 以明確後台語意承接 upload、provider-selected OCR、processing status 與 local chunks readiness。
+- Demo script 先展示 Viewer 查詢已建立知識庫，再切到後台 knowledge base ingestion 說明 backend upload + OCR + local chunking。
+- Release sync 在 `23-04` 完成後同步到 `v0.23.0`。
+
+Acceptance Criteria：
+
+- Viewer Chat 與 Admin / Analyst Ingestion 有明確 UI / 文件邊界。
+- OCR 被描述為 backend ingestion layer，不是前端直接對圖片聊天。
+- 上傳與 OCR 不再出現在 Viewer 主流程。
+- 文件不宣稱已完成 auth/RBAC、worker、DB、VLM parser、production indexing 或 automatic Qdrant ingestion。
+
+Validation：
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
+- `npm.cmd run build`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
+- Browser 檢查 local frontend：Viewer Chat first、Admin / Analyst ingestion surface 分離、無 horizontal overflow。
+- `rg -n "v0.23.0|Phase 23|Viewer Chat|Admin / Analyst|Ingestion|知識庫管理|role split" README.md backend/README.md frontend/README.md docs/demo-script.md docs/architecture.md docs/ROADMAP.md TODO.md tasks/phase-23-role-split-demo/*.md`
+- `git diff --check`
+
+Release Impact：
+
+- Target version: `v0.23.0`。
+- Version bump required: yes for `23-04`; no for `23-01` to `23-03`。
+- 原因：Phase 23 改變面試 demo 的產品入口與 frontend 使用者流程，完成後應形成新的 role split release artifact。
+
+Out of Scope：
+
+- 不新增登入、RBAC、role guard、multi-user permission、PostgreSQL、Redis、NATS、worker、async queue 或 database schema。
+- 不實作 VLM parser、PDF rendering、多頁 production OCR pipeline、automatic Qdrant indexing、default-on vector / hybrid / rerank chat path、Agent runtime、deployment 或 release tag。

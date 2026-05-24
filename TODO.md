@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.21 real GPU OCR interview demo path backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.23 Viewer Chat / Admin Ingestion role split backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -22,6 +22,7 @@
 - Phase 20 -> `v0.20.0`
 - Phase 21 -> `v0.21.0`
 - Phase 22 -> `v0.22.0`
+- Phase 23 -> `v0.23.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -78,6 +79,7 @@
 28. `tasks/phase-20-interview-mvp-packaging/20-04-final-interview-mvp-validation.md`：重跑 final validation，並在 Phase 20 完成時執行 `v0.20.0` release/version sync。
 29. `tasks/phase-21-real-gpu-ocr-demo/21-01-real-gpu-ocr-frontend-flow.md`：將 frontend upload 面試主線改為 provider-selected real GPU OCR-first，mock OCR 只保留為手動 fallback，並同步 `v0.21.0` release 文件與版本。
 30. `tasks/phase-22-rag-query-hardening/22-01-keyword-query-normalization.md`：強化 default keyword RAG query normalization，讓中文 query 與 demo-safe alias 可命中英文 OCR chunks，並同步 `v0.22.0` release 文件與版本。
+31. `tasks/phase-23-role-split-demo/23-01-role-boundary-contract.md`：固定 Viewer Chat 與 Admin / Analyst Ingestion 的產品邊界，讓前台只負責查詢既有知識庫，後台才操作 upload / OCR / ingestion。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -589,6 +591,26 @@ Phase 22 guardrails：
 
 - 不新增 embedding、Qdrant、BM25、rerank、hybrid retrieval、`hybrid_rerank` default chat path 或新外部依賴。
 - 不新增 LLM-as-judge、answer faithfulness scoring、citation quality scoring、DB、Auth、RBAC、Redis、NATS、worker、PDF rendering、image preprocessing 或 production OCR pipeline。
+
+## MVP v0.23.0 Viewer Chat / Admin Ingestion Role Split
+
+- [ ] `tasks/phase-23-role-split-demo/23-01-role-boundary-contract.md`: 固定 Phase 23 產品邊界，明確區分前台 Viewer Chat 與後台 Admin / Analyst Ingestion；文件 ticket，不 bump version。
+- [ ] `tasks/phase-23-role-split-demo/23-02-viewer-chat-only-surface.md`: 將 frontend 預設入口收斂為 Viewer Chat-only，不在前台主畫面顯示 upload / OCR / mock fallback。
+- [ ] `tasks/phase-23-role-split-demo/23-03-admin-ingestion-surface.md`: 建立明確的 Admin / Analyst 知識庫管理 surface，放置文件上傳、provider-selected OCR、狀態與手動 fallback。
+- [ ] `tasks/phase-23-role-split-demo/23-04-role-split-demo-release-sync.md`: 重跑 final validation，並在 Phase 23 完成時執行 `v0.23.0` release/version sync。
+
+Phase 23 goal：
+
+- 將產品入口拆成兩條清楚路徑：Viewer 只進入 Chat 查詢已建立的知識庫；Admin / Analyst 才進入後台知識庫管理流程執行上傳、OCR 與 ingestion 狀態檢查。
+- 修正目前 demo UI 把「查詢使用者」與「知識庫管理者」混在同一畫面的語意問題。
+- 保留目前 local MVP 能力：backend upload、provider-selected OCR、local chunks、keyword baseline、citation 與 optional demo / eval paths。
+
+Phase 23 guardrails：
+
+- 不新增真實登入、RBAC、role guard、multi-user permission、PostgreSQL、Redis、NATS、worker、async queue 或 database schema。
+- 不實作 VLM parser、PDF rendering、多頁 production OCR pipeline、automatic Qdrant indexing、default-on vector / hybrid / rerank chat path、Agent runtime 或 deployment。
+- 不把 Admin / Analyst 後台入口說成正式權限系統；本階段只拆產品表面與 demo 工作流。
+- `23-04` 才允許 `v0.23.0` version bump；`23-01` 到 `23-03` 若未形成完整 release artifact，必須寫 `Version bump required: no`。
 
 ## Release Verification Status
 
