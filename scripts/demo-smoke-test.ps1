@@ -12,7 +12,8 @@ param(
     [string]$QdrantUrl = "http://127.0.0.1:6333",
     [string]$QdrantCollection = "docurag_chunks_v1",
     [int]$QdrantVectorSize = 1024,
-    [string]$ExpectedVersion = "0.25.0"
+    [string]$ExpectedVersion = "0.26.0",
+    [switch]$RunVlmFake
 )
 
 Set-StrictMode -Version Latest
@@ -261,6 +262,9 @@ Write-Host "OCR mock OK"
 $parser = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($upload.document_id)/parse"
 Assert-Condition ($parser.status -eq "parsed") "Parser did not return parsed status."
 Assert-Condition ($parser.parser_source -eq "deterministic_invoice") "Parser source was '$($parser.parser_source)'; expected deterministic_invoice."
+Assert-Condition ($parser.fallback_reason -eq "unsupported_file") "Parser fallback reason was '$($parser.fallback_reason)'; expected unsupported_file."
+Assert-Condition ($parser.trace_metadata.fallback_chain -eq "vlm_invoice -> deterministic_invoice") "Parser fallback chain was '$($parser.trace_metadata.fallback_chain)'; expected vlm_invoice -> deterministic_invoice."
+Assert-Condition ($parser.trace_metadata.fallback_reason -eq "unsupported_file") "Parser trace fallback reason was '$($parser.trace_metadata.fallback_reason)'; expected unsupported_file."
 Assert-Condition ($parser.fields.invoice_number.value -eq "AUR-2026-051") "Parser did not extract invoice number AUR-2026-051."
 Assert-Condition ($parser.fields.vendor_name.value -eq "Aurora Office Supplies Demo LLC") "Parser did not extract expected vendor."
 Assert-Condition ([double]$parser.fields.total_amount.value -eq 1248.5) "Parser did not extract expected total amount."
@@ -294,11 +298,51 @@ Assert-Condition ($agentToolNames[2] -eq "summarize_invoice_fields") "Agent thir
 Assert-Condition ($agentRun.final_answer.status -eq "completed") "Agent final answer did not complete."
 Assert-Condition ($agentRun.final_answer.text -match "Invoice AUR-2026-051") "Agent final answer did not include expected invoice summary."
 Assert-Condition ($agentRun.citations.Count -gt 0) "Agent run did not return citations."
+Assert-Condition ($agentRun.tool_calls[0].observation.fallback_reason -eq "unsupported_file") "Agent get_document_fields did not expose parser fallback reason unsupported_file."
+Assert-Condition ($agentRun.tool_calls[0].output.parser_source -eq "deterministic_invoice") "Agent get_document_fields did not expose deterministic parser source."
 
 $agentLookup = Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/agent/runs/$($agentRun.run_id)"
 Assert-Condition ($agentLookup.run_id -eq $agentRun.run_id) "Agent lookup did not return the saved run."
 Assert-Condition ($agentLookup.status -eq $agentRun.status) "Agent lookup status did not match original run."
 Write-Host "Agent run OK: $($agentRun.run_id); tools $($agentToolNames -join ' -> ')"
+
+$vlmFakeEnabled = $RunVlmFake -or ([string]$env:DOCURAG_VLM_PROVIDER).Trim().ToLowerInvariant() -eq "fake"
+if ($vlmFakeEnabled) {
+    Write-Host "VLM fake provider success check"
+
+    $vlmUpload = Invoke-FileUpload "$ApiBaseUrl/documents/upload" $resolvedRealOcrSamplePath "image/png"
+    Assert-Condition (-not [string]::IsNullOrWhiteSpace($vlmUpload.document_id)) "VLM fake upload did not return document_id."
+
+    $vlmOcr = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($vlmUpload.document_id)/ocr/mock"
+    Assert-Condition ($vlmOcr.status -eq "completed") "VLM fake OCR mock did not complete."
+
+    $vlmParser = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($vlmUpload.document_id)/parse"
+    Assert-Condition ($vlmParser.status -eq "parsed") "VLM fake parser did not return parsed status."
+    Assert-Condition ($vlmParser.parser_source -eq "vlm_invoice") "VLM fake parser source was '$($vlmParser.parser_source)'; expected vlm_invoice."
+    Assert-Condition ($null -eq $vlmParser.fallback_reason) "VLM fake parser fallback reason should be null. Got '$($vlmParser.fallback_reason)'."
+    Assert-Condition ($vlmParser.trace_metadata.vlm_provider -eq "fake") "VLM fake parser did not report vlm_provider=fake."
+    Assert-Condition ($vlmParser.trace_metadata.fallback_chain -eq "vlm_invoice") "VLM fake parser fallback chain was '$($vlmParser.trace_metadata.fallback_chain)'; expected vlm_invoice."
+    Assert-Condition ($vlmParser.fields.invoice_number.value -eq "AUR-2026-051") "VLM fake parser did not extract invoice AUR-2026-051."
+    Assert-Condition ($vlmParser.fields.invoice_number.parser_source -eq "vlm_invoice") "VLM fake parser did not preserve field parser_source=vlm_invoice."
+
+    $vlmAgentBody = @{
+        task = "Summarize invoice fields from the VLM parser result."
+        document_id = $vlmUpload.document_id
+        query = "Mock OCR result sample-ocr-invoice"
+        top_k = 3
+    } | ConvertTo-Json
+    $vlmAgentRun = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/agent/run" -ContentType "application/json" -Body $vlmAgentBody
+
+    Assert-Condition ($vlmAgentRun.status -eq "completed") "VLM fake Agent run did not complete. Got '$($vlmAgentRun.status)'."
+    Assert-Condition ($vlmAgentRun.tool_calls[0].tool_name -eq "get_document_fields") "VLM fake Agent first tool was '$($vlmAgentRun.tool_calls[0].tool_name)'; expected get_document_fields."
+    Assert-Condition ($vlmAgentRun.tool_calls[0].output.parser_source -eq "vlm_invoice") "VLM fake Agent get_document_fields did not expose parser_source=vlm_invoice."
+    Assert-Condition ($null -eq $vlmAgentRun.tool_calls[0].observation.fallback_reason) "VLM fake Agent get_document_fields should not expose fallback reason."
+    Assert-Condition ($vlmAgentRun.final_answer.text -match "Invoice AUR-2026-051") "VLM fake Agent final answer did not include invoice summary."
+    Write-Host "VLM fake parser OK: parser source $($vlmParser.parser_source); Agent $($vlmAgentRun.run_id)"
+}
+else {
+    Write-Host "VLM fake provider success check skipped; set DOCURAG_VLM_PROVIDER=fake or pass -RunVlmFake."
+}
 
 if ($RunVector) {
     Write-Host "Manual vector indexing"

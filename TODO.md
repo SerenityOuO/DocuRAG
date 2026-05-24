@@ -95,12 +95,12 @@
 41. `tasks/phase-25-agent-tool-use-mvp/25-02-agent-tool-adapters.md` 已完成，實作 `get_document_fields`、`search_documents` 與 `summarize_invoice_fields` allowlisted tool adapters。
 42. `tasks/phase-25-agent-tool-use-mvp/25-03-agent-run-api.md` 已完成，新增 `POST /agent/run` 與 `GET /agent/runs/{run_id}`，用 deterministic planner 串接 allowlisted tools。
 43. `tasks/phase-25-agent-tool-use-mvp/25-04-frontend-agent-trace-surface.md` 已完成，在 demo UI 顯示 Agent plan、tool calls、observations、final answer 與 citations。
-44. `tasks/phase-25-agent-tool-use-mvp/25-05-agent-demo-release-sync.md`：已完成版本 / 文件 / smoke 實作，Browser validation 因本機 URL policy blocked，待解除後完成 commit / push。
-45. `tasks/phase-26-vlm-parser-provider-spike/26-01-vlm-provider-decision.md`：固定 VLM provider env、input / output contract、fallback policy 與 Agent 承接方式；文件 / contract ticket，不 bump version。
-46. `tasks/phase-26-vlm-parser-provider-spike/26-02-vlm-input-resolver.md`：新增 demo-safe image input resolver，只解析既有上傳檔案，不做 PDF rendering 或 VLM call。
-47. `tasks/phase-26-vlm-parser-provider-spike/26-03-vlm-parser-adapter.md`：新增 VLM-first `vlm_invoice` parser adapter，輸出沿用 Phase 24 `DocumentFields` schema。
-48. `tasks/phase-26-vlm-parser-provider-spike/26-04-parser-source-comparison.md`：在 API / trace 顯示 `deterministic_invoice` vs `vlm_invoice` 的 parser source、fallback reason 與 confidence。
-49. `tasks/phase-26-vlm-parser-provider-spike/26-05-vlm-parser-demo-release-sync.md`：補齊 VLM parser demo validation，並在 Phase 26 完成時執行 `v0.26.0` release/version sync。
+44. `tasks/phase-25-agent-tool-use-mvp/25-05-agent-demo-release-sync.md` 已完成，版本 / 文件 / smoke / Browser validation 已補齊，等待本批 ticket 完成後一併 commit / push。
+45. `tasks/phase-26-vlm-parser-provider-spike/26-01-vlm-provider-decision.md` 已完成，固定 VLM provider env、input / output contract、fallback policy 與 Agent 承接方式；文件 / contract ticket，不 bump version。
+46. `tasks/phase-26-vlm-parser-provider-spike/26-02-vlm-input-resolver.md` 已完成，新增 demo-safe image input resolver，只解析既有上傳檔案，不做 PDF rendering 或 VLM call。
+47. `tasks/phase-26-vlm-parser-provider-spike/26-03-vlm-parser-adapter.md` 已完成，新增 VLM-first `vlm_invoice` parser adapter，輸出沿用 Phase 24 `DocumentFields` schema。
+48. `tasks/phase-26-vlm-parser-provider-spike/26-04-parser-source-comparison.md` 已完成，在 API / trace 顯示 `deterministic_invoice` vs `vlm_invoice` 的 parser source、fallback reason 與 confidence。
+49. `tasks/phase-26-vlm-parser-provider-spike/26-05-vlm-parser-demo-release-sync.md` 已完成，補齊 VLM parser demo validation、版本 / 文件同步與 `v0.26.0` release sync。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -700,7 +700,7 @@ Phase 24 guardrails：
 - [x] `tasks/phase-25-agent-tool-use-mvp/25-02-agent-tool-adapters.md`: 實作 demo-safe allowlisted tool adapters：`get_document_fields`、`search_documents`、`summarize_invoice_fields`，只封裝既有 structured fields 與 retrieval 能力。
 - [x] `tasks/phase-25-agent-tool-use-mvp/25-03-agent-run-api.md`: 新增 deterministic Agent run API，支援 `POST /agent/run` 與 `GET /agent/runs/{run_id}`，並輸出 plan、tool calls、observations、final answer 與 citations。
 - [x] `tasks/phase-25-agent-tool-use-mvp/25-04-frontend-agent-trace-surface.md`: 在 demo UI 新增 Agent trace surface，展示 plan -> tool calls -> observations -> final answer + citations；Viewer Chat 預設入口保持不變。
-- [ ] `tasks/phase-25-agent-tool-use-mvp/25-05-agent-demo-release-sync.md`: 補齊 Agent demo validation、文件同步與 `v0.25.0` release/version bump；目前 Browser validation blocked，尚未 commit / push。
+- [x] `tasks/phase-25-agent-tool-use-mvp/25-05-agent-demo-release-sync.md`: 補齊 Agent demo validation、文件同步與 `v0.25.0` release/version bump。
 
 Phase 25 goal：
 - 補上 JD 中「AI Agent 架構、Skill / Tool-use 與 Task Planning」的 demo 證據。
@@ -751,15 +751,15 @@ Phase 25 guardrails：
 - 已完成 `v0.25.0` version sync 實作：backend package / app version、frontend package / lock / fallback version、health test 與 Docker Compose `DOCURAG_VERSION` 已同步。
 - `scripts/demo-smoke-test.ps1` 已加入 upload -> OCR mock -> parser -> fields lookup -> Agent run -> Agent lookup -> baseline RAG query 驗證，並檢查 deterministic planner、`allowlisted_read_only` tool policy、三個 allowlisted tools、final answer 與 citations。
 - `README.md`、`backend/README.md`、`frontend/README.md`、`docs/demo-script.md`、`TODO.md` 與 `docs/ROADMAP.md` 已補齊 Agent tool-use demo wording；文件明確說明 Phase 25 是 deterministic planner + allowlisted tools，不是 production autonomous Agent、LLM planner、任意 SQL、正式 RBAC、worker、DB 或 deployment。
-- [ ] 25-05 validation：backend tests 通過，`155 passed`（僅 pytest cache 權限警告）；frontend build 通過；baseline demo smoke 通過，health version `0.25.0`，Agent run / lookup OK，RAG query OK；ticket 指定 `rg` 與 `git diff --check` 通過。Browser 檢查因 Codex in-app Browser 對 local URL 回報 `net::ERR_BLOCKED_BY_CLIENT` 並阻止替代瀏覽器繞過，尚待解除阻擋後完成。
+- [x] 25-05 validation：backend tests 通過，`155 passed`（僅 pytest cache 權限警告）；frontend build 通過；baseline demo smoke 通過，health version `0.25.0`，Agent run / lookup OK，RAG query OK；Browser 桌面檢查通過，Viewer Chat first、Admin / Analyst ingestion Agent trace surface、`Run Agent` success 與無 horizontal overflow 已確認；本批 final `rg` 與 `git diff --check` 已重跑通過。
 
 ## MVP v0.26.0 Real VLM Parser Provider Spike
 
-- [ ] `tasks/phase-26-vlm-parser-provider-spike/26-01-vlm-provider-decision.md`: 固定 VLM provider env、input / output contract、fallback policy 與 Agent 承接方式；文件 ticket，不 bump version。
-- [ ] `tasks/phase-26-vlm-parser-provider-spike/26-02-vlm-input-resolver.md`: 新增 demo-safe image input resolver，只解析既有上傳檔案，不做 PDF rendering 或 VLM call。
-- [ ] `tasks/phase-26-vlm-parser-provider-spike/26-03-vlm-parser-adapter.md`: 新增 VLM-first `vlm_invoice` parser adapter，輸出沿用 Phase 24 `DocumentFields` schema。
-- [ ] `tasks/phase-26-vlm-parser-provider-spike/26-04-parser-source-comparison.md`: 在 API / trace 顯示 `deterministic_invoice` vs `vlm_invoice` 的 parser source、fallback reason、confidence 與 source input。
-- [ ] `tasks/phase-26-vlm-parser-provider-spike/26-05-vlm-parser-demo-release-sync.md`: 補齊 VLM parser demo validation、文件同步與 `v0.26.0` release/version bump。
+- [x] `tasks/phase-26-vlm-parser-provider-spike/26-01-vlm-provider-decision.md`: 固定 VLM provider env、input / output contract、fallback policy 與 Agent 承接方式；文件 ticket，不 bump version。
+- [x] `tasks/phase-26-vlm-parser-provider-spike/26-02-vlm-input-resolver.md`: 新增 demo-safe image input resolver，只解析既有上傳檔案，不做 PDF rendering 或 VLM call。
+- [x] `tasks/phase-26-vlm-parser-provider-spike/26-03-vlm-parser-adapter.md`: 新增 VLM-first `vlm_invoice` parser adapter，輸出沿用 Phase 24 `DocumentFields` schema。
+- [x] `tasks/phase-26-vlm-parser-provider-spike/26-04-parser-source-comparison.md`: 在 API / trace 顯示 `deterministic_invoice` vs `vlm_invoice` 的 parser source、fallback reason、confidence 與 source input。
+- [x] `tasks/phase-26-vlm-parser-provider-spike/26-05-vlm-parser-demo-release-sync.md`: 補齊 VLM parser demo validation、文件同步與 `v0.26.0` release/version bump。
 
 Phase 26 goal：
 - 補上 JD 中「多模態與 OCR：熟悉 VLM 與 OCR 流程，能處理複雜單據解析與結構化資料提取」的可展示切片。
@@ -774,6 +774,37 @@ Phase 26 guardrails：
 - 不修改 RAG ranking、eval runner、Qdrant indexing 或 default Viewer Chat path。
 - `26-05` 才允許 `v0.26.0` version bump；`26-01` 到 `26-04` 若未形成完整 release artifact，必須寫 `Version bump required: no`。
 - 後續執行 Phase 26 runtime ticket 時，不得為了維持舊 demo 相容而讓 deterministic parser 繼續當預設；VLM provider unavailable / timeout / invalid response 時才 fallback。
+
+26-01 VLM provider decision status：
+
+- 已在 `docs/api.md` 定義 `DOCURAG_VLM_PROVIDER`、`DOCURAG_VLM_BASE_URL`、`DOCURAG_VLM_MODEL`、`DOCURAG_VLM_TIMEOUT_SECONDS`、`DOCURAG_VLM_MIN_CONFIDENCE` 與 `DOCURAG_PARSER_SOURCE`。
+- 已在 `docs/api.md` / `docs/architecture.md` 固定 VLM-first parser input / output contract、fallback chain、confidence metadata 與 Agent `get_document_fields` 承接方式。
+- 本 ticket 只改 Markdown，不 bump version；完整 runtime 與 `v0.26.0` release sync 留給 `26-02` 到 `26-05`。
+
+26-02 VLM input resolver status：
+
+- 已新增 `VlmInputResolver` / `VlmInputDescriptor` building block，從既有 document upload metadata 解析 `data/uploads/` 內的 demo-safe `.png` / `.jpg` / `.jpeg`。
+- Resolver 對 `unsupported_file`、`missing_file`、`unsafe_path` 與 `file_not_readable` 回傳明確 fallback reason，不呼叫 VLM、不改 `POST /documents/{document_id}/parse` 行為。
+- Focused tests 已覆蓋 supported image、missing file、unsupported extension 與 unsafe path。
+
+26-03 VLM parser adapter status：
+
+- 已新增 VLM-first `VlmInvoiceParser`、Ollama-style local HTTP provider、disabled provider 與 parser dependency routing；`DOCURAG_PARSER_SOURCE=deterministic_invoice` 只作 explicit debug / validation override。
+- VLM success 會輸出既有 `DocumentFields` / `ParserResult` schema，並標記 `parser_source=vlm_invoice`；provider unavailable、timeout、invalid response、missing fields 或低 confidence 時 fallback 到 `deterministic_invoice`。
+- Focused tests 已覆蓋 VLM success、provider unavailable fallback、timeout / provider failure、invalid response、missing fields 與 explicit deterministic override。
+
+26-04 parser source comparison status：
+
+- Parser response trace 已可透過 `parser_route`、`fallback_chain`、`fallback_reason`、`deterministic_fallback_reason`、`confidence_summary` 與 source input metadata 區分 `vlm_invoice` vs `deterministic_invoice`。
+- VLM fallback 時 top-level `ParserResult.fallback_reason` 顯示 VLM / resolver failure reason；deterministic fallback 自身 missing metadata 保留於 trace，不新增平行 schema。
+- Backend tests 已覆蓋 VLM success trace、VLM fallback trace 與 explicit deterministic override trace；`frontend/README.md` 已補充這是 demo visibility，不是 production parser comparison dashboard。
+
+26-05 VLM parser demo release sync status：
+
+- 已同步 backend package / app version、frontend package / lock / fallback version、health test 與 Docker Compose `DOCURAG_VERSION` 到 `0.26.0`。
+- `scripts/demo-smoke-test.ps1` 現在驗證 text input 的 VLM-first fallback path：`fallback_reason=unsupported_file`、`fallback_chain=vlm_invoice -> deterministic_invoice`，並確認 Agent `get_document_fields` observation 可讀到 parser source / fallback reason。
+- 新增 `DOCURAG_VLM_PROVIDER=fake` demo / smoke stub，用於 image input 的 `vlm_invoice` success path；Agent tool contract 不變，仍只讀保存後的 parser result。
+- README、backend README、frontend README、docs/demo-script.md、docs/api.md、docs/architecture.md、TODO 與 ROADMAP 已同步 Phase 26 demo 說法：這是 VLM-first provider spike，不是 production VLM parser。
 
 ## Release Verification Status
 
@@ -806,4 +837,5 @@ Phase 26 guardrails：
 - [x] v0.22.0: RAG Query Hardening 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.22.0`；keyword query normalization、CJK tokenization、demo-safe 中文 alias、backend tests、frontend build、baseline demo smoke、ticket `rg` 與 `git diff --check` 已通過。
 - [x] v0.23.0: Viewer Chat / Admin Ingestion Role Split 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、frontend fallback version、demo script、architecture、TODO 與 ROADMAP 已同步到 `v0.23.0`；Viewer Chat-only 預設入口、Admin / Analyst ingestion surface、backend tests、frontend build、baseline demo smoke、Browser role split / overflow 檢查、ticket `rg` 與 `git diff --check` 已通過。
 - [x] v0.24.0: VLM / Parser Minimal MVP 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、TODO 與 ROADMAP 已同步到 `v0.24.0`；deterministic invoice parser fallback、parse / fields API、local JSON parser result persistence、frontend structured fields surface、parser demo smoke、Browser structured fields / overflow 檢查、ticket `rg` 與 `git diff --check` 已通過。
-- [ ] v0.25.0: Agent Tool-use Minimal MVP 版本 / 文件 / smoke 實作已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、TODO 與 ROADMAP 已同步到 `v0.25.0`；deterministic planner、allowlisted tool adapters、Agent run / lookup API、frontend trace surface、Agent demo smoke、ticket `rg` 與 `git diff --check` 已通過。Browser Agent trace / overflow 檢查因 local URL policy blocked 尚待完成。
+- [x] v0.25.0: Agent Tool-use Minimal MVP 版本 / 文件 / smoke 實作已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、TODO 與 ROADMAP 已同步到 `v0.25.0`；deterministic planner、allowlisted tool adapters、Agent run / lookup API、frontend trace surface、Agent demo smoke、Browser desktop Agent trace / overflow 檢查、ticket `rg` 與 `git diff --check` 已通過。
+- [x] v0.26.0: Real VLM Parser Provider Spike 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、TODO、ROADMAP、API 與 architecture 文件已同步到 `v0.26.0`；VLM-first parser provider boundary、demo-safe image input resolver、`vlm_invoice` adapter、parser source comparison、fake / stub success smoke、provider unavailable fallback 與 Agent `get_document_fields` consumption validation 已補齊。

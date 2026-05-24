@@ -72,7 +72,7 @@ const suggestedQuestions = [
   "When is the renewal date?",
 ];
 
-const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.25.0"));
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.26.0"));
 
 const heroCopy = computed(() =>
   viewMode.value === "admin"
@@ -605,7 +605,7 @@ onMounted(() => {
 
         <div class="surface-note">
           <strong>目前階段</strong>
-          <span>backend upload + provider-selected OCR + local chunking。real OCR 失敗時保留文件並提供 mock OCR fallback；尚未完成 VLM parser、worker pipeline、DB 或 production indexing。</span>
+          <span>backend upload + provider-selected OCR + local chunking。real OCR 失敗時保留文件並提供 mock OCR fallback；Phase 26 已加入 VLM-first parser spike，但尚未完成 production VLM parser、worker pipeline、DB 或 production indexing。</span>
         </div>
 
         <label class="file-picker">
