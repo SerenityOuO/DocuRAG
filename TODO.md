@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.23 Viewer Chat / Admin Ingestion role split backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.23 Viewer Chat / Admin Ingestion role split release。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -80,6 +80,9 @@
 29. `tasks/phase-21-real-gpu-ocr-demo/21-01-real-gpu-ocr-frontend-flow.md`：將 frontend upload 面試主線改為 provider-selected real GPU OCR-first，mock OCR 只保留為手動 fallback，並同步 `v0.21.0` release 文件與版本。
 30. `tasks/phase-22-rag-query-hardening/22-01-keyword-query-normalization.md`：強化 default keyword RAG query normalization，讓中文 query 與 demo-safe alias 可命中英文 OCR chunks，並同步 `v0.22.0` release 文件與版本。
 31. `tasks/phase-23-role-split-demo/23-01-role-boundary-contract.md`：固定 Viewer Chat 與 Admin / Analyst Ingestion 的產品邊界，讓前台只負責查詢既有知識庫，後台才操作 upload / OCR / ingestion。
+32. `tasks/phase-23-role-split-demo/23-02-viewer-chat-only-surface.md`：將 frontend 預設入口收斂為 Viewer Chat-only，不在前台主畫面顯示 upload / OCR / mock fallback。
+33. `tasks/phase-23-role-split-demo/23-03-admin-ingestion-surface.md`：建立明確 Admin / Analyst 後台知識庫管理 surface，承接 upload、provider-selected OCR、狀態與手動 fallback。
+34. `tasks/phase-23-role-split-demo/23-04-role-split-demo-release-sync.md`：完成 `v0.23.0` release/version sync 與 final validation。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -597,10 +600,11 @@ Phase 22 guardrails：
 - [x] `tasks/phase-23-role-split-demo/23-01-role-boundary-contract.md`: 固定 Phase 23 產品邊界，明確區分前台 Viewer Chat 與後台 Admin / Analyst Ingestion；文件 ticket，不 bump version。
 - [x] `tasks/phase-23-role-split-demo/23-02-viewer-chat-only-surface.md`: 將 frontend 預設入口收斂為 Viewer Chat-only，不在前台主畫面顯示 upload / OCR / mock fallback。
 - [x] `tasks/phase-23-role-split-demo/23-03-admin-ingestion-surface.md`: 建立明確的 Admin / Analyst 知識庫管理 surface，放置文件上傳、provider-selected OCR、狀態與手動 fallback。
-- [ ] `tasks/phase-23-role-split-demo/23-04-role-split-demo-release-sync.md`: 重跑 final validation，並在 Phase 23 完成時執行 `v0.23.0` release/version sync。
+- [x] `tasks/phase-23-role-split-demo/23-04-role-split-demo-release-sync.md`: 重跑 final validation，並在 Phase 23 完成時執行 `v0.23.0` release/version sync。
 - [x] 23-01 validation：README、frontend README、demo script、architecture、ROADMAP 與 TODO 已固定 Viewer Chat / Admin Ingestion 產品邊界；文件明確說明 OCR 是 backend ingestion layer，不是前端直接對圖片聊天；保留 local JSON、local chunks、manual / explicit vector path、無正式 parser / worker / DB / auth 的限制；ticket `rg` 與 `git diff --check` 通過。
 - [x] 23-02 validation：`npm.cmd run build` 於 `frontend/` 通過；local frontend 檢查首頁無文件上傳 / OCR / mock fallback controls，Viewer Chat query 後仍顯示 answer、answer source、retrieval source 與 citation summary；ticket `rg` 與 `git diff --check` 通過。
 - [x] 23-03 validation：`npm.cmd run build` 於 `frontend/` 通過；local frontend 檢查 Viewer Chat 首屏無 upload / OCR controls，後台 Admin / Analyst ingestion surface 可看到文件上傳、provider-selected OCR flow、mock fallback 與 document / OCR / local chunks 狀態；baseline `scripts/demo-smoke-test.ps1` 通過；ticket `rg` 與 `git diff --check` 通過。
+- [x] 23-04 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`131 passed`（僅 pytest cache 權限警告）；`npm.cmd run build` 於 `frontend/` 通過；baseline `scripts/demo-smoke-test.ps1` 通過，health version `0.23.0`、answer source `LLM unavailable fallback`、retrieval source `keyword baseline`；Browser 檢查 Viewer Chat first、Admin / Analyst ingestion surface 分離，桌面與手機寬度無 horizontal overflow；ticket `rg` 與 `git diff --check` 通過。
 
 Phase 23 goal：
 
@@ -644,3 +648,4 @@ Phase 23 guardrails：
 - [x] v0.20.0: Interview MVP Packaging 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.20.0`，demo script、sample / eval coverage、demo media、baseline demo smoke、baseline retrieval eval smoke 與 final validation 已補齊；optional vector-backed smoke 需待本機 Qdrant collection `docurag_chunks_v1` 可用後重跑。
 - [x] v0.21.0: Real GPU OCR Interview Demo Path 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO、ROADMAP 與 demo script 已同步到 `v0.21.0`；frontend upload 已改為 provider-selected real OCR-first flow，mock OCR 只作手動 fallback；frontend build、backend tests、baseline demo smoke、real OCR smoke、ticket `rg` 與 `git diff --check` 已通過。
 - [x] v0.22.0: RAG Query Hardening 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.22.0`；keyword query normalization、CJK tokenization、demo-safe 中文 alias、backend tests、frontend build、baseline demo smoke、ticket `rg` 與 `git diff --check` 已通過。
+- [x] v0.23.0: Viewer Chat / Admin Ingestion Role Split 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、frontend fallback version、demo script、architecture、TODO 與 ROADMAP 已同步到 `v0.23.0`；Viewer Chat-only 預設入口、Admin / Analyst ingestion surface、backend tests、frontend build、baseline demo smoke、Browser role split / overflow 檢查、ticket `rg` 與 `git diff --check` 已通過。

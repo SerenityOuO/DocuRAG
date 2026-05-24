@@ -1,6 +1,6 @@
 # MVP Architecture
 
-本文件描述 DocuRAG AgentOps 目前的受控 MVP 架構。到 v0.19.0 為止，專案已完成 backend / frontend demo、provider-selected OCR、local RAG、citation trace、retrieval eval runner、optional vector / rerank / hybrid / `hybrid_rerank` eval strategy。Phase 20 只做 interview MVP packaging，不新增 production runtime。Phase 23 固定產品表面邊界：Viewer Chat 與 Admin / Analyst Ingestion 必須分開表達，但不代表已新增 auth / RBAC。
+本文件描述 DocuRAG AgentOps 目前的受控 MVP 架構。到 v0.23.0 為止，專案已完成 backend / frontend demo、provider-selected OCR、local RAG、citation trace、retrieval eval runner、optional vector / rerank / hybrid / `hybrid_rerank` eval strategy，以及 Viewer Chat / Admin Ingestion role split。Phase 23 固定產品表面邊界：Viewer Chat 與 Admin / Analyst Ingestion 必須分開表達，但不代表已新增 auth / RBAC。
 
 ## MVP Shape
 

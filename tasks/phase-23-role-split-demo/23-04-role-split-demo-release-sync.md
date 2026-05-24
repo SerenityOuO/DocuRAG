@@ -48,11 +48,11 @@
 
 ## Acceptance Criteria
 
-- [ ] `v0.23.0` 版本與 release docs 已同步。
-- [ ] README / demo script 的面試主線是 Viewer Chat first，Admin / Analyst ingestion 為後台管理流程。
-- [ ] 文件明確說明 OCR 屬於 backend ingestion layer，前端只展示角色入口與狀態。
-- [ ] 文件不宣稱已完成 auth/RBAC、worker、DB、VLM parser、production indexing 或 automatic Qdrant ingestion。
-- [ ] Final validation 通過，TODO / ROADMAP 更新 Phase 23 完成狀態。
+- [x] `v0.23.0` 版本與 release docs 已同步。
+- [x] README / demo script 的面試主線是 Viewer Chat first，Admin / Analyst ingestion 為後台管理流程。
+- [x] 文件明確說明 OCR 屬於 backend ingestion layer，前端只展示角色入口與狀態。
+- [x] 文件不宣稱已完成 auth/RBAC、worker、DB、VLM parser、production indexing 或 automatic Qdrant ingestion。
+- [x] Final validation 通過，TODO / ROADMAP 更新 Phase 23 完成狀態。
 
 ## Validation
 

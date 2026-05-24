@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening backlog 與 v0.23.0 Viewer Chat / Admin Ingestion role split backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening 與 v0.23.0 Viewer Chat / Admin Ingestion role split release。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.22.0 RAG query hardening checklist。
+- TODO 包含 Phase 00 到 v0.23.0 Viewer Chat / Admin Ingestion role split checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -1236,16 +1236,16 @@ Goal：把面試 demo 與產品入口拆回 `goal.md` 的角色模型：前台 V
 Tickets：
 
 - [x] `tasks/phase-23-role-split-demo/23-01-role-boundary-contract.md`
-- [ ] `tasks/phase-23-role-split-demo/23-02-viewer-chat-only-surface.md`
-- [ ] `tasks/phase-23-role-split-demo/23-03-admin-ingestion-surface.md`
-- [ ] `tasks/phase-23-role-split-demo/23-04-role-split-demo-release-sync.md`
+- [x] `tasks/phase-23-role-split-demo/23-02-viewer-chat-only-surface.md`
+- [x] `tasks/phase-23-role-split-demo/23-03-admin-ingestion-surface.md`
+- [x] `tasks/phase-23-role-split-demo/23-04-role-split-demo-release-sync.md`
 
 Expected Outcome：
 
 - Viewer Chat surface 成為 frontend 預設入口；不顯示 upload、OCR、mock fallback 或 ingestion 操作。
 - Admin / Analyst ingestion surface 以明確後台語意承接 upload、provider-selected OCR、processing status 與 local chunks readiness。
 - Demo script 先展示 Viewer 查詢已建立知識庫，再切到後台 knowledge base ingestion 說明 backend upload + OCR + local chunking。
-- Release sync 在 `23-04` 完成後同步到 `v0.23.0`。
+- Release sync 已在 `23-04` 同步到 `v0.23.0`。
 
 23-01 Viewer Chat / Admin Ingestion Boundary Contract Status：
 
@@ -1253,6 +1253,15 @@ Expected Outcome：
 - 文件已明確說明 OCR 屬於 backend ingestion layer，不是前端直接對圖片聊天。
 - 文件保留現況限制：local JSON、provider-selected OCR、local chunks、manual / explicit vector path，尚無正式 parser、worker、DB、auth 或 production indexing。
 - 本 ticket 不修改 frontend / backend runtime、不 bump version；`v0.23.0` release sync 保留給 `23-04`。
+
+23-02 / 23-03 Runtime Surface Status：
+
+- Viewer Chat surface 已成為 frontend 預設入口，不顯示 upload、OCR、mock fallback 或 ingestion 操作。
+- Admin / Analyst ingestion surface 已以後台知識庫管理語意承接文件上傳、provider-selected OCR、manual mock fallback 與 document / OCR / local chunks 狀態。
+
+23-04 Release Sync Status：
+
+- Backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、architecture、TODO 與 ROADMAP 已同步到 `v0.23.0`。
 
 Acceptance Criteria：
 
