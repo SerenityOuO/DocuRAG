@@ -1419,7 +1419,10 @@ Expected Outcome：
 
 25-03 Agent Run API Status：
 
-- 待執行。新增 deterministic Agent run endpoints，保存 run result，並維持 demo-safe error handling。
+- 已完成。新增 `POST /agent/run` 與 `GET /agent/runs/{run_id}`，用 deterministic planner 串接 allowlisted `get_document_fields`、`search_documents` 與 `summarize_invoice_fields`。
+- Agent run result 保存到 local JSON metadata store `agent_runs.json`；lookup endpoint 只讀保存結果，不重跑 planner 或 tools。
+- Backend tests 已覆蓋 successful run、missing parser fields、search fallback、run lookup、invalid document 與 missing run lookup。
+- 25-03 validation：backend focused Agent tests 通過，`6 passed`；backend test script 通過，`155 passed`（僅 pytest cache 權限警告）；demo smoke test 通過，health version 維持 `0.24.0`；ticket 指定 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 25-04 Frontend Agent Trace Surface Status：
 

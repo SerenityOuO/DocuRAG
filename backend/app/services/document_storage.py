@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from fastapi import UploadFile
 
+from app.schemas.agent import AgentRun
 from app.schemas.documents import (
     DocumentChunk,
     DocumentMetadata,
@@ -29,6 +30,7 @@ class DocumentStorage:
         self.data_dir = data_dir
         self.upload_dir = data_dir / "uploads"
         self.metadata_path = data_dir / "documents.json"
+        self.agent_runs_path = data_dir / "agent_runs.json"
 
     def list_documents(self) -> list[DocumentMetadata]:
         documents = self._read_documents()
@@ -68,6 +70,27 @@ class DocumentStorage:
                 "parser_mode": "deterministic",
             },
         )
+
+    def get_agent_run(self, run_id: str) -> AgentRun | None:
+        for agent_run in self._read_agent_runs():
+            if agent_run.run_id == run_id:
+                return agent_run
+
+        return None
+
+    def save_agent_run(self, agent_run: AgentRun) -> AgentRun:
+        agent_runs = self._read_agent_runs()
+
+        for index, saved_agent_run in enumerate(agent_runs):
+            if saved_agent_run.run_id == agent_run.run_id:
+                agent_runs[index] = agent_run
+                self._write_agent_runs(agent_runs)
+                return agent_run
+
+        agent_runs.append(agent_run)
+        self._write_agent_runs(agent_runs)
+
+        return agent_run
 
     def list_documents_for_rag(self) -> list[DocumentMetadata]:
         documents = self._read_documents()
@@ -292,6 +315,34 @@ class DocumentStorage:
 
         raw_documents = json.loads(self.metadata_path.read_text(encoding="utf-8"))
         return [DocumentMetadata.model_validate(raw_document) for raw_document in raw_documents]
+
+    def _ensure_agent_run_storage(self) -> None:
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        if not self.agent_runs_path.exists():
+            self.agent_runs_path.write_text("[]\n", encoding="utf-8")
+
+    def _read_agent_runs(self) -> list[AgentRun]:
+        self._ensure_agent_run_storage()
+
+        raw_agent_runs = json.loads(self.agent_runs_path.read_text(encoding="utf-8"))
+        return [AgentRun.model_validate(raw_agent_run) for raw_agent_run in raw_agent_runs]
+
+    def _write_agent_runs(self, agent_runs: list[AgentRun]) -> None:
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        payload = [agent_run.model_dump(mode="json") for agent_run in agent_runs]
+        content = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+        temp_path = self.agent_runs_path.with_name(f"{self.agent_runs_path.name}.{uuid4().hex}.tmp")
+        temp_path.write_text(content, encoding="utf-8")
+
+        try:
+            temp_path.replace(self.agent_runs_path)
+        except OSError:
+            # Docker Desktop bind mounts on Windows can reject atomic replace.
+            self.agent_runs_path.write_text(content, encoding="utf-8")
+            try:
+                temp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
 
     def _write_documents(self, documents: list[DocumentMetadata]) -> None:
         self.data_dir.mkdir(parents=True, exist_ok=True)

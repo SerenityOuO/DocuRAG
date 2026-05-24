@@ -92,7 +92,7 @@
 39. `tasks/phase-24-vlm-parser-mvp/24-05-parser-demo-release-sync.md`：補齊 parser demo validation，並在 Phase 24 完成時執行 `v0.24.0` release/version sync。
 40. `tasks/phase-25-agent-tool-use-mvp/25-01-agent-boundary-contract.md` 已完成，固定 Agent MVP boundary、allowlisted tools、deterministic planner 與 trace schema；文件 / contract ticket，不 bump version。
 41. `tasks/phase-25-agent-tool-use-mvp/25-02-agent-tool-adapters.md` 已完成，實作 `get_document_fields`、`search_documents` 與 `summarize_invoice_fields` allowlisted tool adapters。
-42. `tasks/phase-25-agent-tool-use-mvp/25-03-agent-run-api.md`：新增 `POST /agent/run` 與 `GET /agent/runs/{run_id}`，用 deterministic planner 串接 allowlisted tools。
+42. `tasks/phase-25-agent-tool-use-mvp/25-03-agent-run-api.md` 已完成，新增 `POST /agent/run` 與 `GET /agent/runs/{run_id}`，用 deterministic planner 串接 allowlisted tools。
 43. `tasks/phase-25-agent-tool-use-mvp/25-04-frontend-agent-trace-surface.md`：在 demo UI 顯示 Agent plan、tool calls、observations、final answer 與 citations。
 44. `tasks/phase-25-agent-tool-use-mvp/25-05-agent-demo-release-sync.md`：補齊 Agent demo validation，並在 Phase 25 完成時執行 `v0.25.0` release/version sync。
 
@@ -692,7 +692,7 @@ Phase 24 guardrails：
 
 - [x] `tasks/phase-25-agent-tool-use-mvp/25-01-agent-boundary-contract.md`: 固定 Agent MVP boundary、allowlisted tools、deterministic planner、run / step / tool call / observation / final answer trace schema；文件 ticket，不 bump version。
 - [x] `tasks/phase-25-agent-tool-use-mvp/25-02-agent-tool-adapters.md`: 實作 demo-safe allowlisted tool adapters：`get_document_fields`、`search_documents`、`summarize_invoice_fields`，只封裝既有 structured fields 與 retrieval 能力。
-- [ ] `tasks/phase-25-agent-tool-use-mvp/25-03-agent-run-api.md`: 新增 deterministic Agent run API，支援 `POST /agent/run` 與 `GET /agent/runs/{run_id}`，並輸出 plan、tool calls、observations、final answer 與 citations。
+- [x] `tasks/phase-25-agent-tool-use-mvp/25-03-agent-run-api.md`: 新增 deterministic Agent run API，支援 `POST /agent/run` 與 `GET /agent/runs/{run_id}`，並輸出 plan、tool calls、observations、final answer 與 citations。
 - [ ] `tasks/phase-25-agent-tool-use-mvp/25-04-frontend-agent-trace-surface.md`: 在 demo UI 新增 Agent trace surface，展示 plan -> tool calls -> observations -> final answer + citations；Viewer Chat 預設入口保持不變。
 - [ ] `tasks/phase-25-agent-tool-use-mvp/25-05-agent-demo-release-sync.md`: 補齊 Agent demo validation、文件同步與 `v0.25.0` release/version bump。
 
@@ -724,6 +724,14 @@ Phase 25 guardrails：
 - Backend tests 已覆蓋有 fields、缺 parser result、search hit、search miss、tool error 與 deterministic invoice summary。
 - 本 ticket 不新增 Agent run API、frontend UI、LLM planner、DB、RBAC、worker、Redis / NATS 或新外部依賴；完整 release sync 留給 `25-05`。
 - [x] 25-02 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`149 passed`（僅 pytest cache 權限警告）；ticket 指定 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+25-03 agent run API status：
+
+- 已新增 `POST /agent/run` 與 `GET /agent/runs/{run_id}`，用 deterministic planner 串接 allowlisted `get_document_fields`、`search_documents` 與 `summarize_invoice_fields`。
+- Agent run result 會保存到 local JSON metadata store `agent_runs.json`，lookup endpoint 只讀保存結果，不重跑 planner 或 tools。
+- Backend tests 已覆蓋 successful run、missing parser fields、search fallback、run lookup、invalid document 與 missing run lookup。
+- 本 ticket 不新增 frontend UI、LLM autonomous planner、OpenAI function calling、Ollama planning call、streaming、DB、RBAC、worker、Redis / NATS、destructive tools 或新外部依賴；完整 release sync 留給 `25-05`。
+- [x] 25-03 validation：`python -m pytest backend/tests/test_agent.py -q` 通過，`6 passed`（僅 pytest cache 權限警告）；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`155 passed`（僅 pytest cache 權限警告）；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1` 通過，health version `0.24.0`、parser fields `AUR-2026-051` / `1248.5 USD`、RAG query OK；ticket 指定 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 ## Release Verification Status
 

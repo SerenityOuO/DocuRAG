@@ -47,8 +47,8 @@
 
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/agent/run` | Future Phase 25 deterministic Agent run endpoint |
-| GET | `/agent/runs/{run_id}` | Future Phase 25 Agent run lookup endpoint |
+| POST | `/agent/run` | Phase 25 deterministic Agent run endpoint |
+| GET | `/agent/runs/{run_id}` | Phase 25 Agent run lookup endpoint |
 
 ## Eval
 
@@ -178,7 +178,7 @@ Document-level processing 後續以 `processing.parser=pending/running/completed
 
 ## Phase 25 Agent Tool-use Contract Draft
 
-Phase 25 的 Agent MVP 只做 deterministic planner 與 allowlisted tool-use，用來把 Phase 24 structured fields、既有 document search / retrieval 與 deterministic invoice summary 串成可重播 trace。`25-01` 只固定 contract；runtime、API、storage、frontend surface 與 demo smoke 由後續 tickets 實作。
+Phase 25 的 Agent MVP 只做 deterministic planner 與 allowlisted tool-use，用來把 Phase 24 structured fields、既有 document search / retrieval 與 deterministic invoice summary 串成可重播 trace。`25-03` 已新增 runtime API 與 local run persistence；frontend surface 與 demo smoke 由後續 tickets 實作。
 
 此 contract 不代表 production autonomous Agent，不接 LLM planner、OpenAI function calling、Ollama planning call、任意 SQL、任意 tool execution、shell command、file system command、delete、reindex、DB、RBAC、worker、Redis 或 NATS。
 
@@ -317,7 +317,7 @@ Status contract：
 
 `POST /agent/run`
 
-- Future `25-03` endpoint；`25-01` 不實作 runtime。
+- `25-03` runtime endpoint。
 - Accepts demo-safe task, optional `document_id`, optional `query` and optional `top_k`.
 - Uses deterministic planner only; it may call only `get_document_fields`, `search_documents` and `summarize_invoice_fields`.
 - Returns `AgentRun` with `run_id`, `status`, `plan_steps`, `tool_calls`, `final_answer`, `citations`, `trace`, `created_at` and `updated_at`.
@@ -326,7 +326,13 @@ Status contract：
 
 `GET /agent/runs/{run_id}`
 
-- Future `25-03` endpoint；`25-01` 不實作 runtime。
+- `25-03` runtime endpoint。
 - Returns a saved `AgentRun` result when available.
 - `404` when the run id does not exist.
 - Does not re-run planner or tools.
+
+`25-03` runtime notes：
+- Agent run results are stored in the local JSON metadata store as `agent_runs.json`.
+- Invoice summary runs with `document_id` execute `get_document_fields` -> `search_documents` -> `summarize_invoice_fields`.
+- Query-only document question runs execute `search_documents` and return retrieved-chunk answer text with citations.
+- Failed parser lookup, search miss or invalid document remains a saved `AgentRun` with failed / fallback plan steps.
