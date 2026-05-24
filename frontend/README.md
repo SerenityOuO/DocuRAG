@@ -1,6 +1,6 @@
 # DocuRAG AgentOps Frontend
 
-最小 Vue 3 + Vite demo UI，用來檢查 backend health、上傳文件、顯示文件列表、執行 OCR，並用 RAG chat 查看 answer、answer source、retrieval source、citations、retrieved chunks 與 compact retrieval trace panel。v0.5.1 搭配公開 sample data、demo seed script 與 API smoke test，讓 GitHub / 面試展示可以快速重跑。v0.6 bridge 保持 UI contract 不變，backend 以 `KeywordRagProvider` 維持 keyword retrieval 與 citation contract。v0.7 的 real OCR spike 已選定 PaddleOCR，backend 已新增 provider-selected OCR endpoint；v0.9 起 provider-selected `/ocr` 預設走 GPU-only PaddleOCR + PP-OCRv4 mobile 中文 / 中英混合模型設定，mock path 仍保留供沒有 real OCR dependency 的環境重跑。v0.10.0 會在 RAG answer 顯示 `deterministic baseline`、`ollama/qwen3.5:4b` 或 LLM fallback source；v0.11.0 額外顯示 `keyword baseline`、`vector/qdrant` 或 `vector unavailable fallback` retrieval source；v0.12.0 optional vector demo 改為 smoke script 先手動 indexing 再查詢；v0.13.0 retrieval evaluation baseline 由 CLI / smoke script 輸出 metrics；v0.15.0 optional `vector_rerank` eval 仍由 CLI / smoke script 輸出 metrics 與 rerank metadata；v0.16.0 optional `hybrid` eval 也由 CLI / smoke script 輸出 metrics 與 hybrid metadata；v0.17.0 trace panel 只讀既有 RAG response metadata，不新增 backend API 或 frontend eval dashboard。v0.19.0 optional `hybrid_rerank` trace 仍由 CLI / smoke script 輸出，frontend 沒有新增 live eval dashboard 或 chat route。v0.20.0 完成 interview MVP packaging，只補齊 demo media / README flow / release validation，不新增 frontend route 或 production eval dashboard。
+最小 Vue 3 + Vite demo UI，第一屏以客服式 RAG chat 為主，用來查看 answer、answer source、retrieval source、citations、retrieved chunks 與 compact retrieval trace panel；backend health、上傳文件、文件列表與 OCR 則保留在同頁後台知識庫管理區。v0.5.1 搭配公開 sample data、demo seed script 與 API smoke test，讓 GitHub / 面試展示可以快速重跑。v0.6 bridge 保持 UI contract 不變，backend 以 `KeywordRagProvider` 維持 keyword retrieval 與 citation contract。v0.7 的 real OCR spike 已選定 PaddleOCR，backend 已新增 provider-selected OCR endpoint；v0.9 起 provider-selected `/ocr` 預設走 GPU-only PaddleOCR + PP-OCRv4 mobile 中文 / 中英混合模型設定，mock path 仍保留供沒有 real OCR dependency 的環境重跑。v0.10.0 會在 RAG answer 顯示 `deterministic baseline`、`ollama/qwen3.5:4b` 或 LLM fallback source；v0.11.0 額外顯示 `keyword baseline`、`vector/qdrant` 或 `vector unavailable fallback` retrieval source；v0.12.0 optional vector demo 改為 smoke script 先手動 indexing 再查詢；v0.13.0 retrieval evaluation baseline 由 CLI / smoke script 輸出 metrics；v0.15.0 optional `vector_rerank` eval 仍由 CLI / smoke script 輸出 metrics 與 rerank metadata；v0.16.0 optional `hybrid` eval 也由 CLI / smoke script 輸出 metrics 與 hybrid metadata；v0.17.0 trace panel 只讀既有 RAG response metadata，不新增 backend API 或 frontend eval dashboard。v0.19.0 optional `hybrid_rerank` trace 仍由 CLI / smoke script 輸出，frontend 沒有新增 live eval dashboard 或 chat route。v0.20.0 完成 interview MVP packaging；v0.20.1 frontend patch 把展示入口調整為 chat-first，不新增 frontend route 或 production eval dashboard。
 
 ## Install
 
@@ -48,8 +48,10 @@ npm.cmd run build
 
 目前 UI 支援：
 
+- 第一屏顯示前台客服機器人，直接呼叫 `POST /rag/query` 查詢後台已建置的知識庫。
+- 尚未有 ready 文件時，chat empty state 會提示先用 seed script 或同頁後台管理區建置知識庫。
+- 同頁後台知識庫管理區保留 backend health、upload、OCR、document list、metadata JSON 與 API response JSON。
 - `GET /health` 顯示 backend 狀態。
-- 首頁只顯示目前版本號。
 - `POST /documents/upload` 上傳本機文件。
 - 上傳成功後自動刷新 `GET /documents` 文件列表。
 - 文件列表顯示 filename、status、OCR status、size、created_at 與 content_type。
@@ -65,6 +67,12 @@ npm.cmd run build
 - Retrieval evaluation metrics、optional `vector_rerank` trace metadata、optional `hybrid` trace metadata 與 optional `hybrid_rerank` trace metadata 由 `scripts/retrieval-eval-smoke.ps1` 輸出，不在 frontend 建立 eval dashboard。`hybrid_rerank` JSON 會用 `merged_score`、`rerank_score` 與 `final_score_source` 區分 score source；缺欄位時沿用 graceful hidden / metadata unavailable 的顯示原則。
 - backend 未啟用 LLM provider 時，answer source 顯示 `deterministic baseline`；設定 `DOCURAG_LLM_PROVIDER=ollama` 且 generation 成功時顯示 `ollama/qwen3.5:4b`；LLM failure fallback 會顯示 `LLM unavailable fallback`。
 - backend 未啟用 vector retrieval 時，retrieval source 顯示 `keyword baseline`；設定 `DOCURAG_RAG_RETRIEVAL_PROVIDER=vector` 且 Qdrant search 成功時顯示 `vector/qdrant`；embedding 或 Qdrant unavailable fallback 會顯示 `vector unavailable fallback`。
+
+建議面試前先 seed demo knowledge base，讓前台客服聊天一打開就能問：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1
+```
 
 建議 demo query：
 

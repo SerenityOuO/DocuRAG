@@ -535,10 +535,12 @@ Phase 20 guardrails：
 - [x] 20-07 validation：`npm.cmd run build` 於 `frontend/` 通過；local frontend demo view 檢查標題、主要中文 panel、舊英文可見標籤與 desktop horizontal overflow 通過；ticket 指定 `rg` 已執行，剩餘命中僅 `listDocuments` / `refreshDocuments` 程式識別符；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 - [x] `tasks/phase-20-interview-mvp-packaging/20-08-readme-zh-tw-demo-media-refresh.md`: 用 20-07 中文化後的 local frontend demo 重新覆蓋 README 引用的 `frontend-overview.png` 與 `frontend-trace.png`；不新增 README 圖片路徑、route、API、外部依賴或 backend runtime。
 - [x] 20-08 validation：`npm.cmd run build` 於 `frontend/` 通過；local frontend demo view 重新截取 `docs/demo-media/frontend-overview.png` 與 `docs/demo-media/frontend-trace.png`，檢查中文標題 / panel / trace、舊英文可見標籤與 desktop horizontal overflow 通過；`rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+- [x] `tasks/phase-20-interview-mvp-packaging/20-09-frontend-chat-first-demo.md`: 將 frontend demo 第一屏調整為客服式 RAG chat，upload / OCR / metadata 保留在同頁後台知識庫管理區；不新增 route、API、外部依賴或 backend runtime。
+- [x] 20-09 validation：`npm.cmd run build` 於 `frontend/` 通過；local frontend demo view 檢查第一屏 chat-first、後台區塊仍可用、RAG query 後 answer / citations / trace / retrieved chunks 可見、desktop horizontal overflow 為 `0`；ticket 指定 `rg` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 Phase 20.1 goal：
 
-- 讓面試 demo 的 frontend 第一眼更像成熟 AI application dashboard，清楚呈現 backend health、文件數、目前選取文件、RAG answer source 與 upload -> OCR -> index -> trace workflow。
+- 讓面試 demo 的 frontend 第一眼更像成熟 AI application：前台是客服式 RAG chat，後台才是 upload -> OCR -> index -> trace workflow 與工程觀測區。
 - 只做展示質感與 README demo media 加分，不改 API contract、不新增功能範圍、不 bump version。
 
 Phase 20.1 guardrails：

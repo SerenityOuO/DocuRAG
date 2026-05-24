@@ -2,7 +2,7 @@
 
 DocuRAG AgentOps 是一個面試展示用的 AI 文件平台 side project，用來呈現企業級文件上傳、OCR、local RAG、citation trace 與 AgentOps 產品思維。
 
-目前主線已完成 local document workflow、provider-selected PaddleOCR OCR flow、PP-OCRv4 mobile 中文 / 中英混合模型設定、backend startup preload、provider reuse、OCR timing metadata、mock OCR override、local keyword RAG baseline、可選 Ollama Qwen3.5 RAG generation demo、可選 manual vector indexing + Qdrant vector retrieval demo、retrieval evaluation baseline、disabled-by-default vector rerank eval spike、optional hybrid retrieval eval strategy、frontend demo UI，以及可重跑的本機 backend validation。這仍是受控 MVP，不是 production OCR / RAG 平台。
+目前主線已完成 local document workflow、provider-selected PaddleOCR OCR flow、PP-OCRv4 mobile 中文 / 中英混合模型設定、backend startup preload、provider reuse、OCR timing metadata、mock OCR override、local keyword RAG baseline、可選 Ollama Qwen3.5 RAG generation demo、可選 manual vector indexing + Qdrant vector retrieval demo、retrieval evaluation baseline、disabled-by-default vector rerank eval spike、optional hybrid retrieval eval strategy、chat-first frontend demo UI，以及可重跑的本機 backend validation。這仍是受控 MVP，不是 production OCR / RAG 平台。
 
 ## Project Goal
 
@@ -36,7 +36,7 @@ DocuRAG AgentOps 要展示三件事：
 - v0.18.0 已完成 `hybrid_rerank` planning backlog；這是 Markdown-only planning，不代表 runtime、eval runner、frontend UI 或 smoke flag 已可用。
 - v0.19.0 已完成 optional `hybrid_rerank` eval strategy：eval provider、`-RunHybridRerank` smoke flag、trace / report metadata naming 與 release sync；這仍只屬於 retrieval eval runner，不接 default `/rag/query` 或 frontend chat。
 - v0.20.0 已完成 interview MVP packaging：demo script、sample / eval coverage、README demo media、baseline validation 與 release 文件同步；不新增 production eval dashboard、worker、DB、auth 或 deployment。
-- Vue 3 + Vite frontend，可操作 upload、document list/detail、selected OCR、mock override、OCR result 與 RAG chat。
+- Vue 3 + Vite frontend，第一屏是客服式 RAG chat；upload、document list/detail、selected OCR、mock override、OCR result 與 JSON trace 保留在同頁後台知識庫管理區。
 - Python 3.12 backend runtime；real OCR 只支援 PaddlePaddle GPU / CUDA runtime，dependency 收斂在 `backend[real-ocr]` optional extra。
 - Dockerfile / Docker Compose backend runtime，real OCR GPU dependency 可透過 build arg 開啟。
 
@@ -51,9 +51,9 @@ DocuRAG AgentOps 要展示三件事：
 
 5 到 10 分鐘面試導覽建議：
 
-1. 先用 frontend health 與 upload panel 說明 backend / frontend 邊界，以及目前是 single-user local demo。
-2. 選擇公開虛構 sample document，展示 document metadata、OCR status、local indexing status 與 OCR text。
-3. 用 `payment due date Net 15` 詢問 RAG，展示 deterministic baseline answer、citations 與 retrieved chunks。
+1. Demo 前先用 `scripts/seed-demo-data.ps1` 或後台區預載公開 synthetic sample，讓前台像客服機器人一樣直接提問。
+2. 第一屏用 `payment due date Net 15` 詢問 RAG，展示 deterministic baseline answer、citations、retrieved chunks 與 trace panel。
+3. 說明前台只負責查詢已建置的知識庫；文件上傳、OCR、local indexing status、metadata 與 API 回應在同頁後台知識庫管理區。
 4. 打開 retrieval trace panel，說明 strategy、answer source、retrieval source、candidate rows、fallback state 與 trace metadata。
 5. 切到 retrieval eval smoke summary，說明 `case_count=20`、Hit Rate@K、MRR@K、Recall@K、failure count 與 trace metadata count。
 6. 補充 optional paths：`vector`、`vector_rerank`、`hybrid` 與 `hybrid_rerank` 都是 explicit eval / demo path；`hybrid_rerank` 不接 default `/rag/query` 或 frontend chat route。
@@ -168,6 +168,12 @@ Frontend UI：
 
 ```text
 http://localhost:5173
+```
+
+建議面試前先 seed demo knowledge base，讓前台客服聊天一打開就能問：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo-data.ps1
 ```
 
 ## Dockerfile Build

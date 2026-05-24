@@ -124,6 +124,36 @@ const completedOcrCount = computed(
 
 const selectedDocumentLabel = computed(() => selectedDocument.value?.filename ?? "尚未選擇文件");
 
+const suggestedQuestions = [
+  "payment due date Net 15",
+  "What is the SLA response target?",
+  "When is the renewal date?",
+];
+
+const knowledgeBaseLabel = computed(() => {
+  if (readyDocumentCount.value > 0) {
+    return `${readyDocumentCount.value} 份文件可查詢`;
+  }
+
+  if (documents.value.length > 0) {
+    return "文件尚未完成建置";
+  }
+
+  return "尚未載入知識庫";
+});
+
+const knowledgeBaseDetail = computed(() => {
+  if (readyDocumentCount.value > 0) {
+    return `${documents.value.length} 份文件已進入後台資料集`;
+  }
+
+  if (documents.value.length > 0) {
+    return "請在後台完成 OCR 或 mock OCR 後再展示前台問答";
+  }
+
+  return "可先執行 seed script，或在後台上傳公開 sample 文件";
+});
+
 const latestJobLabel = computed(() => {
   if (!selectedDocument.value?.latest_job) {
     return "尚無處理工作";
@@ -480,6 +510,10 @@ function candidateTraceSummary(chunk: RetrievedChunk): string[] {
   return summary.length ? summary : ["無中繼資料"];
 }
 
+function useSuggestedQuestion(question: string): void {
+  ragQuery.value = question;
+}
+
 async function checkHealth(): Promise<void> {
   healthState.value = "loading";
   healthError.value = "";
@@ -662,16 +696,16 @@ onMounted(() => {
             <span class="eyebrow">{{ currentVersionLabel }}</span>
             <span class="status-pill" :class="`status-${healthState}`">{{ healthLabel }}</span>
           </div>
-          <h1>DocuRAG AgentOps</h1>
+          <h1>文件客服助理</h1>
           <p class="hero-copy">
-            本機文件智能展示，整合 OCR、具引用來源的 RAG、檢索追蹤與可評估的中繼資料。
+            前台直接查詢已建置的文件知識庫；後台負責上傳、OCR、索引與檢索追蹤。
           </p>
         </div>
 
         <div class="hero-side">
-          <span>目前選取文件</span>
-          <strong>{{ selectedDocumentLabel }}</strong>
-          <small>{{ latestJobLabel }}</small>
+          <span>知識庫狀態</span>
+          <strong>{{ knowledgeBaseLabel }}</strong>
+          <small>{{ knowledgeBaseDetail }}</small>
         </div>
       </div>
 
@@ -691,7 +725,206 @@ onMounted(() => {
       </ol>
     </header>
 
-    <section class="layout" aria-label="展示操作區">
+    <section class="customer-shell" aria-label="前台客服機器人">
+      <article class="panel chat-panel customer-chat-panel">
+        <div class="panel-heading">
+          <div>
+            <h2>前台客服機器人</h2>
+            <p>POST /rag/query</p>
+          </div>
+          <span class="status-pill" :class="`status-${chatState}`">{{ displayRequestState(chatState) }}</span>
+        </div>
+
+        <div class="chat-context-grid">
+          <div>
+            <span>知識庫</span>
+            <strong>{{ knowledgeBaseLabel }}</strong>
+            <small>{{ knowledgeBaseDetail }}</small>
+          </div>
+          <div>
+            <span>回答來源</span>
+            <strong>{{ ragResult ? ragAnswerSource : "等待問題" }}</strong>
+            <small>{{ ragResult ? ragRetrievalSource : "保留 citations 與 trace" }}</small>
+          </div>
+        </div>
+
+        <div class="suggestion-row" aria-label="建議問題">
+          <button
+            v-for="question in suggestedQuestions"
+            :key="question"
+            type="button"
+            class="suggestion-button"
+            @click="useSuggestedQuestion(question)"
+          >
+            {{ question }}
+          </button>
+        </div>
+
+        <form class="chat-form" @submit.prevent="submitRagQuery">
+          <label>
+            <span>問題</span>
+            <textarea v-model="ragQuery" rows="3" placeholder="請問付款期限、SLA 或續約日期" />
+          </label>
+
+          <label>
+            <span>候選數 Top K</span>
+            <input v-model.number="ragTopK" type="number" min="1" max="10" />
+          </label>
+
+          <button type="submit" class="button" :disabled="chatState === 'loading'">
+            {{ chatState === "loading" ? "查詢中..." : "送出問題" }}
+          </button>
+        </form>
+
+        <p v-if="ragError" class="error">{{ ragError }}</p>
+
+        <section v-if="ragResult" class="rag-result">
+          <div class="answer-heading">
+            <h3>回答</h3>
+            <div class="answer-badges">
+              <span class="status-pill" :class="ragAnswerSourceClass">{{ ragAnswerSource }}</span>
+              <span class="status-pill" :class="ragRetrievalSourceClass">{{ ragRetrievalSource }}</span>
+            </div>
+          </div>
+          <pre class="answer-text">{{ ragResult.answer }}</pre>
+
+          <section class="trace-panel" aria-label="檢索追蹤">
+            <h3>檢索追蹤</h3>
+            <dl class="trace-facts">
+              <div v-for="fact in ragTraceFacts" :key="fact.label">
+                <dt>{{ fact.label }}</dt>
+                <dd :class="fact.tone ? `trace-${fact.tone}` : ''">{{ fact.value }}</dd>
+              </div>
+            </dl>
+
+            <div v-if="ragTraceRows.length" class="trace-table-wrap">
+              <table class="trace-table">
+                <thead>
+                  <tr>
+                    <th>排名</th>
+                    <th>分數</th>
+                    <th>來源</th>
+                    <th>候選內容</th>
+                    <th>追蹤</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in ragTraceRows" :key="`${row.documentId}-${row.chunkId}`">
+                    <td>{{ row.rank }}</td>
+                    <td>{{ row.score }}</td>
+                    <td>
+                      <strong>{{ row.filename }}</strong>
+                      <code>{{ row.documentId }}</code>
+                      <code>{{ row.chunkId }}</code>
+                    </td>
+                    <td class="trace-preview">{{ row.preview }}</td>
+                    <td>
+                      <div class="trace-summary">
+                        <code v-for="item in row.traceSummary" :key="`${row.chunkId}-${item}`">{{ item }}</code>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p v-else class="muted">無中繼資料</p>
+          </section>
+
+          <h3>引用來源</h3>
+          <ul v-if="ragResult.citations.length" class="citation-list">
+            <li v-for="citation in ragResult.citations" :key="`${citation.document_id}-${citation.chunk_id}`">
+              <span>{{ citation.filename }}</span>
+              <code>{{ citation.document_id }}</code>
+              <code>{{ citation.chunk_id }}</code>
+              <code v-if="citation.source_type">{{ citation.source_type }}</code>
+              <code v-if="citation.page_number">頁 {{ citation.page_number }}</code>
+              <code v-if="citation.confidence != null">信心 {{ citation.confidence }}</code>
+              <code v-if="citation.bbox">{{ formatBbox(citation.bbox) }}</code>
+              <code v-for="[key, value] in metadataEntries(citation.trace_metadata)" :key="`${citation.chunk_id}-${key}`">
+                {{ key }}={{ value }}
+              </code>
+            </li>
+          </ul>
+          <p v-else class="muted">沒有引用來源。</p>
+
+          <h3>檢索片段</h3>
+          <div v-if="ragResult.retrieved_chunks.length" class="chunk-list">
+            <article v-for="chunk in ragResult.retrieved_chunks" :key="chunk.chunk_id" class="chunk-item">
+              <div class="chunk-meta">
+                <span>{{ chunk.filename }}</span>
+                <code>{{ chunk.chunk_id }}</code>
+                <span v-if="chunk.source_type">{{ chunk.source_type }}</span>
+                <span v-if="chunk.page_number">頁 {{ chunk.page_number }}</span>
+                <span v-if="chunk.confidence != null">信心 {{ chunk.confidence }}</span>
+                <span v-if="chunk.bbox">{{ formatBbox(chunk.bbox) }}</span>
+                <span>分數 {{ chunk.score }}</span>
+              </div>
+              <div v-if="metadataEntries(chunk.metadata).length" class="chunk-meta trace-meta">
+                <code v-for="[key, value] in metadataEntries(chunk.metadata)" :key="`${chunk.chunk_id}-${key}`">
+                  {{ key }}={{ value }}
+                </code>
+              </div>
+              <pre>{{ chunk.text }}</pre>
+            </article>
+          </div>
+          <p v-else class="muted">沒有檢索片段。</p>
+        </section>
+
+        <p v-else class="muted">
+          {{ readyDocumentCount > 0 ? "可以開始詢問後台知識庫。" : "尚未有可查詢文件，請先用 seed script 或後台管理區建置知識庫。" }}
+        </p>
+      </article>
+
+      <aside class="panel operator-panel">
+        <div class="panel-heading">
+          <div>
+            <h2>後台建置狀態</h2>
+            <p>Internal knowledge console</p>
+          </div>
+        </div>
+
+        <dl class="facts">
+          <div>
+            <dt>目前選取</dt>
+            <dd>{{ selectedDocumentLabel }}</dd>
+          </div>
+          <div>
+            <dt>最新工作</dt>
+            <dd>{{ latestJobLabel }}</dd>
+          </div>
+          <div>
+            <dt>可查詢文件</dt>
+            <dd>{{ readyDocumentCount }}</dd>
+          </div>
+          <div>
+            <dt>OCR 已完成</dt>
+            <dd>{{ completedOcrCount }}</dd>
+          </div>
+        </dl>
+
+        <div class="button-row side-actions">
+          <button
+            type="button"
+            class="button secondary-button"
+            :disabled="documentsState === 'loading'"
+            @click="refreshDocuments"
+          >
+            {{ documentsState === "loading" ? "同步中..." : "同步知識庫" }}
+          </button>
+          <button type="button" class="button" :disabled="healthState === 'loading'" @click="checkHealth">
+            {{ healthState === "loading" ? "檢查中..." : "檢查後端" }}
+          </button>
+        </div>
+      </aside>
+    </section>
+
+    <section class="layout" aria-label="後台知識庫管理">
+      <div class="section-intro">
+        <span class="eyebrow">後台知識庫管理</span>
+        <h2>文件建置與工程追蹤</h2>
+        <p>此區保留面試展示用的上傳、OCR、文件列表、metadata 與 API 回應檢查。</p>
+      </div>
+
       <article class="panel">
         <div class="panel-heading">
           <div>
@@ -949,128 +1182,6 @@ onMounted(() => {
         </div>
 
         <p v-else class="muted">尚未選擇文件。</p>
-      </article>
-
-      <article class="panel chat-panel">
-        <div class="panel-heading">
-          <div>
-            <h2>RAG 問答</h2>
-            <p>POST /rag/query</p>
-          </div>
-          <span class="status-pill" :class="`status-${chatState}`">{{ displayRequestState(chatState) }}</span>
-        </div>
-
-        <form class="chat-form" @submit.prevent="submitRagQuery">
-          <label>
-            <span>問題</span>
-            <textarea v-model="ragQuery" rows="3" placeholder="例如：付款期限是 Net 15 嗎？" />
-          </label>
-
-          <label>
-            <span>候選數 Top K</span>
-            <input v-model.number="ragTopK" type="number" min="1" max="10" />
-          </label>
-
-          <button type="submit" class="button" :disabled="chatState === 'loading'">
-            {{ chatState === "loading" ? "查詢中..." : "詢問 RAG" }}
-          </button>
-        </form>
-
-        <p v-if="ragError" class="error">{{ ragError }}</p>
-
-        <section v-if="ragResult" class="rag-result">
-          <div class="answer-heading">
-            <h3>回答</h3>
-            <div class="answer-badges">
-              <span class="status-pill" :class="ragAnswerSourceClass">{{ ragAnswerSource }}</span>
-              <span class="status-pill" :class="ragRetrievalSourceClass">{{ ragRetrievalSource }}</span>
-            </div>
-          </div>
-          <pre class="answer-text">{{ ragResult.answer }}</pre>
-
-          <section class="trace-panel" aria-label="檢索追蹤">
-            <h3>檢索追蹤</h3>
-            <dl class="trace-facts">
-              <div v-for="fact in ragTraceFacts" :key="fact.label">
-                <dt>{{ fact.label }}</dt>
-                <dd :class="fact.tone ? `trace-${fact.tone}` : ''">{{ fact.value }}</dd>
-              </div>
-            </dl>
-
-            <div v-if="ragTraceRows.length" class="trace-table-wrap">
-              <table class="trace-table">
-                <thead>
-                  <tr>
-                    <th>排名</th>
-                    <th>分數</th>
-                    <th>來源</th>
-                    <th>候選內容</th>
-                    <th>追蹤</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="row in ragTraceRows" :key="`${row.documentId}-${row.chunkId}`">
-                    <td>{{ row.rank }}</td>
-                    <td>{{ row.score }}</td>
-                    <td>
-                      <strong>{{ row.filename }}</strong>
-                      <code>{{ row.documentId }}</code>
-                      <code>{{ row.chunkId }}</code>
-                    </td>
-                    <td class="trace-preview">{{ row.preview }}</td>
-                    <td>
-                      <div class="trace-summary">
-                        <code v-for="item in row.traceSummary" :key="`${row.chunkId}-${item}`">{{ item }}</code>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p v-else class="muted">無中繼資料</p>
-          </section>
-
-          <h3>引用來源</h3>
-          <ul v-if="ragResult.citations.length" class="citation-list">
-            <li v-for="citation in ragResult.citations" :key="`${citation.document_id}-${citation.chunk_id}`">
-              <span>{{ citation.filename }}</span>
-              <code>{{ citation.document_id }}</code>
-              <code>{{ citation.chunk_id }}</code>
-              <code v-if="citation.source_type">{{ citation.source_type }}</code>
-              <code v-if="citation.page_number">頁 {{ citation.page_number }}</code>
-              <code v-if="citation.confidence != null">信心 {{ citation.confidence }}</code>
-              <code v-if="citation.bbox">{{ formatBbox(citation.bbox) }}</code>
-              <code v-for="[key, value] in metadataEntries(citation.trace_metadata)" :key="`${citation.chunk_id}-${key}`">
-                {{ key }}={{ value }}
-              </code>
-            </li>
-          </ul>
-          <p v-else class="muted">沒有引用來源。</p>
-
-          <h3>檢索片段</h3>
-          <div v-if="ragResult.retrieved_chunks.length" class="chunk-list">
-            <article v-for="chunk in ragResult.retrieved_chunks" :key="chunk.chunk_id" class="chunk-item">
-              <div class="chunk-meta">
-                <span>{{ chunk.filename }}</span>
-                <code>{{ chunk.chunk_id }}</code>
-                <span v-if="chunk.source_type">{{ chunk.source_type }}</span>
-                <span v-if="chunk.page_number">頁 {{ chunk.page_number }}</span>
-                <span v-if="chunk.confidence != null">信心 {{ chunk.confidence }}</span>
-                <span v-if="chunk.bbox">{{ formatBbox(chunk.bbox) }}</span>
-                <span>分數 {{ chunk.score }}</span>
-              </div>
-              <div v-if="metadataEntries(chunk.metadata).length" class="chunk-meta trace-meta">
-                <code v-for="[key, value] in metadataEntries(chunk.metadata)" :key="`${chunk.chunk_id}-${key}`">
-                  {{ key }}={{ value }}
-                </code>
-              </div>
-              <pre>{{ chunk.text }}</pre>
-            </article>
-          </div>
-          <p v-else class="muted">沒有檢索片段。</p>
-        </section>
-
-        <p v-else class="muted">請先上傳文件並執行 OCR，再輸入問題。</p>
       </article>
 
       <article class="panel response-panel">

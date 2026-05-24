@@ -1004,6 +1004,11 @@ Tickets：
 - [x] `tasks/phase-20-interview-mvp-packaging/20-02-sample-eval-coverage-expansion.md`
 - [x] `tasks/phase-20-interview-mvp-packaging/20-03-demo-media-and-readme-polish.md`
 - [x] `tasks/phase-20-interview-mvp-packaging/20-04-final-interview-mvp-validation.md`
+- [x] `tasks/phase-20-interview-mvp-packaging/20-05-frontend-demo-ui-polish.md`
+- [x] `tasks/phase-20-interview-mvp-packaging/20-06-readme-demo-media-refresh.md`
+- [x] `tasks/phase-20-interview-mvp-packaging/20-07-frontend-zh-tw-copy-polish.md`
+- [x] `tasks/phase-20-interview-mvp-packaging/20-08-readme-zh-tw-demo-media-refresh.md`
+- [x] `tasks/phase-20-interview-mvp-packaging/20-09-frontend-chat-first-demo.md`
 
 Expected Outcome：
 
@@ -1069,12 +1074,18 @@ Expected Outcome：
 - Scope 只限覆蓋既有 `frontend-overview.png` 與 `frontend-trace.png`，不新增 README 圖片路徑、frontend route、backend API、外部依賴、runtime 或 release version bump。
 - Validation：`npm.cmd run build` 通過；local frontend demo view 重新截取 overview / trace 圖，確認中文標題 / panel / trace、舊英文可見標籤與 desktop horizontal overflow 通過；`rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
+20-09 Frontend Chat-First Demo Status：
+
+- 新增 frontend chat-first demo ticket，目標是把第一屏調整成客服式 RAG chat，讓面試展示符合「前台聊天、後台建置知識庫」的產品切法。
+- Scope 只限既有 Vue single-page UI、CSS 與 README / TODO / ROADMAP 文件同步；upload、OCR、文件列表、metadata JSON 與 API response JSON 仍保留在同頁後台知識庫管理區。
+- Validation：`npm.cmd run build` 通過；local frontend demo view 檢查第一屏 chat-first / 後台區塊功能、RAG query 後 answer / citations / trace / retrieved chunks 可見，desktop horizontal overflow 為 `0`；ticket 指定 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
 Acceptance Criteria：
 
 - Phase 20 tickets 都包含 Goal、Scope、Out of Scope、Files likely to change、Acceptance Criteria、Validation 與 Release Impact。
 - Phase 20 目標明確聚焦 interview MVP packaging，不把 production eval dashboard、DB、worker、auth 或 deployment 混進同一階段。
 - `20-04` 才允許 `v0.20.0` version bump；前置 tickets 若未完成完整 release artifact，必須寫 `Version bump required: no`。
-- Phase 20 完成後，README 與 demo script 應能讓面試官在 5 到 10 分鐘內看懂 upload -> OCR -> RAG -> citation -> trace -> eval 的核心價值。
+- Phase 20 完成後，README 與 demo script 應能讓面試官在 5 到 10 分鐘內看懂前台 RAG chat、後台 upload -> OCR -> index 建置流程、citation -> trace -> eval 的核心價值。
 
 Validation：
 

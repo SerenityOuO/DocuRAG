@@ -250,6 +250,112 @@ td {
   color: #991b1b !important;
 }
 
+.customer-shell {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.45fr);
+  margin-bottom: 18px;
+}
+
+.customer-shell .customer-chat-panel {
+  grid-column: auto;
+}
+
+.operator-panel {
+  position: sticky;
+  top: 18px;
+}
+
+.chat-context-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 14px;
+}
+
+.chat-context-grid div {
+  background: #f8fafc;
+  border: 1px solid #e5edf4;
+  border-left: 3px solid #2563eb;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.chat-context-grid span,
+.section-intro span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.chat-context-grid strong {
+  color: #172033;
+  font-size: 16px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.chat-context-grid small {
+  color: #64748b;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.suggestion-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.suggestion-button {
+  background: #eef6f4;
+  border: 1px solid #b8d8d2;
+  border-radius: 999px;
+  color: #0f766e;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 7px 11px;
+}
+
+.suggestion-button:hover {
+  background: #dff1ed;
+}
+
+.side-actions {
+  justify-content: stretch;
+}
+
+.side-actions .button {
+  flex: 1 1 150px;
+}
+
+.section-intro {
+  grid-column: 1 / -1;
+  padding: 8px 0 0;
+}
+
+.section-intro h2 {
+  color: #172033;
+  font-size: 24px;
+  line-height: 1.2;
+  margin: 4px 0 0;
+}
+
+.section-intro p {
+  color: #667085;
+  line-height: 1.5;
+  margin: 6px 0 0;
+}
+
 .layout {
   display: grid;
   gap: 18px;
@@ -790,6 +896,15 @@ pre {
 
   .layout {
     grid-template-columns: 1fr;
+  }
+
+  .customer-shell,
+  .chat-context-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .operator-panel {
+    position: static;
   }
 
   .panel-heading {
