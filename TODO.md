@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.20 interview MVP packaging backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.21 real GPU OCR interview demo path backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -20,6 +20,7 @@
 - Phase 18 -> `v0.18.0`
 - Phase 19 -> `v0.19.0`
 - Phase 20 -> `v0.20.0`
+- Phase 21 -> `v0.21.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -74,6 +75,7 @@
 26. `tasks/phase-20-interview-mvp-packaging/20-02-sample-eval-coverage-expansion.md`：補齊公開 sample data 與 retrieval eval dataset 覆蓋率，目標至少 5 份 sample documents 與 20 筆 eval cases。
 27. `tasks/phase-20-interview-mvp-packaging/20-03-demo-media-and-readme-polish.md`：補齊 README 面試導覽、截圖或 GIF 等 demo media。
 28. `tasks/phase-20-interview-mvp-packaging/20-04-final-interview-mvp-validation.md`：重跑 final validation，並在 Phase 20 完成時執行 `v0.20.0` release/version sync。
+29. `tasks/phase-21-real-gpu-ocr-demo/21-01-real-gpu-ocr-frontend-flow.md`：將 frontend upload 面試主線改為 provider-selected real GPU OCR-first，mock OCR 只保留為手動 fallback，並同步 `v0.21.0` release 文件與版本。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -554,6 +556,22 @@ Phase 20.1 guardrails：
 - 不新增 production eval dashboard、strategy comparison page、live eval runner、backend API、frontend route、外部依賴、DB、auth、Redis、NATS、worker、Agent runtime 或 deployment。
 - 不改 retrieval algorithm、eval runner、smoke script、sample data 或 backend service。
 
+## MVP v0.21.0 Real GPU OCR Interview Demo Path
+
+- [x] `tasks/phase-21-real-gpu-ocr-demo/21-01-real-gpu-ocr-frontend-flow.md`: 將 frontend upload 預設改為 provider-selected `POST /documents/{document_id}/ocr` real GPU OCR-first，real OCR 失敗時保留已上傳文件並提供手動 mock OCR fallback。
+- [x] 21-01 validation：`npm.cmd run build` 於 `frontend/` 通過；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`129 passed`（僅 pytest cache 權限警告）；baseline `scripts/demo-smoke-test.ps1` 通過，health version `0.21.0`、answer source `ollama/qwen3.5:4b`、retrieval source `keyword baseline`；以臨時 `DOCURAG_OCR_PROVIDER=paddleocr` backend 跑 `scripts/demo-smoke-test.ps1 -ApiBaseUrl http://127.0.0.1:8012 -RunRealOcr` 通過，provider-selected OCR completed 且 metadata OK；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+Phase 21 goal：
+
+- 讓面試主線不再看起來像 mock OCR demo；frontend upload 預設展示你已經有的 provider-selected PaddleOCR GPU flow。
+- 保留 mock OCR 作為無 GPU / runtime 失敗時的明確手動 fallback，而不是靜默替代。
+- 同步 `v0.21.0` 版本、README、backend README、frontend README、TODO、ROADMAP 與 demo script。
+
+Phase 21 guardrails：
+
+- 不修改 PaddleOCR provider、engine lifecycle、模型設定、OCR normalization 或 backend OCR API contract。
+- 不新增 PDF rendering、image preprocessing、VLM parser、多頁 production OCR pipeline、DB、Auth、RBAC、Redis、NATS、worker、Agent runtime 或 deployment。
+
 ## Release Verification Status
 
 - [x] v0.0: repo structure、docs、tasks 已完成。
@@ -581,3 +599,4 @@ Phase 20.1 guardrails：
 - [x] v0.18.0: Hybrid Rerank Planning 已完成；本次只新增 Markdown planning tickets / TODO / ROADMAP，不 bump backend、frontend、health test 或 Docker Compose version。
 - [x] v0.19.0: Hybrid Rerank Runtime 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.19.0`，optional `hybrid_rerank` eval provider、`-RunHybridRerank` smoke flag、trace / report metadata、baseline demo smoke 與 baseline eval smoke 已補齊；optional vector-backed smoke 需待本機 Qdrant collection `docurag_chunks_v1` 可用後重跑。
 - [x] v0.20.0: Interview MVP Packaging 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.20.0`，demo script、sample / eval coverage、demo media、baseline demo smoke、baseline retrieval eval smoke 與 final validation 已補齊；optional vector-backed smoke 需待本機 Qdrant collection `docurag_chunks_v1` 可用後重跑。
+- [x] v0.21.0: Real GPU OCR Interview Demo Path 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO、ROADMAP 與 demo script 已同步到 `v0.21.0`；frontend upload 已改為 provider-selected real OCR-first flow，mock OCR 只作手動 fallback；frontend build、backend tests、baseline demo smoke、real OCR smoke、ticket `rg` 與 `git diff --check` 已通過。

@@ -6,6 +6,7 @@ import {
   getHealth,
   queryRag,
   runMockOcr,
+  runSelectedOcr,
   uploadDocument,
   type HealthResponse,
   type RagQueryResponse,
@@ -26,6 +27,7 @@ const health = ref<HealthResponse | null>(null);
 const ragResult = ref<RagQueryResponse | null>(null);
 const uploadResult = ref<UploadResponse | null>(null);
 const selectedFile = ref<File | null>(null);
+const uploadFallbackAvailable = ref(false);
 const ragQuery = ref("");
 const ragTopK = ref(3);
 const healthError = ref("");
@@ -39,7 +41,7 @@ const suggestedQuestions = [
   "When is the renewal date?",
 ];
 
-const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.20.0"));
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.21.0"));
 
 const healthLabel = computed(() => {
   if (healthState.value === "success" && health.value?.status === "ok") {
@@ -130,6 +132,7 @@ function handleFileChange(event: Event): void {
   const input = event.target as HTMLInputElement;
   selectedFile.value = input.files?.[0] ?? null;
   uploadResult.value = null;
+  uploadFallbackAvailable.value = false;
   uploadMessage.value = "";
   uploadError.value = "";
 }
@@ -182,15 +185,60 @@ async function submitUpload(): Promise<void> {
   uploadState.value = "loading";
   uploadError.value = "";
   uploadMessage.value = "";
+  uploadFallbackAvailable.value = false;
+
+  let uploadedDocumentId = "";
 
   try {
     const response = await uploadDocument(selectedFile.value);
     uploadResult.value = response;
-    await runMockOcr(response.document_id);
-    uploadMessage.value = "文件已送到後端，並完成 demo 知識庫處理。";
+    uploadedDocumentId = response.document_id;
+  } catch (error) {
+    uploadResult.value = null;
+    uploadError.value = error instanceof Error ? error.message : "文件上傳失敗";
+    uploadState.value = "error";
+    return;
+  }
+
+  try {
+    const ocrResult = await runSelectedOcr(uploadedDocumentId);
+    const selectedProvider = ocrResult.extracted_fields.provider ?? "";
+
+    if (selectedProvider !== "paddleocr") {
+      uploadFallbackAvailable.value = true;
+      uploadError.value = selectedProvider
+        ? `GPU OCR 未完成：目前後端 selected OCR provider 是 ${selectedProvider}。`
+        : "GPU OCR 未完成：目前後端 selected OCR provider 不是 paddleocr。";
+      uploadState.value = "error";
+      return;
+    }
+
+    uploadMessage.value = "文件已完成 GPU OCR，並送入 demo 知識庫。";
     uploadState.value = "success";
   } catch (error) {
-    uploadError.value = error instanceof Error ? error.message : "上傳或後端處理失敗";
+    uploadFallbackAvailable.value = true;
+    uploadError.value = error instanceof Error ? `GPU OCR 未完成：${error.message}` : "GPU OCR 未完成";
+    uploadState.value = "error";
+  }
+}
+
+async function submitMockFallback(): Promise<void> {
+  if (!uploadResult.value) {
+    uploadError.value = "請先上傳文件。";
+    return;
+  }
+
+  uploadState.value = "loading";
+  uploadError.value = "";
+  uploadMessage.value = "";
+
+  try {
+    await runMockOcr(uploadResult.value.document_id);
+    uploadFallbackAvailable.value = false;
+    uploadMessage.value = "已改用 mock OCR 完成 demo 備援處理。";
+    uploadState.value = "success";
+  } catch (error) {
+    uploadError.value = error instanceof Error ? `Mock OCR 備援失敗：${error.message}` : "Mock OCR 備援失敗";
     uploadState.value = "error";
   }
 }
@@ -291,7 +339,7 @@ onMounted(() => {
         <div class="panel-heading">
           <div>
             <h2>上傳文件</h2>
-            <p>文件送出後由後端完成 demo 知識庫處理。</p>
+            <p>文件送出後由後端 GPU OCR 建立 demo 知識庫。</p>
           </div>
         </div>
 
@@ -311,11 +359,20 @@ onMounted(() => {
           :disabled="!selectedFile || uploadState === 'loading'"
           @click="submitUpload"
         >
-          {{ uploadState === "loading" ? "送往後端處理..." : "上傳並處理" }}
+          {{ uploadState === "loading" ? "後端處理中..." : "上傳並跑 GPU OCR" }}
         </button>
 
         <p v-if="uploadMessage" class="success-message">{{ uploadMessage }}</p>
         <p v-if="uploadError" class="error">{{ uploadError }}</p>
+        <button
+          v-if="uploadFallbackAvailable"
+          type="button"
+          class="button secondary-button upload-button"
+          :disabled="uploadState === 'loading'"
+          @click="submitMockFallback"
+        >
+          改用 mock OCR 備援
+        </button>
 
         <dl v-if="uploadResult" class="upload-summary">
           <div>
@@ -324,7 +381,7 @@ onMounted(() => {
           </div>
           <div>
             <dt>狀態</dt>
-            <dd>已送入後端知識庫流程</dd>
+            <dd>{{ uploadFallbackAvailable ? "GPU OCR 待處理" : "已送入後端知識庫流程" }}</dd>
           </div>
         </dl>
       </article>

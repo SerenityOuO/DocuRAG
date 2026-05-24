@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime backlog 與 v0.20.0 interview MVP packaging backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging 與 v0.21.0 real GPU OCR interview demo path backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.20.0 interview MVP packaging checklist。
+- TODO 包含 Phase 00 到 v0.21.0 real GPU OCR interview demo path checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -79,6 +79,7 @@ Expected Outcome：
 - v0.18.0 planning backlog 只做 `hybrid_rerank` planning tickets；不實作 runtime、不 bump version、不新增 API、frontend UI、eval dashboard、BM25、worker、DB、登入或 RBAC。
 - v0.19.0 hybrid rerank runtime backlog 只做 optional eval runner strategy、smoke flag、trace / report visibility 與 release sync；不接 default `/rag/query`、production eval dashboard、worker、DB、登入或 RBAC。
 - v0.20.0 interview MVP packaging backlog 只做 demo readiness、文件敘事、sample / eval coverage、demo media 與 final validation；不實作 production eval dashboard、worker、DB、登入或 RBAC。
+- v0.21.0 real GPU OCR interview demo path 只做 frontend upload real OCR-first flow、manual mock fallback 與 release 文件同步；不修改 PaddleOCR provider、OCR API contract、PDF pipeline、worker、DB、登入或 RBAC。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -1094,7 +1095,7 @@ Expected Outcome：
 20-11 Frontend Minimal Chat Upload Status：
 
 - 新增 frontend minimal chat / upload ticket，目標是修正 20-09 的同頁後台管理呈現，讓 frontend demo 只保留客服問答與文件上傳。
-- Scope 只限既有 Vue single-page UI、CSS、README、frontend README、TODO 與 ROADMAP 文件同步；上傳仍呼叫既有 backend upload + mock OCR flow，但不在 frontend 顯示 OCR text、extracted fields、document list、metadata JSON、API response JSON、retrieval trace table 或 retrieved chunks。
+- Scope 只限既有 Vue single-page UI、CSS、README、frontend README、TODO 與 ROADMAP 文件同步；當時上傳仍呼叫既有 backend upload + mock OCR flow，但不在 frontend 顯示 OCR text、extracted fields、document list、metadata JSON、API response JSON、retrieval trace table 或 retrieved chunks。v0.21.0 已將 frontend upload 主線改為 provider-selected real OCR-first。
 - Validation：`npm.cmd run build` 通過；Browser 檢查 `http://localhost:5174/` local frontend demo view 只有客服問答與文件上傳，未顯示 OCR panel、document list、metadata JSON、API response JSON 或 trace table，desktop horizontal overflow 為 `0`；ticket 指定 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 20-12 Default LLM Answer Status：
@@ -1128,3 +1129,50 @@ Out of Scope：
 - 不實作 production eval dashboard、BM25 dependency、query rewriting、LLM-as-judge、answer faithfulness scoring 或 citation quality scoring。
 - 不新增 backend API endpoint、frontend route、外部依賴、Docker service、Redis、NATS、worker、async queue、PostgreSQL schema、登入、RBAC 或 Agent runtime。
 - 不新增 VLM parser、PDF rendering、production OCR pipeline、K8s、deployment 設定或 release tag。
+
+## v0.21.0 Real GPU OCR Interview Demo Path
+
+Goal：讓面試主線的 frontend upload 使用既有 provider-selected PaddleOCR GPU OCR flow，不再把 mock OCR 當作上傳主線。
+
+Tickets：
+
+- [x] `tasks/phase-21-real-gpu-ocr-demo/21-01-real-gpu-ocr-frontend-flow.md`
+
+Expected Outcome：
+
+- Frontend upload 成功後預設呼叫 `POST /documents/{document_id}/ocr`，使用 backend selected OCR provider。
+- real OCR 成功時顯示 GPU OCR 完成；real OCR 失敗時保留已上傳 document 並顯示手動 mock OCR fallback button。
+- Backend / frontend / Docker Compose / README / TODO / ROADMAP 同步到 `v0.21.0`。
+- Baseline smoke script 仍可用 mock-safe API path 驗證無 GPU 環境；`-RunRealOcr` 用於有 GPU runtime 的 explicit real OCR validation。
+
+21-01 Real GPU OCR Frontend Flow Status：
+
+- Frontend 已從 `runMockOcr` 主線改為 `runSelectedOcr` 主線，mock OCR 只在 real OCR error 後由使用者手動觸發。
+- Scope 只限既有 Vue single-page UI、版本同步與文件敘事，不新增 backend OCR provider、API、worker、DB、auth 或 deployment。
+- Validation：`npm.cmd run build` 通過；backend test script 通過，`129 passed`（僅 pytest cache 權限警告）；baseline demo smoke 通過，health version `0.21.0`、answer source `ollama/qwen3.5:4b`、retrieval source `keyword baseline`；以臨時 `DOCURAG_OCR_PROVIDER=paddleocr` backend 跑 `scripts/demo-smoke-test.ps1 -ApiBaseUrl http://127.0.0.1:8012 -RunRealOcr` 通過，provider-selected OCR completed 且 metadata OK；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+Acceptance Criteria：
+
+- Frontend upload 不再直接呼叫 `/ocr/mock`。
+- real OCR error state 需保留 uploaded document 並提供 mock fallback。
+- `v0.21.0` release/version sync 不得引入 out-of-scope runtime。
+
+Validation：
+
+- `npm.cmd run build`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
+- Optional：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunRealOcr`
+- `rg -n "v0.21.0|Phase 21|real GPU OCR|RunRealOcr" README.md backend/README.md frontend/README.md TODO.md docs/ROADMAP.md docs/demo-script.md tasks/phase-21-real-gpu-ocr-demo/21-01-real-gpu-ocr-frontend-flow.md`
+- `git diff --check`
+
+Release Impact：
+
+- Target version: `v0.21.0`。
+- Version bump required: yes。
+- 原因：Phase 21 改變面試 demo 的 frontend upload 主線，從 mock OCR ingestion 改為 provider-selected real GPU OCR-first flow。
+
+Out of Scope：
+
+- 不修改 PaddleOCR provider、engine lifecycle、模型設定、OCR normalization 或 backend OCR API contract。
+- 不新增 PDF rendering、image preprocessing、VLM parser、多頁 production OCR pipeline、DB、Auth、RBAC、Redis、NATS、worker、Agent runtime、deployment 或 release tag。
