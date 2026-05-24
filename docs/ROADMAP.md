@@ -1298,7 +1298,7 @@ Goal：補上 OCR 後的 structured extraction demo slice。Phase 24 先以 VLM-
 Tickets：
 
 - [x] `tasks/phase-24-vlm-parser-mvp/24-01-parser-contract.md`
-- [ ] `tasks/phase-24-vlm-parser-mvp/24-02-invoice-parser-service.md`
+- [x] `tasks/phase-24-vlm-parser-mvp/24-02-invoice-parser-service.md`
 - [ ] `tasks/phase-24-vlm-parser-mvp/24-03-document-fields-api.md`
 - [ ] `tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md`
 - [ ] `tasks/phase-24-vlm-parser-mvp/24-05-parser-demo-release-sync.md`
@@ -1322,7 +1322,10 @@ Expected Outcome：
 
 24-02 Invoice Parser Service Status：
 
-- 待執行。實作 deterministic invoice parser fallback 與 backend unit tests，不新增 API 或 frontend UI。
+- 已完成。新增 parser schema 與 `DeterministicInvoiceParser`，可從既有 OCR text / OCR lines 抽取 invoice number、vendor、issue date、total amount、tax amount、currency 與 demo-safe line item 摘要。
+- Parser result 保留欄位層級 `parser_source`、`confidence`、`source_text`、`source_page`、`source_bbox` 與 `fallback_reason`；缺少欄位時以 `field_not_found` / `missing_fields` 表達，不產生假資料。
+- Unit tests 已覆蓋英文 sample invoice、missing fields、中文標籤、TWD / 千分位金額格式與 OCR 未完成 failure path。
+- 24-02 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`135 passed`（僅 pytest cache 權限警告）；`rg -n "DocumentFields|ExtractedField|ParserResult|document_parser|fallback_reason" backend/app backend/tests TODO.md docs/ROADMAP.md tasks/phase-24-vlm-parser-mvp/24-02-invoice-parser-service.md` 通過；`git diff --check` 通過。
 
 24-03 Document Fields API Status：
 

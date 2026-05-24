@@ -33,6 +33,17 @@ class OcrStatus(StrEnum):
     FAILED = "failed"
 
 
+class ParserStatus(StrEnum):
+    PENDING = "pending"
+    PARSING = "parsing"
+    PARSED = "parsed"
+    FAILED = "failed"
+
+
+ParserSource = Literal["deterministic_invoice", "llm_invoice", "vlm_invoice"]
+FieldValue = str | int | float | bool
+
+
 class ProcessingStatus(BaseModel):
     upload: ProcessingStepStatus = ProcessingStepStatus.COMPLETED
     ocr: ProcessingStepStatus = ProcessingStepStatus.PENDING
@@ -87,6 +98,48 @@ class OcrResult(BaseModel):
     extracted_fields: dict[str, str] = Field(default_factory=dict)
     lines: list[OcrTextLine] = Field(default_factory=list)
     updated_at: datetime | None = None
+
+
+class ExtractedField(BaseModel):
+    value: FieldValue | None = None
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    source_text: str | None = None
+    source_page: int | None = Field(default=None, ge=1)
+    source_bbox: BoundingBox | None = None
+    parser_source: ParserSource = "deterministic_invoice"
+    fallback_reason: str | None = None
+
+
+class InvoiceLineItem(BaseModel):
+    description: ExtractedField = Field(default_factory=ExtractedField)
+    quantity: ExtractedField = Field(default_factory=ExtractedField)
+    unit_price: ExtractedField = Field(default_factory=ExtractedField)
+    amount: ExtractedField = Field(default_factory=ExtractedField)
+
+
+class DocumentFields(BaseModel):
+    document_type: ExtractedField = Field(default_factory=ExtractedField)
+    vendor_name: ExtractedField = Field(default_factory=ExtractedField)
+    invoice_number: ExtractedField = Field(default_factory=ExtractedField)
+    issue_date: ExtractedField = Field(default_factory=ExtractedField)
+    total_amount: ExtractedField = Field(default_factory=ExtractedField)
+    tax_amount: ExtractedField = Field(default_factory=ExtractedField)
+    currency: ExtractedField = Field(default_factory=ExtractedField)
+    line_items: list[InvoiceLineItem] = Field(default_factory=list)
+
+
+class ParserResult(BaseModel):
+    document_id: str = Field(..., min_length=1)
+    status: ParserStatus = ParserStatus.PENDING
+    parser_source: ParserSource = "deterministic_invoice"
+    schema_version: str = "invoice_fields_v1"
+    fields: DocumentFields = Field(default_factory=DocumentFields)
+    fallback_reason: str | None = None
+    error_message: str | None = None
+    source_ocr_status: OcrStatus | None = None
+    source_ocr_updated_at: datetime | None = None
+    updated_at: datetime | None = None
+    trace_metadata: dict[str, str] = Field(default_factory=dict)
 
 
 class DocumentChunk(BaseModel):

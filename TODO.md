@@ -628,7 +628,7 @@ Phase 23 guardrails：
 ## MVP v0.24.0 VLM / Parser Minimal MVP
 
 - [x] `tasks/phase-24-vlm-parser-mvp/24-01-parser-contract.md`: 固定 VLM-compatible parser contract，定義 OCR text -> invoice structured fields、parser status、source trace 與 fallback metadata；文件 ticket，不 bump version。
-- [ ] `tasks/phase-24-vlm-parser-mvp/24-02-invoice-parser-service.md`: 實作 deterministic invoice parser service，從既有 OCR text 抽取 invoice number、date、total amount、currency 等 MVP 欄位。
+- [x] `tasks/phase-24-vlm-parser-mvp/24-02-invoice-parser-service.md`: 實作 deterministic invoice parser service，從既有 OCR text 抽取 invoice number、date、total amount、currency 等 MVP 欄位。
 - [ ] `tasks/phase-24-vlm-parser-mvp/24-03-document-fields-api.md`: 新增 `POST /documents/{document_id}/parse` 與 `GET /documents/{document_id}/fields`，並保存 parser result 到 local JSON metadata store。
 - [ ] `tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md`: 在 Admin / Analyst ingestion surface 顯示 parser status 與 structured fields 摘要，Viewer Chat 預設入口不顯示 parse / upload / OCR 操作。
 - [ ] `tasks/phase-24-vlm-parser-mvp/24-05-parser-demo-release-sync.md`: 重跑 final validation，補齊 parser demo 文件與 smoke，並在 Phase 24 完成時執行 `v0.24.0` release/version sync。
@@ -653,6 +653,13 @@ Phase 24 guardrails：
 - 已在 `docs/api.md` 與 `docs/architecture.md` 固定 `DocumentFields`、`ExtractedField`、`ParserResult`、parser status、source trace、fallback metadata、`POST /documents/{document_id}/parse` 與 `GET /documents/{document_id}/fields` 草案。
 - Parser source 明確區分 Phase 24 MVP 的 deterministic invoice parser fallback、future text-only LLM parser 與 future VLM parser；目前不宣稱 production VLM parser，也不 bump version。
 - [x] 24-01 validation：`rg -n "v0.24.0|Phase 24|Parser|VLM-compatible|DocumentFields|ExtractedField|fallback_reason" README.md TODO.md docs/ROADMAP.md docs/api.md docs/architecture.md tasks/phase-24-vlm-parser-mvp/24-01-parser-contract.md` 通過；`git diff --check` 通過（僅顯示 Windows `LF will be replaced by CRLF` 提示）。
+
+24-02 parser service status：
+
+- 已新增 `DocumentFields`、`ExtractedField`、`ParserResult` 與 `ParserStatus` schema，並建立 `DeterministicInvoiceParser` 作為 future VLM / LLM parser 的 fallback。
+- Parser 只使用既有 OCR text / OCR lines，保留 `source_text`、`source_page`、`source_bbox`、`confidence`、`parser_source` 與 `fallback_reason`；缺欄位會回傳 missing metadata，不硬填假值。
+- Unit tests 已覆蓋 sample invoice OCR text、missing field、中文標籤、TWD / 千分位金額與 OCR 未完成失敗案例；本 ticket 不新增 parse API、frontend UI、外部依賴或 version bump。
+- [x] 24-02 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`135 passed`（僅 pytest cache 權限警告）；`rg -n "DocumentFields|ExtractedField|ParserResult|document_parser|fallback_reason" backend/app backend/tests TODO.md docs/ROADMAP.md tasks/phase-24-vlm-parser-mvp/24-02-invoice-parser-service.md` 通過；`git diff --check` 通過。
 
 ## Release Verification Status
 
