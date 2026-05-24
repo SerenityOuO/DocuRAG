@@ -158,7 +158,7 @@ Document-level processing 後續以 `processing.parser=pending/running/completed
 `POST /documents/{document_id}/parse`
 
 - Requires an existing document and completed OCR text.
-- Request body is optional for MVP. If provided, `document_type` may be `invoice`; `parser_source` defaults to `deterministic_invoice`.
+- Request body is optional for MVP. If provided, `document_type` may be `invoice`. Phase 26 起 parser route defaults to VLM-first `vlm_invoice`; `DOCURAG_PARSER_SOURCE=deterministic_invoice` is only an explicit debug / validation override.
 - Returns `ParserResult` and saves it to the document metadata JSON.
 - `404` when document does not exist.
 - `409` when OCR is not completed or OCR text is empty; response body should include `status=failed` and `fallback_reason=ocr_not_completed` or `empty_ocr_text`.
@@ -336,3 +336,94 @@ Status contract：
 - Invoice summary runs with `document_id` execute `get_document_fields` -> `search_documents` -> `summarize_invoice_fields`.
 - Query-only document question runs execute `search_documents` and return retrieved-chunk answer text with citations.
 - Failed parser lookup, search miss or invalid document remains a saved `AgentRun` with failed / fallback plan steps.
+
+## Phase 26 VLM Parser Provider Contract Draft
+
+Phase 26 將 parser default 切成 VLM-first provider spike：`POST /documents/{document_id}/parse` 預設先嘗試 `vlm_invoice`，只有 VLM provider unavailable、timeout、unsupported file、invalid JSON、missing required fields 或 confidence too low 時，才 fallback 到 Phase 24 的 `deterministic_invoice`。這個 default-on 只代表 demo parser path 預設 VLM-first，不代表 production VLM parser、OpenAI SDK、streaming、function calling、PDF rendering、多頁 parser pipeline、worker、DB、RBAC 或 autonomous Agent。
+
+### Provider Env Contract
+
+| Env | Default | Meaning |
+|---|---|---|
+| `DOCURAG_VLM_PROVIDER` | `ollama` | Phase 26 parser provider selector。`ollama` 表示呼叫 Ollama-style local HTTP endpoint；`fake` 只供 demo smoke 驗證 success path；空字串可作 explicit disabled / fallback validation。 |
+| `DOCURAG_VLM_BASE_URL` | `http://127.0.0.1:11434` | Local VLM endpoint base URL。 |
+| `DOCURAG_VLM_MODEL` | `qwen3.5:4b` | Demo VLM parser model name；實際 production vision model selection 留給後續 phase。 |
+| `DOCURAG_VLM_TIMEOUT_SECONDS` | `30` | VLM parser request timeout guardrail，避免 demo 卡死。 |
+| `DOCURAG_VLM_MIN_CONFIDENCE` | `0.5` | Provider response confidence 低於門檻時 fallback 到 deterministic parser。 |
+| `DOCURAG_PARSER_SOURCE` | `vlm_invoice` | Parser route override；預設 VLM-first，`deterministic_invoice` 只作 debug / validation override。 |
+
+### Input Contract
+
+Phase 26 VLM input resolver 只解析既有 upload metadata 與 `data/uploads/` 內的 demo-safe image file：
+
+- 支援 `.png`、`.jpg` 與 `.jpeg`，並回傳 `document_id`、normalized file path、mime type、input source 與 fallback reason。
+- 不支援 PDF rendering、multi-page image extraction、image preprocessing、deskew、layout detection 或 OCR accuracy tuning。
+- Resolver 必須拒絕 missing file、unsupported file type、path traversal 或 upload root 以外的路徑，並回傳明確 failure reason。
+
+### Output Contract
+
+VLM provider 必須回傳 JSON object，並由 adapter 正規化成既有 Phase 24 schema，不新增平行欄位 schema：
+
+```json
+{
+  "document_type": "invoice",
+  "vendor_name": "Aurora Office Supplies Demo LLC",
+  "invoice_number": "AUR-2026-051",
+  "issue_date": "2026-05-31",
+  "total_amount": 1248.5,
+  "tax_amount": 80.0,
+  "currency": "USD",
+  "line_items": [
+    {
+      "description": "Printer paper",
+      "quantity": 5,
+      "unit_price": 18.5,
+      "amount": 92.5
+    }
+  ],
+  "confidence": 0.82
+}
+```
+
+Adapter output rules：
+
+- `ParserResult.parser_source` 與欄位層級 `ExtractedField.parser_source` 必須是 `vlm_invoice`，fallback 後才會是 `deterministic_invoice`。
+- `DocumentFields` 欄位仍使用 `document_type`、`vendor_name`、`invoice_number`、`issue_date`、`total_amount`、`tax_amount`、`currency` 與 `line_items`。
+- `confidence` 需落在 `0` 到 `1`；未知或 invalid confidence 不可硬填高分。
+- `source_text` 可來自 VLM response trace、OCR text 或 normalized field label；沒有來源時可為 `null` 並以 `fallback_reason` 說明。
+- `trace_metadata` 必須標示 `parser_route=vlm_first`、`vlm_provider`、`vlm_model`、`source_input_type=image`、`fallback_chain` 與 `fallback_reason`。
+
+### Fallback Policy
+
+Fallback 不得覆蓋既有 OCR / indexing 狀態，也不讓 Agent 直接呼叫 VLM：
+
+| Failure | Parser behavior |
+|---|---|
+| Provider disabled / unavailable | 記錄 `fallback_reason=vlm_provider_unavailable`，執行 `deterministic_invoice` fallback。 |
+| Request timeout | 記錄 `fallback_reason=vlm_timeout`，執行 deterministic fallback。 |
+| Unsupported or unsafe file | 記錄 resolver failure reason，例如 `unsupported_file` 或 `unsafe_path`，執行 deterministic fallback。 |
+| Invalid JSON / missing required fields | 記錄 `fallback_reason=vlm_invalid_response` 或 `vlm_missing_fields`，不產生假欄位，執行 deterministic fallback。 |
+| Confidence too low | 記錄 `fallback_reason=vlm_low_confidence`，執行 deterministic fallback。 |
+
+Phase 25 Agent contract 不變：`get_document_fields` 只讀已保存的 `ParserResult` / `DocumentFields`。Agent 不直接呼叫 VLM、不改 tool allowlist，也不新增任意 SQL、shell、file system command、worker、DB 或 permission model。
+
+### 26-03 Runtime Notes
+
+- `get_document_parser()` now builds a VLM-first `VlmInvoiceParser` unless `DOCURAG_PARSER_SOURCE=deterministic_invoice` is explicitly set.
+- The default `ollama` provider uses the local HTTP `/api/generate` shape with `stream=false` and image base64; `DOCURAG_VLM_PROVIDER=fake` is a built-in demo / smoke stub and is not a production VLM runtime.
+- VLM success returns `ParserResult.parser_source=vlm_invoice` and field-level `parser_source=vlm_invoice`.
+- Provider unavailable, timeout, invalid response, missing required fields, unsupported file or low confidence falls back to `deterministic_invoice`; fallback details are preserved in `trace_metadata.fallback_chain` and `trace_metadata.fallback_reason`.
+- Existing Phase 25 Agent APIs are unchanged because `get_document_fields` reads the saved `ParserResult` regardless of parser source.
+
+### 26-04 Source Comparison Notes
+
+- Parser responses expose the active route through `trace_metadata.parser_route`: `vlm_first` for Phase 26 default path and `deterministic_only` for explicit deterministic override.
+- `trace_metadata.fallback_chain` shows either `vlm_invoice`, `vlm_invoice -> deterministic_invoice` or `deterministic_invoice`.
+- VLM fallback promotes the VLM / resolver reason to top-level `ParserResult.fallback_reason`; if deterministic fallback also has missing fields, its reason is preserved as `trace_metadata.deterministic_fallback_reason`.
+- `trace_metadata.confidence_summary` provides a compact confidence value that smoke scripts or API clients can check without a production parser comparison dashboard.
+
+### 26-05 Demo Release Notes
+
+- Release version is `v0.26.0`.
+- `scripts/demo-smoke-test.ps1` validates the VLM-first fallback path on text input and, when `DOCURAG_VLM_PROVIDER=fake` is set for the backend / script environment, validates the `vlm_invoice` success path on image input.
+- The same smoke path verifies that Agent `get_document_fields` can read both `deterministic_invoice` fallback results and `vlm_invoice` success results without changing the Phase 25 Agent tool contract.

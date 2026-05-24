@@ -21,7 +21,6 @@ from app.schemas.documents import (
     ProcessingStatus,
     ProcessingStepStatus,
 )
-from app.services.document_parser import DeterministicInvoiceParser
 from app.services.ocr import OcrProvider
 
 
@@ -273,7 +272,7 @@ class DocumentStorage:
     def run_parser(
         self,
         document_id: str,
-        parser: DeterministicInvoiceParser,
+        parser,
     ) -> ParserResult | None:
         documents = self._read_documents()
 

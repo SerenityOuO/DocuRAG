@@ -1,6 +1,6 @@
 # MVP Architecture
 
-本文件描述 DocuRAG AgentOps 目前的受控 MVP 架構。到 v0.24.0 為止，專案已完成 backend / frontend demo、provider-selected OCR、local RAG、citation trace、retrieval eval runner、optional vector / rerank / hybrid / `hybrid_rerank` eval strategy、Viewer Chat / Admin Ingestion role split，以及 deterministic parser MVP。Phase 25 先固定 Agent Tool-use contract，但不代表已新增 autonomous Agent、auth / RBAC、worker 或 DB runtime。
+本文件描述 DocuRAG AgentOps 目前的受控 MVP 架構。到 v0.26.0 為止，專案已完成 backend / frontend demo、provider-selected OCR、local RAG、citation trace、retrieval eval runner、optional vector / rerank / hybrid / `hybrid_rerank` eval strategy、Viewer Chat / Admin Ingestion role split、deterministic parser MVP、deterministic Agent tool-use trace，以及 VLM-first parser provider spike。Phase 26 把 parser default 切成 VLM-first provider spike，但不代表已新增 production VLM parser、auth / RBAC、worker 或 DB runtime。
 
 ## MVP Shape
 
@@ -14,12 +14,13 @@ Admin / Analyst Ingestion Surface
     |-- upload / provider-selected OCR / processing status
     |-- OCR result / local chunks / metadata debug links
     |-- Phase 24 parser result: OCR text -> structured fields
+    |-- Phase 26 parser route: image input -> vlm_invoice -> deterministic fallback
     |-- Phase 25 Agent contract: deterministic plan -> allowlisted tools -> trace
     |
 FastAPI Backend
     |
     |-- health / document API / OCR API / RAG API / parse / fields API
-    |-- future Agent run API
+    |-- Agent run / lookup API
     |-- manual vector indexing API
     |-- retrieval eval runner CLI
     |
@@ -30,6 +31,7 @@ Local Data Store
 Optional Local AI Runtime
     |
     |-- PaddleOCR GPU provider
+    |-- Phase 26 VLM parser provider over local HTTP
     |-- Ollama generation / embedding
     |-- Qdrant vector collection
     |-- FastEmbed rerank adapter
@@ -139,6 +141,40 @@ Agent guardrails：
 - 不新增 PostgreSQL、Redis、NATS、worker、async queue、Auth、RBAC、role guard、project permission 或 multi-user isolation。
 - 不修改 parser extraction、OCR provider、RAG ranking、eval runner、Qdrant indexing 或 default Viewer Chat path。
 - Agent trace surface 不宣稱 production Agent dashboard 或正式權限系統。
+
+## Phase 26 VLM Parser Provider Boundary
+
+Phase 26 的目標是把 parser default 切成 VLM-first demo path：`vlm_invoice` 先從既有 upload metadata 解析 demo-safe image input，再呼叫可設定的 local VLM provider；provider unavailable、timeout、unsupported file、invalid response、missing fields 或 confidence too low 時，才 fallback 到 `deterministic_invoice`。這不改 Phase 25 Agent planner / tool allowlist；Agent 仍只透過 `get_document_fields` 讀取保存後的 parser result。
+
+```text
+Admin / Analyst Ingestion Surface
+    |
+    |-- upload demo-safe image
+    |-- run provider-selected OCR
+    |-- run parser explicitly
+    |
+FastAPI Backend Parser Route
+    |
+    |-- VLM input resolver -> existing data/uploads image path
+    |-- vlm_invoice adapter -> configurable local VLM provider
+    |-- deterministic_invoice fallback
+    |
+Local JSON Store
+    |
+    |-- ParserResult parser_source / fallback chain / confidence metadata
+    |
+Phase 25 Agent
+    |
+    |-- get_document_fields reads saved ParserResult only
+```
+
+Phase 26 contract rules：
+
+- `DOCURAG_VLM_PROVIDER`、`DOCURAG_VLM_BASE_URL`、`DOCURAG_VLM_MODEL`、`DOCURAG_VLM_TIMEOUT_SECONDS` 與 `DOCURAG_VLM_MIN_CONFIDENCE` 定義 provider boundary；`DOCURAG_PARSER_SOURCE=deterministic_invoice` 只作 explicit debug / validation override。
+- Input resolver 只支援 `data/uploads/` 內既有 `.png` / `.jpg` / `.jpeg`，不做 PDF rendering、multi-page extraction、image preprocessing、layout analysis 或 table reconstruction。
+- VLM output 必須正規化成既有 `DocumentFields` / `ExtractedField` / `ParserResult` schema，保留 `parser_source=vlm_invoice`、confidence、source trace、`fallback_chain` 與 `fallback_reason`。
+- Fallback 只影響 parser result / parser processing step，不覆蓋 OCR / indexing 狀態，也不觸發 RAG ranking、Qdrant indexing、eval runner、worker、DB 或 permission model。
+- `deterministic_invoice` 在 Phase 26 後不再是預設 parser route，只能作為 VLM fallback 或 explicit debug override。
 
 ## Near-Term Runtime Boundary
 

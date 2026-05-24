@@ -277,7 +277,9 @@ def test_parse_document_fields_saves_parser_result_to_metadata(
     assert body["fields"]["currency"]["value"] == "USD"
     assert body["fields"]["invoice_number"]["parser_source"] == "deterministic_invoice"
     assert body["fields"]["invoice_number"]["source_text"] == "Invoice number: AUR-2026-051"
-    assert body["fallback_reason"] is None
+    assert body["fallback_reason"] == "unsupported_file"
+    assert body["trace_metadata"]["fallback_chain"] == "vlm_invoice -> deterministic_invoice"
+    assert body["trace_metadata"]["fallback_reason"] == "unsupported_file"
 
     metadata_path = tmp_path / "data" / "documents.json"
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
@@ -373,10 +375,11 @@ def test_parse_document_fields_keeps_missing_fields_as_metadata(client: TestClie
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "parsed"
-    assert body["fallback_reason"] == "missing_fields"
+    assert body["fallback_reason"] == "unsupported_file"
     assert body["fields"]["invoice_number"]["value"] == "INV-2026-001"
     assert body["fields"]["vendor_name"]["value"] is None
     assert body["fields"]["vendor_name"]["fallback_reason"] == "field_not_found"
+    assert body["trace_metadata"]["deterministic_fallback_reason"] == "missing_fields"
     assert "vendor_name" in body["trace_metadata"]["missing_fields"]
 
 

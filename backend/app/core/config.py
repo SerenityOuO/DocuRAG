@@ -19,7 +19,7 @@ def default_data_dir() -> Path:
 
 class Settings(BaseSettings):
     app_name: str = "DocuRAG AgentOps Backend"
-    version: str = "0.25.0"
+    version: str = "0.26.0"
     environment: str = "local"
     data_dir: Path = Field(default_factory=default_data_dir)
     ocr_provider: str = "paddleocr"
@@ -38,6 +38,12 @@ class Settings(BaseSettings):
     llm_base_url: str = "http://127.0.0.1:11434"
     llm_model: str = "qwen3.5:4b"
     llm_timeout_seconds: float = 30.0
+    parser_source: str = "vlm_invoice"
+    vlm_provider: str | None = "ollama"
+    vlm_base_url: str = "http://127.0.0.1:11434"
+    vlm_model: str = "qwen3.5:4b"
+    vlm_timeout_seconds: float = 30.0
+    vlm_min_confidence: float = 0.5
     embedding_provider: str | None = None
     embedding_base_url: str = "http://127.0.0.1:11434"
     embedding_model: str = "qwen3-embedding:0.6b"

@@ -16,12 +16,13 @@ from app.schemas.documents import (
     ParserStatus,
     VectorIndexingResponse,
 )
-from app.services.document_parser import DeterministicInvoiceParser
+from app.services.document_parser import DeterministicInvoiceParser, VlmInvoiceParser, create_vlm_provider
 from app.services.document_storage import DocumentStorage
 from app.services.embedding import create_embedding_provider
 from app.services.ocr import MockOcrProvider, OcrProvider, PaddleOcrProvider
 from app.services.vector_indexing import VectorIndexingService
 from app.services.vector_store import create_qdrant_vector_store
+from app.services.vlm_input import VlmInputResolver
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -47,8 +48,22 @@ def get_vector_indexing_service() -> VectorIndexingService:
     )
 
 
-def get_document_parser() -> DeterministicInvoiceParser:
-    return DeterministicInvoiceParser()
+def get_document_parser():
+    settings = get_settings()
+    parser_source = settings.parser_source.strip().lower()
+    if parser_source == "deterministic_invoice":
+        return DeterministicInvoiceParser()
+
+    return VlmInvoiceParser(
+        input_resolver=VlmInputResolver(settings.data_dir / "uploads"),
+        provider=create_vlm_provider(
+            settings.vlm_provider,
+            settings.vlm_base_url,
+            settings.vlm_model,
+            settings.vlm_timeout_seconds,
+        ),
+        min_confidence=settings.vlm_min_confidence,
+    )
 
 
 def _selected_ocr_provider_key() -> tuple[object, ...]:
@@ -149,7 +164,7 @@ DocumentStorageDep = Annotated[DocumentStorage, Depends(get_document_storage)]
 MockOcrProviderDep = Annotated[MockOcrProvider, Depends(get_mock_ocr_provider)]
 SelectedOcrProviderDep = Annotated[OcrProvider, Depends(get_selected_ocr_provider)]
 VectorIndexingServiceDep = Annotated[VectorIndexingService, Depends(get_vector_indexing_service)]
-DocumentParserDep = Annotated[DeterministicInvoiceParser, Depends(get_document_parser)]
+DocumentParserDep = Annotated[object, Depends(get_document_parser)]
 
 
 @router.post("/upload", response_model=DocumentUploadResponse)

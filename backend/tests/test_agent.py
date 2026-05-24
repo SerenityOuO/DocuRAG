@@ -88,7 +88,9 @@ def test_agent_run_returns_plan_tool_calls_answer_and_citations(client: TestClie
     assert body["trace"]["planner"] == "deterministic"
     assert body["trace"]["tool_policy"] == "allowlisted_read_only"
     assert body["trace"]["tool_count"] == "3"
-    assert body["trace"]["fallback_count"] == "0"
+    assert body["trace"]["fallback_count"] == "2"
+    assert body["tool_calls"][0]["observation"]["fallback_reason"] == "unsupported_file"
+    assert body["tool_calls"][2]["observation"]["fallback_reason"] == "unsupported_file"
 
 
 def test_agent_run_lookup_returns_saved_run(client: TestClient) -> None:
@@ -153,7 +155,10 @@ def test_agent_run_completes_invoice_summary_with_search_fallback(client: TestCl
     assert body["final_answer"]["fallback_reason"] == "no_retrieved_chunks"
     assert "Invoice AUR-2026-051 is from Aurora Office Supplies Demo LLC." in body["final_answer"]["text"]
     assert body["citations"] == []
-    assert body["trace"]["fallback_count"] == "1"
+    assert body["trace"]["fallback_count"] == "3"
+    assert body["tool_calls"][0]["observation"]["fallback_reason"] == "unsupported_file"
+    assert body["tool_calls"][1]["observation"]["fallback_reason"] == "no_retrieved_chunks"
+    assert body["tool_calls"][2]["observation"]["fallback_reason"] == "unsupported_file"
 
 
 def test_agent_run_returns_failed_state_for_invalid_document(client: TestClient) -> None:
