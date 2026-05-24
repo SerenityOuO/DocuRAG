@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.23 Viewer Chat / Admin Ingestion role split release。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.24 VLM / Parser Minimal MVP backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -23,6 +23,7 @@
 - Phase 21 -> `v0.21.0`
 - Phase 22 -> `v0.22.0`
 - Phase 23 -> `v0.23.0`
+- Phase 24 -> `v0.24.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -83,6 +84,11 @@
 32. `tasks/phase-23-role-split-demo/23-02-viewer-chat-only-surface.md`：將 frontend 預設入口收斂為 Viewer Chat-only，不在前台主畫面顯示 upload / OCR / mock fallback。
 33. `tasks/phase-23-role-split-demo/23-03-admin-ingestion-surface.md`：建立明確 Admin / Analyst 後台知識庫管理 surface，承接 upload、provider-selected OCR、狀態與手動 fallback。
 34. `tasks/phase-23-role-split-demo/23-04-role-split-demo-release-sync.md`：完成 `v0.23.0` release/version sync 與 final validation。
+35. `tasks/phase-24-vlm-parser-mvp/24-01-parser-contract.md`：固定 VLM-compatible parser contract、invoice structured fields、parser status 與 fallback metadata；文件 / contract ticket，不 bump version。
+36. `tasks/phase-24-vlm-parser-mvp/24-02-invoice-parser-service.md`：實作 deterministic invoice parser service，從既有 OCR text 抽取 demo-safe structured fields，作為 future VLM / LLM parser fallback。
+37. `tasks/phase-24-vlm-parser-mvp/24-03-document-fields-api.md`：新增 parse / fields API，將 parser result 保存到 local JSON metadata store。
+38. `tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md`：在 Admin / Analyst ingestion surface 顯示 structured fields 摘要，Viewer Chat 仍保持只查詢。
+39. `tasks/phase-24-vlm-parser-mvp/24-05-parser-demo-release-sync.md`：補齊 parser demo validation，並在 Phase 24 完成時執行 `v0.24.0` release/version sync。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -618,6 +624,29 @@ Phase 23 guardrails：
 - 不實作 VLM parser、PDF rendering、多頁 production OCR pipeline、automatic Qdrant indexing、default-on vector / hybrid / rerank chat path、Agent runtime 或 deployment。
 - 不把 Admin / Analyst 後台入口說成正式權限系統；本階段只拆產品表面與 demo 工作流。
 - `23-04` 才允許 `v0.23.0` version bump；`23-01` 到 `23-03` 若未形成完整 release artifact，必須寫 `Version bump required: no`。
+
+## MVP v0.24.0 VLM / Parser Minimal MVP
+
+- [ ] `tasks/phase-24-vlm-parser-mvp/24-01-parser-contract.md`: 固定 VLM-compatible parser contract，定義 OCR text -> invoice structured fields、parser status、source trace 與 fallback metadata；文件 ticket，不 bump version。
+- [ ] `tasks/phase-24-vlm-parser-mvp/24-02-invoice-parser-service.md`: 實作 deterministic invoice parser service，從既有 OCR text 抽取 invoice number、date、total amount、currency 等 MVP 欄位。
+- [ ] `tasks/phase-24-vlm-parser-mvp/24-03-document-fields-api.md`: 新增 `POST /documents/{document_id}/parse` 與 `GET /documents/{document_id}/fields`，並保存 parser result 到 local JSON metadata store。
+- [ ] `tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md`: 在 Admin / Analyst ingestion surface 顯示 parser status 與 structured fields 摘要，Viewer Chat 預設入口不顯示 parse / upload / OCR 操作。
+- [ ] `tasks/phase-24-vlm-parser-mvp/24-05-parser-demo-release-sync.md`: 重跑 final validation，補齊 parser demo 文件與 smoke，並在 Phase 24 完成時執行 `v0.24.0` release/version sync。
+
+Phase 24 goal：
+
+- 補上 JD 中「OCR / VLM 流程、複雜單據解析與結構化資料提取」的可展示切片。
+- 先完成 VLM-compatible contract 與 deterministic invoice parser fallback，讓 demo 可穩定展示 OCR -> structured fields。
+- 保留 future VLM / LLM parser 替換位置，但不把真正 vision model runtime 塞進第一個 parser MVP。
+
+Phase 24 guardrails：
+
+- 不新增真正 VLM、Ollama vision call、OpenAI-compatible VLM、LLM parser 或新外部依賴。
+- 不新增 PostgreSQL schema、migration、Redis、NATS、worker、async queue、Auth、RBAC、Agent runtime、K8s 或 deployment 設定。
+- 不修改 PaddleOCR provider、OCR model、OCR preprocessing、RAG retrieval、eval runner、Qdrant indexing 或 default chat path。
+- 不實作人工修正欄位、欄位版本紀錄、audit log、表格完整重建、PDF rendering、多頁 production OCR pipeline 或 production parser dashboard。
+- 不把 structured fields 接成 SQL query tool、Agent tool 或 default vector metadata filtering。
+- `24-05` 才允許 `v0.24.0` version bump；`24-01` 到 `24-04` 若未形成完整 release artifact，必須寫 `Version bump required: no`。
 
 ## Release Verification Status
 

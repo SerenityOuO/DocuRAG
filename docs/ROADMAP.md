@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening 與 v0.23.0 Viewer Chat / Admin Ingestion role split release。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release 與 v0.24.0 VLM / Parser Minimal MVP backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.23.0 Viewer Chat / Admin Ingestion role split checklist。
+- TODO 包含 Phase 00 到 v0.24.0 VLM / Parser Minimal MVP checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -82,6 +82,7 @@ Expected Outcome：
 - v0.21.0 real GPU OCR interview demo path 只做 frontend upload real OCR-first flow、manual mock fallback 與 release 文件同步；不修改 PaddleOCR provider、OCR API contract、PDF pipeline、worker、DB、登入或 RBAC。
 - v0.22.0 RAG query hardening 只做 keyword query normalization、CJK tokenization 與 demo-safe alias；不新增 embedding、Qdrant、BM25、rerank、hybrid retrieval、query rewrite、DB、登入或 RBAC。
 - v0.23.0 Viewer Chat / Admin Ingestion role split 只拆產品入口與 demo surface：Viewer 前台只做 Chat；Admin / Analyst 後台才做 upload、provider-selected OCR 與 ingestion 狀態。不新增 auth、RBAC、DB、worker、VLM parser、production indexing 或 automatic Qdrant ingestion。
+- v0.24.0 VLM / Parser Minimal MVP 只做 parser contract、deterministic invoice parser fallback、parse / fields API、Admin / Analyst structured fields surface 與 release sync；不新增真正 VLM、LLM parser、DB、worker、Agent runtime 或 production parser pipeline。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -1289,3 +1290,75 @@ Out of Scope：
 
 - 不新增登入、RBAC、role guard、multi-user permission、PostgreSQL、Redis、NATS、worker、async queue 或 database schema。
 - 不實作 VLM parser、PDF rendering、多頁 production OCR pipeline、automatic Qdrant indexing、default-on vector / hybrid / rerank chat path、Agent runtime、deployment 或 release tag。
+
+## v0.24.0 VLM / Parser Minimal MVP
+
+Goal：補上 OCR 後的 structured extraction demo slice。Phase 24 先以 VLM-compatible parser contract 與 deterministic invoice parser fallback 建立穩定 MVP，讓 Admin / Analyst ingestion flow 可以展示 OCR -> structured fields；真正 VLM / LLM parser 留給後續 phase。
+
+Tickets：
+
+- [ ] `tasks/phase-24-vlm-parser-mvp/24-01-parser-contract.md`
+- [ ] `tasks/phase-24-vlm-parser-mvp/24-02-invoice-parser-service.md`
+- [ ] `tasks/phase-24-vlm-parser-mvp/24-03-document-fields-api.md`
+- [ ] `tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md`
+- [ ] `tasks/phase-24-vlm-parser-mvp/24-05-parser-demo-release-sync.md`
+
+Expected Outcome：
+
+- Parser contract 定義 `DocumentFields`、`ExtractedField`、`ParserResult`、parser status、source trace 與 fallback metadata。
+- Deterministic invoice parser 可從既有 OCR text / OCR lines 抽出 invoice number、issue date、total amount、currency 等 demo-safe 欄位。
+- `POST /documents/{document_id}/parse` 可對已 OCR document 執行 parser；`GET /documents/{document_id}/fields` 可查詢保存的 structured fields。
+- Parser result 保存到既有 local JSON metadata store，不新增資料庫。
+- Admin / Analyst ingestion surface 可顯示 parser status 與 structured fields 摘要；Viewer Chat surface 仍只查詢既有知識庫。
+- README 與 demo script 清楚說明 Phase 24 是 deterministic parser MVP / VLM-compatible contract，不是 production VLM parser。
+
+24-01 Parser Contract Status：
+
+- 待執行。需先固定 invoice structured fields contract、parser status、source trace、fallback metadata 與 future VLM / LLM parser 邊界。
+
+24-02 Invoice Parser Service Status：
+
+- 待執行。實作 deterministic invoice parser fallback 與 backend unit tests，不新增 API 或 frontend UI。
+
+24-03 Document Fields API Status：
+
+- 待執行。新增 parse / fields API 並保存 parser result 到 local JSON metadata store。
+
+24-04 Frontend Fields Surface Status：
+
+- 待執行。在 Admin / Analyst ingestion surface 顯示 structured fields；Viewer Chat first surface 不顯示 upload / OCR / parse 操作。
+
+24-05 Parser Demo Release Sync Status：
+
+- 待執行。完成 `v0.24.0` version sync、README / backend README / frontend README / demo script 更新、backend tests、frontend build、baseline smoke 與 Browser 檢查。
+
+Acceptance Criteria：
+
+- Phase 24 tickets 都包含 Goal、Scope、Out of Scope、Files likely to change、Acceptance Criteria、Validation 與 Release Impact。
+- OCR -> parser -> structured fields 的 demo path 可被 API / frontend / smoke script 驗證。
+- Parser result 必須保留 source trace 與 fallback metadata，不可硬填假資料。
+- 文件不宣稱已完成 production VLM parser、正式 RBAC、worker、DB、Agent runtime 或 production indexing。
+- `24-05` 才允許 `v0.24.0` version bump；前置 tickets 若未完成完整 release artifact，必須寫 `Version bump required: no`。
+
+Validation：
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
+- `npm.cmd run build`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
+- Browser 檢查 local frontend：Viewer Chat first、Admin / Analyst ingestion structured fields surface、桌面與手機寬度無 horizontal overflow。
+- `rg -n "v0.24.0|Phase 24|Parser|structured fields|欄位解析|VLM-compatible|DocumentFields|ExtractedField" README.md backend/README.md frontend/README.md docs/demo-script.md docs/ROADMAP.md TODO.md backend/app frontend/src tasks/phase-24-vlm-parser-mvp`
+- `git diff --check`
+
+Release Impact：
+
+- Target version: `v0.24.0`。
+- Version bump required: yes for `24-05`; no for `24-01` to `24-04`。
+- 原因：Phase 24 需要在 parser contract、deterministic parser service、parse / fields API、frontend fields surface 與 final validation 都完成後，才形成 `v0.24.0` VLM / Parser Minimal MVP release artifact。
+
+Out of Scope：
+
+- 不新增真正 VLM、Ollama vision call、OpenAI-compatible VLM、LLM parser 或新外部依賴。
+- 不新增 PostgreSQL schema、migration、Redis、NATS、worker、async queue、Auth、RBAC、Agent runtime、K8s、deployment 設定或 release tag。
+- 不修改 PaddleOCR provider、OCR model、OCR preprocessing、RAG retrieval、eval runner、Qdrant indexing 或 default chat path。
+- 不實作人工修正欄位、欄位版本紀錄、audit log、表格完整重建、PDF rendering、多頁 production OCR pipeline 或 production parser dashboard。
+- 不把 structured fields 接成 SQL query tool、Agent tool 或 default vector metadata filtering。
