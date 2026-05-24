@@ -630,7 +630,7 @@ Phase 23 guardrails：
 - [x] `tasks/phase-24-vlm-parser-mvp/24-01-parser-contract.md`: 固定 VLM-compatible parser contract，定義 OCR text -> invoice structured fields、parser status、source trace 與 fallback metadata；文件 ticket，不 bump version。
 - [x] `tasks/phase-24-vlm-parser-mvp/24-02-invoice-parser-service.md`: 實作 deterministic invoice parser service，從既有 OCR text 抽取 invoice number、date、total amount、currency 等 MVP 欄位。
 - [x] `tasks/phase-24-vlm-parser-mvp/24-03-document-fields-api.md`: 新增 `POST /documents/{document_id}/parse` 與 `GET /documents/{document_id}/fields`，並保存 parser result 到 local JSON metadata store。
-- [ ] `tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md`: 在 Admin / Analyst ingestion surface 顯示 parser status 與 structured fields 摘要，Viewer Chat 預設入口不顯示 parse / upload / OCR 操作。
+- [x] `tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md`: 在 Admin / Analyst ingestion surface 顯示 parser status 與 structured fields 摘要，Viewer Chat 預設入口不顯示 parse / upload / OCR 操作。
 - [ ] `tasks/phase-24-vlm-parser-mvp/24-05-parser-demo-release-sync.md`: 重跑 final validation，補齊 parser demo 文件與 smoke，並在 Phase 24 完成時執行 `v0.24.0` release/version sync。
 
 Phase 24 goal：
@@ -667,6 +667,13 @@ Phase 24 guardrails：
 - `ProcessingStatus` 已加入 parser step，`ProcessingJobType.PARSER` 記錄明確 parse request；parser failure 不覆蓋 OCR / indexing 狀態，也不觸發 vector indexing、RAG ingestion、Qdrant upsert 或 eval run。
 - API tests 已覆蓋 pending fields lookup、未 OCR parse failure、OCR 後 parse、保存後 fields lookup、storage reload 後 lookup、document not found 與 missing fields metadata。
 - [x] 24-03 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`143 passed`（僅 pytest cache 權限警告）；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1` 通過，health version `0.23.0`、answer source `ollama/qwen3.5:4b`、retrieval source `keyword baseline`；`rg -n "/parse|/fields|ParserResult|DocumentFields|fallback_reason" backend/app backend/tests docs/api.md TODO.md docs/ROADMAP.md tasks/phase-24-vlm-parser-mvp/24-03-document-fields-api.md` 通過；`git diff --check` 通過。
+
+24-04 frontend fields surface status：
+
+- 已在 Admin / Analyst ingestion surface 顯示 parser status、欄位解析操作、structured fields 摘要、confidence、source text、missing fields 與 failed parser state。
+- Viewer Chat 預設入口仍只提供 RAG query，不顯示 upload、OCR、parse 或 ingestion 操作；UI 不宣稱 production VLM parser 或正式 RBAC。
+- `frontend/README.md` 已補充 Phase 24 deterministic parser frontend slice 與 structured fields / `GET /fields` 檢查方式，並保留 production VLM parser / worker / DB 非目標說明。
+- [x] 24-04 validation：`npm.cmd run build` 通過；Browser 檢查 `http://localhost:5173` desktop 與 390px mobile 通過，Viewer Chat first 不顯示 parse / upload / OCR 操作，Admin / Analyst ingestion surface 可觸發欄位解析並顯示 `AUR-2026-051`、vendor、total、confidence 與 source text，且無 horizontal overflow；`rg -n "structured fields|欄位解析|Parser|parse|fields|Viewer Chat|Admin / Analyst" frontend/src frontend/README.md TODO.md docs/ROADMAP.md tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md` 通過；`git diff --check` 通過。
 
 ## Release Verification Status
 

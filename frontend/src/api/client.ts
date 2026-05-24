@@ -16,6 +16,7 @@ export type UploadResponse = {
   created_at: string;
   processing: DocumentProcessingStatus;
   ocr: OcrResult;
+  parser_result: ParserResult | null;
   chunks: DocumentChunk[];
   processing_jobs: ProcessingJob[];
   latest_job: ProcessingJob | null;
@@ -39,6 +40,7 @@ export type DocumentProcessingStatus = {
   upload: string;
   ocr: string;
   indexing: string;
+  parser: string;
   ready: boolean;
   failed_reason: string | null;
   updated_at: string | null;
@@ -84,6 +86,48 @@ export type DocumentChunk = {
   confidence: number | null;
   source_type: string;
   metadata: Record<string, string>;
+};
+
+export type ExtractedField = {
+  value: string | number | boolean | null;
+  confidence: number | null;
+  source_text: string | null;
+  source_page: number | null;
+  source_bbox: BoundingBox | null;
+  parser_source: string;
+  fallback_reason: string | null;
+};
+
+export type InvoiceLineItem = {
+  description: ExtractedField;
+  quantity: ExtractedField;
+  unit_price: ExtractedField;
+  amount: ExtractedField;
+};
+
+export type DocumentFields = {
+  document_type: ExtractedField;
+  vendor_name: ExtractedField;
+  invoice_number: ExtractedField;
+  issue_date: ExtractedField;
+  total_amount: ExtractedField;
+  tax_amount: ExtractedField;
+  currency: ExtractedField;
+  line_items: InvoiceLineItem[];
+};
+
+export type ParserResult = {
+  document_id: string;
+  status: string;
+  parser_source: string;
+  schema_version: string;
+  fields: DocumentFields;
+  fallback_reason: string | null;
+  error_message: string | null;
+  source_ocr_status: string | null;
+  source_ocr_updated_at: string | null;
+  updated_at: string | null;
+  trace_metadata: Record<string, string>;
 };
 
 export type RagCitation = {
@@ -179,6 +223,19 @@ export async function runSelectedOcr(documentId: string): Promise<OcrResultRespo
 export async function getOcrResult(documentId: string): Promise<OcrResultResponse> {
   const response = await fetch(`${API_BASE_URL}/documents/${documentId}/ocr`);
   return readJson<OcrResultResponse>(response);
+}
+
+export async function parseDocumentFields(documentId: string): Promise<ParserResult> {
+  const response = await fetch(`${API_BASE_URL}/documents/${documentId}/parse`, {
+    method: "POST",
+  });
+
+  return readJson<ParserResult>(response);
+}
+
+export async function getDocumentFields(documentId: string): Promise<ParserResult> {
+  const response = await fetch(`${API_BASE_URL}/documents/${documentId}/fields`);
+  return readJson<ParserResult>(response);
 }
 
 export async function queryRag(query: string, topK: number): Promise<RagQueryResponse> {

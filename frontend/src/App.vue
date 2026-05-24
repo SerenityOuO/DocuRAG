@@ -5,12 +5,16 @@ import {
   API_BASE_URL,
   getHealth,
   listDocuments,
+  parseDocumentFields,
   queryRag,
   runMockOcr,
   runSelectedOcr,
   uploadDocument,
   type DocumentMetadata,
+  type DocumentFields,
+  type ExtractedField,
   type HealthResponse,
+  type ParserResult,
   type RagQueryResponse,
   type UploadResponse,
 } from "./api/client";
@@ -22,6 +26,15 @@ type SourceSummary = {
   filename: string;
   chunkIds: string[];
 };
+
+type InvoiceFieldKey =
+  | "document_type"
+  | "vendor_name"
+  | "invoice_number"
+  | "issue_date"
+  | "total_amount"
+  | "tax_amount"
+  | "currency";
 
 const healthState = ref<RequestState>("idle");
 const chatState = ref<RequestState>("idle");
@@ -41,6 +54,8 @@ const ragError = ref("");
 const documentsError = ref("");
 const uploadError = ref("");
 const uploadMessage = ref("");
+const parseStates = ref<Record<string, RequestState>>({});
+const parseErrors = ref<Record<string, string>>({});
 
 const suggestedQuestions = [
   "payment due date Net 15",
@@ -127,6 +142,16 @@ const citedSources = computed<SourceSummary[]>(() => {
 
 const latestDocuments = computed(() => documents.value.slice(0, 5));
 
+const invoiceFieldLabels: Array<[InvoiceFieldKey, string]> = [
+  ["document_type", "文件類型"],
+  ["invoice_number", "發票號碼"],
+  ["vendor_name", "供應商"],
+  ["issue_date", "日期"],
+  ["total_amount", "總金額"],
+  ["tax_amount", "稅額"],
+  ["currency", "幣別"],
+];
+
 function sourceTone(source: string): "status-failed" | "status-ready" | "status-success" {
   if (source.includes("備援") || source.includes("不可用")) {
     return "status-failed";
@@ -181,6 +206,73 @@ function documentStatusTone(status: string): string {
   }
 
   return "status-ready";
+}
+
+function parserStatus(document: DocumentMetadata): string {
+  if (document.parser_result?.status) {
+    return document.parser_result.status;
+  }
+
+  return document.processing.parser ?? "pending";
+}
+
+function canParseDocument(document: DocumentMetadata): boolean {
+  return document.ocr.status === "completed" || document.processing.ocr === "completed";
+}
+
+function formatFieldValue(field: ExtractedField): string {
+  if (field.value === null || field.value === undefined || field.value === "") {
+    return "missing";
+  }
+
+  return String(field.value);
+}
+
+function formatAmount(fields: DocumentFields): string {
+  const amount = formatFieldValue(fields.total_amount);
+
+  if (amount === "missing") {
+    return amount;
+  }
+
+  const currency = fields.currency.value ? ` ${fields.currency.value}` : "";
+  return `${amount}${currency}`;
+}
+
+function parserFieldDisplay(result: ParserResult, fieldName: InvoiceFieldKey): string {
+  if (fieldName === "total_amount") {
+    return formatAmount(result.fields);
+  }
+
+  return formatFieldValue(result.fields[fieldName]);
+}
+
+function fieldMeta(field: ExtractedField): string {
+  const confidence = field.confidence === null ? "confidence n/a" : `confidence ${Math.round(field.confidence * 100)}%`;
+  const source = field.source_text ? `source: ${field.source_text}` : field.fallback_reason ? `reason: ${field.fallback_reason}` : "source unavailable";
+
+  return `${confidence}; ${source}`;
+}
+
+function missingFieldLabels(result: ParserResult): string[] {
+  return invoiceFieldLabels
+    .filter(([fieldName]) => result.fields[fieldName].value === null)
+    .map(([, label]) => label);
+}
+
+function updateDocumentParserResult(documentId: string, parserResult: ParserResult): void {
+  documents.value = documents.value.map((document) =>
+    document.document_id === documentId
+      ? {
+          ...document,
+          parser_result: parserResult,
+          processing: {
+            ...document.processing,
+            parser: parserResult.status === "parsed" ? "completed" : parserResult.status,
+          },
+        }
+      : document,
+  );
 }
 
 function useSuggestedQuestion(question: string): void {
@@ -306,6 +398,37 @@ async function submitMockFallback(): Promise<void> {
   } catch (error) {
     uploadError.value = error instanceof Error ? `Mock OCR 備援失敗：${error.message}` : "Mock OCR 備援失敗";
     uploadState.value = "error";
+  }
+}
+
+async function submitFieldParse(document: DocumentMetadata): Promise<void> {
+  parseStates.value = {
+    ...parseStates.value,
+    [document.document_id]: "loading",
+  };
+  parseErrors.value = {
+    ...parseErrors.value,
+    [document.document_id]: "",
+  };
+
+  try {
+    const parserResult = await parseDocumentFields(document.document_id);
+    updateDocumentParserResult(document.document_id, parserResult);
+    parseStates.value = {
+      ...parseStates.value,
+      [document.document_id]: "success",
+    };
+    await refreshDocuments();
+  } catch (error) {
+    parseErrors.value = {
+      ...parseErrors.value,
+      [document.document_id]: error instanceof Error ? error.message : "欄位解析失敗",
+    };
+    parseStates.value = {
+      ...parseStates.value,
+      [document.document_id]: "error",
+    };
+    await refreshDocuments();
   }
 }
 
@@ -492,10 +615,70 @@ onMounted(() => {
               <span class="status-pill" :class="documentStatusTone(document.processing.ocr)">
                 OCR {{ document.processing.ocr }}
               </span>
+              <span class="status-pill" :class="documentStatusTone(parserStatus(document))">
+                Parser {{ parserStatus(document) }}
+              </span>
               <span class="status-pill" :class="document.processing.ready ? 'status-success' : 'status-ready'">
                 {{ chunkReadiness(document) }}
               </span>
             </div>
+            <div class="parser-actions">
+              <button
+                type="button"
+                class="button secondary-button compact-button"
+                :disabled="!canParseDocument(document) || parseStates[document.document_id] === 'loading'"
+                @click="submitFieldParse(document)"
+              >
+                {{
+                  parseStates[document.document_id] === "loading"
+                    ? "解析中..."
+                    : document.parser_result?.status === "parsed"
+                      ? "重新解析欄位"
+                      : "解析欄位"
+                }}
+              </button>
+              <small v-if="!canParseDocument(document)">OCR 完成後才能解析欄位。</small>
+            </div>
+            <p v-if="parseErrors[document.document_id]" class="error">
+              {{ parseErrors[document.document_id] }}
+            </p>
+            <section
+              v-if="document.parser_result?.status === 'parsed'"
+              class="fields-summary"
+              aria-label="欄位解析摘要"
+            >
+              <div class="fields-summary-header">
+                <div>
+                  <span>Parser</span>
+                  <strong>{{ document.parser_result.parser_source }}</strong>
+                </div>
+                <small v-if="document.parser_result.fallback_reason">
+                  {{ document.parser_result.fallback_reason }}
+                </small>
+              </div>
+              <div class="fields-grid">
+                <div v-for="field in invoiceFieldLabels" :key="field[0]" class="field-cell">
+                  <span>{{ field[1] }}</span>
+                  <strong>{{ parserFieldDisplay(document.parser_result, field[0]) }}</strong>
+                  <small>{{ fieldMeta(document.parser_result.fields[field[0]]) }}</small>
+                </div>
+              </div>
+              <p v-if="missingFieldLabels(document.parser_result).length" class="muted compact-note">
+                缺少欄位：{{ missingFieldLabels(document.parser_result).join("、") }}
+              </p>
+              <p v-if="document.parser_result.fields.line_items.length" class="muted compact-note">
+                line items：{{ document.parser_result.fields.line_items.length }}
+              </p>
+            </section>
+            <section
+              v-else-if="document.parser_result?.status === 'failed'"
+              class="fields-summary fields-summary-failed"
+              aria-label="欄位解析失敗"
+            >
+              <strong>{{ document.parser_result.fallback_reason ?? "parser_failed" }}</strong>
+              <span>{{ document.parser_result.error_message ?? "欄位解析未完成。" }}</span>
+            </section>
+            <p v-else class="muted compact-note">尚未執行欄位解析。</p>
             <p v-if="document.processing.failed_reason" class="error">{{ document.processing.failed_reason }}</p>
           </li>
         </ul>

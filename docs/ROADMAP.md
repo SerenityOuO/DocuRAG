@@ -1300,7 +1300,7 @@ Tickets：
 - [x] `tasks/phase-24-vlm-parser-mvp/24-01-parser-contract.md`
 - [x] `tasks/phase-24-vlm-parser-mvp/24-02-invoice-parser-service.md`
 - [x] `tasks/phase-24-vlm-parser-mvp/24-03-document-fields-api.md`
-- [ ] `tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md`
+- [x] `tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md`
 - [ ] `tasks/phase-24-vlm-parser-mvp/24-05-parser-demo-release-sync.md`
 
 Expected Outcome：
@@ -1337,7 +1337,10 @@ Expected Outcome：
 
 24-04 Frontend Fields Surface Status：
 
-- 待執行。在 Admin / Analyst ingestion surface 顯示 structured fields；Viewer Chat first surface 不顯示 upload / OCR / parse 操作。
+- 已完成。Admin / Analyst ingestion surface 可觸發 parser，並顯示 parser status、document type、invoice number、vendor、issue date、total amount、currency、confidence、source text、missing fields 與 failed parser state。
+- Viewer Chat first surface 仍只提供已建立知識庫的 RAG query，不顯示 upload、OCR、parse 或 ingestion 操作。
+- `frontend/README.md` 已補充 deterministic parser frontend slice、structured fields 摘要與 `GET /documents/{document_id}/fields` 檢查方式；仍明確不是 production VLM parser、正式 RBAC、worker 或 DB pipeline。
+- 24-04 validation：`npm.cmd run build` 通過；Browser 檢查 `http://localhost:5173` desktop 與 390px mobile 通過，Viewer Chat first 不顯示 parse / upload / OCR 操作，Admin / Analyst ingestion surface 可觸發欄位解析並顯示 `AUR-2026-051`、vendor、total、confidence 與 source text，且無 horizontal overflow；`rg -n "structured fields|欄位解析|Parser|parse|fields|Viewer Chat|Admin / Analyst" frontend/src frontend/README.md TODO.md docs/ROADMAP.md tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md` 通過；`git diff --check` 通過。
 
 24-05 Parser Demo Release Sync Status：
 
