@@ -1411,7 +1411,11 @@ Expected Outcome：
 
 25-02 Agent Tool Adapters Status：
 
-- 待執行。封裝 existing structured fields、local document search / retrieval 與 deterministic invoice summary；不新增任意 tool registry 或外部執行能力。
+- 已完成。新增 `AgentToolCall` / observation schema 與 `AgentToolService` building block，封裝 existing structured fields、local document search / retrieval 與 deterministic invoice summary。
+- `get_document_fields` 只讀既有 local JSON metadata 中已保存的 parser result；缺 parser result 或 unknown document 會回傳明確 failed observation。
+- `search_documents` 使用既有 RAG provider / keyword retrieval path，保留 citations、retrieved chunks 與 trace metadata；search miss 或 provider error 會回傳 failed / fallback state。
+- `summarize_invoice_fields` 使用 deterministic formatter 摘要 invoice fields，不呼叫 LLM、不硬填缺失欄位。
+- 25-02 validation：backend test script 通過，`149 passed`（僅 pytest cache 權限警告）；ticket 指定 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 25-03 Agent Run API Status：
 

@@ -91,7 +91,7 @@
 38. `tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md`：在 Admin / Analyst ingestion surface 顯示 structured fields 摘要，Viewer Chat 仍保持只查詢。
 39. `tasks/phase-24-vlm-parser-mvp/24-05-parser-demo-release-sync.md`：補齊 parser demo validation，並在 Phase 24 完成時執行 `v0.24.0` release/version sync。
 40. `tasks/phase-25-agent-tool-use-mvp/25-01-agent-boundary-contract.md` 已完成，固定 Agent MVP boundary、allowlisted tools、deterministic planner 與 trace schema；文件 / contract ticket，不 bump version。
-41. `tasks/phase-25-agent-tool-use-mvp/25-02-agent-tool-adapters.md`：實作 `get_document_fields`、`search_documents` 與 `summarize_invoice_fields` allowlisted tool adapters。
+41. `tasks/phase-25-agent-tool-use-mvp/25-02-agent-tool-adapters.md` 已完成，實作 `get_document_fields`、`search_documents` 與 `summarize_invoice_fields` allowlisted tool adapters。
 42. `tasks/phase-25-agent-tool-use-mvp/25-03-agent-run-api.md`：新增 `POST /agent/run` 與 `GET /agent/runs/{run_id}`，用 deterministic planner 串接 allowlisted tools。
 43. `tasks/phase-25-agent-tool-use-mvp/25-04-frontend-agent-trace-surface.md`：在 demo UI 顯示 Agent plan、tool calls、observations、final answer 與 citations。
 44. `tasks/phase-25-agent-tool-use-mvp/25-05-agent-demo-release-sync.md`：補齊 Agent demo validation，並在 Phase 25 完成時執行 `v0.25.0` release/version sync。
@@ -691,7 +691,7 @@ Phase 24 guardrails：
 ## MVP v0.25.0 Agent Tool-use Minimal MVP
 
 - [x] `tasks/phase-25-agent-tool-use-mvp/25-01-agent-boundary-contract.md`: 固定 Agent MVP boundary、allowlisted tools、deterministic planner、run / step / tool call / observation / final answer trace schema；文件 ticket，不 bump version。
-- [ ] `tasks/phase-25-agent-tool-use-mvp/25-02-agent-tool-adapters.md`: 實作 demo-safe allowlisted tool adapters：`get_document_fields`、`search_documents`、`summarize_invoice_fields`，只封裝既有 structured fields 與 retrieval 能力。
+- [x] `tasks/phase-25-agent-tool-use-mvp/25-02-agent-tool-adapters.md`: 實作 demo-safe allowlisted tool adapters：`get_document_fields`、`search_documents`、`summarize_invoice_fields`，只封裝既有 structured fields 與 retrieval 能力。
 - [ ] `tasks/phase-25-agent-tool-use-mvp/25-03-agent-run-api.md`: 新增 deterministic Agent run API，支援 `POST /agent/run` 與 `GET /agent/runs/{run_id}`，並輸出 plan、tool calls、observations、final answer 與 citations。
 - [ ] `tasks/phase-25-agent-tool-use-mvp/25-04-frontend-agent-trace-surface.md`: 在 demo UI 新增 Agent trace surface，展示 plan -> tool calls -> observations -> final answer + citations；Viewer Chat 預設入口保持不變。
 - [ ] `tasks/phase-25-agent-tool-use-mvp/25-05-agent-demo-release-sync.md`: 補齊 Agent demo validation、文件同步與 `v0.25.0` release/version bump。
@@ -716,6 +716,14 @@ Phase 25 guardrails：
 - 文件明確禁止任意 SQL、任意工具執行、delete、reindex、shell / file system command、DB、RBAC、worker、Redis / NATS 與 production autonomous Agent 宣稱。
 - 本 ticket 只改 Markdown，不 bump version；完整 runtime 與 `v0.25.0` release sync 留給 `25-02` 到 `25-05`。
 - [x] 25-01 validation：`rg -n "v0.25.0|Phase 25|Agent|tool-use|get_document_fields|search_documents|summarize_invoice_fields|deterministic planner|allowlisted" README.md TODO.md docs/ROADMAP.md docs/api.md docs/architecture.md tasks/phase-25-agent-tool-use-mvp/25-01-agent-boundary-contract.md` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+25-02 agent tool adapters status：
+
+- 已新增 `backend/app/schemas/agent.py` 與 `backend/app/services/agent_tools.py`，固定 `AgentToolCall`、tool observation、tool status 與 allowlisted tool output shape。
+- 已實作 read-only `get_document_fields`、`search_documents` 與 `summarize_invoice_fields` adapters，只讀既有 local JSON parser result 與既有 RAG / keyword retrieval path，不執行任意 SQL、delete、reindex、shell / file system command 或 destructive operation。
+- Backend tests 已覆蓋有 fields、缺 parser result、search hit、search miss、tool error 與 deterministic invoice summary。
+- 本 ticket 不新增 Agent run API、frontend UI、LLM planner、DB、RBAC、worker、Redis / NATS 或新外部依賴；完整 release sync 留給 `25-05`。
+- [x] 25-02 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`149 passed`（僅 pytest cache 權限警告）；ticket 指定 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 ## Release Verification Status
 
