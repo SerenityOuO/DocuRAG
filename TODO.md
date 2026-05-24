@@ -631,7 +631,7 @@ Phase 23 guardrails：
 - [x] `tasks/phase-24-vlm-parser-mvp/24-02-invoice-parser-service.md`: 實作 deterministic invoice parser service，從既有 OCR text 抽取 invoice number、date、total amount、currency 等 MVP 欄位。
 - [x] `tasks/phase-24-vlm-parser-mvp/24-03-document-fields-api.md`: 新增 `POST /documents/{document_id}/parse` 與 `GET /documents/{document_id}/fields`，並保存 parser result 到 local JSON metadata store。
 - [x] `tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md`: 在 Admin / Analyst ingestion surface 顯示 parser status 與 structured fields 摘要，Viewer Chat 預設入口不顯示 parse / upload / OCR 操作。
-- [ ] `tasks/phase-24-vlm-parser-mvp/24-05-parser-demo-release-sync.md`: 重跑 final validation，補齊 parser demo 文件與 smoke，並在 Phase 24 完成時執行 `v0.24.0` release/version sync。
+- [x] `tasks/phase-24-vlm-parser-mvp/24-05-parser-demo-release-sync.md`: 重跑 final validation，補齊 parser demo 文件與 smoke，並在 Phase 24 完成時執行 `v0.24.0` release/version sync。
 
 Phase 24 goal：
 
@@ -675,6 +675,13 @@ Phase 24 guardrails：
 - `frontend/README.md` 已補充 Phase 24 deterministic parser frontend slice 與 structured fields / `GET /fields` 檢查方式，並保留 production VLM parser / worker / DB 非目標說明。
 - [x] 24-04 validation：`npm.cmd run build` 通過；Browser 檢查 `http://localhost:5173` desktop 與 390px mobile 通過，Viewer Chat first 不顯示 parse / upload / OCR 操作，Admin / Analyst ingestion surface 可觸發欄位解析並顯示 `AUR-2026-051`、vendor、total、confidence 與 source text，且無 horizontal overflow；`rg -n "structured fields|欄位解析|Parser|parse|fields|Viewer Chat|Admin / Analyst" frontend/src frontend/README.md TODO.md docs/ROADMAP.md tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md` 通過；`git diff --check` 通過。
 
+24-05 parser demo release sync status：
+
+- 已完成 `v0.24.0` version sync：backend package / app version、frontend package / lock / fallback version、health test 與 Docker Compose `DOCURAG_VERSION` 已同步。
+- `README.md`、`backend/README.md`、`frontend/README.md`、`docs/demo-script.md`、`TODO.md` 與 `docs/ROADMAP.md` 已補齊 parser demo wording；文件明確說明 Phase 24 是 deterministic parser MVP / VLM-compatible contract，不是 production VLM parser、LLM parser、worker、DB、Auth/RBAC、Agent runtime 或 deployment。
+- `scripts/demo-smoke-test.ps1` 已加入 upload -> OCR mock -> parser -> fields lookup -> baseline RAG query 驗證，並檢查 `/health` version `0.24.0`、parser source、invoice number、vendor、total、currency 與 source text。
+- [x] 24-05 validation：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/test-backend.ps1` 通過，`143 passed`（僅 pytest cache 權限警告）；`npm.cmd run build` 通過；`powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/demo-smoke-test.ps1` 通過，health version `0.24.0`、parser fields `AUR-2026-051` / `1248.5 USD`、answer source `LLM unavailable fallback`、retrieval source `keyword baseline`；Browser 檢查 `http://localhost:5173` desktop 與 390px mobile 通過，Viewer Chat first 不顯示 parse / upload / OCR，Admin / Analyst ingestion surface 顯示 parser status、欄位解析操作、`AUR-2026-051` 與 structured fields 摘要，且無 horizontal overflow；`rg -n "v0.24.0|Phase 24|Parser|structured fields|欄位解析|VLM-compatible|DocumentFields|ExtractedField" README.md backend/README.md frontend/README.md docs/demo-script.md docs/ROADMAP.md TODO.md backend/app frontend/src tasks/phase-24-vlm-parser-mvp` 通過；`git diff --check` 通過。
+
 ## Release Verification Status
 
 - [x] v0.0: repo structure、docs、tasks 已完成。
@@ -705,3 +712,4 @@ Phase 24 guardrails：
 - [x] v0.21.0: Real GPU OCR Interview Demo Path 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO、ROADMAP 與 demo script 已同步到 `v0.21.0`；frontend upload 已改為 provider-selected real OCR-first flow，mock OCR 只作手動 fallback；frontend build、backend tests、baseline demo smoke、real OCR smoke、ticket `rg` 與 `git diff --check` 已通過。
 - [x] v0.22.0: RAG Query Hardening 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、TODO 與 ROADMAP 已同步到 `v0.22.0`；keyword query normalization、CJK tokenization、demo-safe 中文 alias、backend tests、frontend build、baseline demo smoke、ticket `rg` 與 `git diff --check` 已通過。
 - [x] v0.23.0: Viewer Chat / Admin Ingestion Role Split 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、frontend fallback version、demo script、architecture、TODO 與 ROADMAP 已同步到 `v0.23.0`；Viewer Chat-only 預設入口、Admin / Analyst ingestion surface、backend tests、frontend build、baseline demo smoke、Browser role split / overflow 檢查、ticket `rg` 與 `git diff --check` 已通過。
+- [x] v0.24.0: VLM / Parser Minimal MVP 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、TODO 與 ROADMAP 已同步到 `v0.24.0`；deterministic invoice parser fallback、parse / fields API、local JSON parser result persistence、frontend structured fields surface、parser demo smoke、Browser structured fields / overflow 檢查、ticket `rg` 與 `git diff --check` 已通過。

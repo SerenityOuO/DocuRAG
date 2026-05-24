@@ -1,6 +1,6 @@
 # Backend
 
-DocuRAG AgentOps backend MVP v0.23.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、manual vector indexing API、local RAG query API、retrieval evaluation runner、disabled-by-default rerank adapter、optional hybrid / `hybrid_rerank` eval strategy、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，RAG 預設仍以 `KeywordRagProvider` 做 keyword retrieval 與 citation contract。v0.10.0 加入最小 Ollama `qwen3.5:4b` LLM client、可選 `/rag/query` generation path 與 demo smoke；v0.11.0 加入 disabled-by-default Ollama embedding client、optional Qdrant runtime 與 fallback-safe vector retrieval path；v0.12.0 加入 manual vector indexing service / API，讓 vector retrieval 查詢已明確索引的 chunks；v0.13.0 加入公開 eval dataset 與 Hit Rate@K / MRR@K / Recall@K metrics runner；v0.15.0 加入 optional `vector_rerank` eval strategy 與 rerank trace metadata；v0.16.0 加入 12 筆 eval dataset 與 optional `hybrid` eval strategy；v0.17.0 改善 retrieval eval summary visibility；v0.19.0 加入 optional `hybrid_rerank` eval provider、smoke flag 與 trace / report metadata naming；v0.20.0 完成 interview MVP packaging release sync 與 final validation；v0.21.0 將 frontend upload 面試主線改為 provider-selected real GPU OCR-first，mock OCR 僅作手動 fallback；v0.22.0 強化 keyword query normalization，讓中文 query 與常見 demo alias 可命中英文 OCR chunks；v0.23.0 完成 Viewer Chat / Admin Ingestion role split，前台只查詢已建立知識庫，後台才操作 backend upload、provider-selected OCR 與 ingestion 狀態。未設定 vector retrieval 或 rerank provider 時既有 `/rag/query` 仍維持 keyword retrieval baseline；20-12 local demo follow-up 起，LLM provider 未覆寫時會預設嘗試 Ollama `qwen3.5:4b` generation，Ollama 不可用時 fallback 到 retrieved OCR chunks。此階段不接資料庫、OpenAI API、vLLM、default-on hybrid / hybrid rerank、production eval dashboard、Redis、NATS、worker、登入權限或 production indexing。
+DocuRAG AgentOps backend MVP v0.24.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、deterministic invoice parser fallback、parse / fields API、manual vector indexing API、local RAG query API、retrieval evaluation runner、disabled-by-default rerank adapter、optional hybrid / `hybrid_rerank` eval strategy、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.6 bridge 先整理 provider contract，RAG 預設仍以 `KeywordRagProvider` 做 keyword retrieval 與 citation contract。v0.10.0 加入最小 Ollama `qwen3.5:4b` LLM client、可選 `/rag/query` generation path 與 demo smoke；v0.11.0 加入 disabled-by-default Ollama embedding client、optional Qdrant runtime 與 fallback-safe vector retrieval path；v0.12.0 加入 manual vector indexing service / API，讓 vector retrieval 查詢已明確索引的 chunks；v0.13.0 加入公開 eval dataset 與 Hit Rate@K / MRR@K / Recall@K metrics runner；v0.15.0 加入 optional `vector_rerank` eval strategy 與 rerank trace metadata；v0.16.0 加入 12 筆 eval dataset 與 optional `hybrid` eval strategy；v0.17.0 改善 retrieval eval summary visibility；v0.19.0 加入 optional `hybrid_rerank` eval provider、smoke flag 與 trace / report metadata naming；v0.20.0 完成 interview MVP packaging release sync 與 final validation；v0.21.0 將 frontend upload 面試主線改為 provider-selected real GPU OCR-first，mock OCR 僅作手動 fallback；v0.22.0 強化 keyword query normalization，讓中文 query 與常見 demo alias 可命中英文 OCR chunks；v0.23.0 完成 Viewer Chat / Admin Ingestion role split，前台只查詢已建立知識庫，後台才操作 backend upload、provider-selected OCR 與 ingestion 狀態；v0.24.0 新增 OCR 後 structured fields demo，parser result 保存於 local JSON metadata store。未設定 vector retrieval 或 rerank provider 時既有 `/rag/query` 仍維持 keyword retrieval baseline；20-12 local demo follow-up 起，LLM provider 未覆寫時會預設嘗試 Ollama `qwen3.5:4b` generation，Ollama 不可用時 fallback 到 retrieved OCR chunks。此階段不接資料庫、OpenAI API、vLLM、真正 VLM / LLM parser、default-on hybrid / hybrid rerank、production eval dashboard、Redis、NATS、worker、登入權限或 production indexing。
 
 ## Install
 
@@ -64,6 +64,26 @@ OCR result：
 ```powershell
 curl http://127.0.0.1:8000/documents/{document_id}/ocr
 ```
+
+Run deterministic parser：
+
+```powershell
+curl -X POST http://127.0.0.1:8000/documents/{document_id}/parse
+```
+
+Structured fields：
+
+```powershell
+curl http://127.0.0.1:8000/documents/{document_id}/fields
+```
+
+Phase 24 parser boundary：
+
+- Parser MVP source 為 `deterministic_invoice`，只從既有 OCR text / OCR lines 抽取 demo-safe invoice fields。
+- `ParserResult` 保存 `DocumentFields`、欄位 `confidence`、`source_text`、`source_page`、`source_bbox`、`parser_source` 與 `fallback_reason`。
+- Parser missing fields 會回傳 `field_not_found` / `missing_fields` metadata，不產生假資料。
+- Parser failure 只更新 `processing.parser` 與 parser job，不覆蓋 OCR / indexing 狀態，也不觸發 vector indexing、RAG ingestion、Qdrant upsert 或 eval run。
+- 這是 VLM-compatible contract 與 deterministic fallback，不是真正 VLM parser、LLM parser、worker、DB schema 或 production parser pipeline。
 
 Phase 07 provider decision：
 
@@ -406,3 +426,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 
 - v0.21.0: Real GPU OCR Interview Demo Path、frontend upload provider-selected real OCR-first flow、manual mock OCR fallback、版本與文件同步已完成。
 - v0.22.0: RAG Query Hardening、keyword query normalization、CJK tokenization、demo-safe 中文 alias、backend tests 與版本文件同步已完成。
 - v0.23.0: Viewer Chat / Admin Ingestion Role Split、Viewer 前台查詢與 Admin / Analyst 後台 ingestion surface 分離、版本與文件同步已完成。
+- v0.24.0: VLM / Parser Minimal MVP、deterministic invoice parser fallback、parse / fields API、local JSON parser result persistence、frontend structured fields surface、parser smoke validation 與版本文件同步已完成。

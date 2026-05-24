@@ -11,7 +11,8 @@ param(
     [string]$EmbeddingModel = "qwen3-embedding:0.6b",
     [string]$QdrantUrl = "http://127.0.0.1:6333",
     [string]$QdrantCollection = "docurag_chunks_v1",
-    [int]$QdrantVectorSize = 1024
+    [int]$QdrantVectorSize = 1024,
+    [string]$ExpectedVersion = "0.24.0"
 )
 
 Set-StrictMode -Version Latest
@@ -244,6 +245,7 @@ if ($RunVector) {
 $health = Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/health"
 Assert-Condition ($health.status -eq "ok") "Expected /health status ok."
 Assert-Condition (-not [string]::IsNullOrWhiteSpace($health.version)) "Expected /health version."
+Assert-Condition ($health.version -eq $ExpectedVersion) "Expected /health version $ExpectedVersion. Got $($health.version). Restart the backend after release sync."
 Write-Host "Health OK: version $($health.version)"
 
 $upload = Invoke-FileUpload "$ApiBaseUrl/documents/upload" $resolvedSamplePath "text/plain"
@@ -255,6 +257,21 @@ $ocr = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($upload.docu
 Assert-Condition ($ocr.status -eq "completed") "OCR mock did not complete."
 Assert-Condition ($ocr.text -match "AUR-2026-051") "OCR mock did not include sample invoice content."
 Write-Host "OCR mock OK"
+
+$parser = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($upload.document_id)/parse"
+Assert-Condition ($parser.status -eq "parsed") "Parser did not return parsed status."
+Assert-Condition ($parser.parser_source -eq "deterministic_invoice") "Parser source was '$($parser.parser_source)'; expected deterministic_invoice."
+Assert-Condition ($parser.fields.invoice_number.value -eq "AUR-2026-051") "Parser did not extract invoice number AUR-2026-051."
+Assert-Condition ($parser.fields.vendor_name.value -eq "Aurora Office Supplies Demo LLC") "Parser did not extract expected vendor."
+Assert-Condition ([double]$parser.fields.total_amount.value -eq 1248.5) "Parser did not extract expected total amount."
+Assert-Condition ($parser.fields.currency.value -eq "USD") "Parser did not extract expected currency."
+Assert-Condition (-not [string]::IsNullOrWhiteSpace([string]$parser.fields.invoice_number.source_text)) "Parser did not preserve invoice number source text."
+
+$fields = Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/documents/$($upload.document_id)/fields"
+Assert-Condition ($fields.status -eq "parsed") "Saved fields lookup did not return parsed status."
+Assert-Condition ($fields.fields.invoice_number.value -eq "AUR-2026-051") "Saved fields lookup did not return invoice number AUR-2026-051."
+Assert-Condition ($fields.fields.total_amount.value -eq $parser.fields.total_amount.value) "Saved fields lookup total amount did not match parser result."
+Write-Host "Parser fields OK: invoice $($fields.fields.invoice_number.value); total $($fields.fields.total_amount.value) $($fields.fields.currency.value)"
 
 if ($RunVector) {
     Write-Host "Manual vector indexing"

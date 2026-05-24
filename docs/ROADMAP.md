@@ -1301,7 +1301,7 @@ Tickets：
 - [x] `tasks/phase-24-vlm-parser-mvp/24-02-invoice-parser-service.md`
 - [x] `tasks/phase-24-vlm-parser-mvp/24-03-document-fields-api.md`
 - [x] `tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md`
-- [ ] `tasks/phase-24-vlm-parser-mvp/24-05-parser-demo-release-sync.md`
+- [x] `tasks/phase-24-vlm-parser-mvp/24-05-parser-demo-release-sync.md`
 
 Expected Outcome：
 
@@ -1344,7 +1344,10 @@ Expected Outcome：
 
 24-05 Parser Demo Release Sync Status：
 
-- 待執行。完成 `v0.24.0` version sync、README / backend README / frontend README / demo script 更新、backend tests、frontend build、baseline smoke 與 Browser 檢查。
+- 已完成。`v0.24.0` version sync 已涵蓋 backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、TODO 與 ROADMAP。
+- `scripts/demo-smoke-test.ps1` 已納入 OCR -> parser -> structured fields path，驗證 upload、OCR mock、`POST /documents/{document_id}/parse`、`GET /documents/{document_id}/fields` 與 baseline RAG query。
+- 文件已明確把 Phase 24 定義為 deterministic parser MVP / VLM-compatible contract；不宣稱 production VLM parser、LLM parser、worker、DB、正式 RBAC、Agent runtime 或 deployment。
+- 24-05 validation：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/test-backend.ps1` 通過，`143 passed`（僅 pytest cache 權限警告）；`npm.cmd run build` 通過；`powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/demo-smoke-test.ps1` 通過，health version `0.24.0`、parser fields `AUR-2026-051` / `1248.5 USD`、answer source `LLM unavailable fallback`、retrieval source `keyword baseline`；Browser 檢查 `http://localhost:5173` desktop 與 390px mobile 通過，Viewer Chat first 不顯示 parse / upload / OCR，Admin / Analyst ingestion surface 顯示 parser status、欄位解析操作、`AUR-2026-051` 與 structured fields 摘要，且無 horizontal overflow；`rg -n "v0.24.0|Phase 24|Parser|structured fields|欄位解析|VLM-compatible|DocumentFields|ExtractedField" README.md backend/README.md frontend/README.md docs/demo-script.md docs/ROADMAP.md TODO.md backend/app frontend/src tasks/phase-24-vlm-parser-mvp` 通過；`git diff --check` 通過。
 
 Acceptance Criteria：
 
