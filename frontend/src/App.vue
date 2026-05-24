@@ -5,12 +5,8 @@ import {
   API_BASE_URL,
   getHealth,
   queryRag,
-  runMockOcr,
-  runSelectedOcr,
-  uploadDocument,
   type HealthResponse,
   type RagQueryResponse,
-  type UploadResponse,
 } from "./api/client";
 
 type RequestState = "idle" | "loading" | "success" | "error";
@@ -22,18 +18,12 @@ type SourceSummary = {
 
 const healthState = ref<RequestState>("idle");
 const chatState = ref<RequestState>("idle");
-const uploadState = ref<RequestState>("idle");
 const health = ref<HealthResponse | null>(null);
 const ragResult = ref<RagQueryResponse | null>(null);
-const uploadResult = ref<UploadResponse | null>(null);
-const selectedFile = ref<File | null>(null);
-const uploadFallbackAvailable = ref(false);
 const ragQuery = ref("");
 const ragTopK = ref(3);
 const healthError = ref("");
 const ragError = ref("");
-const uploadError = ref("");
-const uploadMessage = ref("");
 
 const suggestedQuestions = [
   "payment due date Net 15",
@@ -124,19 +114,6 @@ function sourceTone(source: string): "status-failed" | "status-ready" | "status-
   return "status-success";
 }
 
-function formatBytes(size: number): string {
-  return `${size.toLocaleString()} 位元組`;
-}
-
-function handleFileChange(event: Event): void {
-  const input = event.target as HTMLInputElement;
-  selectedFile.value = input.files?.[0] ?? null;
-  uploadResult.value = null;
-  uploadFallbackAvailable.value = false;
-  uploadMessage.value = "";
-  uploadError.value = "";
-}
-
 function useSuggestedQuestion(question: string): void {
   ragQuery.value = question;
 }
@@ -176,73 +153,6 @@ async function submitRagQuery(): Promise<void> {
   }
 }
 
-async function submitUpload(): Promise<void> {
-  if (!selectedFile.value) {
-    uploadError.value = "請先選擇檔案。";
-    return;
-  }
-
-  uploadState.value = "loading";
-  uploadError.value = "";
-  uploadMessage.value = "";
-  uploadFallbackAvailable.value = false;
-
-  let uploadedDocumentId = "";
-
-  try {
-    const response = await uploadDocument(selectedFile.value);
-    uploadResult.value = response;
-    uploadedDocumentId = response.document_id;
-  } catch (error) {
-    uploadResult.value = null;
-    uploadError.value = error instanceof Error ? error.message : "文件上傳失敗";
-    uploadState.value = "error";
-    return;
-  }
-
-  try {
-    const ocrResult = await runSelectedOcr(uploadedDocumentId);
-    const selectedProvider = ocrResult.extracted_fields.provider ?? "";
-
-    if (selectedProvider !== "paddleocr") {
-      uploadFallbackAvailable.value = true;
-      uploadError.value = selectedProvider
-        ? `GPU OCR 未完成：目前後端 selected OCR provider 是 ${selectedProvider}。`
-        : "GPU OCR 未完成：目前後端 selected OCR provider 不是 paddleocr。";
-      uploadState.value = "error";
-      return;
-    }
-
-    uploadMessage.value = "文件已完成 GPU OCR，並送入 demo 知識庫。";
-    uploadState.value = "success";
-  } catch (error) {
-    uploadFallbackAvailable.value = true;
-    uploadError.value = error instanceof Error ? `GPU OCR 未完成：${error.message}` : "GPU OCR 未完成";
-    uploadState.value = "error";
-  }
-}
-
-async function submitMockFallback(): Promise<void> {
-  if (!uploadResult.value) {
-    uploadError.value = "請先上傳文件。";
-    return;
-  }
-
-  uploadState.value = "loading";
-  uploadError.value = "";
-  uploadMessage.value = "";
-
-  try {
-    await runMockOcr(uploadResult.value.document_id);
-    uploadFallbackAvailable.value = false;
-    uploadMessage.value = "已改用 mock OCR 完成 demo 備援處理。";
-    uploadState.value = "success";
-  } catch (error) {
-    uploadError.value = error instanceof Error ? `Mock OCR 備援失敗：${error.message}` : "Mock OCR 備援失敗";
-    uploadState.value = "error";
-  }
-}
-
 onMounted(() => {
   void checkHealth();
 });
@@ -259,7 +169,7 @@ onMounted(() => {
           </div>
           <h1>文件客服助理</h1>
           <p class="hero-copy">
-            前台只負責提問與上傳文件；後端目前接收文件並提供 OCR / demo RAG API。
+            前台查詢入口，只回答後端已建立的文件知識庫；資料建立由後台知識庫管理流程處理。
           </p>
         </div>
 
@@ -271,12 +181,12 @@ onMounted(() => {
       </div>
     </header>
 
-    <section class="minimal-grid" aria-label="文件客服入口">
+    <section class="minimal-grid viewer-grid" aria-label="前台文件客服查詢入口">
       <article class="panel chat-surface">
         <div class="panel-heading">
           <div>
-            <h2>問問題</h2>
-            <p>詢問後端已建立的文件知識庫。</p>
+            <h2>前台查詢</h2>
+            <p>Viewer 只詢問後端已建立的文件知識庫，並查看回答與引用來源。</p>
           </div>
         </div>
 
@@ -328,62 +238,11 @@ onMounted(() => {
                 <small>{{ source.chunkIds.length }} 個引用片段</small>
               </li>
             </ul>
-            <p v-else class="muted">沒有引用來源。</p>
+            <p v-else class="muted">沒有引用來源；請確認後端知識庫資料是否已建立。</p>
           </div>
         </section>
 
-        <p v-else class="muted">請輸入問題。若尚未有資料，先在右側上傳公開 sample 文件。</p>
-      </article>
-
-      <article class="panel upload-surface">
-        <div class="panel-heading">
-          <div>
-            <h2>上傳文件</h2>
-            <p>文件送出後由後端 GPU OCR 建立 demo 知識庫。</p>
-          </div>
-        </div>
-
-        <label class="file-picker">
-          <span>選擇檔案</span>
-          <input type="file" @change="handleFileChange" />
-        </label>
-
-        <p v-if="selectedFile" class="selected-file">
-          {{ selectedFile.name }} - {{ formatBytes(selectedFile.size) }}
-        </p>
-        <p v-else class="muted">尚未選擇檔案。</p>
-
-        <button
-          type="button"
-          class="button upload-button"
-          :disabled="!selectedFile || uploadState === 'loading'"
-          @click="submitUpload"
-        >
-          {{ uploadState === "loading" ? "後端處理中..." : "上傳並跑 GPU OCR" }}
-        </button>
-
-        <p v-if="uploadMessage" class="success-message">{{ uploadMessage }}</p>
-        <p v-if="uploadError" class="error">{{ uploadError }}</p>
-        <button
-          v-if="uploadFallbackAvailable"
-          type="button"
-          class="button secondary-button upload-button"
-          :disabled="uploadState === 'loading'"
-          @click="submitMockFallback"
-        >
-          改用 mock OCR 備援
-        </button>
-
-        <dl v-if="uploadResult" class="upload-summary">
-          <div>
-            <dt>檔名</dt>
-            <dd>{{ uploadResult.filename }}</dd>
-          </div>
-          <div>
-            <dt>狀態</dt>
-            <dd>{{ uploadFallbackAvailable ? "GPU OCR 待處理" : "OCR 已完成" }}</dd>
-          </div>
-        </dl>
+        <p v-else class="muted">請輸入問題。若尚未有資料，請先由後台知識庫管理流程建立資料。</p>
       </article>
     </section>
 

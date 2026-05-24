@@ -595,10 +595,11 @@ Phase 22 guardrails：
 ## MVP v0.23.0 Viewer Chat / Admin Ingestion Role Split
 
 - [x] `tasks/phase-23-role-split-demo/23-01-role-boundary-contract.md`: 固定 Phase 23 產品邊界，明確區分前台 Viewer Chat 與後台 Admin / Analyst Ingestion；文件 ticket，不 bump version。
-- [ ] `tasks/phase-23-role-split-demo/23-02-viewer-chat-only-surface.md`: 將 frontend 預設入口收斂為 Viewer Chat-only，不在前台主畫面顯示 upload / OCR / mock fallback。
+- [x] `tasks/phase-23-role-split-demo/23-02-viewer-chat-only-surface.md`: 將 frontend 預設入口收斂為 Viewer Chat-only，不在前台主畫面顯示 upload / OCR / mock fallback。
 - [ ] `tasks/phase-23-role-split-demo/23-03-admin-ingestion-surface.md`: 建立明確的 Admin / Analyst 知識庫管理 surface，放置文件上傳、provider-selected OCR、狀態與手動 fallback。
 - [ ] `tasks/phase-23-role-split-demo/23-04-role-split-demo-release-sync.md`: 重跑 final validation，並在 Phase 23 完成時執行 `v0.23.0` release/version sync。
 - [x] 23-01 validation：README、frontend README、demo script、architecture、ROADMAP 與 TODO 已固定 Viewer Chat / Admin Ingestion 產品邊界；文件明確說明 OCR 是 backend ingestion layer，不是前端直接對圖片聊天；保留 local JSON、local chunks、manual / explicit vector path、無正式 parser / worker / DB / auth 的限制；ticket `rg` 與 `git diff --check` 通過。
+- [x] 23-02 validation：`npm.cmd run build` 於 `frontend/` 通過；local frontend 檢查首頁無文件上傳 / OCR / mock fallback controls，Viewer Chat query 後仍顯示 answer、answer source、retrieval source 與 citation summary；ticket `rg` 與 `git diff --check` 通過。
 
 Phase 23 goal：
 

@@ -34,11 +34,11 @@
 
 ## Acceptance Criteria
 
-- [ ] Frontend 預設畫面是 Viewer Chat，不顯示文件上傳、OCR、mock fallback 或 ingestion 操作。
-- [ ] Chat query 成功後仍能顯示 answer、answer source、retrieval source 與 citation summary。
-- [ ] 空知識庫 / 無 chunks 狀態以 Viewer 角度說明，不把使用者導向同一畫面的上傳操作。
-- [ ] UI 文字明確使用「前台查詢」或等價語意，不暗示 OCR 在前端執行。
-- [ ] 既有 frontend build 通過。
+- [x] Frontend 預設畫面是 Viewer Chat，不顯示文件上傳、OCR、mock fallback 或 ingestion 操作。
+- [x] Chat query 成功後仍能顯示 answer、answer source、retrieval source 與 citation summary。
+- [x] 空知識庫 / 無 chunks 狀態以 Viewer 角度說明，不把使用者導向同一畫面的上傳操作。
+- [x] UI 文字明確使用「前台查詢」或等價語意，不暗示 OCR 在前端執行。
+- [x] 既有 frontend build 通過。
 
 ## Validation
 
