@@ -2,7 +2,7 @@
 
 DocuRAG AgentOps 是一個面試展示用的 AI 文件平台 side project，用來呈現企業級文件上傳、OCR、local RAG、citation trace 與 AgentOps 產品思維。
 
-目前主線已完成 local document workflow、provider-selected PaddleOCR OCR flow、PP-OCRv4 mobile 中文 / 中英混合模型設定、backend startup preload、provider reuse、OCR timing metadata、mock OCR override、local keyword RAG baseline、可選 Ollama Qwen3.5 RAG generation demo、可選 manual vector indexing + Qdrant vector retrieval demo、retrieval evaluation baseline、disabled-by-default vector rerank eval spike、optional hybrid retrieval eval strategy、chat-first frontend demo UI，以及可重跑的本機 backend validation。這仍是受控 MVP，不是 production OCR / RAG 平台。
+目前主線已完成 local document workflow、provider-selected PaddleOCR OCR flow、PP-OCRv4 mobile 中文 / 中英混合模型設定、backend startup preload、provider reuse、OCR timing metadata、mock OCR override、local keyword RAG baseline、可選 Ollama Qwen3.5 RAG generation demo、可選 manual vector indexing + Qdrant vector retrieval demo、retrieval evaluation baseline、disabled-by-default vector rerank eval spike、optional hybrid retrieval eval strategy、minimal chat / upload frontend demo UI，以及可重跑的本機 backend validation。這仍是受控 MVP，不是 production OCR / RAG 平台。
 
 ## Project Goal
 
@@ -36,7 +36,7 @@ DocuRAG AgentOps 要展示三件事：
 - v0.18.0 已完成 `hybrid_rerank` planning backlog；這是 Markdown-only planning，不代表 runtime、eval runner、frontend UI 或 smoke flag 已可用。
 - v0.19.0 已完成 optional `hybrid_rerank` eval strategy：eval provider、`-RunHybridRerank` smoke flag、trace / report metadata naming 與 release sync；這仍只屬於 retrieval eval runner，不接 default `/rag/query` 或 frontend chat。
 - v0.20.0 已完成 interview MVP packaging：demo script、sample / eval coverage、README demo media、baseline validation 與 release 文件同步；不新增 production eval dashboard、worker、DB、auth 或 deployment。
-- Vue 3 + Vite frontend，第一屏是客服式 RAG chat；upload、document list/detail、selected OCR、mock override、OCR result 與 JSON trace 保留在同頁後台知識庫管理區。
+- Vue 3 + Vite frontend 只暴露客服問答與文件上傳；OCR、chunking、indexing、document list、raw JSON 與 detailed trace table 都留在 backend API / CLI / smoke scripts。
 - Python 3.12 backend runtime；real OCR 只支援 PaddlePaddle GPU / CUDA runtime，dependency 收斂在 `backend[real-ocr]` optional extra。
 - Dockerfile / Docker Compose backend runtime，real OCR GPU dependency 可透過 build arg 開啟。
 
@@ -51,16 +51,16 @@ DocuRAG AgentOps 要展示三件事：
 
 5 到 10 分鐘面試導覽建議：
 
-1. Demo 前先用 `scripts/seed-demo-data.ps1` 或後台區預載公開 synthetic sample，讓前台像客服機器人一樣直接提問。
-2. 第一屏用 `payment due date Net 15` 詢問 RAG，展示 deterministic baseline answer、citations、retrieved chunks 與 trace panel。
-3. 說明前台只負責查詢已建置的知識庫；文件上傳、OCR、local indexing status、metadata 與 API 回應在同頁後台知識庫管理區。
-4. 打開 retrieval trace panel，說明 strategy、answer source、retrieval source、candidate rows、fallback state 與 trace metadata。
+1. Demo 前先用 `scripts/seed-demo-data.ps1` 或 backend API 預載公開 synthetic sample，讓前台像客服機器人一樣直接提問。
+2. 第一屏用 `payment due date Net 15` 詢問 RAG，展示 deterministic baseline answer 與簡化引用來源。
+3. 說明 frontend 只負責問問題與上傳文件；OCR、chunking、indexing、metadata 與 detailed trace 都在 backend / CLI 層處理。
+4. 若面試官想看工程細節，再切到 API docs、smoke script output 或 eval CLI 說明 strategy、fallback state 與 trace metadata。
 5. 切到 retrieval eval smoke summary，說明 `case_count=20`、Hit Rate@K、MRR@K、Recall@K、failure count 與 trace metadata count。
 6. 補充 optional paths：`vector`、`vector_rerank`、`hybrid` 與 `hybrid_rerank` 都是 explicit eval / demo path；`hybrid_rerank` 不接 default `/rag/query` 或 frontend chat route。
 
-## Recommended Chat-First Demo
+## Recommended Minimal Chat / Upload Demo
 
-這是面試時最穩的 baseline demo，不需要 real OCR GPU runtime、Ollama、Qdrant 或 reranker。流程是先在後台預載公開 synthetic knowledge base，再讓前台客服機器人直接查詢。
+這是面試時最穩的 baseline demo，不需要 real OCR GPU runtime、Ollama、Qdrant 或 reranker。Frontend 只提供兩件事：問問題與上傳文件；其餘 OCR、chunking、indexing、metadata 與 detailed trace 都交給 backend / CLI。
 
 1. 啟動 mock-safe backend：
 
@@ -92,29 +92,24 @@ http://localhost:5173
 payment due date Net 15
 ```
 
-5. 展示回答後的引用與 trace：
+5. 展示回答與簡化引用來源：
 
 - `answer source`：未啟用 LLM 時是 deterministic baseline。
 - `retrieval source`：未啟用 vector 時是 keyword baseline。
-- `citations`：回答對應的來源文件與 chunk。
-- `retrieved chunks`：實際被拿來回答的片段。
-- `trace panel`：strategy、candidate rows、fallback state 與 trace metadata。
+- `引用來源`：回答對應的來源文件與引用片段數。
+- detailed trace / retrieved chunks：由 backend response、smoke script 或 eval CLI 檢查，不在 frontend 主畫面攤開。
 
-前台 / 後台 demo 分工：
+Frontend / backend demo 分工：
 
 | 區域 | 面試說法 |
 |---|---|
-| 前台客服機器人 | Viewer 只需要聊天，不需要自行上傳文件。 |
-| 後台知識庫管理 | Analyst / Admin 上傳文件、跑 OCR、確認索引、查看 metadata 與 API response。 |
+| 客服問答 | Viewer 只需要聊天與查看簡化引用來源。 |
+| 文件上傳 | Analyst / Admin 可以把文件送到後端知識庫流程；OCR、chunking 與 indexing 不在 frontend 展開。 |
 | Retrieval eval smoke | 開發者用 CLI 量化 Hit Rate@K、MRR@K、Recall@K、failure count 與 trace metadata count。 |
 
 若要展示 LLM generation、vector retrieval、rerank、hybrid 或 real OCR，再切到下方 optional paths；它們不是 baseline demo 的必要條件。
 
-Demo media：
-
-![Chat-first frontend overview](docs/demo-media/frontend-overview.png)
-
-![RAG answer, retrieval trace and citations](docs/demo-media/frontend-trace.png)
+工程細節 demo media：
 
 ![Retrieval eval summary](docs/demo-media/eval-summary.png)
 

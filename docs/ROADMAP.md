@@ -1010,6 +1010,7 @@ Tickets：
 - [x] `tasks/phase-20-interview-mvp-packaging/20-08-readme-zh-tw-demo-media-refresh.md`
 - [x] `tasks/phase-20-interview-mvp-packaging/20-09-frontend-chat-first-demo.md`
 - [x] `tasks/phase-20-interview-mvp-packaging/20-10-readme-chat-first-demo-refresh.md`
+- [x] `tasks/phase-20-interview-mvp-packaging/20-11-frontend-minimal-chat-upload.md`
 
 Expected Outcome：
 
@@ -1017,6 +1018,7 @@ Expected Outcome：
 - 20-02 補齊公開虛構 sample / eval coverage，目標至少 5 份 sample documents 與 20 筆 retrieval eval cases。
 - 20-03 補齊 README 5 到 10 分鐘面試導覽，以及展示 frontend trace / citation / eval 可觀測性的截圖或 GIF。
 - 20-04 重跑 final validation，完成 backend / frontend / Docker Compose / README / TODO / ROADMAP 的 `v0.20.0` release sync。
+- 20-11 將 frontend demo 收斂為客服問答與文件上傳兩個使用者可見入口，其餘 OCR、indexing、document list、raw JSON、trace table 與 eval metrics 留在 backend API / CLI / smoke scripts。
 
 20-01 Demo Doc Refresh Status：
 
@@ -1087,12 +1089,18 @@ Expected Outcome：
 - Scope 只限 `README.md` 與 TODO / ROADMAP / ticket 狀態同步；不修改 frontend、backend、sample data、eval dataset、smoke script 或 demo media。
 - Validation：ticket 指定 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
+20-11 Frontend Minimal Chat Upload Status：
+
+- 新增 frontend minimal chat / upload ticket，目標是修正 20-09 的同頁後台管理呈現，讓 frontend demo 只保留客服問答與文件上傳。
+- Scope 只限既有 Vue single-page UI、CSS、README、frontend README、TODO 與 ROADMAP 文件同步；上傳仍呼叫既有 backend upload + mock OCR flow，但不在 frontend 顯示 OCR text、extracted fields、document list、metadata JSON、API response JSON、retrieval trace table 或 retrieved chunks。
+- Validation：`npm.cmd run build` 通過；Browser 檢查 `http://localhost:5174/` local frontend demo view 只有客服問答與文件上傳，未顯示 OCR panel、document list、metadata JSON、API response JSON 或 trace table，desktop horizontal overflow 為 `0`；ticket 指定 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
 Acceptance Criteria：
 
 - Phase 20 tickets 都包含 Goal、Scope、Out of Scope、Files likely to change、Acceptance Criteria、Validation 與 Release Impact。
 - Phase 20 目標明確聚焦 interview MVP packaging，不把 production eval dashboard、DB、worker、auth 或 deployment 混進同一階段。
 - `20-04` 才允許 `v0.20.0` version bump；前置 tickets 若未完成完整 release artifact，必須寫 `Version bump required: no`。
-- Phase 20 完成後，README 與 demo script 應能讓面試官在 5 到 10 分鐘內看懂前台 RAG chat、後台 upload -> OCR -> index 建置流程、citation -> trace -> eval 的核心價值。
+- Phase 20 完成後，README 與 demo script 應能讓面試官在 5 到 10 分鐘內看懂前台客服問答與文件上傳的產品入口，並能在 backend API / CLI / smoke scripts 看到 OCR、indexing、citation、trace 與 eval 的工程能力。
 
 Validation：
 

@@ -539,10 +539,12 @@ Phase 20 guardrails：
 - [x] 20-09 validation：`npm.cmd run build` 於 `frontend/` 通過；local frontend demo view 檢查第一屏 chat-first、後台區塊仍可用、RAG query 後 answer / citations / trace / retrieved chunks 可見、desktop horizontal overflow 為 `0`；ticket 指定 `rg` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 - [x] `tasks/phase-20-interview-mvp-packaging/20-10-readme-chat-first-demo-refresh.md`: 更新 root README 的 chat-first recommended demo flow、前台 / 後台分工與 baseline / optional path 說明；不修改 frontend、backend、sample data 或 demo media。
 - [x] 20-10 validation：ticket 指定 `rg` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+- [x] `tasks/phase-20-interview-mvp-packaging/20-11-frontend-minimal-chat-upload.md`: 將 frontend demo 收斂成兩個使用者可見入口：客服問答與文件上傳；OCR、indexing、document list、raw JSON、retrieval trace table 與 eval metrics 留在 backend API / CLI / smoke scripts。
+- [x] 20-11 validation：`npm.cmd run build` 於 `frontend/` 通過；Browser 檢查 `http://localhost:5174/` local frontend demo view 只有客服問答與文件上傳，沒有 OCR panel、document list、metadata JSON、API response JSON、trace table，desktop horizontal overflow 為 `0`；ticket 指定 `rg` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 Phase 20.1 goal：
 
-- 讓面試 demo 的 frontend 第一眼更像成熟 AI application：前台是客服式 RAG chat，後台才是 upload -> OCR -> index -> trace workflow 與工程觀測區。
+- 讓面試 demo 的 frontend 第一眼就是產品入口：使用者只看到客服式 RAG chat 與文件上傳，OCR、chunking、indexing、trace、raw JSON 與 eval metrics 都回到 backend API / CLI / smoke scripts。
 - 只做展示質感與 README demo media 加分，不改 API contract、不新增功能範圍、不 bump version。
 
 Phase 20.1 guardrails：
