@@ -13,11 +13,14 @@ from app.schemas.documents import (
     OcrResult,
     OcrStatus,
     OcrTextLine,
+    ParserResult,
+    ParserStatus,
     ProcessingJob,
     ProcessingJobType,
     ProcessingStatus,
     ProcessingStepStatus,
 )
+from app.services.document_parser import DeterministicInvoiceParser
 from app.services.ocr import OcrProvider
 
 
@@ -45,6 +48,26 @@ class DocumentStorage:
             return None
 
         return document.ocr or OcrResult(status=OcrStatus.PENDING)
+
+    def get_parser_result(self, document_id: str) -> ParserResult | None:
+        document = self.get_document(document_id)
+
+        if document is None:
+            return None
+
+        if document.parser_result is not None:
+            return document.parser_result
+
+        return ParserResult(
+            document_id=document.document_id,
+            status=ParserStatus.PENDING,
+            source_ocr_status=document.ocr.status,
+            source_ocr_updated_at=document.ocr.updated_at,
+            trace_metadata={
+                "input": "ocr_lines" if document.ocr.lines else "ocr_text",
+                "parser_mode": "deterministic",
+            },
+        )
 
     def list_documents_for_rag(self) -> list[DocumentMetadata]:
         documents = self._read_documents()
@@ -221,6 +244,41 @@ class DocumentStorage:
             self._write_documents(documents)
 
             return ocr_result
+
+        return None
+
+    def run_parser(
+        self,
+        document_id: str,
+        parser: DeterministicInvoiceParser,
+    ) -> ParserResult | None:
+        documents = self._read_documents()
+
+        for index, document in enumerate(documents):
+            if document.document_id != document_id:
+                continue
+
+            now = datetime.now(UTC)
+            parser_result = parser.parse(document, parsed_at=now)
+            document.parser_result = parser_result
+            document.processing.parser = (
+                ProcessingStepStatus.COMPLETED
+                if parser_result.status == ParserStatus.PARSED
+                else ProcessingStepStatus.FAILED
+            )
+            document.processing.updated_at = now
+            self._record_job(
+                document,
+                ProcessingJobType.PARSER,
+                document.processing.parser,
+                now,
+                error_message=parser_result.error_message or parser_result.fallback_reason,
+            )
+
+            documents[index] = document
+            self._write_documents(documents)
+
+            return parser_result
 
         return None
 

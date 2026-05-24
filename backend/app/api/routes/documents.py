@@ -12,8 +12,11 @@ from app.schemas.documents import (
     DocumentUploadResponse,
     OcrStatus,
     OcrResultResponse,
+    ParserResult,
+    ParserStatus,
     VectorIndexingResponse,
 )
+from app.services.document_parser import DeterministicInvoiceParser
 from app.services.document_storage import DocumentStorage
 from app.services.embedding import create_embedding_provider
 from app.services.ocr import MockOcrProvider, OcrProvider, PaddleOcrProvider
@@ -42,6 +45,10 @@ def get_vector_indexing_service() -> VectorIndexingService:
         embedding_provider=create_embedding_provider(settings),
         vector_store=create_qdrant_vector_store(settings),
     )
+
+
+def get_document_parser() -> DeterministicInvoiceParser:
+    return DeterministicInvoiceParser()
 
 
 def _selected_ocr_provider_key() -> tuple[object, ...]:
@@ -142,6 +149,7 @@ DocumentStorageDep = Annotated[DocumentStorage, Depends(get_document_storage)]
 MockOcrProviderDep = Annotated[MockOcrProvider, Depends(get_mock_ocr_provider)]
 SelectedOcrProviderDep = Annotated[OcrProvider, Depends(get_selected_ocr_provider)]
 VectorIndexingServiceDep = Annotated[VectorIndexingService, Depends(get_vector_indexing_service)]
+DocumentParserDep = Annotated[DeterministicInvoiceParser, Depends(get_document_parser)]
 
 
 @router.post("/upload", response_model=DocumentUploadResponse)
@@ -223,6 +231,36 @@ async def get_ocr_result(
         raise HTTPException(status_code=404, detail="Document not found")
 
     return OcrResultResponse(document_id=document_id, **ocr_result.model_dump())
+
+
+@router.post("/{document_id}/parse", response_model=ParserResult)
+async def parse_document_fields(
+    document_id: str,
+    storage: DocumentStorageDep,
+    parser: DocumentParserDep,
+) -> ParserResult:
+    parser_result = storage.run_parser(document_id, parser)
+
+    if parser_result is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if parser_result.status == ParserStatus.FAILED:
+        raise HTTPException(status_code=409, detail=parser_result.model_dump(mode="json"))
+
+    return parser_result
+
+
+@router.get("/{document_id}/fields", response_model=ParserResult)
+async def get_document_fields(
+    document_id: str,
+    storage: DocumentStorageDep,
+) -> ParserResult:
+    parser_result = storage.get_parser_result(document_id)
+
+    if parser_result is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    return parser_result
 
 
 @router.post("/{document_id}/index/vector", response_model=VectorIndexingResponse)

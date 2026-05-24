@@ -1299,7 +1299,7 @@ Tickets：
 
 - [x] `tasks/phase-24-vlm-parser-mvp/24-01-parser-contract.md`
 - [x] `tasks/phase-24-vlm-parser-mvp/24-02-invoice-parser-service.md`
-- [ ] `tasks/phase-24-vlm-parser-mvp/24-03-document-fields-api.md`
+- [x] `tasks/phase-24-vlm-parser-mvp/24-03-document-fields-api.md`
 - [ ] `tasks/phase-24-vlm-parser-mvp/24-04-frontend-fields-surface.md`
 - [ ] `tasks/phase-24-vlm-parser-mvp/24-05-parser-demo-release-sync.md`
 
@@ -1329,7 +1329,11 @@ Expected Outcome：
 
 24-03 Document Fields API Status：
 
-- 待執行。新增 parse / fields API 並保存 parser result 到 local JSON metadata store。
+- 已完成。`POST /documents/{document_id}/parse` 可對已完成 OCR 的 document 執行 deterministic invoice parser；`GET /documents/{document_id}/fields` 可回傳保存的 parser result，尚未 parse 時回傳 pending result。
+- Parser result 保存到 local JSON metadata store 的 `parser_result`，重啟 / 重新建立 storage 後仍可 lookup。
+- `ProcessingStatus.parser` 與 `ProcessingJobType.PARSER` 已記錄 parser request 狀態；parser failure 只影響 parser step，不覆蓋 OCR / indexing 狀態，不觸發 vector indexing、RAG ingestion、Qdrant upsert 或 eval run。
+- API tests 已覆蓋 pending fields、未 OCR parse failure、OCR 後 parse、fields lookup、document not found、missing fields metadata 與 dependency override。
+- 24-03 validation：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`143 passed`（僅 pytest cache 權限警告）；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1` 通過，health version `0.23.0`、answer source `ollama/qwen3.5:4b`、retrieval source `keyword baseline`；`rg -n "/parse|/fields|ParserResult|DocumentFields|fallback_reason" backend/app backend/tests docs/api.md TODO.md docs/ROADMAP.md tasks/phase-24-vlm-parser-mvp/24-03-document-fields-api.md` 通過；`git diff --check` 通過。
 
 24-04 Frontend Fields Surface Status：
 

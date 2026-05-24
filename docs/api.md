@@ -51,7 +51,7 @@
 
 ## Phase 24 Parser Contract Draft
 
-Phase 24 的 parser contract 先支援 invoice MVP。`24-01` 只固定文件與 API 草案；runtime、metadata persistence 與 frontend surface 由後續 tickets 實作。此 contract 是 VLM-compatible，不代表目前已接真正 VLM、LLM parser、DB、worker 或 production parser pipeline。
+Phase 24 的 parser contract 先支援 invoice MVP。`24-01` 固定文件與 API 草案，`24-02` 新增 deterministic parser service，`24-03` 新增 parse / fields API 與 local JSON persistence。此 contract 是 VLM-compatible，不代表目前已接真正 VLM、LLM parser、DB、worker 或 production parser pipeline。
 
 ### Parser Sources
 
@@ -63,7 +63,7 @@ Phase 24 的 parser contract 先支援 invoice MVP。`24-01` 只固定文件與 
 
 ### Status Contract
 
-Parser 狀態存在於 `ParserResult.status`，後續若接入 document processing metadata，才新增可選 `processing.parser` step。Parser failure 不應清空 OCR result、chunks 或影響 Viewer Chat 的 default RAG path。
+Parser 狀態存在於 `ParserResult.status`；`24-03` 起 document processing metadata 也包含 `processing.parser` step。Parser failure 不應清空 OCR result、chunks 或影響 Viewer Chat 的 default RAG path。
 
 | Status | Meaning |
 |---|---|
@@ -146,18 +146,25 @@ Document-level processing 後續以 `processing.parser=pending/running/completed
 }
 ```
 
-### Endpoint Drafts
+### Endpoint Contract
 
 `POST /documents/{document_id}/parse`
 
 - Requires an existing document and completed OCR text.
 - Request body is optional for MVP. If provided, `document_type` may be `invoice`; `parser_source` defaults to `deterministic_invoice`.
-- Returns `ParserResult`.
+- Returns `ParserResult` and saves it to the document metadata JSON.
 - `404` when document does not exist.
 - `409` when OCR is not completed or OCR text is empty; response body should include `status=failed` and `fallback_reason=ocr_not_completed` or `empty_ocr_text`.
+- Does not trigger OCR, vector indexing, RAG retrieval, Qdrant upsert, eval run or any async worker.
 
 `GET /documents/{document_id}/fields`
 
 - Returns saved `ParserResult` when parser has completed or failed.
 - Returns `status=pending` when the document exists but no parser result has been saved yet.
 - Does not trigger OCR, parser, vector indexing, RAG retrieval or any async worker.
+
+`24-03` runtime notes：
+
+- Parser result is stored on `DocumentMetadata.parser_result` in the existing local JSON metadata store.
+- `ProcessingStatus.parser` uses `pending` / `completed` / `failed` to show parser state. Parser failure does not overwrite OCR / indexing state and does not affect Viewer Chat's default RAG path.
+- `ProcessingJobType.PARSER` records the explicit parser request with success or failure metadata.

@@ -43,6 +43,7 @@ def test_processing_job_type_values() -> None:
     assert ProcessingJobType.OCR_MOCK == "ocr_mock"
     assert ProcessingJobType.OCR_REAL == "ocr_real"
     assert ProcessingJobType.LOCAL_INDEXING == "local_indexing"
+    assert ProcessingJobType.PARSER == "parser"
 
 
 def test_processing_job_validates_required_fields() -> None:
@@ -97,6 +98,7 @@ def test_document_processing_status_defaults() -> None:
     assert document.processing.upload == ProcessingStepStatus.COMPLETED
     assert document.processing.ocr == ProcessingStepStatus.PENDING
     assert document.processing.indexing == ProcessingStepStatus.PENDING
+    assert document.processing.parser == ProcessingStepStatus.PENDING
     assert document.processing.ready is False
     assert document.processing.failed_reason is None
     assert document.processing_jobs == []

@@ -24,6 +24,7 @@ class ProcessingJobType(StrEnum):
     OCR_MOCK = "ocr_mock"
     OCR_REAL = "ocr_real"
     LOCAL_INDEXING = "local_indexing"
+    PARSER = "parser"
 
 
 class OcrStatus(StrEnum):
@@ -48,6 +49,7 @@ class ProcessingStatus(BaseModel):
     upload: ProcessingStepStatus = ProcessingStepStatus.COMPLETED
     ocr: ProcessingStepStatus = ProcessingStepStatus.PENDING
     indexing: ProcessingStepStatus = ProcessingStepStatus.PENDING
+    parser: ProcessingStepStatus = ProcessingStepStatus.PENDING
     ready: bool = False
     failed_reason: str | None = None
     updated_at: datetime | None = None
@@ -167,6 +169,7 @@ class DocumentMetadata(BaseModel):
     created_at: datetime
     processing: ProcessingStatus = Field(default_factory=ProcessingStatus)
     ocr: OcrResult = Field(default_factory=OcrResult)
+    parser_result: ParserResult | None = None
     chunks: list[DocumentChunk] = Field(default_factory=list)
     processing_jobs: list[ProcessingJob] = Field(default_factory=list)
     latest_job: ProcessingJob | None = None

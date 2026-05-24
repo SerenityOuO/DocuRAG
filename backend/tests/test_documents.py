@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from app.api.routes.documents import (
     _reset_selected_ocr_provider_cache,
     get_document_storage,
+    get_document_parser,
     get_mock_ocr_provider,
     get_selected_ocr_provider,
     get_vector_indexing_service,
@@ -19,6 +20,7 @@ from app.core.config import get_settings
 from app.main import app
 from app.schemas.documents import BoundingBox, DocumentMetadata, OcrResult, OcrStatus, OcrTextLine, ProcessingJobType
 from app.services.document_storage import DocumentStorage
+from app.services.document_parser import DeterministicInvoiceParser
 from app.services import ocr as ocr_module
 from app.services.ocr import MockOcrProvider, PaddleOcrProvider
 from app.services.vector_indexing import VectorIndexingResult
@@ -219,6 +221,193 @@ def test_get_ocr_result_returns_saved_mock_result(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.json() == mock_response.json()
+
+
+def test_get_fields_returns_pending_before_parser_runs(client: TestClient) -> None:
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("invoice.txt", b"sample document", "text/plain")},
+    )
+    document_id = upload_response.json()["document_id"]
+
+    response = client.get(f"/documents/{document_id}/fields")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["document_id"] == document_id
+    assert body["status"] == "pending"
+    assert body["parser_source"] == "deterministic_invoice"
+    assert body["source_ocr_status"] == "pending"
+
+
+def test_parse_document_fields_saves_parser_result_to_metadata(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    invoice_text = "\n".join(
+        [
+            "Fictitious Demo Invoice",
+            "Invoice number: AUR-2026-051",
+            "Vendor: Aurora Office Supplies Demo LLC",
+            "Issue date: 2026-05-31",
+            "Tax: USD 80.00",
+            "Amount due: USD 1,248.50",
+            "Line items:",
+            "- 6 ergonomic chair kits at USD 149.00 each",
+        ]
+    )
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("invoice.txt", invoice_text.encode("utf-8"), "text/plain")},
+    )
+    document_id = upload_response.json()["document_id"]
+    client.post(f"/documents/{document_id}/ocr/mock")
+
+    response = client.post(f"/documents/{document_id}/parse")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["document_id"] == document_id
+    assert body["status"] == "parsed"
+    assert body["fields"]["invoice_number"]["value"] == "AUR-2026-051"
+    assert body["fields"]["vendor_name"]["value"] == "Aurora Office Supplies Demo LLC"
+    assert body["fields"]["issue_date"]["value"] == "2026-05-31"
+    assert body["fields"]["total_amount"]["value"] == 1248.5
+    assert body["fields"]["tax_amount"]["value"] == 80.0
+    assert body["fields"]["currency"]["value"] == "USD"
+    assert body["fields"]["invoice_number"]["parser_source"] == "deterministic_invoice"
+    assert body["fields"]["invoice_number"]["source_text"] == "Invoice number: AUR-2026-051"
+    assert body["fallback_reason"] is None
+
+    metadata_path = tmp_path / "data" / "documents.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata[0]["parser_result"]["status"] == "parsed"
+    assert metadata[0]["parser_result"]["fields"]["invoice_number"]["value"] == "AUR-2026-051"
+    assert metadata[0]["processing"]["parser"] == "completed"
+    assert [job["job_type"] for job in metadata[0]["processing_jobs"]] == [
+        "upload",
+        "ocr_mock",
+        "local_indexing",
+        "parser",
+    ]
+    assert metadata[0]["latest_job"]["job_type"] == "parser"
+    assert metadata[0]["latest_job"]["status"] == "completed"
+
+
+def test_get_fields_returns_saved_parser_result_after_storage_reload(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    invoice_text = "\n".join(
+        [
+            "Invoice number: ORN-2026-118",
+            "Vendor: Orion Analytics Demo Software",
+            "Issue date: 2026-06-01",
+            "Amount due: USD 3,888.00",
+        ]
+    )
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("invoice.txt", invoice_text.encode("utf-8"), "text/plain")},
+    )
+    document_id = upload_response.json()["document_id"]
+    client.post(f"/documents/{document_id}/ocr/mock")
+    client.post(f"/documents/{document_id}/parse")
+    app.dependency_overrides[get_document_storage] = lambda: DocumentStorage(tmp_path / "data")
+
+    response = client.get(f"/documents/{document_id}/fields")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "parsed"
+    assert response.json()["fields"]["invoice_number"]["value"] == "ORN-2026-118"
+
+
+def test_parse_document_fields_rejects_document_before_ocr(client: TestClient) -> None:
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("invoice.txt", b"sample document", "text/plain")},
+    )
+    document_id = upload_response.json()["document_id"]
+
+    response = client.post(f"/documents/{document_id}/parse")
+
+    assert response.status_code == 409
+    detail = response.json()["detail"]
+    assert detail["document_id"] == document_id
+    assert detail["status"] == "failed"
+    assert detail["fallback_reason"] == "ocr_not_completed"
+    assert detail["fields"]["invoice_number"]["value"] is None
+    assert detail["fields"]["invoice_number"]["fallback_reason"] is None
+
+
+def test_parse_document_fields_returns_404_for_unknown_document(client: TestClient) -> None:
+    response = client.post("/documents/not-found/parse")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Document not found"
+
+
+def test_get_fields_returns_404_for_unknown_document(client: TestClient) -> None:
+    response = client.get("/documents/not-found/fields")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Document not found"
+
+
+def test_parse_document_fields_keeps_missing_fields_as_metadata(client: TestClient) -> None:
+    invoice_text = "\n".join(
+        [
+            "Invoice number: INV-2026-001",
+            "Amount due: USD 10.00",
+        ]
+    )
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("invoice.txt", invoice_text.encode("utf-8"), "text/plain")},
+    )
+    document_id = upload_response.json()["document_id"]
+    client.post(f"/documents/{document_id}/ocr/mock")
+
+    response = client.post(f"/documents/{document_id}/parse")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "parsed"
+    assert body["fallback_reason"] == "missing_fields"
+    assert body["fields"]["invoice_number"]["value"] == "INV-2026-001"
+    assert body["fields"]["vendor_name"]["value"] is None
+    assert body["fields"]["vendor_name"]["fallback_reason"] == "field_not_found"
+    assert "vendor_name" in body["trace_metadata"]["missing_fields"]
+
+
+def test_parse_document_fields_uses_parser_dependency_override(client: TestClient) -> None:
+    class StubParser(DeterministicInvoiceParser):
+        def parse(self, document: DocumentMetadata, parsed_at: datetime | None = None):
+            result = super().parse(document, parsed_at)
+            result.trace_metadata["stub_parser"] = "true"
+            return result
+
+    app.dependency_overrides[get_document_parser] = StubParser
+    invoice_text = "\n".join(
+        [
+            "Invoice number: INV-2026-002",
+            "Vendor: Stub Demo Vendor",
+            "Issue date: 2026-05-24",
+            "Tax: USD 1.00",
+            "Total: USD 11.00",
+        ]
+    )
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("invoice.txt", invoice_text.encode("utf-8"), "text/plain")},
+    )
+    document_id = upload_response.json()["document_id"]
+    client.post(f"/documents/{document_id}/ocr/mock")
+
+    response = client.post(f"/documents/{document_id}/parse")
+
+    assert response.status_code == 200
+    assert response.json()["trace_metadata"]["stub_parser"] == "true"
 
 
 def test_vector_indexing_endpoint_returns_indexing_result(client: TestClient) -> None:
