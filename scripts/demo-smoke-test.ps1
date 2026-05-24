@@ -12,7 +12,7 @@ param(
     [string]$QdrantUrl = "http://127.0.0.1:6333",
     [string]$QdrantCollection = "docurag_chunks_v1",
     [int]$QdrantVectorSize = 1024,
-    [string]$ExpectedVersion = "0.24.0"
+    [string]$ExpectedVersion = "0.25.0"
 )
 
 Set-StrictMode -Version Latest
@@ -272,6 +272,33 @@ Assert-Condition ($fields.status -eq "parsed") "Saved fields lookup did not retu
 Assert-Condition ($fields.fields.invoice_number.value -eq "AUR-2026-051") "Saved fields lookup did not return invoice number AUR-2026-051."
 Assert-Condition ($fields.fields.total_amount.value -eq $parser.fields.total_amount.value) "Saved fields lookup total amount did not match parser result."
 Write-Host "Parser fields OK: invoice $($fields.fields.invoice_number.value); total $($fields.fields.total_amount.value) $($fields.fields.currency.value)"
+
+$agentBody = @{
+    task = "Summarize invoice fields and cite payment terms."
+    document_id = $upload.document_id
+    query = "payment terms"
+    top_k = 3
+} | ConvertTo-Json
+$agentRun = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/agent/run" -ContentType "application/json" -Body $agentBody
+
+Assert-Condition (-not [string]::IsNullOrWhiteSpace($agentRun.run_id)) "Agent run did not return run_id."
+Assert-Condition ($agentRun.status -eq "completed") "Agent run did not complete. Got '$($agentRun.status)'."
+Assert-Condition ($agentRun.trace.planner -eq "deterministic") "Agent planner trace was '$($agentRun.trace.planner)'; expected deterministic."
+Assert-Condition ($agentRun.trace.tool_policy -eq "allowlisted_read_only") "Agent tool policy was '$($agentRun.trace.tool_policy)'; expected allowlisted_read_only."
+Assert-Condition ($agentRun.plan_steps.Count -eq 3) "Agent run expected 3 plan steps. Got $($agentRun.plan_steps.Count)."
+Assert-Condition ($agentRun.tool_calls.Count -eq 3) "Agent run expected 3 tool calls. Got $($agentRun.tool_calls.Count)."
+$agentToolNames = @($agentRun.tool_calls | ForEach-Object { $_.tool_name })
+Assert-Condition ($agentToolNames[0] -eq "get_document_fields") "Agent first tool was '$($agentToolNames[0])'; expected get_document_fields."
+Assert-Condition ($agentToolNames[1] -eq "search_documents") "Agent second tool was '$($agentToolNames[1])'; expected search_documents."
+Assert-Condition ($agentToolNames[2] -eq "summarize_invoice_fields") "Agent third tool was '$($agentToolNames[2])'; expected summarize_invoice_fields."
+Assert-Condition ($agentRun.final_answer.status -eq "completed") "Agent final answer did not complete."
+Assert-Condition ($agentRun.final_answer.text -match "Invoice AUR-2026-051") "Agent final answer did not include expected invoice summary."
+Assert-Condition ($agentRun.citations.Count -gt 0) "Agent run did not return citations."
+
+$agentLookup = Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/agent/runs/$($agentRun.run_id)"
+Assert-Condition ($agentLookup.run_id -eq $agentRun.run_id) "Agent lookup did not return the saved run."
+Assert-Condition ($agentLookup.status -eq $agentRun.status) "Agent lookup status did not match original run."
+Write-Host "Agent run OK: $($agentRun.run_id); tools $($agentToolNames -join ' -> ')"
 
 if ($RunVector) {
     Write-Host "Manual vector indexing"

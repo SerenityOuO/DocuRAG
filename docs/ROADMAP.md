@@ -84,7 +84,7 @@ Expected Outcome：
 - v0.23.0 Viewer Chat / Admin Ingestion role split 只拆產品入口與 demo surface：Viewer 前台只做 Chat；Admin / Analyst 後台才做 upload、provider-selected OCR 與 ingestion 狀態。不新增 auth、RBAC、DB、worker、VLM parser、production indexing 或 automatic Qdrant ingestion。
 - v0.24.0 VLM / Parser Minimal MVP 只做 parser contract、deterministic invoice parser fallback、parse / fields API、Admin / Analyst structured fields surface 與 release sync；不新增真正 VLM、LLM parser、DB、worker、Agent runtime 或 production parser pipeline。
 - v0.25.0 Agent Tool-use Minimal MVP 只做 deterministic planner、allowlisted tool adapters、Agent run API、frontend trace surface 與 release sync；不新增 LLM autonomous planner、任意 SQL、DB、RBAC、worker、Redis/NATS 或 destructive tools。
-- v0.26.0 Real VLM Parser Provider Spike 只做 disabled-by-default VLM provider contract、demo-safe image input resolver、`vlm_invoice` adapter、parser source comparison 與 release sync；不新增 default-on VLM、PDF rendering、多頁 parser pipeline、DB、worker、RBAC 或 Agent 直接呼叫 VLM。
+- v0.26.0 Real VLM Parser Provider Spike 只做 VLM-first provider contract、demo-safe image input resolver、`vlm_invoice` adapter、parser source comparison 與 release sync；`deterministic_invoice` 只作 fallback / debug override，不新增 production VLM parser、PDF rendering、多頁 parser pipeline、DB、worker、RBAC 或 Agent 直接呼叫 VLM。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -1434,7 +1434,10 @@ Expected Outcome：
 
 25-05 Agent Demo Release Sync Status：
 
-- 待執行。執行 backend / frontend / demo smoke / Browser validation，完成 `v0.25.0` version sync 與文件同步。
+- 已完成版本 / 文件 / smoke 實作，但 Browser validation 因 local URL policy blocked，尚未 commit / push。backend package / app version、frontend package / lock / fallback version、health test 與 Docker Compose `DOCURAG_VERSION` 已同步到 `0.25.0`。
+- `scripts/demo-smoke-test.ps1` 已補上 parser 後的 Agent run 與 Agent lookup 驗證，確認 deterministic planner、`allowlisted_read_only` tool policy、`get_document_fields` / `search_documents` / `summarize_invoice_fields`、final answer 與 citations。
+- `README.md`、`backend/README.md`、`frontend/README.md`、`docs/demo-script.md`、`TODO.md` 與 `docs/ROADMAP.md` 已同步 Phase 25 demo 說法，明確標示這是 deterministic planner + allowlisted tools，不是 production autonomous Agent。
+- 25-05 validation：backend tests 通過，`155 passed`（僅 pytest cache 權限警告）；frontend build 通過；baseline demo smoke 通過，health version `0.25.0`，Agent run / lookup OK，RAG query OK；ticket 指定 `rg` 與 `git diff --check` 通過。Browser Viewer Chat / Agent trace / overflow 檢查因 Codex in-app Browser 對 local URL 回報 `net::ERR_BLOCKED_BY_CLIENT` 並阻止替代瀏覽器繞過，尚待解除阻擋後完成。
 
 Acceptance Criteria：
 
@@ -1469,7 +1472,7 @@ Out of Scope：
 
 ## v0.26.0 Real VLM Parser Provider Spike
 
-Goal：承接 Phase 24 parser schema 與 Phase 25 Agent tool-use，新增 disabled-by-default VLM parser provider spike。Phase 26 的核心不是讓 Agent 直接呼叫 VLM，而是讓 VLM parser 產生更好的 structured fields，讓既有 `get_document_fields` tool 可以讀取保存後的結果。
+Goal：承接 Phase 24 parser schema 與 Phase 25 Agent tool-use，新增 VLM-first parser provider spike。Phase 26 的核心不是讓 Agent 直接呼叫 VLM，而是讓 VLM parser 預設優先產生 structured fields，VLM 不可用或回傳不合法時才 fallback 到 deterministic parser，讓既有 `get_document_fields` tool 可以讀取保存後的結果。
 
 Tickets：
 
@@ -1483,7 +1486,7 @@ Expected Outcome：
 
 - VLM provider env、input / output contract、fallback policy 與 trace metadata 被固定。
 - Demo-safe image input resolver 可從既有 upload metadata 取得 image input，不做 PDF rendering。
-- Disabled-by-default `vlm_invoice` adapter 可把 fake / configured provider output 正規化成既有 `DocumentFields` / `ParserResult`。
+- VLM-first `vlm_invoice` adapter 可把 fake / configured provider output 正規化成既有 `DocumentFields` / `ParserResult`。
 - API / trace 可顯示 `deterministic_invoice` vs `vlm_invoice`、fallback reason、confidence 與 source input。
 - Phase 25 Agent `get_document_fields` contract 不變；Agent 只消費 parser result，不直接呼叫 VLM。
 
@@ -1497,7 +1500,7 @@ Expected Outcome：
 
 26-03 VLM Parser Adapter Status：
 
-- 待執行。新增 disabled-by-default `vlm_invoice` adapter；未設定 provider 時保持 deterministic parser fallback。
+- 待執行。新增 VLM-first `vlm_invoice` adapter；provider unavailable、timeout 或 invalid response 時才 fallback 到 deterministic parser。
 
 26-04 Parser Source Comparison Status：
 
@@ -1510,7 +1513,7 @@ Expected Outcome：
 Acceptance Criteria：
 
 - Phase 26 tickets 都包含 Goal、Scope、Out of Scope、Files likely to change、Acceptance Criteria、Validation 與 Release Impact。
-- `vlm_invoice` 必須 disabled-by-default；沒有 VLM provider 時 demo 仍可回到 deterministic parser。
+- `vlm_invoice` 必須作為 Phase 26 parser 預設優先路徑；沒有可用 VLM provider、timeout 或 invalid response 時 demo 才回到 deterministic parser。
 - VLM output 必須正規化成既有 `DocumentFields` / `ParserResult`，不可新增平行 schema。
 - Agent planner / tool allowlist 不變；Agent 不直接呼叫 VLM。
 - 文件不宣稱已完成 production VLM parser、PDF rendering、多頁 parser pipeline、正式 RBAC、worker、DB 或 deployment。
@@ -1533,7 +1536,7 @@ Release Impact：
 
 Out of Scope：
 
-- 不新增 production VLM parser、default-on vision runtime、OpenAI vision call、Ollama vision call、streaming、function calling 或新外部依賴。
+- 不新增 production VLM parser、OpenAI SDK、streaming、function calling 或新外部依賴；Phase 26 的 default-on 只代表 demo parser path 預設 VLM-first。
 - 不新增 PDF rendering、image preprocessing、layout analysis、多頁 production parser pipeline、table reconstruction、人工修正 workflow 或 parser dashboard。
 - 不新增 PostgreSQL schema、migration、Redis、NATS、worker、async queue、Auth、RBAC、Agent permission model、K8s 或 deployment 設定。
 - 不修改 Phase 25 Agent planner / tool allowlist；Agent 不直接呼叫 VLM，只透過 `get_document_fields` 消費 parser result。

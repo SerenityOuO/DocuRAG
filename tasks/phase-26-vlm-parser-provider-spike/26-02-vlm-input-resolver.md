@@ -2,7 +2,7 @@
 
 ## Goal
 
-新增 Phase 26 VLM parser 的最小 input resolver，讓 disabled-by-default VLM adapter 可以從既有上傳文件中取得 demo-safe image input；本 ticket 不呼叫 VLM，不改 parser output。
+新增 Phase 26 VLM-first parser 的最小 input resolver，讓預設優先的 VLM adapter 可以從既有上傳文件中取得 demo-safe image input；本 ticket 不呼叫 VLM，不改 parser output。
 
 ## Scope
 
@@ -11,7 +11,7 @@
 - unsupported file type、missing file、path traversal 風險或檔案不可讀時，回傳明確 failure reason。
 - Resolver output 必須包含 `document_id`、normalized file path / bytes reference、mime type、input source 與 fallback reason。
 - 補 backend tests 覆蓋 supported image、missing file、unsupported extension 與 unsafe path。
-- 保留 Phase 24 deterministic parser path，不改 `POST /documents/{document_id}/parse` 預設行為。
+- 保留 Phase 24 deterministic parser 作為後續 VLM adapter 的 fallback building block；本 ticket 不改 `POST /documents/{document_id}/parse` 行為。
 
 ## Out of Scope
 

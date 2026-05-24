@@ -16,6 +16,13 @@
 - 優先最小改動、貼合既有風格，不為未來擴充提前抽象化。
 - 當使用者已在當前對話明確確認某個 Phase 的 ticket 草案、文件更新清單或規劃寫入後，Codex 可直接寫入該次已確認的 Markdown / ticket / TODO / ROADMAP 變更，後續同類文件寫入不需要重複詢問；但仍必須遵守 ticket-first、Scope / Out of Scope、validation、git 流程與安全限制，不得因此自動新增外部依賴、資料庫 schema、認證權限、部署設定或程式碼實作。
 
+預設切換規範：
+
+- 當使用者明確要求把新方案改成預設路徑時，後續 ticket、文件、實作與 demo 說法都必須以新方案作為 default，不再維持舊版本的預設行為。
+- 舊方案若仍有工程價值，只能保留為 explicit fallback、manual override、debug path 或 validation path；不得為了舊 demo 相容而讓新功能保持 disabled-by-default。
+- 例如使用者要求從 mock OCR 改成 PaddleOCR GPU 後，provider-selected OCR 預設必須是 PaddleOCR GPU；mock OCR 只能是手動 fallback。使用者要求從 deterministic parser 改成 VLM parser 後，parser 預設必須是 VLM-first；deterministic parser 只能是 VLM unavailable / timeout / invalid response 時的 fallback。
+- 預設切換不代表可以跳過 ticket-first、Scope / Out of Scope、validation、git 流程或安全限制；不得因此自動新增外部依賴、資料庫 schema、認證權限、部署設定、worker 或未排定的 production 能力。
+
 版本與文件同步規範：
 
 - 已完成的舊 ticket 不強制回填 `Release Impact`；從後續 ticket 起，每個 Phase 必須對應明確版本號。一般 Phase 使用 `v0.<phase>.0`，例如 Phase 08 對應 `v0.8.0`、Phase 09 對應 `v0.9.0`、Phase 10 對應 `v0.10.0`。

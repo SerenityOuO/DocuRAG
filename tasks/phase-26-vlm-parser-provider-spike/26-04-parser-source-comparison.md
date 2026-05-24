@@ -2,14 +2,14 @@
 
 ## Goal
 
-讓 API / demo trace 能清楚比較 `deterministic_invoice` 與 `vlm_invoice` parser source，顯示 fallback reason、confidence 與欄位來源，讓 Phase 26 的 VLM provider spike 可被面試 demo 解釋。
+讓 API / demo trace 能清楚比較 VLM-first `vlm_invoice` 與 fallback `deterministic_invoice` parser source，顯示 fallback reason、confidence 與欄位來源，讓 Phase 26 的 VLM provider spike 可被面試 demo 解釋。
 
 ## Scope
 
 - 擴充 parser result / fields response 的 trace metadata，使 `parser_source`、`fallback_reason`、confidence summary 與 source input type 更清楚。
-- 若 VLM 成功，API response 顯示 `vlm_invoice` source 與欄位層級 confidence / source text。
+- 若預設 VLM-first path 成功，API response 顯示 `vlm_invoice` source 與欄位層級 confidence / source text。
 - 若 VLM fallback，API response 顯示 fallback chain，例如 `vlm_invoice -> deterministic_invoice` 與 failure reason。
-- 在 backend tests 中覆蓋 VLM success trace、VLM fallback trace 與 deterministic-only trace。
+- 在 backend tests 中覆蓋 VLM success trace、VLM fallback trace 與 explicit deterministic override trace。
 - 必要時更新 `docs/api.md` 與 frontend README / demo wording，但不做新的 production dashboard。
 
 ## Out of Scope
@@ -39,6 +39,7 @@
 ## Acceptance Criteria
 
 - [ ] Parser response 可區分 `deterministic_invoice` 與 `vlm_invoice`。
+- [ ] Parser response 可顯示 Phase 26 預設路徑是 VLM-first，而不是 deterministic-first。
 - [ ] VLM fallback 時可看到明確 fallback chain / reason。
 - [ ] Confidence summary 與 source metadata 可被 API / smoke script 檢查。
 - [ ] 文件明確說明這是 demo visibility，不是 production parser evaluation dashboard。
