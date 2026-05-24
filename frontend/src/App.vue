@@ -7,9 +7,11 @@ import {
   listDocuments,
   parseDocumentFields,
   queryRag,
+  runAgent,
   runMockOcr,
   runSelectedOcr,
   uploadDocument,
+  type AgentRun,
   type DocumentMetadata,
   type DocumentFields,
   type ExtractedField,
@@ -56,6 +58,13 @@ const uploadError = ref("");
 const uploadMessage = ref("");
 const parseStates = ref<Record<string, RequestState>>({});
 const parseErrors = ref<Record<string, string>>({});
+const agentState = ref<RequestState>("idle");
+const agentRun = ref<AgentRun | null>(null);
+const agentTask = ref("Summarize invoice fields and cite payment terms.");
+const agentDocumentId = ref("");
+const agentQuery = ref("payment terms");
+const agentTopK = ref(3);
+const agentError = ref("");
 
 const suggestedQuestions = [
   "payment due date Net 15",
@@ -141,6 +150,7 @@ const citedSources = computed<SourceSummary[]>(() => {
 });
 
 const latestDocuments = computed(() => documents.value.slice(0, 5));
+const agentDocumentOptions = computed(() => latestDocuments.value);
 
 const invoiceFieldLabels: Array<[InvoiceFieldKey, string]> = [
   ["document_type", "文件類型"],
@@ -275,6 +285,14 @@ function updateDocumentParserResult(documentId: string, parserResult: ParserResu
   );
 }
 
+function syncAgentDocumentSelection(): void {
+  const hasSelectedDocument = documents.value.some((document) => document.document_id === agentDocumentId.value);
+
+  if (!hasSelectedDocument) {
+    agentDocumentId.value = latestDocuments.value[0]?.document_id ?? "";
+  }
+}
+
 function useSuggestedQuestion(question: string): void {
   ragQuery.value = question;
 }
@@ -321,6 +339,7 @@ async function refreshDocuments(): Promise<void> {
   try {
     const response = await listDocuments();
     documents.value = response.documents;
+    syncAgentDocumentSelection();
     documentsState.value = "success";
   } catch (error) {
     documents.value = [];
@@ -347,6 +366,7 @@ async function submitUpload(): Promise<void> {
     uploadResult.value = response;
     uploadedDocumentId = response.document_id;
     await refreshDocuments();
+    syncAgentDocumentSelection();
   } catch (error) {
     uploadResult.value = null;
     uploadError.value = error instanceof Error ? error.message : "文件上傳失敗";
@@ -429,6 +449,39 @@ async function submitFieldParse(document: DocumentMetadata): Promise<void> {
       [document.document_id]: "error",
     };
     await refreshDocuments();
+  }
+}
+
+async function submitAgentRun(): Promise<void> {
+  const task = agentTask.value.trim();
+  const documentId = agentDocumentId.value.trim();
+  const query = agentQuery.value.trim();
+
+  if (!task) {
+    agentError.value = "Agent task is required.";
+    return;
+  }
+
+  if (!documentId) {
+    agentError.value = "Select an ingested document for this Agent demo run.";
+    return;
+  }
+
+  agentState.value = "loading";
+  agentError.value = "";
+
+  try {
+    agentRun.value = await runAgent({
+      task,
+      document_id: documentId,
+      query: query || undefined,
+      top_k: agentTopK.value,
+    });
+    agentState.value = agentRun.value.status === "failed" ? "error" : "success";
+  } catch (error) {
+    agentRun.value = null;
+    agentError.value = error instanceof Error ? error.message : "Agent run failed.";
+    agentState.value = "error";
   }
 }
 
@@ -682,6 +735,139 @@ onMounted(() => {
             <p v-if="document.processing.failed_reason" class="error">{{ document.processing.failed_reason }}</p>
           </li>
         </ul>
+      </article>
+
+      <article class="panel agent-surface" aria-label="Agent trace surface">
+        <div class="panel-heading">
+          <div>
+            <h2>Agent trace</h2>
+            <p>Admin / Analyst demo surface for deterministic tool-use runs.</p>
+          </div>
+          <span class="status-pill" :class="documentStatusTone(agentRun?.status ?? 'pending')">
+            {{ agentRun?.status ?? "pending" }}
+          </span>
+        </div>
+
+        <form class="agent-form" @submit.prevent="submitAgentRun">
+          <label class="agent-task-field">
+            <span>Agent task</span>
+            <textarea v-model="agentTask" rows="3" />
+          </label>
+
+          <label>
+            <span>Document</span>
+            <select v-model="agentDocumentId">
+              <option value="" disabled>Select document</option>
+              <option v-for="document in agentDocumentOptions" :key="document.document_id" :value="document.document_id">
+                {{ document.filename }}
+              </option>
+            </select>
+          </label>
+
+          <label>
+            <span>Query</span>
+            <input v-model="agentQuery" type="text" placeholder="payment terms" />
+          </label>
+
+          <label>
+            <span>Top K</span>
+            <input v-model.number="agentTopK" type="number" min="1" max="10" />
+          </label>
+
+          <button type="submit" class="button" :disabled="agentState === 'loading'">
+            {{ agentState === "loading" ? "Running..." : "Run Agent" }}
+          </button>
+        </form>
+
+        <p v-if="agentError" class="error">{{ agentError }}</p>
+        <p v-if="!agentRun" class="muted compact-note">
+          Agent trace runs stay inside the Phase 25 read-only tool allowlist.
+        </p>
+
+        <section v-if="agentRun" class="agent-result" aria-label="Agent run result">
+          <div class="trace-facts">
+            <div>
+              <dt>Run</dt>
+              <dd>{{ agentRun.run_id }}</dd>
+            </div>
+            <div>
+              <dt>Planner</dt>
+              <dd>{{ agentRun.trace.planner }}</dd>
+            </div>
+            <div>
+              <dt>Tool policy</dt>
+              <dd>{{ agentRun.trace.tool_policy }}</dd>
+            </div>
+            <div>
+              <dt>Fallbacks</dt>
+              <dd>{{ agentRun.trace.fallback_count }}</dd>
+            </div>
+          </div>
+
+          <section class="agent-section">
+            <h3>Plan</h3>
+            <ol class="agent-step-list">
+              <li v-for="step in agentRun.plan_steps" :key="step.step_id">
+                <div>
+                  <strong>{{ step.title }}</strong>
+                  <small>{{ step.tool_name ?? "no tool" }}</small>
+                </div>
+                <span class="status-pill" :class="documentStatusTone(step.status)">{{ step.status }}</span>
+                <p>{{ step.observation_summary ?? "observation unavailable" }}</p>
+                <small v-if="step.fallback_reason" class="fallback-note">{{ step.fallback_reason }}</small>
+              </li>
+            </ol>
+          </section>
+
+          <section class="agent-section">
+            <h3>Tool calls</h3>
+            <div class="agent-tool-list">
+              <article v-for="toolCall in agentRun.tool_calls" :key="`${agentRun.run_id}-${toolCall.tool_name}`">
+                <div class="agent-tool-heading">
+                  <strong>{{ toolCall.tool_name }}</strong>
+                  <span class="status-pill" :class="documentStatusTone(toolCall.status)">{{ toolCall.status }}</span>
+                </div>
+                <dl class="agent-tool-details">
+                  <div>
+                    <dt>Input</dt>
+                    <dd>{{ toolCall.input_summary }}</dd>
+                  </div>
+                  <div>
+                    <dt>Observation</dt>
+                    <dd>{{ toolCall.observation.message }}</dd>
+                  </div>
+                  <div v-if="toolCall.output_summary">
+                    <dt>Output</dt>
+                    <dd>{{ toolCall.output_summary }}</dd>
+                  </div>
+                  <div v-if="toolCall.observation.fallback_reason">
+                    <dt>Fallback</dt>
+                    <dd>{{ toolCall.observation.fallback_reason }}</dd>
+                  </div>
+                </dl>
+                <p v-if="toolCall.observation.missing_fields.length" class="muted compact-note">
+                  Missing fields: {{ toolCall.observation.missing_fields.join(", ") }}
+                </p>
+              </article>
+            </div>
+          </section>
+
+          <section class="agent-section">
+            <h3>Final answer</h3>
+            <pre class="answer-text">{{ agentRun.final_answer.text }}</pre>
+          </section>
+
+          <section class="agent-section">
+            <h3>Citations</h3>
+            <ul v-if="agentRun.citations.length" class="citation-list">
+              <li v-for="citation in agentRun.citations" :key="`${citation.document_id}-${citation.chunk_id}`">
+                <span>{{ citation.filename }}</span>
+                <code>{{ citation.chunk_id }}</code>
+              </li>
+            </ul>
+            <p v-else class="muted compact-note">No citations returned for this Agent run.</p>
+          </section>
+        </section>
       </article>
     </section>
 

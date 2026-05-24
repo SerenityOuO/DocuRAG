@@ -1426,7 +1426,10 @@ Expected Outcome：
 
 25-04 Frontend Agent Trace Surface Status：
 
-- 待執行。在 demo UI 呈現 Agent trace；Viewer Chat 預設入口仍維持既有查詢體驗，不顯示 destructive operation 或 production Agent dashboard 暗示。
+- 已完成。在 Admin / Analyst ingestion surface 新增 Agent trace panel，展示 deterministic plan、tool calls、observation、final answer、citations、trace metadata 與 fallback state。
+- Viewer Chat 預設入口仍維持既有查詢體驗，不顯示 upload、OCR、parse 或 Agent operations。
+- UI 不宣稱 production autonomous Agent、正式 RBAC、worker、DB runtime 或任意 tool console。
+- 25-04 validation：frontend build 通過；Browser 檢查 Viewer Chat first、Agent trace success / fallback state、desktop 1280px 與 mobile 390px 無 horizontal overflow；ticket 指定 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 25-05 Agent Demo Release Sync Status：
 

@@ -152,6 +152,71 @@ export type RagQueryResponse = {
   retrieved_chunks: RetrievedChunk[];
 };
 
+export type AgentToolStatus = "completed" | "failed";
+
+export type AgentRunStatus = "pending" | "running" | "completed" | "failed";
+
+export type AgentToolName = "get_document_fields" | "search_documents" | "summarize_invoice_fields";
+
+export type AgentToolObservation = {
+  status: AgentToolStatus;
+  message: string;
+  missing_fields: string[];
+  fallback_reason: string | null;
+};
+
+export type AgentToolCall = {
+  tool_name: AgentToolName;
+  status: AgentToolStatus;
+  input_summary: string;
+  output_summary: string | null;
+  observation: AgentToolObservation;
+  output: Record<string, unknown>;
+  citations: RagCitation[];
+  retrieved_chunks: RetrievedChunk[];
+  trace_metadata: Record<string, string>;
+  error_message: string | null;
+};
+
+export type AgentStep = {
+  step_id: string;
+  order: number;
+  title: string;
+  tool_name: AgentToolName | null;
+  status: AgentRunStatus;
+  input_summary: string | null;
+  observation_summary: string | null;
+  fallback_reason: string | null;
+};
+
+export type AgentFinalAnswer = {
+  text: string;
+  status: AgentRunStatus;
+  fallback_reason: string | null;
+};
+
+export type AgentRun = {
+  run_id: string;
+  status: AgentRunStatus;
+  task: string;
+  document_id: string | null;
+  query: string | null;
+  plan_steps: AgentStep[];
+  tool_calls: AgentToolCall[];
+  final_answer: AgentFinalAnswer;
+  citations: RagCitation[];
+  trace: Record<string, string>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AgentRunRequest = {
+  task: string;
+  document_id?: string;
+  query?: string;
+  top_k?: number;
+};
+
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 
 export const API_BASE_URL = configuredBaseUrl.replace(/\/$/, "");
@@ -251,4 +316,16 @@ export async function queryRag(query: string, topK: number): Promise<RagQueryRes
   });
 
   return readJson<RagQueryResponse>(response);
+}
+
+export async function runAgent(request: AgentRunRequest): Promise<AgentRun> {
+  const response = await fetch(`${API_BASE_URL}/agent/run`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+
+  return readJson<AgentRun>(response);
 }

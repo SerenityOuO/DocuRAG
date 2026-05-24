@@ -46,6 +46,13 @@ npm.cmd run build
 
 ## Demo UI
 
+### Phase 25 Agent Trace Surface
+
+- Admin / Analyst / developer-oriented surface can call `POST /agent/run` with a demo-safe task, document and query.
+- The Agent trace surface shows deterministic plan, tool calls, observation, final answer, citations and fallback state.
+- Viewer Chat remains the default front surface and does not show Agent operations, upload, OCR or parse controls.
+- This is a deterministic tool-use demo surface, not a production autonomous Agent dashboard, RBAC surface, worker runtime or DB-backed tool console.
+
 目前 UI 支援：
 
 - 前台 Viewer Chat：輸入 query 與 top_k，呼叫 `POST /rag/query`，用來查詢已建立的 demo knowledge base。
