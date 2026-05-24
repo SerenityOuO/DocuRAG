@@ -537,6 +537,8 @@ Phase 20 guardrails：
 - [x] 20-08 validation：`npm.cmd run build` 於 `frontend/` 通過；local frontend demo view 重新截取 `docs/demo-media/frontend-overview.png` 與 `docs/demo-media/frontend-trace.png`，檢查中文標題 / panel / trace、舊英文可見標籤與 desktop horizontal overflow 通過；`rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 - [x] `tasks/phase-20-interview-mvp-packaging/20-09-frontend-chat-first-demo.md`: 將 frontend demo 第一屏調整為客服式 RAG chat，upload / OCR / metadata 保留在同頁後台知識庫管理區；不新增 route、API、外部依賴或 backend runtime。
 - [x] 20-09 validation：`npm.cmd run build` 於 `frontend/` 通過；local frontend demo view 檢查第一屏 chat-first、後台區塊仍可用、RAG query 後 answer / citations / trace / retrieved chunks 可見、desktop horizontal overflow 為 `0`；ticket 指定 `rg` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+- [x] `tasks/phase-20-interview-mvp-packaging/20-10-readme-chat-first-demo-refresh.md`: 更新 root README 的 chat-first recommended demo flow、前台 / 後台分工與 baseline / optional path 說明；不修改 frontend、backend、sample data 或 demo media。
+- [x] 20-10 validation：ticket 指定 `rg` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 Phase 20.1 goal：
 

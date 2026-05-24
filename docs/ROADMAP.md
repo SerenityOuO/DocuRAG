@@ -1009,6 +1009,7 @@ Tickets：
 - [x] `tasks/phase-20-interview-mvp-packaging/20-07-frontend-zh-tw-copy-polish.md`
 - [x] `tasks/phase-20-interview-mvp-packaging/20-08-readme-zh-tw-demo-media-refresh.md`
 - [x] `tasks/phase-20-interview-mvp-packaging/20-09-frontend-chat-first-demo.md`
+- [x] `tasks/phase-20-interview-mvp-packaging/20-10-readme-chat-first-demo-refresh.md`
 
 Expected Outcome：
 
@@ -1079,6 +1080,12 @@ Expected Outcome：
 - 新增 frontend chat-first demo ticket，目標是把第一屏調整成客服式 RAG chat，讓面試展示符合「前台聊天、後台建置知識庫」的產品切法。
 - Scope 只限既有 Vue single-page UI、CSS 與 README / TODO / ROADMAP 文件同步；upload、OCR、文件列表、metadata JSON 與 API response JSON 仍保留在同頁後台知識庫管理區。
 - Validation：`npm.cmd run build` 通過；local frontend demo view 檢查第一屏 chat-first / 後台區塊功能、RAG query 後 answer / citations / trace / retrieved chunks 可見，desktop horizontal overflow 為 `0`；ticket 指定 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+20-10 README Chat-First Demo Refresh Status：
+
+- 新增 README chat-first demo refresh ticket，目標是讓 root README 的推薦展示流程清楚呈現前台客服聊天、後台知識庫建置與 baseline / optional path 的邊界。
+- Scope 只限 `README.md` 與 TODO / ROADMAP / ticket 狀態同步；不修改 frontend、backend、sample data、eval dataset、smoke script 或 demo media。
+- Validation：ticket 指定 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 Acceptance Criteria：
 
