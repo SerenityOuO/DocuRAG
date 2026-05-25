@@ -871,6 +871,11 @@ Phase 28 guardrails：
 - 待執行。`28-04` 做 demo login mode 與基本 role gates，但不做正式多租戶 RBAC。
 - 待執行。`28-05` 完成 `v0.28.0` release sync 與 validation。
 
+## Documentation Maintenance
+
+- [x] `tasks/docs-readme-interview-dev-split.md`: 將 root README 切分為面試官入口 `README.md` 與開發紀錄 `README_DEV.md`；不 bump version、不改 runtime。
+- [x] README split validation：`rg -n "README_DEV.md|開發紀錄|面試官|技術亮點|Release Status" README.md README_DEV.md TODO.md tasks/docs-readme-interview-dev-split.md` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
 ## Release Verification Status
 
 - [x] v0.0: repo structure、docs、tasks 已完成。
