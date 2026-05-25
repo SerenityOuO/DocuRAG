@@ -388,6 +388,70 @@ td {
   line-height: 1.45;
 }
 
+.collapsible-status {
+  display: grid;
+  gap: 0;
+}
+
+.collapsible-status summary {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e5edf4;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  list-style: none;
+  padding: 14px;
+}
+
+.collapsible-status summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsible-status summary::after {
+  background: #ffffff;
+  border: 1px solid #d7e2ec;
+  border-radius: 999px;
+  color: #475569;
+  content: "展開";
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 10px;
+}
+
+.collapsible-status[open] summary::after {
+  content: "收合";
+}
+
+.collapsible-status summary div {
+  min-width: 0;
+}
+
+.collapsible-status summary h2,
+.collapsible-status summary p {
+  margin: 0;
+}
+
+.collapsible-status summary p {
+  color: #667085;
+  line-height: 1.45;
+  margin-top: 5px;
+}
+
+.collapsible-body {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.status-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .role-picker {
   display: grid;
   gap: 8px;

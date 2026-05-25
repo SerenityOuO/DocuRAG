@@ -562,6 +562,7 @@ Phase 20 guardrails：
 
 - [x] `tasks/phase-20-interview-mvp-packaging/20-05-frontend-demo-ui-polish.md`: 改善既有 Vue demo UI 的第一屏資訊層次、workflow 狀態、卡片 / 表格 / trace 視覺質感；不新增 route、API、外部依賴或 backend runtime。
 - [x] 20-05 validation：`npm.cmd run build` 於 `frontend/` 通過；Browser 檢查 `http://localhost:5173/` local frontend demo view，desktop viewport 無 horizontal overflow；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+- [x] 20-05 follow-up：移除後台知識庫管理的長段階段說明，將資料匯入狀態改為預設收合，並將 Agent 執行紀錄主要文案、狀態、工具名、觀察結果與常見回答格式中文化；不新增 route、API、外部依賴或 backend runtime。
 - [x] `tasks/phase-20-interview-mvp-packaging/20-06-readme-demo-media-refresh.md`: 用 20-05 polish 後的 local frontend demo 與 baseline eval summary 重新覆蓋 README 引用的三張 demo 圖；不新增 route、API、外部依賴或 backend runtime。
 - [x] 20-06 validation：`npm.cmd run build` 於 `frontend/` 通過；Browser 重新截取 `docs/demo-media/frontend-overview.png` 與 `docs/demo-media/frontend-trace.png`；baseline `scripts/retrieval-eval-smoke.ps1` 通過，keyword summary `case_count=20`、Hit Rate@K `0.7`、MRR@K `0.475`、Recall@K `0.625`、failure count `0`、fallback count `0`、trace metadata count `62`；重新產生 `docs/demo-media/eval-summary.png`；`rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 - [x] `tasks/phase-20-interview-mvp-packaging/20-07-frontend-zh-tw-copy-polish.md`: 將 frontend demo 的 hero、summary cards、workflow、panel、按鈕、表格、empty states、常見狀態與瀏覽器標題中文化；保留 API endpoint、JSON key、provider / model 名稱與技術 token 原文，不新增 route、API、外部依賴或 backend runtime。

@@ -1068,6 +1068,7 @@ Expected Outcome：
 - 新增 frontend demo UI polish ticket，目標是改善第一屏 MVP status overview、workflow status、selected document summary 與 trace / citation 視覺層次。
 - Scope 只限既有 Vue single-page UI 與 CSS，不新增 route、API、外部依賴、backend runtime 或 release version bump。
 - Validation：`npm.cmd run build` 通過；Browser 檢查 `http://localhost:5173/` desktop local view 無 horizontal overflow；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+- Follow-up：後台知識庫管理已移除長段階段說明；資料匯入狀態預設收合，點開才顯示細節；Agent 執行紀錄主要文案、狀態、工具名、觀察結果與常見回答格式已中文化，仍不新增 route、API、外部依賴或 backend runtime。
 
 20-06 README Demo Media Refresh Status：
 

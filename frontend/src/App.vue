@@ -73,9 +73,9 @@ const parseStates = ref<Record<string, RequestState>>({});
 const parseErrors = ref<Record<string, string>>({});
 const agentState = ref<RequestState>("idle");
 const agentRun = ref<AgentRun | null>(null);
-const agentTask = ref("Summarize invoice fields and cite payment terms.");
+const agentTask = ref("整理這份 invoice 欄位，並補充付款期限來源。");
 const agentDocumentId = ref("");
-const agentQuery = ref("payment terms");
+const agentQuery = ref("付款期限 / payment terms");
 const agentTopK = ref(3);
 const agentError = ref("");
 const loginUsername = ref("admin");
@@ -227,6 +227,73 @@ const invoiceFieldLabels: Array<[InvoiceFieldKey, string]> = [
   ["currency", "幣別"],
 ];
 
+const statusLabels: Record<string, string> = {
+  idle: "待命",
+  loading: "處理中",
+  pending: "待處理",
+  running: "執行中",
+  success: "成功",
+  uploaded: "已上傳",
+  ready: "已就緒",
+  completed: "已完成",
+  parsed: "已解析",
+  parsing: "解析中",
+  failed: "失敗",
+  error: "錯誤",
+};
+
+const toolLabels: Record<string, string> = {
+  get_document_fields: "讀取結構化欄位",
+  search_documents: "搜尋文件內容",
+  summarize_invoice_fields: "彙整發票欄位",
+};
+
+const stepTitleLabels: Record<string, string> = {
+  "Read structured invoice fields": "讀取結構化欄位",
+  "Search supporting document chunks": "搜尋相關文件片段",
+  "Summarize invoice fields": "彙整發票欄位",
+  "Reject unsupported demo task": "拒絕不支援的 demo 任務",
+};
+
+const traceValueLabels: Record<string, string> = {
+  deterministic: "確定性規劃器",
+  allowlisted_read_only: "唯讀 allowlist 工具",
+};
+
+const agentMessageLabels: Record<string, string> = {
+  "Parser result was available.": "已取得欄位解析結果。",
+  "Parser result is not available for this document.": "這份文件還沒有可用的欄位解析結果。",
+  "Document not found.": "找不到文件。",
+  "Document not found for search.": "搜尋時找不到指定文件。",
+  "Document search failed.": "文件搜尋失敗。",
+  "No document chunks matched the query.": "沒有找到符合查詢的文件片段。",
+  "Document search returned matching chunks.": "已找到符合查詢的文件片段。",
+  "Cannot summarize invoice fields before parser result is available.": "欄位解析結果尚不可用，無法彙整發票欄位。",
+  "Invoice fields were summarized with deterministic formatting.": "已用確定性格式彙整發票欄位。",
+  "No document_id or query was provided for the demo-safe planner.": "尚未提供文件或查詢內容，demo-safe 規劃器無法執行。",
+};
+
+const fallbackReasonLabels: Record<string, string> = {
+  document_not_found: "找不到文件",
+  no_retrieved_chunks: "沒有找到可引用片段",
+  parser_result_missing: "缺少欄位解析結果",
+  summary_failed: "欄位彙整失敗",
+  tool_error: "工具執行錯誤",
+  tool_failed: "工具執行失敗",
+  unsupported_task: "不支援的任務",
+};
+
+const agentFieldLabels: Record<string, string> = {
+  document_type: "文件類型",
+  vendor_name: "供應商",
+  invoice_number: "發票號碼",
+  issue_date: "日期",
+  total_amount: "總金額",
+  tax_amount: "稅額",
+  currency: "幣別",
+  line_items: "品項明細",
+};
+
 function sourceTone(source: string): "status-failed" | "status-ready" | "status-success" {
   if (source.includes("備援") || source.includes("不可用")) {
     return "status-failed";
@@ -259,6 +326,22 @@ function formatBytes(size: number): string {
   return `${size.toLocaleString()} 位元組`;
 }
 
+function statusLabel(status: string | null | undefined): string {
+  if (!status) {
+    return "待處理";
+  }
+
+  return statusLabels[status] ?? status;
+}
+
+function toolLabel(toolName: string | null | undefined): string {
+  if (!toolName) {
+    return "不呼叫工具";
+  }
+
+  return toolLabels[toolName] ?? toolName;
+}
+
 function handleFileChange(event: Event): void {
   const input = event.target as HTMLInputElement;
   selectedFile.value = input.files?.[0] ?? null;
@@ -288,25 +371,25 @@ function chunkReadiness(document: DocumentMetadata): string {
   if (document.chunks.length > 0) {
     const sourceType = document.chunks[0]?.source_type;
     if (sourceType === "text_upload") {
-      return `text_upload chunks ready (${document.chunks.length})`;
+      return `文字 chunks 已建立 (${document.chunks.length})`;
     }
 
     if (sourceType === "pdf_text") {
-      return `pdf_text chunks ready (${document.chunks.length})`;
+      return `PDF 文字 chunks 已建立 (${document.chunks.length})`;
     }
 
-    return `local chunks ready (${document.chunks.length})`;
+    return `local chunks 已建立 (${document.chunks.length})`;
   }
 
   if (processingReason(document).includes("pdf_scanned_pending_ocr")) {
-    return "pdf_scanned_pending_ocr";
+    return "掃描 PDF 待 OCR";
   }
 
   if (processingReason(document).includes("pdf_text_extraction_failed")) {
-    return "PDF text extraction failed";
+    return "PDF 文字抽取失敗";
   }
 
-  return "local chunks not ready";
+  return "local chunks 尚未建立";
 }
 
 function documentSourceLabel(document: DocumentMetadata): string {
@@ -324,11 +407,11 @@ function documentSourceLabel(document: DocumentMetadata): string {
   }
 
   if (processingReason(document).includes("pdf_scanned_pending_ocr")) {
-    return "scanned PDF pending OCR";
+    return "掃描 PDF 待 OCR";
   }
 
   if (processingReason(document).includes("pdf_text_extraction_failed")) {
-    return "PDF extraction failed";
+    return "PDF 文字抽取失敗";
   }
 
   if (document.file_type === "txt") {
@@ -336,10 +419,10 @@ function documentSourceLabel(document: DocumentMetadata): string {
   }
 
   if (document.file_type === "pdf") {
-    return "PDF text pending";
+    return "PDF 文字待抽取";
   }
 
-  return "image_ocr";
+  return "圖片 OCR";
 }
 
 function documentStatusTone(status: string): string {
@@ -398,10 +481,98 @@ function parserFieldDisplay(result: ParserResult, fieldName: InvoiceFieldKey): s
 }
 
 function fieldMeta(field: ExtractedField): string {
-  const confidence = field.confidence === null ? "confidence n/a" : `confidence ${Math.round(field.confidence * 100)}%`;
-  const source = field.source_text ? `source: ${field.source_text}` : field.fallback_reason ? `reason: ${field.fallback_reason}` : "source unavailable";
+  const confidence = field.confidence === null ? "信心值 n/a" : `信心值 ${Math.round(field.confidence * 100)}%`;
+  const source = field.source_text ? `來源：${field.source_text}` : field.fallback_reason ? `原因：${fallbackReasonLabel(field.fallback_reason) || field.fallback_reason}` : "來源未提供";
 
   return `${confidence}; ${source}`;
+}
+
+function agentStepTitle(title: string): string {
+  return stepTitleLabels[title] ?? title;
+}
+
+function agentTraceValue(value: string | undefined): string {
+  if (!value) {
+    return "未提供";
+  }
+
+  return traceValueLabels[value] ?? value;
+}
+
+function fallbackReasonLabel(reason: string | null | undefined): string {
+  if (!reason) {
+    return "";
+  }
+
+  return fallbackReasonLabels[reason] ?? reason;
+}
+
+function agentMessage(message: string | null | undefined): string {
+  if (!message) {
+    return "沒有可用觀察結果。";
+  }
+
+  return agentMessageLabels[message] ?? message;
+}
+
+function agentSummary(summary: string | null | undefined): string {
+  if (!summary) {
+    return "沒有輸出摘要。";
+  }
+
+  const retrievedMatch = summary.match(/^Retrieved (\d+) chunk\(s\)\.$/);
+  if (retrievedMatch) {
+    return `已找回 ${retrievedMatch[1]} 個文件片段。`;
+  }
+
+  if (summary.startsWith("Parser result status is ")) {
+    return `欄位解析狀態：${statusLabel(summary.replace("Parser result status is ", "").replace(".", ""))}。`;
+  }
+
+  return summary
+    .replace(/invoice_number=/g, "發票號碼=")
+    .replace(/vendor=/g, "供應商=")
+    .replace(/total=/g, "總金額=");
+}
+
+function agentInputSummary(summary: string | null | undefined): string {
+  if (!summary) {
+    return "沒有輸入摘要。";
+  }
+
+  return summary
+    .replace(/query=/g, "查詢=")
+    .replace(/document_id=/g, "文件 ID=")
+    .replace(/top_k=/g, "Top K=")
+    .replace(/\bany\b/g, "不限文件");
+}
+
+function missingFieldText(fields: string[]): string {
+  return fields.map((field) => agentFieldLabels[field] ?? field).join("、");
+}
+
+function agentAnswerText(text: string): string {
+  return text
+    .replace(/Tool trace:/g, "工具流程：")
+    .replace(/Citations: none available\./g, "引用來源：目前沒有可用引用。")
+    .replace(/Citations:/g, "引用來源：")
+    .replace(/get_document_fields=completed/g, "讀取結構化欄位=已完成")
+    .replace(/search_documents=completed/g, "搜尋文件內容=已完成")
+    .replace(/summarize_invoice_fields=completed/g, "彙整發票欄位=已完成")
+    .replace(/get_document_fields=failed/g, "讀取結構化欄位=失敗")
+    .replace(/search_documents=failed/g, "搜尋文件內容=失敗")
+    .replace(/summarize_invoice_fields=failed/g, "彙整發票欄位=失敗")
+    .replace(/Invoice /g, "發票 ")
+    .replace(/ is from /g, " 來自 ")
+    .replace(/Issue date:/g, "開立日期：")
+    .replace(/Total amount:/g, "總金額：")
+    .replace(/Tax amount:/g, "稅額：")
+    .replace(/Source chunks:/g, "來源片段：")
+    .replace(/Missing fields:/g, "缺少欄位：")
+    .replace(/unknown invoice number/g, "未知發票號碼")
+    .replace(/unknown vendor/g, "未知供應商")
+    .replace(/Agent run failed at/g, "Agent 執行失敗於")
+    .replace(/Fallback reason:/g, "備援原因：");
 }
 
 function missingFieldLabels(result: ParserResult): string[] {
@@ -765,12 +936,12 @@ async function submitAgentRun(): Promise<void> {
   const query = agentQuery.value.trim();
 
   if (!task) {
-    agentError.value = "Agent task is required.";
+    agentError.value = "請先輸入 Agent 任務。";
     return;
   }
 
   if (!documentId) {
-    agentError.value = "Select an ingested document for this Agent demo run.";
+    agentError.value = "請先選擇已匯入的文件。";
     return;
   }
 
@@ -787,7 +958,7 @@ async function submitAgentRun(): Promise<void> {
     agentState.value = agentRun.value.status === "failed" ? "error" : "success";
   } catch (error) {
     agentRun.value = null;
-    agentError.value = error instanceof Error ? error.message : "Agent run failed.";
+    agentError.value = error instanceof Error ? error.message : "Agent 執行失敗。";
     agentState.value = "error";
   }
 }
@@ -977,11 +1148,6 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="surface-note">
-          <strong>目前階段</strong>
-          <span>backend upload + source router + local chunking。`.txt` 直接建立 text_upload chunks；text-native PDF 會抽文字層建立 pdf_text chunks；scanned PDF 只標示 pdf_scanned_pending_ocr；圖片走 provider-selected OCR。real OCR 失敗時保留文件並提供 mock OCR fallback；Phase 27 預設會 best-effort 執行 VLM-first parser 與 Qdrant vector indexing，但仍不是 production worker pipeline、DB 或正式權限系統。</span>
-        </div>
-
         <label class="file-picker">
           <span>選擇文件</span>
           <input type="file" @change="handleFileChange" />
@@ -1023,126 +1189,133 @@ onMounted(() => {
       </article>
 
       <article class="panel ingestion-status">
-        <div class="panel-heading">
-          <div>
-            <h2>Ingestion 狀態</h2>
-            <p>只呈現 local MVP 處理狀態，不代表正式 production indexing。</p>
-          </div>
-          <button type="button" class="button secondary-button compact-button" @click="refreshDocuments">
-            重新整理
-          </button>
-        </div>
-
-        <p v-if="documentsError" class="error">{{ documentsError }}</p>
-        <p v-if="documentsState === 'loading'" class="muted">讀取文件狀態中...</p>
-        <p v-else-if="latestDocuments.length === 0" class="muted">目前沒有後台文件紀錄。</p>
-
-        <ul v-else class="document-status-list">
-          <li v-for="document in latestDocuments" :key="document.document_id">
+        <details class="collapsible-status">
+          <summary>
             <div>
-              <strong>{{ document.filename }}</strong>
-              <small>{{ document.document_id }}</small>
+              <h2>資料匯入狀態</h2>
+              <p>{{ latestDocuments.length }} 筆文件紀錄，點開後才顯示處理細節。</p>
             </div>
-            <div class="document-status-row">
-              <span class="status-pill" :class="documentStatusTone(document.status)">
-                document {{ document.status }}
-              </span>
-              <span class="status-pill status-ready">
-                {{ documentSourceLabel(document) }}
-              </span>
-              <span class="status-pill" :class="documentStatusTone(document.processing.ocr)">
-                OCR {{ document.processing.ocr }}
-              </span>
-              <span class="status-pill" :class="documentStatusTone(parserStatus(document))">
-                Parser {{ parserStatus(document) }}
-              </span>
-              <span class="status-pill" :class="document.processing.ready ? 'status-success' : 'status-ready'">
-                {{ chunkReadiness(document) }}
-              </span>
-            </div>
-            <div class="parser-actions">
-              <button
-                type="button"
-                class="button secondary-button compact-button"
-                :disabled="!canParseDocument(document) || parseStates[document.document_id] === 'loading'"
-                @click="submitFieldParse(document)"
-              >
-                {{
-                  parseStates[document.document_id] === "loading"
-                    ? "解析中..."
-                    : document.parser_result?.status === "parsed"
-                      ? "重新解析欄位"
-                      : "解析欄位"
-                }}
+          </summary>
+
+          <div class="collapsible-body">
+            <div class="status-toolbar">
+              <button type="button" class="button secondary-button compact-button" @click="refreshDocuments">
+                重新整理
               </button>
-              <small v-if="!canParseDocument(document)">OCR 完成、直接文字匯入或 text-native PDF 後才能解析欄位。</small>
             </div>
-            <p v-if="parseErrors[document.document_id]" class="error">
-              {{ parseErrors[document.document_id] }}
-            </p>
-            <section
-              v-if="document.parser_result?.status === 'parsed'"
-              class="fields-summary"
-              aria-label="欄位解析摘要"
-            >
-              <div class="fields-summary-header">
+
+            <p v-if="documentsError" class="error">{{ documentsError }}</p>
+            <p v-if="documentsState === 'loading'" class="muted">讀取文件狀態中...</p>
+            <p v-else-if="latestDocuments.length === 0" class="muted">目前沒有後台文件紀錄。</p>
+
+            <ul v-else class="document-status-list">
+              <li v-for="document in latestDocuments" :key="document.document_id">
                 <div>
-                  <span>Parser</span>
-                  <strong>{{ document.parser_result.parser_source }}</strong>
+                  <strong>{{ document.filename }}</strong>
+                  <small>{{ document.document_id }}</small>
                 </div>
-                <small v-if="document.parser_result.fallback_reason">
-                  {{ document.parser_result.fallback_reason }}
-                </small>
-              </div>
-              <div class="fields-grid">
-                <div v-for="field in invoiceFieldLabels" :key="field[0]" class="field-cell">
-                  <span>{{ field[1] }}</span>
-                  <strong>{{ parserFieldDisplay(document.parser_result, field[0]) }}</strong>
-                  <small>{{ fieldMeta(document.parser_result.fields[field[0]]) }}</small>
+                <div class="document-status-row">
+                  <span class="status-pill" :class="documentStatusTone(document.status)">
+                    文件 {{ statusLabel(document.status) }}
+                  </span>
+                  <span class="status-pill status-ready">
+                    {{ documentSourceLabel(document) }}
+                  </span>
+                  <span class="status-pill" :class="documentStatusTone(document.processing.ocr)">
+                    OCR {{ statusLabel(document.processing.ocr) }}
+                  </span>
+                  <span class="status-pill" :class="documentStatusTone(parserStatus(document))">
+                    欄位解析 {{ statusLabel(parserStatus(document)) }}
+                  </span>
+                  <span class="status-pill" :class="document.processing.ready ? 'status-success' : 'status-ready'">
+                    {{ chunkReadiness(document) }}
+                  </span>
                 </div>
-              </div>
-              <p v-if="missingFieldLabels(document.parser_result).length" class="muted compact-note">
-                缺少欄位：{{ missingFieldLabels(document.parser_result).join("、") }}
-              </p>
-              <p v-if="document.parser_result.fields.line_items.length" class="muted compact-note">
-                line items：{{ document.parser_result.fields.line_items.length }}
-              </p>
-            </section>
-            <section
-              v-else-if="document.parser_result?.status === 'failed'"
-              class="fields-summary fields-summary-failed"
-              aria-label="欄位解析失敗"
-            >
-              <strong>{{ document.parser_result.fallback_reason ?? "parser_failed" }}</strong>
-              <span>{{ document.parser_result.error_message ?? "欄位解析未完成。" }}</span>
-            </section>
-            <p v-else class="muted compact-note">尚未執行欄位解析。</p>
-            <p v-if="document.processing.failed_reason" class="error">{{ document.processing.failed_reason }}</p>
-          </li>
-        </ul>
+                <div class="parser-actions">
+                  <button
+                    type="button"
+                    class="button secondary-button compact-button"
+                    :disabled="!canParseDocument(document) || parseStates[document.document_id] === 'loading'"
+                    @click="submitFieldParse(document)"
+                  >
+                    {{
+                      parseStates[document.document_id] === "loading"
+                        ? "解析中..."
+                        : document.parser_result?.status === "parsed"
+                          ? "重新解析欄位"
+                          : "解析欄位"
+                    }}
+                  </button>
+                  <small v-if="!canParseDocument(document)">OCR 完成、直接文字匯入或 text-native PDF 後才能解析欄位。</small>
+                </div>
+                <p v-if="parseErrors[document.document_id]" class="error">
+                  {{ parseErrors[document.document_id] }}
+                </p>
+                <section
+                  v-if="document.parser_result?.status === 'parsed'"
+                  class="fields-summary"
+                  aria-label="欄位解析摘要"
+                >
+                  <div class="fields-summary-header">
+                    <div>
+                      <span>欄位解析器</span>
+                      <strong>{{ document.parser_result.parser_source }}</strong>
+                    </div>
+                    <small v-if="document.parser_result.fallback_reason">
+                      {{ fallbackReasonLabel(document.parser_result.fallback_reason) }}
+                    </small>
+                  </div>
+                  <div class="fields-grid">
+                    <div v-for="field in invoiceFieldLabels" :key="field[0]" class="field-cell">
+                      <span>{{ field[1] }}</span>
+                      <strong>{{ parserFieldDisplay(document.parser_result, field[0]) }}</strong>
+                      <small>{{ fieldMeta(document.parser_result.fields[field[0]]) }}</small>
+                    </div>
+                  </div>
+                  <p v-if="missingFieldLabels(document.parser_result).length" class="muted compact-note">
+                    缺少欄位：{{ missingFieldLabels(document.parser_result).join("、") }}
+                  </p>
+                  <p v-if="document.parser_result.fields.line_items.length" class="muted compact-note">
+                    品項明細：{{ document.parser_result.fields.line_items.length }}
+                  </p>
+                </section>
+                <section
+                  v-else-if="document.parser_result?.status === 'failed'"
+                  class="fields-summary fields-summary-failed"
+                  aria-label="欄位解析失敗"
+                >
+                  <strong>{{ fallbackReasonLabel(document.parser_result.fallback_reason) || "欄位解析失敗" }}</strong>
+                  <span>{{ document.parser_result.error_message ?? "欄位解析未完成。" }}</span>
+                </section>
+                <p v-else class="muted compact-note">尚未執行欄位解析。</p>
+                <p v-if="document.processing.failed_reason" class="error">{{ document.processing.failed_reason }}</p>
+              </li>
+            </ul>
+          </div>
+        </details>
       </article>
 
-      <article class="panel agent-surface" aria-label="Agent trace surface">
+      <article class="panel agent-surface" aria-label="Agent 執行紀錄">
         <div class="panel-heading">
           <div>
-            <h2>Agent trace</h2>
-            <p>Admin / Analyst demo surface for deterministic tool-use runs.</p>
+            <h2>Agent 執行紀錄</h2>
+            <p>Admin / Analyst 可在這裡查看確定性工具流程、觀察結果與引用來源。</p>
           </div>
           <span class="status-pill" :class="documentStatusTone(agentRun?.status ?? 'pending')">
-            {{ agentRun?.status ?? "pending" }}
+            {{ statusLabel(agentRun?.status ?? "pending") }}
           </span>
         </div>
 
         <form class="agent-form" @submit.prevent="submitAgentRun">
           <label class="agent-task-field">
-            <span>Agent task</span>
+            <span>任務</span>
             <textarea v-model="agentTask" rows="3" />
           </label>
 
           <label>
-            <span>Document</span>
+            <span>文件</span>
             <select v-model="agentDocumentId">
-              <option value="" disabled>Select document</option>
+              <option value="" disabled>選擇文件</option>
               <option v-for="document in agentDocumentOptions" :key="document.document_id" :value="document.document_id">
                 {{ document.filename }}
               </option>
@@ -1150,7 +1323,7 @@ onMounted(() => {
           </label>
 
           <label>
-            <span>Query</span>
+            <span>查詢關鍵字</span>
             <input v-model="agentQuery" type="text" placeholder="payment terms" />
           </label>
 
@@ -1160,97 +1333,97 @@ onMounted(() => {
           </label>
 
           <button type="submit" class="button" :disabled="agentState === 'loading'">
-            {{ agentState === "loading" ? "Running..." : "Run Agent" }}
+            {{ agentState === "loading" ? "執行中..." : "執行 Agent" }}
           </button>
         </form>
 
         <p v-if="agentError" class="error">{{ agentError }}</p>
         <p v-if="!agentRun" class="muted compact-note">
-          Agent trace runs stay inside the Phase 25 read-only tool allowlist.
+          Agent 只會使用 Phase 25 已允許的唯讀工具，不會執行任意外部操作。
         </p>
 
-        <section v-if="agentRun" class="agent-result" aria-label="Agent run result">
+        <section v-if="agentRun" class="agent-result" aria-label="Agent 執行結果">
           <div class="trace-facts">
             <div>
-              <dt>Run</dt>
+              <dt>執行 ID</dt>
               <dd>{{ agentRun.run_id }}</dd>
             </div>
             <div>
-              <dt>Planner</dt>
-              <dd>{{ agentRun.trace.planner }}</dd>
+              <dt>規劃器</dt>
+              <dd>{{ agentTraceValue(agentRun.trace.planner) }}</dd>
             </div>
             <div>
-              <dt>Tool policy</dt>
-              <dd>{{ agentRun.trace.tool_policy }}</dd>
+              <dt>工具政策</dt>
+              <dd>{{ agentTraceValue(agentRun.trace.tool_policy) }}</dd>
             </div>
             <div>
-              <dt>Fallbacks</dt>
+              <dt>備援次數</dt>
               <dd>{{ agentRun.trace.fallback_count }}</dd>
             </div>
           </div>
 
           <section class="agent-section">
-            <h3>Plan</h3>
+            <h3>執行計畫</h3>
             <ol class="agent-step-list">
               <li v-for="step in agentRun.plan_steps" :key="step.step_id">
                 <div>
-                  <strong>{{ step.title }}</strong>
-                  <small>{{ step.tool_name ?? "no tool" }}</small>
+                  <strong>{{ agentStepTitle(step.title) }}</strong>
+                  <small>{{ toolLabel(step.tool_name) }}</small>
                 </div>
-                <span class="status-pill" :class="documentStatusTone(step.status)">{{ step.status }}</span>
-                <p>{{ step.observation_summary ?? "observation unavailable" }}</p>
-                <small v-if="step.fallback_reason" class="fallback-note">{{ step.fallback_reason }}</small>
+                <span class="status-pill" :class="documentStatusTone(step.status)">{{ statusLabel(step.status) }}</span>
+                <p>{{ agentMessage(step.observation_summary) }}</p>
+                <small v-if="step.fallback_reason" class="fallback-note">{{ fallbackReasonLabel(step.fallback_reason) }}</small>
               </li>
             </ol>
           </section>
 
           <section class="agent-section">
-            <h3>Tool calls</h3>
+            <h3>工具呼叫</h3>
             <div class="agent-tool-list">
               <article v-for="toolCall in agentRun.tool_calls" :key="`${agentRun.run_id}-${toolCall.tool_name}`">
                 <div class="agent-tool-heading">
-                  <strong>{{ toolCall.tool_name }}</strong>
-                  <span class="status-pill" :class="documentStatusTone(toolCall.status)">{{ toolCall.status }}</span>
+                  <strong>{{ toolLabel(toolCall.tool_name) }}</strong>
+                  <span class="status-pill" :class="documentStatusTone(toolCall.status)">{{ statusLabel(toolCall.status) }}</span>
                 </div>
                 <dl class="agent-tool-details">
                   <div>
-                    <dt>Input</dt>
-                    <dd>{{ toolCall.input_summary }}</dd>
+                    <dt>輸入摘要</dt>
+                    <dd>{{ agentInputSummary(toolCall.input_summary) }}</dd>
                   </div>
                   <div>
-                    <dt>Observation</dt>
-                    <dd>{{ toolCall.observation.message }}</dd>
+                    <dt>觀察結果</dt>
+                    <dd>{{ agentMessage(toolCall.observation.message) }}</dd>
                   </div>
                   <div v-if="toolCall.output_summary">
-                    <dt>Output</dt>
-                    <dd>{{ toolCall.output_summary }}</dd>
+                    <dt>輸出摘要</dt>
+                    <dd>{{ agentSummary(toolCall.output_summary) }}</dd>
                   </div>
                   <div v-if="toolCall.observation.fallback_reason">
-                    <dt>Fallback</dt>
-                    <dd>{{ toolCall.observation.fallback_reason }}</dd>
+                    <dt>備援原因</dt>
+                    <dd>{{ fallbackReasonLabel(toolCall.observation.fallback_reason) }}</dd>
                   </div>
                 </dl>
                 <p v-if="toolCall.observation.missing_fields.length" class="muted compact-note">
-                  Missing fields: {{ toolCall.observation.missing_fields.join(", ") }}
+                  缺少欄位：{{ missingFieldText(toolCall.observation.missing_fields) }}
                 </p>
               </article>
             </div>
           </section>
 
           <section class="agent-section">
-            <h3>Final answer</h3>
-            <pre class="answer-text">{{ agentRun.final_answer.text }}</pre>
+            <h3>最終回答</h3>
+            <pre class="answer-text">{{ agentAnswerText(agentRun.final_answer.text) }}</pre>
           </section>
 
           <section class="agent-section">
-            <h3>Citations</h3>
+            <h3>引用來源</h3>
             <ul v-if="agentRun.citations.length" class="citation-list">
               <li v-for="citation in agentRun.citations" :key="`${citation.document_id}-${citation.chunk_id}`">
                 <span>{{ citation.filename }}</span>
                 <code>{{ citation.chunk_id }}</code>
               </li>
             </ul>
-            <p v-else class="muted compact-note">No citations returned for this Agent run.</p>
+            <p v-else class="muted compact-note">這次 Agent 執行沒有回傳引用來源。</p>
           </section>
         </section>
       </article>
