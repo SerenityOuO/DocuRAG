@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.26 Real VLM Parser Provider Spike backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.27 Aggressive Demo Defaults backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -26,6 +26,7 @@
 - Phase 24 -> `v0.24.0`
 - Phase 25 -> `v0.25.0`
 - Phase 26 -> `v0.26.0`
+- Phase 27 -> `v0.27.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -95,12 +96,13 @@
 41. `tasks/phase-25-agent-tool-use-mvp/25-02-agent-tool-adapters.md` 已完成，實作 `get_document_fields`、`search_documents` 與 `summarize_invoice_fields` allowlisted tool adapters。
 42. `tasks/phase-25-agent-tool-use-mvp/25-03-agent-run-api.md` 已完成，新增 `POST /agent/run` 與 `GET /agent/runs/{run_id}`，用 deterministic planner 串接 allowlisted tools。
 43. `tasks/phase-25-agent-tool-use-mvp/25-04-frontend-agent-trace-surface.md` 已完成，在 demo UI 顯示 Agent plan、tool calls、observations、final answer 與 citations。
-44. `tasks/phase-25-agent-tool-use-mvp/25-05-agent-demo-release-sync.md` 已完成，版本 / 文件 / smoke / Browser validation 已補齊，等待本批 ticket 完成後一併 commit / push。
+44. `tasks/phase-25-agent-tool-use-mvp/25-05-agent-demo-release-sync.md` 已完成，版本 / 文件 / smoke / Browser validation 已補齊。
 45. `tasks/phase-26-vlm-parser-provider-spike/26-01-vlm-provider-decision.md` 已完成，固定 VLM provider env、input / output contract、fallback policy 與 Agent 承接方式；文件 / contract ticket，不 bump version。
 46. `tasks/phase-26-vlm-parser-provider-spike/26-02-vlm-input-resolver.md` 已完成，新增 demo-safe image input resolver，只解析既有上傳檔案，不做 PDF rendering 或 VLM call。
 47. `tasks/phase-26-vlm-parser-provider-spike/26-03-vlm-parser-adapter.md` 已完成，新增 VLM-first `vlm_invoice` parser adapter，輸出沿用 Phase 24 `DocumentFields` schema。
 48. `tasks/phase-26-vlm-parser-provider-spike/26-04-parser-source-comparison.md` 已完成，在 API / trace 顯示 `deterministic_invoice` vs `vlm_invoice` 的 parser source、fallback reason 與 confidence。
 49. `tasks/phase-26-vlm-parser-provider-spike/26-05-vlm-parser-demo-release-sync.md` 已完成，補齊 VLM parser demo validation、版本 / 文件同步與 `v0.26.0` release sync。
+50. `tasks/phase-27-aggressive-defaults/27-01-aggressive-demo-defaults.md` 已完成，啟用 default `hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter、frontend parser + vector indexing best-effort flow 與 `v0.27.0` release sync。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -246,11 +248,11 @@
 ## Parking Lot
 
 - [ ] Production-grade OCR / VLM parser（v0.7 / v0.8 只先完成 provider spike 與 runtime stabilization）。
-- [ ] Embedding 與 Qdrant indexing。
+- [ ] Production-grade background embedding / Qdrant indexing pipeline（v0.27.0 只有 demo best-effort / manual indexing，不是正式 worker）。
 - [ ] Redis session / cache / rate limit。
 - [ ] NATS worker。
-- [ ] LLM-based RAG generation / rerank / citation trace evaluation。
-- [ ] vLLM / Ollama / OpenAI-compatible provider。
+- [ ] Production-grade LLM / rerank / citation quality evaluation（local Ollama generation 與 FastEmbed adapter 已有 demo default，正式評測仍未做）。
+- [ ] vLLM / OpenAI-compatible provider。
 
 ## MVP v0.9.x GPU Runtime Backlog
 
@@ -806,6 +808,27 @@ Phase 26 guardrails：
 - 新增 `DOCURAG_VLM_PROVIDER=fake` demo / smoke stub，用於 image input 的 `vlm_invoice` success path；Agent tool contract 不變，仍只讀保存後的 parser result。
 - README、backend README、frontend README、docs/demo-script.md、docs/api.md、docs/architecture.md、TODO 與 ROADMAP 已同步 Phase 26 demo 說法：這是 VLM-first provider spike，不是 production VLM parser。
 
+## MVP v0.27.0 Aggressive Demo Defaults
+
+- [x] `tasks/phase-27-aggressive-defaults/27-01-aggressive-demo-defaults.md`: 啟用 default `hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter、frontend parser + vector indexing best-effort flow 與 `v0.27.0` release/version bump。
+
+Phase 27 goal：
+- 把已實作、已有 fallback、可驗證的進階 demo 能力改成預設路徑：`hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter，以及 Admin ingestion 後的 parser + vector indexing best-effort flow。
+- 讓 demo 開場就走最完整的先進路徑；本機模型、Qdrant 或 reranker 不可用時，回到 keyword evidence，並在 trace / UI 顯示原因。
+
+Phase 27 guardrails：
+- 不新增 PostgreSQL schema、migration、Redis、NATS、worker、async queue、Auth / RBAC、OpenAI SDK、vLLM、production VLM parser、PDF rendering、K8s 或 deployment 設定。
+- 不把 best-effort vector indexing 說成正式背景任務或 production ingestion pipeline。
+- 不移除 keyword、deterministic parser 或 mock OCR；它們只作 fallback、manual override、debug path 或 validation path。
+
+27-01 aggressive defaults status：
+
+- Backend 預設已改為 `hybrid_rerank`，embedding 預設 Ollama，rerank 預設 FastEmbed adapter；`/rag/query` 與 Agent `search_documents` 使用同一個 RAG provider selection。
+- `/rag/query` 已接上 `vector`、`vector_rerank`、`hybrid` 與 `hybrid_rerank` runtime provider；embedding、Qdrant 或 reranker 不可用時，會回到 keyword evidence 並保留 fallback metadata。
+- Frontend 預設進入 Admin / Analyst ingestion surface；OCR 成功後會 best-effort 執行 parser 與 vector indexing，失敗時保留明確訊息，不阻斷主要 demo。
+- README、backend README、frontend README、docs/demo-script.md、docs/api.md、docs/architecture.md、PRD、TODO、ROADMAP、Docker Compose、`.env.example` 與 demo smoke script 已同步 `v0.27.0` aggressive default 說法。
+- [x] 27-01 validation：backend tests 通過，`166 passed`（僅 pytest cache 權限警告）；frontend build 通過；baseline demo smoke 通過，health version `0.27.0`、retrieval source `hybrid_rerank fallback: reranker_unavailable`；Browser 檢查 desktop 1280px 與 mobile 390px 預設皆為 Admin / Analyst ingestion surface，且無 horizontal overflow；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
 ## Release Verification Status
 
 - [x] v0.0: repo structure、docs、tasks 已完成。
@@ -839,3 +862,4 @@ Phase 26 guardrails：
 - [x] v0.24.0: VLM / Parser Minimal MVP 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、TODO 與 ROADMAP 已同步到 `v0.24.0`；deterministic invoice parser fallback、parse / fields API、local JSON parser result persistence、frontend structured fields surface、parser demo smoke、Browser structured fields / overflow 檢查、ticket `rg` 與 `git diff --check` 已通過。
 - [x] v0.25.0: Agent Tool-use Minimal MVP 版本 / 文件 / smoke 實作已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、TODO 與 ROADMAP 已同步到 `v0.25.0`；deterministic planner、allowlisted tool adapters、Agent run / lookup API、frontend trace surface、Agent demo smoke、Browser desktop Agent trace / overflow 檢查、ticket `rg` 與 `git diff --check` 已通過。
 - [x] v0.26.0: Real VLM Parser Provider Spike 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、TODO、ROADMAP、API 與 architecture 文件已同步到 `v0.26.0`；VLM-first parser provider boundary、demo-safe image input resolver、`vlm_invoice` adapter、parser source comparison、fake / stub success smoke、provider unavailable fallback 與 Agent `get_document_fields` consumption validation 已補齊。
+- [x] v0.27.0: Aggressive Demo Defaults 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、TODO、ROADMAP、API、architecture、PRD 與 `.env.example` 已同步到 `v0.27.0`；default `hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter、frontend parser + vector indexing best-effort flow、fallback-safe demo smoke 與 Browser default surface validation 已補齊。

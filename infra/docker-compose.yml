@@ -8,10 +8,19 @@ services:
         DOCURAG_INSTALL_REAL_OCR: ${DOCURAG_INSTALL_REAL_OCR:-false}
     environment:
       DOCURAG_APP_NAME: DocuRAG AgentOps Backend
-      DOCURAG_VERSION: 0.26.0
+      DOCURAG_VERSION: 0.27.0
       DOCURAG_ENVIRONMENT: docker
       DOCURAG_DATA_DIR: /app/data
       DOCURAG_OCR_PROVIDER: ${DOCURAG_OCR_PROVIDER:-paddleocr}
+      DOCURAG_LLM_PROVIDER: ${DOCURAG_LLM_PROVIDER:-ollama}
+      DOCURAG_LLM_BASE_URL: ${DOCURAG_LLM_BASE_URL:-http://host.docker.internal:11434}
+      DOCURAG_VLM_PROVIDER: ${DOCURAG_VLM_PROVIDER:-ollama}
+      DOCURAG_VLM_BASE_URL: ${DOCURAG_VLM_BASE_URL:-http://host.docker.internal:11434}
+      DOCURAG_RAG_RETRIEVAL_PROVIDER: ${DOCURAG_RAG_RETRIEVAL_PROVIDER:-hybrid_rerank}
+      DOCURAG_EMBEDDING_PROVIDER: ${DOCURAG_EMBEDDING_PROVIDER:-ollama}
+      DOCURAG_EMBEDDING_BASE_URL: ${DOCURAG_EMBEDDING_BASE_URL:-http://host.docker.internal:11434}
+      DOCURAG_RERANK_PROVIDER: ${DOCURAG_RERANK_PROVIDER:-fastembed}
+      DOCURAG_QDRANT_URL: ${DOCURAG_QDRANT_URL:-http://qdrant:6333}
     volumes:
       - ../data:/app/data
     ports:

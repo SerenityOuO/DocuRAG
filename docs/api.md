@@ -35,7 +35,7 @@
 | GET | `/documents/{document_id}/fields` | Extracted fields |
 | POST | `/documents/{document_id}/parse` | Run the MVP parser for an OCR-completed document |
 | GET | `/documents/{document_id}/chunks` | Document chunks |
-| POST | `/documents/{document_id}/index/vector` | Manually index document chunks into Qdrant when embedding / Qdrant runtime is explicitly enabled |
+| POST | `/documents/{document_id}/index/vector` | Index document chunks into Qdrant when embedding / Qdrant runtime is available; frontend v0.27.0 calls this best-effort after OCR |
 
 ## Chat
 
@@ -427,3 +427,33 @@ Phase 25 Agent contract 不變：`get_document_fields` 只讀已保存的 `Parse
 - Release version is `v0.26.0`.
 - `scripts/demo-smoke-test.ps1` validates the VLM-first fallback path on text input and, when `DOCURAG_VLM_PROVIDER=fake` is set for the backend / script environment, validates the `vlm_invoice` success path on image input.
 - The same smoke path verifies that Agent `get_document_fields` can read both `deterministic_invoice` fallback results and `vlm_invoice` success results without changing the Phase 25 Agent tool contract.
+
+## Phase 27 Aggressive Demo Defaults
+
+Phase 27 將已完成且有 fallback 的進階能力改成預設體驗。這是 demo default，不代表 production DB、worker、auth、OpenAI API 或 vLLM serving 已完成。
+
+### Default Runtime Env
+
+| Env | Default | Meaning |
+|---|---|---|
+| `DOCURAG_RAG_RETRIEVAL_PROVIDER` | `hybrid_rerank` | `/rag/query` 與 Agent `search_documents` 預設先做 keyword + vector merge，再嘗試 rerank。 |
+| `DOCURAG_EMBEDDING_PROVIDER` | `ollama` | Query / indexing embedding 預設使用 Ollama `POST /api/embed`。 |
+| `DOCURAG_RERANK_PROVIDER` | `fastembed` | Reranker adapter 預設使用 FastEmbed lazy import；runtime 不可用時保留 candidates 並寫入 fallback metadata。 |
+| `DOCURAG_QDRANT_URL` | `http://127.0.0.1:6333` | Local Qdrant endpoint；Docker Compose 內預設改用 `http://qdrant:6333`。 |
+
+### RAG Provider Behavior
+
+- `keyword`：只使用 local keyword retrieval，可作 debug / validation override。
+- `vector`：使用 Ollama embedding + Qdrant search，失敗時 fallback 到 keyword evidence。
+- `vector_rerank`：先使用 vector retrieval，再用 reranker 重新排序；vector failure 時不再 rerank fallback chunks。
+- `hybrid`：合併 keyword + vector candidates，vector branch failure 時回到 keyword-only candidates 並保留 branch fallback metadata。
+- `hybrid_rerank`：Phase 27 default；先 hybrid merge / dedupe，再交給 reranker。embedding、Qdrant 或 reranker 不可用時都不得讓 request hard fail。
+
+### Frontend Ingestion Behavior
+
+Admin / Analyst ingestion surface v0.27.0 起預設為第一屏。上傳與 provider-selected OCR 成功後，frontend 會 best-effort 呼叫：
+
+1. `POST /documents/{document_id}/parse`
+2. `POST /documents/{document_id}/index/vector`
+
+任一呼叫失敗時只顯示 fallback / unavailable message，不阻斷文件保存、local chunks 或 Viewer Chat fallback 查詢。

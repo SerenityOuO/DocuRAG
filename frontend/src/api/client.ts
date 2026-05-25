@@ -130,6 +130,20 @@ export type ParserResult = {
   trace_metadata: Record<string, string>;
 };
 
+export type VectorIndexingResponse = {
+  document_id: string;
+  status: string;
+  indexed_chunk_count: number;
+  skipped_chunk_count: number;
+  point_ids: string[];
+  collection_name: string | null;
+  vector_size: number | null;
+  embedding_provider: string | null;
+  embedding_model: string | null;
+  reason: string | null;
+  error: string | null;
+};
+
 export type RagCitation = {
   document_id: string;
   filename: string;
@@ -301,6 +315,14 @@ export async function parseDocumentFields(documentId: string): Promise<ParserRes
 export async function getDocumentFields(documentId: string): Promise<ParserResult> {
   const response = await fetch(`${API_BASE_URL}/documents/${documentId}/fields`);
   return readJson<ParserResult>(response);
+}
+
+export async function indexDocumentVector(documentId: string): Promise<VectorIndexingResponse> {
+  const response = await fetch(`${API_BASE_URL}/documents/${documentId}/index/vector`, {
+    method: "POST",
+  });
+
+  return readJson<VectorIndexingResponse>(response);
 }
 
 export async function queryRag(query: string, topK: number): Promise<RagQueryResponse> {

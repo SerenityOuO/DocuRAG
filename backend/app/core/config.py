@@ -19,7 +19,7 @@ def default_data_dir() -> Path:
 
 class Settings(BaseSettings):
     app_name: str = "DocuRAG AgentOps Backend"
-    version: str = "0.26.0"
+    version: str = "0.27.0"
     environment: str = "local"
     data_dir: Path = Field(default_factory=default_data_dir)
     ocr_provider: str = "paddleocr"
@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     vlm_model: str = "qwen3.5:4b"
     vlm_timeout_seconds: float = 30.0
     vlm_min_confidence: float = 0.5
-    embedding_provider: str | None = None
+    embedding_provider: str | None = "ollama"
     embedding_base_url: str = "http://127.0.0.1:11434"
     embedding_model: str = "qwen3-embedding:0.6b"
     embedding_timeout_seconds: float = 30.0
@@ -52,8 +52,8 @@ class Settings(BaseSettings):
     qdrant_collection: str = "docurag_chunks_v1"
     qdrant_vector_size: int = 1024
     qdrant_timeout_seconds: float = 10.0
-    rag_retrieval_provider: str = "keyword"
-    rerank_provider: str | None = None
+    rag_retrieval_provider: str = "hybrid_rerank"
+    rerank_provider: str | None = "fastembed"
     rerank_model: str = "BAAI/bge-reranker-base"
     rerank_top_k: int = 5
     rerank_timeout_seconds: float = 30.0

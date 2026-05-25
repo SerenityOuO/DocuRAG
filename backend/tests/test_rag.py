@@ -14,7 +14,12 @@ from app.schemas.rag import RagCitation, RagQueryResponse
 from app.services.embedding import EmbeddingProviderError, EmbeddingResult
 from app.services.document_storage import DocumentStorage
 from app.services.llm import LlmGeneration, LlmProviderError
-from app.services.rag import KeywordRagProvider, VectorRagProvider
+from app.services.rag import (
+    HybridRagProvider,
+    HybridRerankRagProvider,
+    KeywordRagProvider,
+    VectorRagProvider,
+)
 from app.services.vector_store import (
     QdrantCollectionStatus,
     QdrantPoint,
@@ -662,6 +667,7 @@ def test_get_rag_provider_enables_ollama_from_settings(monkeypatch: pytest.Monke
     monkeypatch.setenv("DOCURAG_LLM_PROVIDER", "ollama")
     monkeypatch.setenv("DOCURAG_LLM_MODEL", "qwen3.5:4b")
     monkeypatch.setenv("DOCURAG_LLM_BASE_URL", "http://127.0.0.1:11434")
+    monkeypatch.setenv("DOCURAG_RAG_RETRIEVAL_PROVIDER", "keyword")
     get_settings.cache_clear()
 
     try:
@@ -676,6 +682,9 @@ def test_get_rag_provider_enables_ollama_from_settings(monkeypatch: pytest.Monke
 
 def test_get_rag_provider_enables_default_ollama_from_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("DOCURAG_LLM_PROVIDER", raising=False)
+    monkeypatch.delenv("DOCURAG_RAG_RETRIEVAL_PROVIDER", raising=False)
+    monkeypatch.delenv("DOCURAG_EMBEDDING_PROVIDER", raising=False)
+    monkeypatch.delenv("DOCURAG_RERANK_PROVIDER", raising=False)
     get_settings.cache_clear()
 
     try:
@@ -683,9 +692,12 @@ def test_get_rag_provider_enables_default_ollama_from_settings(monkeypatch: pyte
     finally:
         get_settings.cache_clear()
 
-    assert isinstance(provider, KeywordRagProvider)
-    assert provider.llm_provider is not None
-    assert provider.llm_provider.name == "ollama"
+    assert isinstance(provider, HybridRerankRagProvider)
+    assert provider.rerank_service.provider.name == "fastembed"
+    assert isinstance(provider.hybrid_provider, HybridRagProvider)
+    assert provider.hybrid_provider.vector_provider.embedding_provider.name == "ollama"
+    assert provider.hybrid_provider.keyword_provider.llm_provider is not None
+    assert provider.hybrid_provider.keyword_provider.llm_provider.name == "ollama"
 
 
 def test_get_rag_provider_enables_vector_from_settings(monkeypatch: pytest.MonkeyPatch) -> None:

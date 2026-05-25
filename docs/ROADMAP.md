@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP 與 v0.26.0 Real VLM Parser Provider Spike release。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release 與 v0.27.0 Aggressive Demo Defaults release。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.26.0 Real VLM Parser Provider Spike checklist。
+- TODO 包含 Phase 00 到 v0.27.0 Aggressive Demo Defaults checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -85,6 +85,7 @@ Expected Outcome：
 - v0.24.0 VLM / Parser Minimal MVP 只做 parser contract、deterministic invoice parser fallback、parse / fields API、Admin / Analyst structured fields surface 與 release sync；不新增真正 VLM、LLM parser、DB、worker、Agent runtime 或 production parser pipeline。
 - v0.25.0 Agent Tool-use Minimal MVP 只做 deterministic planner、allowlisted tool adapters、Agent run API、frontend trace surface 與 release sync；不新增 LLM autonomous planner、任意 SQL、DB、RBAC、worker、Redis/NATS 或 destructive tools。
 - v0.26.0 Real VLM Parser Provider Spike 只做 VLM-first provider contract、demo-safe image input resolver、`vlm_invoice` adapter、parser source comparison 與 release sync；`deterministic_invoice` 只作 fallback / debug override，不新增 production VLM parser、PDF rendering、多頁 parser pipeline、DB、worker、RBAC 或 Agent 直接呼叫 VLM。
+- v0.27.0 Aggressive Demo Defaults 只把已完成且有 fallback 的 demo 能力改成預設：default `hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter、frontend parser + vector indexing best-effort flow；不新增 DB、worker、Auth/RBAC、OpenAI API、vLLM、PDF rendering 或 production indexing pipeline。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -383,7 +384,7 @@ Tickets：
 11-02 Embedding client：
 
 - 新增 `EmbeddingProvider` interface、`DisabledEmbeddingProvider` 與 `OllamaEmbeddingProvider`。
-- `DOCURAG_EMBEDDING_PROVIDER` 預設未設定，embedding provider disabled，不改 `/rag/query` keyword baseline。
+- Phase 11 到 v0.26.0 期間，`DOCURAG_EMBEDDING_PROVIDER` 預設未設定，embedding provider disabled，不改 `/rag/query` keyword baseline；v0.27.0 起已改為 aggressive default adapter。
 - `DOCURAG_EMBEDDING_PROVIDER=ollama` 時使用 `POST /api/embed`、`DOCURAG_EMBEDDING_BASE_URL=http://127.0.0.1:11434`、`DOCURAG_EMBEDDING_MODEL=qwen3-embedding:0.6b` 與 `DOCURAG_EMBEDDING_TIMEOUT_SECONDS=30`。
 - `scripts/ollama-embedding-smoke.ps1` 可檢查 `/api/tags` 與 `/api/embed` 並輸出 vector dimension。
 - 2026-05-22 follow-up：已透過 Ollama API pull `qwen3-embedding:0.6b`，`scripts/ollama-embedding-smoke.ps1` 通過並確認實際 vector dimension 為 `1024`。
@@ -657,7 +658,7 @@ Acceptance Criteria：
 
 15-02 / 15-03 Runtime Status：
 
-- Rerank provider 設定已新增為 `DOCURAG_RERANK_PROVIDER`、`DOCURAG_RERANK_MODEL`、`DOCURAG_RERANK_TOP_K` 與 `DOCURAG_RERANK_TIMEOUT_SECONDS`，預設 disabled。
+- Phase 15 當時新增 `DOCURAG_RERANK_PROVIDER`、`DOCURAG_RERANK_MODEL`、`DOCURAG_RERANK_TOP_K` 與 `DOCURAG_RERANK_TIMEOUT_SECONDS`，預設 disabled；v0.27.0 起 `fastembed` 已成為 aggressive default adapter。
 - `FastEmbedRerankProvider` 採 lazy import；FastEmbed 不存在、provider disabled、timeout 或 malformed scores 時，`RerankService` 會保留原 candidates 並記錄 fallback metadata。
 - `vector_rerank` eval strategy 已接入 `app.services.evaluation`；流程為 vector retrieval -> rerank candidates -> Phase 13 metrics。若 vector retrieval fallback，eval result strategy 會標成 `vector_unavailable_fallback`，且不對 keyword fallback chunks rerank。
 - `scripts/retrieval-eval-smoke.ps1 -RunVectorRerank` 已可輸出 `.tmp/retrieval-eval-result-vector-rerank.json`，並檢查 rerank metadata 或 fallback metadata。
@@ -1551,3 +1552,51 @@ Out of Scope：
 - 不新增 PostgreSQL schema、migration、Redis、NATS、worker、async queue、Auth、RBAC、Agent permission model、K8s 或 deployment 設定。
 - 不修改 Phase 25 Agent planner / tool allowlist；Agent 不直接呼叫 VLM，只透過 `get_document_fields` 消費 parser result。
 - 不修改 RAG ranking、eval runner、Qdrant indexing 或 default Viewer Chat path。
+
+## v0.27.0 Aggressive Demo Defaults
+
+Goal：依使用者確認，將已實作、已驗證、可 fallback 的先進 demo 能力改成預設路徑。Phase 27 聚焦 default behavior，不新增 production infra。
+
+Ticket：
+
+- `tasks/phase-27-aggressive-defaults/27-01-aggressive-demo-defaults.md`
+
+Expected Outcome：
+
+- Backend / frontend / health / Docker Compose version 同步到 `0.27.0` / `v0.27.0`。
+- `DOCURAG_RAG_RETRIEVAL_PROVIDER` 預設為 `hybrid_rerank`，`DOCURAG_EMBEDDING_PROVIDER` 預設為 `ollama`，`DOCURAG_RERANK_PROVIDER` 預設為 `fastembed`。
+- `/rag/query` 與 Agent `search_documents` 支援 default `hybrid_rerank`，外部 runtime 不可用時 fallback 到 keyword evidence 並保留 trace。
+- Frontend 預設開啟 Admin / Analyst ingestion surface，OCR 成功後 best-effort 執行 VLM-first parser 與 Qdrant vector indexing。
+- Demo smoke baseline 在沒有 Qdrant / FastEmbed runtime 時仍可通過，並驗證 aggressive fallback source。
+
+27-01 Aggressive Demo Defaults Status：
+
+- 已完成。Backend default provider selection、frontend default surface、demo smoke、Docker Compose advanced env、README / backend README / frontend README / API / architecture / demo script / TODO / ROADMAP 已同步。
+- 本 release 不新增 PostgreSQL、Redis、NATS、worker、Auth、RBAC、OpenAI API、vLLM、production parser dashboard、PDF rendering 或 release tag。
+- Validation 已通過：backend tests `166 passed`（僅 pytest cache 權限警告）；frontend build 通過；baseline demo smoke 通過，health version `0.27.0`，retrieval source `hybrid_rerank fallback: reranker_unavailable`；Browser 檢查 desktop 1280px 與 mobile 390px 預設皆為 Admin / Analyst ingestion surface，且無 horizontal overflow；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+Acceptance Criteria：
+
+- `/health` 回傳 `0.27.0`。
+- 未覆寫 env 時 backend RAG provider 為 `hybrid_rerank`，embedding provider 為 Ollama，rerank provider 為 FastEmbed adapter。
+- `/rag/query` 可回傳 `hybrid_rerank` trace 或 fallback trace，不因 embedding、Qdrant 或 reranker 不可用 hard fail。
+- Frontend 預設後台 ingestion，並在 OCR 後嘗試 parser + vector indexing。
+
+Validation：
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
+- `npm.cmd run build`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
+- Browser 檢查 local frontend：預設 Admin / Analyst ingestion surface、Viewer Chat 可切換、retrieval source / fallback 顯示、桌面與手機寬度無 horizontal overflow。
+- `rg -n "v0.27.0|Phase 27|aggressive|hybrid_rerank|DOCURAG_RAG_RETRIEVAL_PROVIDER|DOCURAG_EMBEDDING_PROVIDER|DOCURAG_RERANK_PROVIDER" README.md backend/README.md frontend/README.md docs/demo-script.md docs/ROADMAP.md docs/api.md docs/architecture.md TODO.md backend/app frontend/src scripts infra tasks/phase-27-aggressive-defaults`
+- `git diff --check`
+
+Release Impact：
+
+- Target version: `v0.27.0`。
+- Version bump required: yes。
+- 原因：Phase 27 改變 default `/rag/query`、Agent search、frontend first surface 與 ingestion 後續動作，屬於使用者可見 release。
+
+Out of Scope：
+
+- 不新增 production indexing worker、DB-backed ingestion、PostgreSQL schema、Redis、NATS、Auth、RBAC、OpenAI SDK、vLLM、PDF rendering、多頁 parser pipeline 或 production eval dashboard。

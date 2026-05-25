@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from "vue";
 import {
   API_BASE_URL,
   getHealth,
+  indexDocumentVector,
   listDocuments,
   parseDocumentFields,
   queryRag,
@@ -42,7 +43,7 @@ const healthState = ref<RequestState>("idle");
 const chatState = ref<RequestState>("idle");
 const documentsState = ref<RequestState>("idle");
 const uploadState = ref<RequestState>("idle");
-const viewMode = ref<ViewMode>("viewer");
+const viewMode = ref<ViewMode>("admin");
 const health = ref<HealthResponse | null>(null);
 const ragResult = ref<RagQueryResponse | null>(null);
 const documents = ref<DocumentMetadata[]>([]);
@@ -72,7 +73,7 @@ const suggestedQuestions = [
   "When is the renewal date?",
 ];
 
-const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.26.0"));
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.27.0"));
 
 const heroCopy = computed(() =>
   viewMode.value === "admin"
@@ -122,6 +123,26 @@ const ragAnswerSource = computed(() => {
 
 const ragRetrievalSource = computed(() => {
   const trace = ragTraceMetadata.value;
+
+  if (trace.strategy_label === "hybrid_rerank") {
+    if (trace.fallback_state && trace.fallback_state !== "none") {
+      return `hybrid_rerank 備援：${trace.fallback_state}`;
+    }
+
+    return "hybrid_rerank";
+  }
+
+  if (trace.strategy_label === "hybrid") {
+    return "hybrid";
+  }
+
+  if (trace.strategy_label === "vector_rerank") {
+    if (trace.rerank_status && trace.rerank_status !== "completed") {
+      return `vector_rerank 備援：${trace.rerank_status}`;
+    }
+
+    return "vector_rerank";
+  }
 
   if (trace.vector_retrieval_status === "completed") {
     return `${trace.retrieval_provider ?? "vector"}/${trace.vector_store ?? "qdrant"}`;
@@ -348,6 +369,29 @@ async function refreshDocuments(): Promise<void> {
   }
 }
 
+async function runAggressivePostOcr(documentId: string, baseMessage: string): Promise<string> {
+  const messages = [baseMessage];
+
+  try {
+    const parserResult = await parseDocumentFields(documentId);
+    updateDocumentParserResult(documentId, parserResult);
+    messages.push(`VLM-first 欄位解析完成（${parserResult.parser_source}）。`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "欄位解析暫時不可用";
+    messages.push(`欄位解析暫時不可用，已保留後端備援：${message}`);
+  }
+
+  try {
+    const vectorResult = await indexDocumentVector(documentId);
+    messages.push(`Qdrant 向量索引完成（${vectorResult.indexed_chunk_count} chunks）。`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "向量索引暫時不可用";
+    messages.push(`向量索引暫時不可用，查詢會使用後端備援：${message}`);
+  }
+
+  return messages.join(" ");
+}
+
 async function submitUpload(): Promise<void> {
   if (!selectedFile.value) {
     uploadError.value = "請先選擇檔案。";
@@ -388,7 +432,10 @@ async function submitUpload(): Promise<void> {
       return;
     }
 
-    uploadMessage.value = "文件已完成 provider-selected OCR，並產生 local chunks。";
+    uploadMessage.value = await runAggressivePostOcr(
+      uploadedDocumentId,
+      "文件已完成 provider-selected OCR，並產生 local chunks。",
+    );
     uploadState.value = "success";
     await refreshDocuments();
   } catch (error) {
@@ -412,7 +459,10 @@ async function submitMockFallback(): Promise<void> {
   try {
     await runMockOcr(uploadResult.value.document_id);
     uploadFallbackAvailable.value = false;
-    uploadMessage.value = "已改用 mock OCR 完成後台 ingestion 備援處理。";
+    uploadMessage.value = await runAggressivePostOcr(
+      uploadResult.value.document_id,
+      "已改用 mock OCR 完成後台 ingestion 備援處理。",
+    );
     uploadState.value = "success";
     await refreshDocuments();
   } catch (error) {
@@ -487,6 +537,7 @@ async function submitAgentRun(): Promise<void> {
 
 onMounted(() => {
   void checkHealth();
+  void refreshDocuments();
 });
 </script>
 
@@ -605,7 +656,7 @@ onMounted(() => {
 
         <div class="surface-note">
           <strong>目前階段</strong>
-          <span>backend upload + provider-selected OCR + local chunking。real OCR 失敗時保留文件並提供 mock OCR fallback；Phase 26 已加入 VLM-first parser spike，但尚未完成 production VLM parser、worker pipeline、DB 或 production indexing。</span>
+          <span>backend upload + provider-selected OCR + local chunking。real OCR 失敗時保留文件並提供 mock OCR fallback；Phase 27 預設會 best-effort 執行 VLM-first parser 與 Qdrant vector indexing，但仍不是 production worker pipeline、DB 或正式權限系統。</span>
         </div>
 
         <label class="file-picker">
@@ -624,7 +675,7 @@ onMounted(() => {
           :disabled="!selectedFile || uploadState === 'loading'"
           @click="submitUpload"
         >
-          {{ uploadState === "loading" ? "後台處理中..." : "建立 demo 知識庫資料" }}
+          {{ uploadState === "loading" ? "後台處理中..." : "建立進階 demo 知識庫資料" }}
         </button>
 
         <p v-if="uploadMessage" class="success-message">{{ uploadMessage }}</p>

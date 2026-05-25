@@ -12,7 +12,7 @@ param(
     [string]$QdrantUrl = "http://127.0.0.1:6333",
     [string]$QdrantCollection = "docurag_chunks_v1",
     [int]$QdrantVectorSize = 1024,
-    [string]$ExpectedVersion = "0.26.0",
+    [string]$ExpectedVersion = "0.27.0",
     [switch]$RunVlmFake
 )
 
@@ -123,6 +123,23 @@ function Get-RagRetrievalSource {
 
     if ($null -eq $trace) {
         return "keyword baseline"
+    }
+
+    $strategyProperty = $trace.PSObject.Properties["strategy_label"]
+    if ($null -ne $strategyProperty -and -not [string]::IsNullOrWhiteSpace([string]$strategyProperty.Value)) {
+        $strategy = [string]$strategyProperty.Value
+        $fallbackState = $trace.PSObject.Properties["fallback_state"]
+        $rerankStatus = $trace.PSObject.Properties["rerank_status"]
+
+        if ($null -ne $fallbackState -and -not [string]::IsNullOrWhiteSpace([string]$fallbackState.Value) -and [string]$fallbackState.Value -ne "none") {
+            return "$strategy fallback: $($fallbackState.Value)"
+        }
+
+        if ($null -ne $rerankStatus -and -not [string]::IsNullOrWhiteSpace([string]$rerankStatus.Value) -and [string]$rerankStatus.Value -ne "completed") {
+            return "$strategy fallback: rerank_$($rerankStatus.Value)"
+        }
+
+        return $strategy
     }
 
     $statusProperty = $trace.PSObject.Properties["vector_retrieval_status"]
@@ -367,6 +384,28 @@ if ($RunVector) {
     Assert-Condition ($vectorIndexing.embedding_model -eq $EmbeddingModel) "Manual vector indexing used embedding model '$($vectorIndexing.embedding_model)'; expected '$EmbeddingModel'."
     Write-Host "Manual vector indexing OK: indexed chunks $($vectorIndexing.indexed_chunk_count)"
 }
+else {
+    Write-Host "Aggressive default vector indexing best-effort"
+
+    try {
+        $defaultVectorIndexing = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($upload.document_id)/index/vector"
+        if ($defaultVectorIndexing.status -eq "completed") {
+            Write-Host "Aggressive vector indexing OK: indexed chunks $($defaultVectorIndexing.indexed_chunk_count)"
+        }
+        else {
+            Write-Host "Aggressive vector indexing skipped: status $($defaultVectorIndexing.status)"
+        }
+    }
+    catch {
+        $errorBody = Get-ErrorResponseBody $_
+        $detail = $_.Exception.Message
+        if (-not [string]::IsNullOrWhiteSpace($errorBody)) {
+            $detail = "$detail Response body: $errorBody"
+        }
+
+        Write-Host "Aggressive vector indexing unavailable; RAG fallback is expected in local baseline. $detail"
+    }
+}
 
 $ragBody = @{
     query = "payment due date Net 15"
@@ -393,10 +432,26 @@ else {
 }
 
 if ($RunVector) {
-    Assert-Condition ($ragRetrievalSource -eq "vector/qdrant") "Expected vector retrieval source 'vector/qdrant'. Got '$ragRetrievalSource'. Start backend with DOCURAG_RAG_RETRIEVAL_PROVIDER=vector, DOCURAG_EMBEDDING_PROVIDER=ollama, DOCURAG_EMBEDDING_MODEL=$EmbeddingModel, DOCURAG_QDRANT_URL=$QdrantUrl, and DOCURAG_QDRANT_COLLECTION=$QdrantCollection."
+    $acceptedVectorSources = @("vector/qdrant", "vector_rerank", "hybrid", "hybrid_rerank")
+    $hasAcceptedVectorSource = $false
+    foreach ($source in $acceptedVectorSources) {
+        if ($ragRetrievalSource.StartsWith($source)) {
+            $hasAcceptedVectorSource = $true
+        }
+    }
+
+    Assert-Condition $hasAcceptedVectorSource "Expected vector-backed retrieval source. Got '$ragRetrievalSource'. Start backend with DOCURAG_RAG_RETRIEVAL_PROVIDER=vector or hybrid_rerank, DOCURAG_EMBEDDING_PROVIDER=ollama, DOCURAG_EMBEDDING_MODEL=$EmbeddingModel, DOCURAG_QDRANT_URL=$QdrantUrl, and DOCURAG_QDRANT_COLLECTION=$QdrantCollection."
 }
 else {
-    Assert-Condition ($ragRetrievalSource -eq "keyword baseline") "Expected keyword baseline retrieval source. Got '$ragRetrievalSource'."
+    $acceptedDefaultSources = @("keyword baseline", "vector unavailable fallback", "vector/qdrant", "vector_rerank", "hybrid", "hybrid_rerank")
+    $hasAcceptedDefaultSource = $false
+    foreach ($source in $acceptedDefaultSources) {
+        if ($ragRetrievalSource.StartsWith($source)) {
+            $hasAcceptedDefaultSource = $true
+        }
+    }
+
+    Assert-Condition $hasAcceptedDefaultSource "Expected aggressive default retrieval source or fallback. Got '$ragRetrievalSource'."
 }
 
 Write-Host "RAG query OK: answer source $ragAnswerSource; retrieval source $ragRetrievalSource"
