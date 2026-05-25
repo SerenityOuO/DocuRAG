@@ -12,7 +12,7 @@ def test_health_check() -> None:
     body = response.json()
     assert body["status"] == "ok"
     assert body["service"]
-    assert body["version"] == "0.27.0"
+    assert body["version"] == "0.27.1"
 
 
 def test_health_allows_local_frontend_origin() -> None:

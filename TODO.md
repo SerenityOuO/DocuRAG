@@ -105,6 +105,8 @@
 48. `tasks/phase-26-vlm-parser-provider-spike/26-04-parser-source-comparison.md` 已完成，在 API / trace 顯示 `deterministic_invoice` vs `vlm_invoice` 的 parser source、fallback reason 與 confidence。
 49. `tasks/phase-26-vlm-parser-provider-spike/26-05-vlm-parser-demo-release-sync.md` 已完成，補齊 VLM parser demo validation、版本 / 文件同步與 `v0.26.0` release sync。
 50. `tasks/phase-27-aggressive-defaults/27-01-aggressive-demo-defaults.md` 已完成，啟用 default `hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter、frontend parser + vector indexing best-effort flow 與 `v0.27.0` release sync。
+51. `tasks/phase-27-aggressive-defaults/27-02-ocr-vlm-evidence-alignment.md` 已完成，讓 VLM parser request 帶 image + OCR context，並將 VLM 欄位結果對回 OCR line / bbox 或標示 evidence unmatched / unavailable；同步 `v0.27.1` patch release。
+52. `tasks/phase-27-aggressive-defaults/27-03-vector-source-expansion-contract.md` 已完成，固定 `ocr_image`、`text_upload`、`pdf_text` 與 `pdf_scanned_pending_ocr` vector source contract；planning ticket，不 bump version。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -813,8 +815,8 @@ Phase 26 guardrails：
 ## MVP v0.27.0 Aggressive Demo Defaults
 
 - [x] `tasks/phase-27-aggressive-defaults/27-01-aggressive-demo-defaults.md`: 啟用 default `hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter、frontend parser + vector indexing best-effort flow 與 `v0.27.0` release/version bump。
-- [ ] `tasks/phase-27-aggressive-defaults/27-02-ocr-vlm-evidence-alignment.md`: 讓 VLM parser 同時使用圖片與 OCR context，並把 VLM 欄位結果對回 OCR line / bbox；target `v0.27.1`。
-- [ ] `tasks/phase-27-aggressive-defaults/27-03-vector-source-expansion-contract.md`: 固定 vector DB source contract，明確規劃 `.txt` direct chunks、text-native PDF 與 scanned PDF 的不同路徑；planning ticket，不 bump version。
+- [x] `tasks/phase-27-aggressive-defaults/27-02-ocr-vlm-evidence-alignment.md`: 讓 VLM parser 同時使用圖片與 OCR context，並把 VLM 欄位結果對回 OCR line / bbox；target `v0.27.1`。
+- [x] `tasks/phase-27-aggressive-defaults/27-03-vector-source-expansion-contract.md`: 固定 vector DB source contract，明確規劃 `.txt` direct chunks、text-native PDF 與 scanned PDF 的不同路徑；planning ticket，不 bump version。
 
 Phase 27 goal：
 - 把已實作、已有 fallback、可驗證的進階 demo 能力改成預設路徑：`hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter，以及 Admin ingestion 後的 parser + vector indexing best-effort flow。
@@ -838,8 +840,10 @@ Phase 27 guardrails：
 
 27-02 / 27-03 patch backlog status：
 
-- 待執行。`27-02` 是 runtime hardening ticket，完成後應讓 VLM request 同時帶圖片與 OCR context，並在 VLM 欄位結果中保存 OCR evidence mapping。
-- 待執行。`27-03` 是 source contract / planning ticket，用來拆清楚 OCR image、direct text upload、text-native PDF 與 scanned PDF 的 vector ingestion 邊界。
+- 已完成。`27-02` 讓 VLM request 同時帶圖片與 compact OCR context，並在 `vlm_invoice` 欄位結果中保存 matched OCR `source_text` / `source_page` / `source_bbox`；未命中時以 `evidence_unmatched` / `evidence_unavailable` 標示。RAG / vector indexing 仍使用 OCR chunks，Agent allowlist 不變。
+- [x] 27-02 validation：backend tests 通過，`168 passed`（僅 pytest cache 權限警告）；frontend build 通過；demo smoke with fake VLM 通過，health version `0.27.1`、RAG answer source `LLM unavailable fallback`、retrieval source `hybrid_rerank fallback: reranker_unavailable`；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+- 已完成。`27-03` 是 source contract / planning ticket，用來拆清楚 `ocr_image`、`text_upload`、`pdf_text` 與 `pdf_scanned_pending_ocr` 的 vector ingestion 邊界；目前 runtime 仍主要索引 OCR chunks，`.txt` direct chunks、PDF text extraction 與 scanned PDF rendering / OCR pipeline 留給 Phase 28 後續小票。
+- [x] 27-03 validation：ticket `rg` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。本 ticket 不 bump version，且未修改 runtime。
 
 ## MVP v0.28.0 Document Sources / Demo Auth Mode
 
@@ -916,3 +920,4 @@ Phase 28 guardrails：
 - [x] v0.25.0: Agent Tool-use Minimal MVP 版本 / 文件 / smoke 實作已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、TODO 與 ROADMAP 已同步到 `v0.25.0`；deterministic planner、allowlisted tool adapters、Agent run / lookup API、frontend trace surface、Agent demo smoke、Browser desktop Agent trace / overflow 檢查、ticket `rg` 與 `git diff --check` 已通過。
 - [x] v0.26.0: Real VLM Parser Provider Spike 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、TODO、ROADMAP、API 與 architecture 文件已同步到 `v0.26.0`；VLM-first parser provider boundary、demo-safe image input resolver、`vlm_invoice` adapter、parser source comparison、fake / stub success smoke、provider unavailable fallback 與 Agent `get_document_fields` consumption validation 已補齊。
 - [x] v0.27.0: Aggressive Demo Defaults 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、TODO、ROADMAP、API、architecture、PRD 與 `.env.example` 已同步到 `v0.27.0`；default `hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter、frontend parser + vector indexing best-effort flow、fallback-safe demo smoke 與 Browser default surface validation 已補齊。
+- [x] v0.27.1: OCR / VLM Evidence Alignment 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、README_DEV、backend README、frontend README、demo script、TODO、ROADMAP、API 與 architecture 文件已同步到 `v0.27.1`；VLM request 帶 image + OCR context，欄位 evidence mapping、unmatched trace、deterministic fallback 與 Agent structured fields + OCR chunk validation 已補齊。

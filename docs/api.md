@@ -58,6 +58,50 @@
 
 ## Phase 24 Parser Contract Draft
 
+## Phase 27 Vector Source Contract
+
+`27-03` 只固定 normalized text source 與 vector source 邊界，不新增 runtime。現有 `POST /documents/{document_id}/index/vector` 仍讀取文件已保存的 chunks；在 v0.27.1 runtime 中，主要來源是 OCR 完成後產生的 `ocr_image` chunks。
+
+### Source Taxonomy
+
+| Source type | Content source | Runtime status | Notes |
+|---|---|---|---|
+| `ocr_image` | OCR text / OCR lines from image upload | Current demo path | 圖片或掃描類文件先走 OCR，再用 OCR chunks 寫入 Qdrant。 |
+| `text_upload` | Original text file body | Future runtime ticket | `.txt` 應直接建立 chunks，不需要假裝經過 OCR。 |
+| `pdf_text` | Text-native PDF extraction | Future runtime ticket | 只代表 PDF 內已有文字層；不包含 scanned PDF。 |
+| `pdf_scanned_pending_ocr` | PDF page images pending rendering / OCR | Planning only | 未實作 PDF rendering / OCR pipeline 前，不宣稱可索引 scanned PDF。 |
+
+### Normalized Text Source
+
+後續 ingestion source router 應把各來源整理成同一個 chunk input contract：
+
+```json
+{
+  "document_id": "doc_123",
+  "filename": "invoice.png",
+  "source_type": "ocr_image",
+  "content_source": "ocr_image",
+  "chunk_id": "chunk_001",
+  "text": "Payment terms: Net 15",
+  "page_number": 1,
+  "bbox": {
+    "x_min": 10,
+    "y_min": 20,
+    "x_max": 260,
+    "y_max": 44
+  },
+  "confidence": 0.96,
+  "metadata": {
+    "project_id": null,
+    "tenant_id": null
+  }
+}
+```
+
+Qdrant payload 至少保留 `document_id`、`filename`、`chunk_id`、`source_type`、`content_source`、`page_number`、`created_at` 與 future `project_id` / `tenant_id` 欄位位置。`bbox` 與 `confidence` 對 `text_upload` / `pdf_text` 可為 `null`；對 `ocr_image` 則應沿用 OCR line trace。
+
+VLM structured fields 不在本 ticket 自動寫入 retrieval chunks；若後續要把欄位索引進 Qdrant，必須另開 ticket 定義 field-indexing policy、dedupe key 與 citation semantics。
+
 Phase 24 的 parser contract 先支援 invoice MVP。`24-01` 固定文件與 API 草案，`24-02` 新增 deterministic parser service，`24-03` 新增 parse / fields API 與 local JSON persistence。此 contract 是 VLM-compatible，不代表目前已接真正 VLM、LLM parser、DB、worker 或 production parser pipeline。
 
 ### Parser Sources
@@ -390,7 +434,7 @@ Adapter output rules：
 - `ParserResult.parser_source` 與欄位層級 `ExtractedField.parser_source` 必須是 `vlm_invoice`，fallback 後才會是 `deterministic_invoice`。
 - `DocumentFields` 欄位仍使用 `document_type`、`vendor_name`、`invoice_number`、`issue_date`、`total_amount`、`tax_amount`、`currency` 與 `line_items`。
 - `confidence` 需落在 `0` 到 `1`；未知或 invalid confidence 不可硬填高分。
-- `source_text` 可來自 VLM response trace、OCR text 或 normalized field label；沒有來源時可為 `null` 並以 `fallback_reason` 說明。
+- `source_text` 在 v0.27.1 起優先來自 matched OCR line；沒有 OCR context 或無法對齊時可為 `null`，並以 `fallback_reason=evidence_unavailable` / `evidence_unmatched` 說明，不得假造 page 或 bbox。
 - `trace_metadata` 必須標示 `parser_route=vlm_first`、`vlm_provider`、`vlm_model`、`source_input_type=image`、`fallback_chain` 與 `fallback_reason`。
 
 ### Fallback Policy
@@ -410,7 +454,7 @@ Phase 25 Agent contract 不變：`get_document_fields` 只讀已保存的 `Parse
 ### 26-03 Runtime Notes
 
 - `get_document_parser()` now builds a VLM-first `VlmInvoiceParser` unless `DOCURAG_PARSER_SOURCE=deterministic_invoice` is explicitly set.
-- The default `ollama` provider uses the local HTTP `/api/generate` shape with `stream=false` and image base64; `DOCURAG_VLM_PROVIDER=fake` is a built-in demo / smoke stub and is not a production VLM runtime.
+- The default `ollama` provider uses the local HTTP `/api/generate` shape with `stream=false`, image base64 and compact OCR context; `DOCURAG_VLM_PROVIDER=fake` is a built-in demo / smoke stub and is not a production VLM runtime.
 - VLM success returns `ParserResult.parser_source=vlm_invoice` and field-level `parser_source=vlm_invoice`.
 - Provider unavailable, timeout, invalid response, missing required fields, unsupported file or low confidence falls back to `deterministic_invoice`; fallback details are preserved in `trace_metadata.fallback_chain` and `trace_metadata.fallback_reason`.
 - Existing Phase 25 Agent APIs are unchanged because `get_document_fields` reads the saved `ParserResult` regardless of parser source.
@@ -427,6 +471,25 @@ Phase 25 Agent contract 不變：`get_document_fields` 只讀已保存的 `Parse
 - Release version is `v0.26.0`.
 - `scripts/demo-smoke-test.ps1` validates the VLM-first fallback path on text input and, when `DOCURAG_VLM_PROVIDER=fake` is set for the backend / script environment, validates the `vlm_invoice` success path on image input.
 - The same smoke path verifies that Agent `get_document_fields` can read both `deterministic_invoice` fallback results and `vlm_invoice` success results without changing the Phase 25 Agent tool contract.
+
+## Phase 27 OCR / VLM Evidence Alignment
+
+v0.27.1 補強 VLM parser 的 evidence contract。OCR 仍負責產生可搜尋文字層、OCR lines、chunks 與 RAG citations；VLM parser 負責欄位理解，但 request 會同時帶原始圖片與 compact OCR context。
+
+VLM request boundary：
+
+- 必須包含 demo-safe uploaded image。
+- 若 OCR 已完成，descriptor 會附帶最多 30 筆 compact OCR context lines，包含 text、page number、bbox 與 confidence 摘要。
+- VLM provider 不可用、unsupported file、timeout、invalid response、missing fields 或 low confidence 時，仍 fallback 到 deterministic parser。
+
+VLM field evidence rules：
+
+- `vlm_invoice` success path 沿用既有 `DocumentFields` / `ExtractedField` / `ParserResult` schema，不新增平行 parser schema。
+- 欄位值若可對回 OCR line，欄位結果會保存 `source_text`、`source_page` 與 `source_bbox`；confidence 取 VLM confidence 與 OCR line confidence 的較保守值。
+- 欄位值若無法對回 OCR line，欄位 `fallback_reason` 會標示 `evidence_unmatched`；沒有 OCR context 時標示 `evidence_unavailable`。
+- `ParserResult.trace_metadata` 會包含 `ocr_context_state`、`ocr_context_line_count`、`field_evidence_state`、`field_evidence_matched_count` 與 `field_evidence_unmatched_count`。
+- RAG / vector indexing 仍只使用 OCR chunks；VLM structured fields 不會在此 ticket 自動寫入 retrieval corpus。
+- Agent planner / tool allowlist 不變；Agent 透過 `get_document_fields` 讀 structured fields，透過 `search_documents` 讀 OCR chunks。
 
 ## Phase 27 Aggressive Demo Defaults
 

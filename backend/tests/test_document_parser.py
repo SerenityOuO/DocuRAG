@@ -29,8 +29,10 @@ class FakeVlmProvider:
     def __init__(self, payload: dict | None = None, fallback_reason: str | None = None) -> None:
         self.payload = payload or {}
         self.fallback_reason = fallback_reason
+        self.last_descriptor = None
 
-    def extract_invoice_fields(self, _descriptor):
+    def extract_invoice_fields(self, descriptor):
+        self.last_descriptor = descriptor
         if self.fallback_reason is not None:
             raise VlmProviderError(self.fallback_reason, "fake provider failure")
 
@@ -109,6 +111,28 @@ def _vlm_payload() -> dict:
     }
 
 
+def _aurora_ocr_lines() -> list[OcrTextLine]:
+    lines = [
+        "Aurora Office Supplies Demo LLC Invoice",
+        "Invoice number: AUR-2026-051",
+        "Vendor: Aurora Office Supplies Demo LLC",
+        "Issue date: 2026-05-31",
+        "Tax: USD 80.00",
+        "Amount due: USD 1,248.50",
+        "Line items:",
+        "Printer paper quantity 5 unit price USD 18.50 amount USD 92.50",
+    ]
+    return [
+        OcrTextLine(
+            text=line,
+            page_number=1,
+            bbox=BoundingBox(x_min=10, y_min=20 + index * 12, x_max=420, y_max=30 + index * 12),
+            confidence=0.95,
+        )
+        for index, line in enumerate(lines)
+    ]
+
+
 def test_vlm_invoice_parser_returns_vlm_parser_result(tmp_path: Path) -> None:
     document, resolver = _vlm_document(tmp_path, _complete_invoice_text())
     parser = VlmInvoiceParser(resolver, FakeVlmProvider(_vlm_payload()))
@@ -125,6 +149,62 @@ def test_vlm_invoice_parser_returns_vlm_parser_result(tmp_path: Path) -> None:
     assert result.trace_metadata["fallback_chain"] == "vlm_invoice"
     assert result.trace_metadata["confidence_summary"] == "0.8200"
     assert result.trace_metadata["source_input_type"] == "image"
+
+
+def test_vlm_invoice_parser_sends_image_and_ocr_context_and_maps_field_evidence(tmp_path: Path) -> None:
+    ocr_lines = _aurora_ocr_lines()
+    document, resolver = _vlm_document(tmp_path, "\n".join(line.text for line in ocr_lines))
+    document.ocr.lines = ocr_lines
+    provider = FakeVlmProvider(_vlm_payload())
+    parser = VlmInvoiceParser(resolver, provider)
+
+    result = parser.parse(document)
+
+    assert provider.last_descriptor is not None
+    assert provider.last_descriptor.file_path is not None
+    assert provider.last_descriptor.mime_type == "image/png"
+    assert len(provider.last_descriptor.ocr_context_lines) == len(ocr_lines)
+    assert provider.last_descriptor.ocr_context_lines[1].text == "Invoice number: AUR-2026-051"
+    assert result.status == ParserStatus.PARSED
+    assert result.parser_source == "vlm_invoice"
+    assert result.fields.invoice_number.value == "AUR-2026-051"
+    assert result.fields.invoice_number.source_text == "Invoice number: AUR-2026-051"
+    assert result.fields.invoice_number.source_page == 1
+    assert result.fields.invoice_number.source_bbox == BoundingBox(x_min=10, y_min=32, x_max=420, y_max=42)
+    assert result.fields.invoice_number.fallback_reason is None
+    assert result.fields.line_items[0].amount.source_text == (
+        "Printer paper quantity 5 unit price USD 18.50 amount USD 92.50"
+    )
+    assert result.trace_metadata["ocr_context_state"] == "available"
+    assert result.trace_metadata["ocr_context_line_count"] == str(len(ocr_lines))
+    assert result.trace_metadata["field_evidence_state"] == "matched"
+    assert result.trace_metadata["field_evidence_unmatched_count"] == "0"
+
+
+def test_vlm_invoice_parser_marks_unmatched_field_evidence_without_fake_bbox(tmp_path: Path) -> None:
+    ocr_lines = [
+        OcrTextLine(
+            text="Unrelated OCR line",
+            page_number=1,
+            bbox=BoundingBox(x_min=1, y_min=2, x_max=3, y_max=4),
+            confidence=0.9,
+        )
+    ]
+    document, resolver = _vlm_document(tmp_path, "\n".join(line.text for line in ocr_lines))
+    document.ocr.lines = ocr_lines
+    parser = VlmInvoiceParser(resolver, FakeVlmProvider(_vlm_payload()))
+
+    result = parser.parse(document)
+
+    assert result.status == ParserStatus.PARSED
+    assert result.parser_source == "vlm_invoice"
+    assert result.fields.invoice_number.value == "AUR-2026-051"
+    assert result.fields.invoice_number.source_text is None
+    assert result.fields.invoice_number.source_page is None
+    assert result.fields.invoice_number.source_bbox is None
+    assert result.fields.invoice_number.fallback_reason == "evidence_unmatched"
+    assert result.trace_metadata["field_evidence_state"] == "unmatched"
+    assert "invoice_number" in result.trace_metadata["field_evidence_unmatched_fields"]
 
 
 def test_runtime_fake_vlm_provider_returns_demo_invoice_payload(tmp_path: Path) -> None:

@@ -12,7 +12,7 @@ param(
     [string]$QdrantUrl = "http://127.0.0.1:6333",
     [string]$QdrantCollection = "docurag_chunks_v1",
     [int]$QdrantVectorSize = 1024,
-    [string]$ExpectedVersion = "0.27.0",
+    [string]$ExpectedVersion = "0.27.1",
     [switch]$RunVlmFake
 )
 
@@ -339,8 +339,11 @@ if ($vlmFakeEnabled) {
     Assert-Condition ($null -eq $vlmParser.fallback_reason) "VLM fake parser fallback reason should be null. Got '$($vlmParser.fallback_reason)'."
     Assert-Condition ($vlmParser.trace_metadata.vlm_provider -eq "fake") "VLM fake parser did not report vlm_provider=fake."
     Assert-Condition ($vlmParser.trace_metadata.fallback_chain -eq "vlm_invoice") "VLM fake parser fallback chain was '$($vlmParser.trace_metadata.fallback_chain)'; expected vlm_invoice."
+    Assert-Condition ($vlmParser.trace_metadata.ocr_context_state -eq "available") "VLM fake parser did not receive OCR context."
+    Assert-Condition ([int]$vlmParser.trace_metadata.ocr_context_line_count -gt 0) "VLM fake parser OCR context line count was not positive."
     Assert-Condition ($vlmParser.fields.invoice_number.value -eq "AUR-2026-051") "VLM fake parser did not extract invoice AUR-2026-051."
     Assert-Condition ($vlmParser.fields.invoice_number.parser_source -eq "vlm_invoice") "VLM fake parser did not preserve field parser_source=vlm_invoice."
+    Assert-Condition ($vlmParser.fields.invoice_number.fallback_reason -eq "evidence_unmatched") "VLM fake parser should mark invoice number OCR evidence as unmatched for the mock image OCR path."
 
     $vlmAgentBody = @{
         task = "Summarize invoice fields from the VLM parser result."

@@ -58,14 +58,14 @@
 
 ## Acceptance Criteria
 
-- [ ] OCR completed document 保留可搜尋 OCR text / OCR lines / chunks，且 RAG response 仍能引用 OCR chunks。
-- [ ] VLM request 同時包含原始圖片與 compact OCR context；trace metadata 可看出 VLM 是否收到 OCR evidence。
-- [ ] VLM success path 仍輸出既有 `DocumentFields` / `ParserResult` schema，且 `parser_source=vlm_invoice`。
-- [ ] VLM 欄位值若能對回 OCR line，欄位結果必須包含 `source_text`、`source_page`、`source_bbox` 或等價 trace metadata。
-- [ ] VLM 欄位值若不能對回 OCR line，結果必須清楚標示 evidence unmatched / unavailable，不可假造 page 或 bbox。
-- [ ] Deterministic fallback path 仍可用 OCR text / OCR lines 產生欄位結果。
-- [ ] Agent run 仍固定使用 `get_document_fields` -> `search_documents` -> `summarize_invoice_fields`，並能在 trace 中看出 structured fields 與 OCR chunks 都被使用。
-- [ ] 文件說法明確區分：OCR 是文字層 / retrieval evidence，VLM 是欄位理解 / parser，兩者不是互相替代。
+- [x] OCR completed document 保留可搜尋 OCR text / OCR lines / chunks，且 RAG response 仍能引用 OCR chunks。
+- [x] VLM request 同時包含原始圖片與 compact OCR context；trace metadata 可看出 VLM 是否收到 OCR evidence。
+- [x] VLM success path 仍輸出既有 `DocumentFields` / `ParserResult` schema，且 `parser_source=vlm_invoice`。
+- [x] VLM 欄位值若能對回 OCR line，欄位結果必須包含 `source_text`、`source_page`、`source_bbox` 或等價 trace metadata。
+- [x] VLM 欄位值若不能對回 OCR line，結果必須清楚標示 evidence unmatched / unavailable，不可假造 page 或 bbox。
+- [x] Deterministic fallback path 仍可用 OCR text / OCR lines 產生欄位結果。
+- [x] Agent run 仍固定使用 `get_document_fields` -> `search_documents` -> `summarize_invoice_fields`，並能在 trace 中看出 structured fields 與 OCR chunks 都被使用。
+- [x] 文件說法明確區分：OCR 是文字層 / retrieval evidence，VLM 是欄位理解 / parser，兩者不是互相替代。
 
 ## Validation
 
@@ -74,3 +74,10 @@
 - 若使用 fake VLM provider，需驗證 image + OCR context success path。
 - `rg -n "ocr context|OCR context|source_bbox|source_page|evidence|vlm_invoice|get_document_fields|search_documents" backend/app backend/tests README.md backend/README.md frontend/README.md docs/api.md docs/architecture.md docs/demo-script.md TODO.md docs/ROADMAP.md tasks/phase-27-aggressive-defaults`
 - `git diff --check`
+
+Validation result：
+
+- Backend tests passed: `168 passed`（僅 pytest cache 權限警告）。
+- Frontend build passed.
+- Demo smoke passed with fake VLM provider: health version `0.27.1`，VLM fake image path 使用 OCR context，RAG answer source `LLM unavailable fallback`，retrieval source `hybrid_rerank fallback: reranker_unavailable`。
+- Ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。

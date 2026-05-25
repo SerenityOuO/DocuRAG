@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release 與 Phase 27 patch backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch 與 Phase 27 source contract backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.27.0 Aggressive Demo Defaults checklist。
+- TODO 包含 Phase 00 到 v0.27.1 OCR / VLM Evidence Alignment checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -1570,7 +1570,7 @@ Expected Outcome：
 - `/rag/query` 與 Agent `search_documents` 支援 default `hybrid_rerank`，外部 runtime 不可用時 fallback 到 keyword evidence 並保留 trace。
 - Frontend 預設開啟 Admin / Analyst ingestion surface，OCR 成功後 best-effort 執行 VLM-first parser 與 Qdrant vector indexing。
 - Demo smoke baseline 在沒有 Qdrant / FastEmbed runtime 時仍可通過，並驗證 aggressive fallback source。
-- 後續 `v0.27.1` patch 目標是補齊 OCR / VLM evidence alignment：VLM 同時看圖片與 OCR context，VLM JSON 欄位可對回 OCR line / bbox，RAG 與 Agent 仍以 OCR chunks 作為 retrieval evidence。
+- `v0.27.1` patch 已補齊 OCR / VLM evidence alignment：VLM 同時看圖片與 OCR context，VLM JSON 欄位可對回 OCR line / bbox 或標示 evidence unmatched / unavailable，RAG 與 Agent 仍以 OCR chunks 作為 retrieval evidence。
 - Vector source expansion contract 需明確區分 OCR image chunks、`.txt` direct text chunks、text-native PDF extraction 與 scanned PDF rendering / OCR pipeline；未實作 PDF rendering 前不得宣稱 scanned PDF 已支援。
 
 27-01 Aggressive Demo Defaults Status：
@@ -1581,12 +1581,19 @@ Expected Outcome：
 
 27-02 OCR / VLM Evidence Alignment Status：
 
-- 待執行。此 ticket 會把 Phase 26 VLM-first parser 從「VLM 看圖片、OCR 主要作為前置門檻與 fallback」補強為「VLM 看圖片並參考 OCR lines，欄位結果可連回 OCR evidence」。
-- Target version: `v0.27.1`。完成時需同步 backend / frontend / health / Docker Compose version、README、backend README、frontend README、docs/api.md、docs/architecture.md、docs/demo-script.md、TODO 與 ROADMAP。
+- 已完成。此 ticket 已把 Phase 26 VLM-first parser 從「VLM 看圖片、OCR 主要作為前置門檻與 fallback」補強為「VLM 看圖片並參考 OCR lines，欄位結果可連回 OCR evidence」。
+- VLM input descriptor 現在包含 compact OCR context lines；Ollama-style VLM prompt 同時送 image base64 與 OCR context，trace metadata 顯示 `ocr_context_state` 與 `ocr_context_line_count`。
+- `vlm_invoice` success path 仍輸出既有 `DocumentFields` / `ParserResult` schema；欄位值若命中 OCR line 會保存 `source_text`、`source_page` 與 `source_bbox`，未命中時標示 `evidence_unmatched` / `evidence_unavailable`，不假造 page 或 bbox。
+- RAG / vector indexing 仍使用 OCR chunks，不把 VLM fields 自動混入 retrieval corpus；Agent planner / tool allowlist 不變，仍固定 `get_document_fields` -> `search_documents` -> `summarize_invoice_fields`。
+- Target version: `v0.27.1`。已同步 backend / frontend / health / Docker Compose version、README、README_DEV、backend README、frontend README、docs/api.md、docs/architecture.md、docs/demo-script.md、TODO 與 ROADMAP。
+- Validation 已通過：backend tests `168 passed`（僅 pytest cache 權限警告）；frontend build 通過；demo smoke with fake VLM 通過，health version `0.27.1`，RAG answer source `LLM unavailable fallback`，retrieval source `hybrid_rerank fallback: reranker_unavailable`；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 27-03 Vector Source Expansion Contract Status：
 
-- 待執行。此 ticket 只固定 source contract，不改 runtime：vector DB 長期不應只吃 OCR chunks；`.txt` 應走 direct text chunks，text-native PDF 與 scanned PDF 需分開規劃。
+- 已完成。此 ticket 只固定 source contract，不改 runtime：vector DB 長期不應只吃 OCR chunks；`.txt` 應走 direct text chunks，text-native PDF 與 scanned PDF 需分開規劃。
+- Source taxonomy 已固定為 `ocr_image`、`text_upload`、`pdf_text` 與 `pdf_scanned_pending_ocr`；目前 runtime 仍主要索引 OCR chunks，`.txt` direct ingestion、PDF text extraction 與 scanned PDF rendering / OCR pipeline 留給後續票。
+- Normalized vector source contract 要求 payload 保留 `document_id`、`filename`、`chunk_id`、`source_type`、`content_source`、`page_number`、`created_at` 與 future project / tenant metadata 位置；`bbox` 與 `confidence` 視來源可為空。
+- VLM fields 不會在本 ticket 自動寫入 retrieval chunks；field indexing 需另開 policy ticket。
 - 本 ticket 不 bump version，且不新增 PDF rendering、PDF text extraction dependency、worker、DB、Auth / RBAC 或 deployment。
 
 Acceptance Criteria：
@@ -1603,6 +1610,7 @@ Validation：
 - `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
 - Browser 檢查 local frontend：預設 Admin / Analyst ingestion surface、Viewer Chat 可切換、retrieval source / fallback 顯示、桌面與手機寬度無 horizontal overflow。
 - `rg -n "v0.27.0|Phase 27|aggressive|hybrid_rerank|DOCURAG_RAG_RETRIEVAL_PROVIDER|DOCURAG_EMBEDDING_PROVIDER|DOCURAG_RERANK_PROVIDER" README.md backend/README.md frontend/README.md docs/demo-script.md docs/ROADMAP.md docs/api.md docs/architecture.md TODO.md backend/app frontend/src scripts infra tasks/phase-27-aggressive-defaults`
+- `rg -n "text_upload|pdf_text|pdf_scanned|content_source|ocr_image|vector source|Vector Source" README.md backend/README.md frontend/README.md docs/api.md docs/architecture.md docs/ROADMAP.md TODO.md tasks/phase-27-aggressive-defaults`
 - `git diff --check`
 
 Release Impact：

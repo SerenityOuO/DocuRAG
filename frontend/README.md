@@ -1,6 +1,6 @@
 # DocuRAG AgentOps Frontend
 
-最小 Vue 3 + Vite demo UI 目前已拆成前台 Viewer Chat 與後台 Admin / Analyst Ingestion 兩個 surface。v0.27.0 起預設先打開後台 Admin / Analyst Ingestion，讓 demo 第一眼呈現上傳、provider-selected OCR、VLM-first parser、Agent trace 與 best-effort Qdrant vector indexing。Viewer Chat 可切換使用，只查詢後端已建立的文件知識庫，並顯示 answer、answer source、retrieval source 與 citation summary。OCR detail、raw JSON、retrieval trace table 與 eval metrics 可由 backend API、smoke scripts 或 CLI 檢查，不屬於 Viewer Chat 主流程；正式知識庫 worker / DB pipeline 尚未實作。backend v0.27.0 預設使用 `hybrid_rerank` RAG / Agent search、Ollama embedding 與 FastEmbed rerank adapter；Ollama embedding、Qdrant 或 reranker 不可用時，UI 會顯示 fallback 狀態。這仍不是 production VLM parser、autonomous Agent dashboard 或正式 RBAC。
+最小 Vue 3 + Vite demo UI 目前已拆成前台 Viewer Chat 與後台 Admin / Analyst Ingestion 兩個 surface。v0.27.0 起預設先打開後台 Admin / Analyst Ingestion，讓 demo 第一眼呈現上傳、provider-selected OCR、VLM-first parser、Agent trace 與 best-effort Qdrant vector indexing。v0.27.1 起 backend VLM parser 會同時使用原始圖片與 OCR context，欄位結果可在 API / smoke trace 中看到 OCR evidence mapping 或 unmatched 狀態。Phase 27 source contract 已明確標記目前 vector indexing 主要使用 `ocr_image` chunks；`.txt` direct chunks、`pdf_text` 與 `pdf_scanned_pending_ocr` 會在後續 runtime 票處理。Viewer Chat 可切換使用，只查詢後端已建立的文件知識庫，並顯示 answer、answer source、retrieval source 與 citation summary。OCR detail、raw JSON、retrieval trace table 與 eval metrics 可由 backend API、smoke scripts 或 CLI 檢查，不屬於 Viewer Chat 主流程；正式知識庫 worker / DB pipeline 尚未實作。backend 預設使用 `hybrid_rerank` RAG / Agent search、Ollama embedding 與 FastEmbed rerank adapter；Ollama embedding、Qdrant 或 reranker 不可用時，UI 會顯示 fallback 狀態。這仍不是 production VLM parser、autonomous Agent dashboard 或正式 RBAC。
 
 ## Install
 
@@ -59,7 +59,7 @@ npm.cmd run build
 - 回答結果：顯示 answer、answer source、retrieval source 與簡化引用來源。
 - 空知識庫狀態：以 Viewer 角度提示需先由後台知識庫管理流程建立資料，不在前台查詢畫面提供文件上傳或 OCR 操作。
 - 後台 Admin / Analyst Ingestion：預設入口，呼叫 `POST /documents/upload` 與 provider-selected `POST /documents/{document_id}/ocr`，顯示 document / OCR / parser / local chunks 狀態；OCR 成功後會 best-effort 執行 `POST /documents/{document_id}/parse` 與 `POST /documents/{document_id}/index/vector`；real OCR 失敗時才提供手動 `POST /documents/{document_id}/ocr/mock` fallback。
-- 欄位解析：OCR 完成後可在後台觸發 `POST /documents/{document_id}/parse`，並顯示 parser status、document type、invoice number、vendor、issue date、total amount、currency、confidence 與 source text 摘要；missing fields 會顯示 fallback metadata，詳細 JSON 留給 `GET /documents/{document_id}/fields` 或 API docs。
+- 欄位解析：OCR 完成後可在後台觸發 `POST /documents/{document_id}/parse`，並顯示 parser status、document type、invoice number、vendor、issue date、total amount、currency、confidence 與 source text 摘要；v0.27.1 起 VLM 欄位若可對回 OCR line 會保存 source text / page / bbox，無法對回時以 evidence unmatched / unavailable 標示；詳細 JSON 留給 `GET /documents/{document_id}/fields` 或 API docs。
 - Phase 26 parser source comparison：API response 會透過 `parser_source`、`trace_metadata.fallback_chain`、`trace_metadata.fallback_reason`、`trace_metadata.confidence_summary` 與 source input metadata 區分 `vlm_invoice` 與 `deterministic_invoice`；frontend 仍只呈現 demo-friendly structured fields 摘要，不新增 production parser comparison dashboard。
 - 後端健康：只顯示簡短連線狀態與版本，不顯示 raw health JSON。
 - 工程細節：OCR text、extracted fields、document list、metadata JSON、retrieved chunks、trace metadata 與 eval metrics 改由 backend API、`scripts/demo-smoke-test.ps1`、`scripts/retrieval-eval-smoke.ps1` 或 API docs 檢查，不放在 frontend 主畫面；正式知識庫 ingestion / indexing pipeline 尚未實作。
@@ -92,3 +92,5 @@ payment due date Net 15
 - v0.25.0: Agent Tool-use Minimal MVP 已完成；後台 Agent trace surface 可顯示 deterministic plan、allowlisted tool calls、observations、final answer、citations 與 fallback state，版本與文件同步已完成。
 - v0.26.0: Real VLM Parser Provider Spike 已完成；後台 structured fields surface 可顯示 `vlm_invoice` / `deterministic_invoice` parser source 與 fallback metadata，Agent trace 仍只透過 `get_document_fields` 讀取保存結果。
 - v0.27.0: Aggressive Demo Defaults 已完成；後台預設入口、OCR 後 best-effort parser + vector indexing、default `hybrid_rerank` retrieval source / fallback 顯示與版本文件同步已完成。
+- v0.27.1: OCR / VLM Evidence Alignment 已完成；backend VLM parser 使用 image + OCR context，欄位結果可保留 OCR line / bbox evidence 或明確 unmatched 狀態。
+- Phase 27 source contract: 已完成 vector source planning；目前 UI 的 best-effort indexing 仍代表 OCR chunks demo path，不宣稱 `.txt` direct ingestion 或 PDF pipeline runtime 已完成。

@@ -1,6 +1,6 @@
 # Backend
 
-DocuRAG AgentOps backend MVP v0.27.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、VLM-first invoice parser spike、deterministic invoice parser fallback、parse / fields API、Agent run / lookup API、manual vector indexing API、local RAG query API、retrieval evaluation runner、FastEmbed rerank adapter、hybrid / `hybrid_rerank` runtime provider、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.27.0 起 backend 採 aggressive demo defaults：`DOCURAG_RAG_RETRIEVAL_PROVIDER=hybrid_rerank`、`DOCURAG_EMBEDDING_PROVIDER=ollama`、`DOCURAG_RERANK_PROVIDER=fastembed`。`/rag/query` 與 Agent `search_documents` 會優先使用 hybrid rerank；Ollama embedding、Qdrant 或 FastEmbed runtime 不可用時，會 fallback 到 keyword evidence 並寫入 trace。LLM provider 未覆寫時仍預設嘗試 Ollama `qwen3.5:4b` generation，Ollama 不可用時 fallback 到 retrieved OCR chunks。此階段不接資料庫、OpenAI API、vLLM、production VLM / LLM parser、production eval dashboard、Redis、NATS、worker、登入權限、production autonomous Agent、LLM planner、任意 SQL 或 production indexing pipeline。
+DocuRAG AgentOps backend MVP v0.27.1 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、VLM-first invoice parser spike、OCR / VLM evidence alignment、deterministic invoice parser fallback、parse / fields API、Agent run / lookup API、manual vector indexing API、local RAG query API、retrieval evaluation runner、FastEmbed rerank adapter、hybrid / `hybrid_rerank` runtime provider、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.27.0 起 backend 採 aggressive demo defaults：`DOCURAG_RAG_RETRIEVAL_PROVIDER=hybrid_rerank`、`DOCURAG_EMBEDDING_PROVIDER=ollama`、`DOCURAG_RERANK_PROVIDER=fastembed`。v0.27.1 起 VLM parser request 會同時帶原始圖片與 compact OCR context；欄位值可對回 OCR line / bbox，未命中時會標示 evidence unmatched / unavailable。Phase 27 source contract 已固定 `ocr_image`、`text_upload`、`pdf_text` 與 `pdf_scanned_pending_ocr` 的 vector ingestion 邊界；目前 runtime 仍主要索引 OCR chunks，`.txt` direct chunks 與 PDF 分流留給後續票。`/rag/query` 與 Agent `search_documents` 會優先使用 hybrid rerank；Ollama embedding、Qdrant 或 FastEmbed runtime 不可用時，會 fallback 到 keyword evidence 並寫入 trace。LLM provider 未覆寫時仍預設嘗試 Ollama `qwen3.5:4b` generation，Ollama 不可用時 fallback 到 retrieved OCR chunks。此階段不接資料庫、OpenAI API、vLLM、production VLM / LLM parser、production eval dashboard、Redis、NATS、worker、登入權限、production autonomous Agent、LLM planner、任意 SQL 或 production indexing pipeline。
 
 ## Install
 
@@ -110,8 +110,8 @@ Phase 25 Agent boundary：
 Phase 26 VLM parser provider spike：
 
 - `POST /documents/{document_id}/parse` 預設走 VLM-first `vlm_invoice` route；`DOCURAG_PARSER_SOURCE=deterministic_invoice` 只作 explicit debug / validation override。
-- `DOCURAG_VLM_PROVIDER=ollama` 會嘗試 local HTTP `/api/generate` vision-style request；`DOCURAG_VLM_PROVIDER=fake` 只供 demo smoke 驗證 success path；空字串或不可用 provider 會明確 fallback。
-- VLM success 會保存既有 `DocumentFields` / `ParserResult` schema，並標記 `parser_source=vlm_invoice`；fallback 會回到 `deterministic_invoice` 並保留 `fallback_reason` 與 `fallback_chain` trace。
+- `DOCURAG_VLM_PROVIDER=ollama` 會嘗試 local HTTP `/api/generate` vision-style request；request 包含 image base64 與 compact OCR context；`DOCURAG_VLM_PROVIDER=fake` 只供 demo smoke 驗證 success path；空字串或不可用 provider 會明確 fallback。
+- VLM success 會保存既有 `DocumentFields` / `ParserResult` schema，並標記 `parser_source=vlm_invoice`；欄位值若能命中 OCR line，會保存 `source_text`、`source_page` 與 `source_bbox`，未命中則以 `evidence_unmatched` / `evidence_unavailable` 標示；fallback 會回到 `deterministic_invoice` 並保留 `fallback_reason` 與 `fallback_chain` trace。
 - Agent contract 不變；`get_document_fields` 只讀保存後的 parser result，不直接呼叫 VLM，也不新增 tool allowlist。
 - 這不是 production VLM parser、PDF rendering、多頁 parser pipeline、table reconstruction、人工修正 workflow、worker、DB schema 或 deployment 設定。
 
@@ -242,6 +242,9 @@ Phase 12 manual Vector Indexing：
 - Endpoint 預設使用 `DOCURAG_EMBEDDING_PROVIDER=ollama`，且 Qdrant collection 可用時有機會成功；provider disabled、embedding failure、Qdrant unavailable 或 vector size mismatch 會回傳清楚錯誤。
 - 成功 response 會包含 `indexed_chunk_count`、`point_ids`、`collection_name`、`vector_size`、`embedding_provider` 與 `embedding_model`。
 - Empty chunks 會回傳 `status=skipped`，未完成 OCR 的 document 會回傳 `409`；backend upload / OCR endpoint 本身不啟動 worker，frontend v0.27.0 後台 ingestion 會在 OCR 成功後 best-effort 呼叫此 API。
+- Phase 27 source contract 將目前 runtime 來源標為 `ocr_image`：OCR lines / chunks 是 Qdrant payload 的文字來源，payload 至少保留 `document_id`、`filename`、`chunk_id`、`source_type`、`content_source`、`page_number`、`created_at` 與 future `project_id` / `tenant_id` metadata 位置。
+- 後續 `.txt` 檔應走 `text_upload` direct chunks，不需要假裝經過 OCR；text-native PDF 應走 `pdf_text` extraction；scanned PDF 在 PDF rendering / OCR pipeline 完成前只能標為 `pdf_scanned_pending_ocr`，不得宣稱已可索引。
+- VLM structured fields 不會在本 contract 自動寫入 retrieval chunks；若未來要索引欄位，需要另開 field-indexing policy ticket。
 
 ```powershell
 $env:DOCURAG_RAG_RETRIEVAL_PROVIDER="hybrid_rerank"
@@ -461,3 +464,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 
 - v0.25.0: Agent Tool-use Minimal MVP、deterministic planner、allowlisted tool adapters、Agent run / lookup API、frontend trace surface、Agent demo smoke validation 與版本文件同步已完成。
 - v0.26.0: Real VLM Parser Provider Spike、VLM-first `vlm_invoice` adapter、demo-safe image input resolver、fake / stub success smoke、provider unavailable fallback 與 Agent `get_document_fields` consumption validation 已完成。
 - v0.27.0: Aggressive Demo Defaults、default `hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter、frontend parser + vector indexing best-effort flow 與 fallback-safe smoke validation 已完成。
+- v0.27.1: OCR / VLM Evidence Alignment 已完成；VLM request 帶 image + OCR context，欄位結果會保存 OCR evidence 或標示 evidence unmatched / unavailable，RAG / vector indexing 仍使用 OCR chunks。

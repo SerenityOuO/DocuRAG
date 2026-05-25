@@ -1,6 +1,6 @@
 # MVP Architecture
 
-本文件描述 DocuRAG AgentOps 目前的受控 MVP 架構。到 v0.27.0 為止，專案已完成 backend / frontend demo、provider-selected OCR、citation trace、retrieval eval runner、vector / rerank / hybrid / `hybrid_rerank` retrieval building blocks、Viewer Chat / Admin Ingestion role split、deterministic Agent tool-use trace、VLM-first parser provider spike，以及 aggressive demo defaults。Phase 27 把 RAG / Agent search default 切成 `hybrid_rerank`，並讓 frontend 後台 OCR 後 best-effort 執行 parser 與 vector indexing，但不代表已新增 production VLM parser、auth / RBAC、worker 或 DB runtime。
+本文件描述 DocuRAG AgentOps 目前的受控 MVP 架構。到 v0.27.1 為止，專案已完成 backend / frontend demo、provider-selected OCR、citation trace、retrieval eval runner、vector / rerank / hybrid / `hybrid_rerank` retrieval building blocks、Viewer Chat / Admin Ingestion role split、deterministic Agent tool-use trace、VLM-first parser provider spike、OCR / VLM evidence alignment，以及 aggressive demo defaults。Phase 27 把 RAG / Agent search default 切成 `hybrid_rerank`，並讓 frontend 後台 OCR 後 best-effort 執行 parser 與 vector indexing；v0.27.1 補上 VLM image + OCR context 與欄位 evidence mapping，但不代表已新增 production VLM parser、auth / RBAC、worker 或 DB runtime。
 
 ## MVP Shape
 
@@ -14,7 +14,7 @@ Admin / Analyst Ingestion Surface
     |-- upload / provider-selected OCR / processing status
     |-- OCR result / local chunks / metadata debug links
     |-- Phase 24 parser result: OCR text -> structured fields
-    |-- Phase 26 parser route: image input -> vlm_invoice -> deterministic fallback
+    |-- Phase 26 / 27 parser route: image input + OCR context -> vlm_invoice -> deterministic fallback
     |-- Phase 25 Agent contract: deterministic plan -> allowlisted tools -> trace
     |
 FastAPI Backend
@@ -144,7 +144,7 @@ Agent guardrails：
 
 ## Phase 26 VLM Parser Provider Boundary
 
-Phase 26 的目標是把 parser default 切成 VLM-first demo path：`vlm_invoice` 先從既有 upload metadata 解析 demo-safe image input，再呼叫可設定的 local VLM provider；provider unavailable、timeout、unsupported file、invalid response、missing fields 或 confidence too low 時，才 fallback 到 `deterministic_invoice`。這不改 Phase 25 Agent planner / tool allowlist；Agent 仍只透過 `get_document_fields` 讀取保存後的 parser result。
+Phase 26 的目標是把 parser default 切成 VLM-first demo path：`vlm_invoice` 先從既有 upload metadata 解析 demo-safe image input，再呼叫可設定的 local VLM provider；provider unavailable、timeout、unsupported file、invalid response、missing fields 或 confidence too low 時，才 fallback 到 `deterministic_invoice`。v0.27.1 起 VLM request 也帶 compact OCR context，VLM 欄位結果會嘗試對回 OCR line / bbox。這不改 Phase 25 Agent planner / tool allowlist；Agent 仍只透過 `get_document_fields` 讀取保存後的 parser result。
 
 ```text
 Admin / Analyst Ingestion Surface
@@ -155,7 +155,7 @@ Admin / Analyst Ingestion Surface
     |
 FastAPI Backend Parser Route
     |
-    |-- VLM input resolver -> existing data/uploads image path
+    |-- VLM input resolver -> existing data/uploads image path + OCR context
     |-- vlm_invoice adapter -> configurable local VLM provider
     |-- deterministic_invoice fallback
     |
@@ -171,8 +171,8 @@ Phase 25 Agent
 Phase 26 contract rules：
 
 - `DOCURAG_VLM_PROVIDER`、`DOCURAG_VLM_BASE_URL`、`DOCURAG_VLM_MODEL`、`DOCURAG_VLM_TIMEOUT_SECONDS` 與 `DOCURAG_VLM_MIN_CONFIDENCE` 定義 provider boundary；`DOCURAG_PARSER_SOURCE=deterministic_invoice` 只作 explicit debug / validation override。
-- Input resolver 只支援 `data/uploads/` 內既有 `.png` / `.jpg` / `.jpeg`，不做 PDF rendering、multi-page extraction、image preprocessing、layout analysis 或 table reconstruction。
-- VLM output 必須正規化成既有 `DocumentFields` / `ExtractedField` / `ParserResult` schema，保留 `parser_source=vlm_invoice`、confidence、source trace、`fallback_chain` 與 `fallback_reason`。
+- Input resolver 只支援 `data/uploads/` 內既有 `.png` / `.jpg` / `.jpeg`，並可附帶 OCR text / OCR lines compact context；不做 PDF rendering、multi-page extraction、image preprocessing、layout analysis 或 table reconstruction。
+- VLM output 必須正規化成既有 `DocumentFields` / `ExtractedField` / `ParserResult` schema，保留 `parser_source=vlm_invoice`、confidence、source trace、`fallback_chain` 與 `fallback_reason`；欄位 evidence 命中 OCR line 時保存 `source_text` / `source_page` / `source_bbox`，未命中時標示 evidence unmatched / unavailable。
 - Fallback 只影響 parser result / parser processing step，不覆蓋 OCR / indexing 狀態，也不觸發 RAG ranking、Qdrant indexing、eval runner、worker、DB 或 permission model。
 - `deterministic_invoice` 在 Phase 26 後不再是預設 parser route，只能作為 VLM fallback 或 explicit debug override。
 
@@ -199,8 +199,37 @@ Phase 27 default rules：
 - `DOCURAG_RAG_RETRIEVAL_PROVIDER=hybrid_rerank` 成為 backend default；`keyword` 只作 debug / validation override。
 - `DOCURAG_EMBEDDING_PROVIDER=ollama` 與 `DOCURAG_RERANK_PROVIDER=fastembed` 成為 default adapter selection；兩者不可用時不得讓 `/rag/query` hard fail。
 - `POST /documents/{document_id}/index/vector` 仍是同步 API，不代表 worker pipeline；frontend 只是在 OCR 後 best-effort 呼叫。
+- OCR 仍是 RAG / vector indexing 的文字層來源；VLM fields 只作 parser structured fields，不在 Phase 27 自動寫成 retrieval chunks。
 - Agent planner / tool allowlist 不變；`search_documents` 使用 default RAG provider，但 Agent 不新增任意 tool、SQL、reindex 或 destructive behavior。
 - 不新增 PostgreSQL、Redis、NATS、worker、Auth、RBAC、OpenAI API、vLLM、PDF rendering 或 production parser dashboard。
+
+### Phase 27 Vector Source Contract
+
+`27-03` 補上的 source contract 只定義後續 ingestion 邊界，不改 runtime。現有 Qdrant best-effort indexing 主要吃 `ocr_image` chunks，也就是圖片 / 掃描類上傳先由 OCR 產生文字層，再把 OCR chunks 寫入 vector store。
+
+```text
+Image upload
+    |-- provider-selected OCR
+    |-- normalized chunks: source_type=ocr_image, content_source=ocr_image
+    |-- manual / best-effort vector indexing
+
+Future .txt upload
+    |-- direct text chunking
+    |-- normalized chunks: source_type=text_upload, content_source=text_upload
+
+Future text-native PDF
+    |-- PDF text extraction
+    |-- normalized chunks: source_type=pdf_text, content_source=pdf_text
+
+Future scanned PDF
+    |-- PDF rendering required
+    |-- OCR pipeline required
+    |-- current state: source_type=pdf_scanned_pending_ocr
+```
+
+Normalized vector source metadata must include `document_id`, `filename`, `chunk_id`, `source_type`, `content_source`, optional `page_number`, optional `bbox`, optional `confidence`, `created_at` and reserved future `project_id` / `tenant_id` fields. This keeps Qdrant from becoming permanently coupled to OCR-only chunks while avoiding a false claim that `.txt`, `pdf_text` or scanned PDF runtime is already complete.
+
+VLM structured fields remain parser output for Admin / Analyst and Agent `get_document_fields`; they are not automatically converted into retrieval chunks. Field indexing requires a separate policy ticket.
 
 ## Near-Term Runtime Boundary
 

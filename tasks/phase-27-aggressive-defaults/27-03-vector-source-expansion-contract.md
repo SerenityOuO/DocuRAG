@@ -47,13 +47,18 @@
 
 ## Acceptance Criteria
 
-- [ ] 文件明確回答：vector DB 不應只長期依賴 OCR chunks；`.txt` 應支援 direct text chunks。
-- [ ] 文件明確區分 text-native PDF 與 scanned PDF，不把 PDF 支援說成單一簡單功能。
-- [ ] Vector source contract 包含 source type、page / bbox 可選欄位、content source metadata 與 future tenant / project metadata 位置。
-- [ ] 文件明確說明 VLM fields 不會在本 ticket 自動變成 retrieval chunks。
-- [ ] 後續 runtime ticket 可依此拆成 `.txt` direct ingestion、PDF text extraction、scanned PDF rendering / OCR 三個小任務。
+- [x] 文件明確回答：vector DB 不應只長期依賴 OCR chunks；`.txt` 應支援 direct text chunks。
+- [x] 文件明確區分 text-native PDF 與 scanned PDF，不把 PDF 支援說成單一簡單功能。
+- [x] Vector source contract 包含 source type、page / bbox 可選欄位、content source metadata 與 future tenant / project metadata 位置。
+- [x] 文件明確說明 VLM fields 不會在本 ticket 自動變成 retrieval chunks。
+- [x] 後續 runtime ticket 可依此拆成 `.txt` direct ingestion、PDF text extraction、scanned PDF rendering / OCR 三個小任務。
 
 ## Validation
 
 - `rg -n "text_upload|pdf_text|pdf_scanned|content_source|ocr_image|vector source|Vector Source" README.md backend/README.md frontend/README.md docs/api.md docs/architecture.md docs/ROADMAP.md TODO.md tasks/phase-27-aggressive-defaults`
 - `git diff --check`
+
+Validation result：
+
+- Ticket `rg` passed.
+- `git diff --check` passed（僅 Windows LF/CRLF 提示）。

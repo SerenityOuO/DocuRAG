@@ -18,7 +18,7 @@ from app.schemas.documents import (
     ParserSource,
     ParserStatus,
 )
-from app.services.vlm_input import VlmInputDescriptor, VlmInputResolver
+from app.services.vlm_input import VlmInputDescriptor, VlmInputResolver, VlmOcrContextLine
 
 
 @dataclass(frozen=True)
@@ -86,8 +86,12 @@ class OllamaVlmProvider:
         if descriptor.file_path is None:
             raise VlmProviderError("missing_file", "VLM input file was unavailable.")
 
+        ocr_context = _format_ocr_context_for_prompt(descriptor)
         prompt = (
-            "Extract invoice fields from this document image. Return only one JSON object with "
+            "Extract invoice fields from this document image. Use the compact OCR context below as "
+            "supporting text evidence, but still inspect the image. "
+            f"OCR context:\n{ocr_context}\n"
+            "Return only one JSON object with "
             "document_type, vendor_name, invoice_number, issue_date, total_amount, tax_amount, "
             "currency, line_items, and confidence."
         )
@@ -149,6 +153,107 @@ def create_vlm_provider(
     return DisabledVlmProvider()
 
 
+def _format_ocr_context_for_prompt(descriptor: VlmInputDescriptor) -> str:
+    if not descriptor.ocr_context_lines:
+        return "(no OCR context available)"
+
+    formatted_lines = []
+    for line_index, line in enumerate(descriptor.ocr_context_lines, start=1):
+        attributes = []
+        if line.page_number is not None:
+            attributes.append(f"page={line.page_number}")
+        if line.bbox is not None:
+            attributes.append(
+                "bbox="
+                f"{line.bbox.x_min:.2f},{line.bbox.y_min:.2f},"
+                f"{line.bbox.x_max:.2f},{line.bbox.y_max:.2f}"
+            )
+        if line.confidence is not None:
+            attributes.append(f"confidence={line.confidence:.4f}")
+
+        prefix = f"{line_index}."
+        if attributes:
+            prefix = f"{prefix} [{'; '.join(attributes)}]"
+
+        formatted_lines.append(f"{prefix} {line.text}")
+
+    return "\n".join(formatted_lines)
+
+
+def _match_ocr_context_line(
+    value: str | int | float | bool,
+    ocr_context_lines: tuple[VlmOcrContextLine, ...],
+    field_name: str | None = None,
+) -> VlmOcrContextLine | None:
+    for line in ocr_context_lines:
+        if _value_matches_ocr_line(value, line.text, field_name, require_numeric_context=True):
+            return line
+
+    if field_name == "quantity":
+        return None
+
+    for line in ocr_context_lines:
+        if _value_matches_ocr_line(value, line.text, field_name, require_numeric_context=False):
+            return line
+
+    return None
+
+
+def _value_matches_ocr_line(
+    value: str | int | float | bool,
+    line_text: str,
+    field_name: str | None = None,
+    require_numeric_context: bool = False,
+) -> bool:
+    if isinstance(value, bool):
+        return str(value).lower() in line_text.lower()
+
+    if isinstance(value, (int, float)):
+        if require_numeric_context and not _numeric_context_matches(field_name, line_text):
+            return False
+
+        target_number = float(value)
+        for number in _numbers_from_text(line_text):
+            if abs(number - target_number) <= 0.0001:
+                return True
+
+        return False
+
+    normalized_value = _normalize_match_text(str(value))
+    normalized_line = _normalize_match_text(line_text)
+
+    return bool(normalized_value) and normalized_value in normalized_line
+
+
+def _numbers_from_text(text: str) -> list[float]:
+    numbers: list[float] = []
+    for match in re.finditer(r"[-+]?\d[\d,]*(?:\.\d+)?", text):
+        try:
+            numbers.append(float(match.group(0).replace(",", "")))
+        except ValueError:
+            continue
+
+    return numbers
+
+
+def _numeric_context_matches(field_name: str | None, line_text: str) -> bool:
+    normalized_field = (field_name or "").lower()
+    if normalized_field == "quantity":
+        return bool(re.search(r"\b(?:qty|quantity|count|seats?|kits?|items?)\b|數量|数量", line_text, re.IGNORECASE))
+    if normalized_field in {"total_amount", "amount"}:
+        return bool(re.search(r"\b(?:amount\s*due|total|grand\s*total|amount)\b|總計|总计|金額|金额", line_text, re.IGNORECASE))
+    if normalized_field == "tax_amount":
+        return bool(re.search(r"\b(?:tax|vat)\b|稅額|税额", line_text, re.IGNORECASE))
+    if normalized_field == "unit_price":
+        return bool(re.search(r"\b(?:unit\s*price|price|at|@)\b|單價|单价", line_text, re.IGNORECASE))
+
+    return True
+
+
+def _normalize_match_text(value: str) -> str:
+    return re.sub(r"[^0-9a-zA-Z\u4e00-\u9fff]+", "", value).lower()
+
+
 class VlmInvoiceParser:
     parser_source: ParserSource = "vlm_invoice"
     schema_version = "invoice_fields_v1"
@@ -201,7 +306,7 @@ class VlmInvoiceParser:
 
         try:
             payload = self.provider.extract_invoice_fields(descriptor)
-            fields, confidence = self._fields_from_payload(payload)
+            fields, confidence = self._fields_from_payload(payload, descriptor)
         except VlmProviderError as exc:
             return self._fallback(document, parsed_at, exc.fallback_reason, descriptor)
 
@@ -228,6 +333,7 @@ class VlmInvoiceParser:
                 descriptor,
                 fallback_chain="vlm_invoice",
                 confidence=confidence,
+                fields=fields,
             ),
         )
 
@@ -272,6 +378,7 @@ class VlmInvoiceParser:
         fallback_chain: str,
         fallback_reason: str | None = None,
         confidence: float | None = None,
+        fields: DocumentFields | None = None,
     ) -> dict[str, str]:
         metadata = {
             "parser_route": "vlm_first",
@@ -280,6 +387,8 @@ class VlmInvoiceParser:
             "source_input_type": "image" if descriptor.mime_type else "unavailable",
             "source_input": descriptor.input_source,
             "fallback_chain": fallback_chain,
+            "ocr_context_state": "available" if descriptor.ocr_context_lines else "unavailable",
+            "ocr_context_line_count": str(len(descriptor.ocr_context_lines)),
         }
         if descriptor.mime_type:
             metadata["source_mime_type"] = descriptor.mime_type
@@ -287,20 +396,26 @@ class VlmInvoiceParser:
             metadata["fallback_reason"] = fallback_reason
         if confidence is not None:
             metadata["confidence_summary"] = f"{confidence:.4f}"
+        if fields is not None:
+            metadata.update(self._field_evidence_metadata(fields))
 
         return metadata
 
-    def _fields_from_payload(self, payload: dict) -> tuple[DocumentFields, float]:
+    def _fields_from_payload(
+        self,
+        payload: dict,
+        descriptor: VlmInputDescriptor,
+    ) -> tuple[DocumentFields, float]:
         confidence = self._confidence(payload.get("confidence"))
         fields = DocumentFields(
-            document_type=self._payload_field(payload, "document_type", confidence),
-            vendor_name=self._payload_field(payload, "vendor_name", confidence),
-            invoice_number=self._payload_field(payload, "invoice_number", confidence),
-            issue_date=self._payload_field(payload, "issue_date", confidence),
-            total_amount=self._payload_field(payload, "total_amount", confidence),
-            tax_amount=self._payload_field(payload, "tax_amount", confidence, required=False),
-            currency=self._payload_field(payload, "currency", confidence),
-            line_items=self._line_items_from_payload(payload.get("line_items"), confidence),
+            document_type=self._payload_field(payload, "document_type", confidence, descriptor),
+            vendor_name=self._payload_field(payload, "vendor_name", confidence, descriptor),
+            invoice_number=self._payload_field(payload, "invoice_number", confidence, descriptor),
+            issue_date=self._payload_field(payload, "issue_date", confidence, descriptor),
+            total_amount=self._payload_field(payload, "total_amount", confidence, descriptor),
+            tax_amount=self._payload_field(payload, "tax_amount", confidence, descriptor, required=False),
+            currency=self._payload_field(payload, "currency", confidence, descriptor),
+            line_items=self._line_items_from_payload(payload.get("line_items"), confidence, descriptor),
         )
         return fields, confidence
 
@@ -309,6 +424,7 @@ class VlmInvoiceParser:
         payload: dict,
         field_name: str,
         confidence: float,
+        descriptor: VlmInputDescriptor,
         required: bool = True,
     ) -> ExtractedField:
         value = payload.get(field_name)
@@ -318,14 +434,19 @@ class VlmInvoiceParser:
                 fallback_reason="field_not_found" if required else None,
             )
 
-        return ExtractedField(
+        return self._vlm_field(
             value=value,
             confidence=confidence,
-            source_text=f"vlm:{field_name}",
-            parser_source=self.parser_source,
+            descriptor=descriptor,
+            field_name=field_name,
         )
 
-    def _line_items_from_payload(self, raw_items: object, confidence: float) -> list[InvoiceLineItem]:
+    def _line_items_from_payload(
+        self,
+        raw_items: object,
+        confidence: float,
+        descriptor: VlmInputDescriptor,
+    ) -> list[InvoiceLineItem]:
         if not isinstance(raw_items, list):
             return []
 
@@ -336,14 +457,104 @@ class VlmInvoiceParser:
 
             line_items.append(
                 InvoiceLineItem(
-                    description=self._payload_field(raw_item, "description", confidence, required=False),
-                    quantity=self._payload_field(raw_item, "quantity", confidence, required=False),
-                    unit_price=self._payload_field(raw_item, "unit_price", confidence, required=False),
-                    amount=self._payload_field(raw_item, "amount", confidence, required=False),
+                    description=self._payload_field(raw_item, "description", confidence, descriptor, required=False),
+                    quantity=self._payload_field(raw_item, "quantity", confidence, descriptor, required=False),
+                    unit_price=self._payload_field(raw_item, "unit_price", confidence, descriptor, required=False),
+                    amount=self._payload_field(raw_item, "amount", confidence, descriptor, required=False),
                 )
             )
 
         return line_items
+
+    def _vlm_field(
+        self,
+        value: str | int | float | bool,
+        confidence: float,
+        descriptor: VlmInputDescriptor,
+        field_name: str,
+    ) -> ExtractedField:
+        if not descriptor.ocr_context_lines:
+            return ExtractedField(
+                value=value,
+                confidence=confidence,
+                parser_source=self.parser_source,
+                fallback_reason="evidence_unavailable",
+            )
+
+        matched_line = _match_ocr_context_line(value, descriptor.ocr_context_lines, field_name)
+        if matched_line is None:
+            return ExtractedField(
+                value=value,
+                confidence=confidence,
+                parser_source=self.parser_source,
+                fallback_reason="evidence_unmatched",
+            )
+
+        field_confidence = confidence
+        if matched_line.confidence is not None:
+            field_confidence = min(confidence, matched_line.confidence)
+
+        return ExtractedField(
+            value=value,
+            confidence=field_confidence,
+            source_text=matched_line.text,
+            source_page=matched_line.page_number,
+            source_bbox=matched_line.bbox,
+            parser_source=self.parser_source,
+        )
+
+    def _field_evidence_metadata(self, fields: DocumentFields) -> dict[str, str]:
+        value_fields = [
+            ("document_type", fields.document_type),
+            ("vendor_name", fields.vendor_name),
+            ("invoice_number", fields.invoice_number),
+            ("issue_date", fields.issue_date),
+            ("total_amount", fields.total_amount),
+            ("tax_amount", fields.tax_amount),
+            ("currency", fields.currency),
+        ]
+        for item_index, line_item in enumerate(fields.line_items):
+            value_fields.extend(
+                [
+                    (f"line_items[{item_index}].description", line_item.description),
+                    (f"line_items[{item_index}].quantity", line_item.quantity),
+                    (f"line_items[{item_index}].unit_price", line_item.unit_price),
+                    (f"line_items[{item_index}].amount", line_item.amount),
+                ]
+            )
+
+        populated_fields = [
+            (field_name, field)
+            for field_name, field in value_fields
+            if field.value is not None
+        ]
+        matched_fields = [
+            field_name
+            for field_name, field in populated_fields
+            if field.source_text and field.fallback_reason is None
+        ]
+        unmatched_fields = [
+            field_name
+            for field_name, field in populated_fields
+            if field.fallback_reason in {"evidence_unavailable", "evidence_unmatched"}
+        ]
+
+        if not populated_fields:
+            evidence_state = "unavailable"
+        elif len(matched_fields) == len(populated_fields):
+            evidence_state = "matched"
+        elif matched_fields:
+            evidence_state = "partial"
+        else:
+            evidence_state = "unmatched"
+
+        return {
+            "field_evidence_state": evidence_state,
+            "field_evidence_count": str(len(populated_fields)),
+            "field_evidence_matched_count": str(len(matched_fields)),
+            "field_evidence_unmatched_count": str(len(unmatched_fields)),
+            "field_evidence_unmatched_fields": ",".join(unmatched_fields),
+        }
 
     def _confidence(self, value: object) -> float:
         if not isinstance(value, (int, float)):
