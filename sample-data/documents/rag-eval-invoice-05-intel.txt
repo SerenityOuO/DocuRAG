@@ -1,0 +1,31 @@
+發票摘要表 - Demo Only
+
+用途說明:
+這是一份虛構的 DocuRAG RAG evaluation fixture。供應商欄位使用 Intel
+作為測試標籤，不代表真實 Intel 交易，不含真實稅號、地址、logo 或付款資料。
+
+一、發票資訊
+供應商: Intel
+發票編號: INTL-DEMO-2026-118
+日期: 2026-03-09
+幣別: 新台幣 TWD
+
+二、收款條件
+付款條件: Net 30
+付款截止日: 2026-04-08
+
+三、費用項目
+項目 A: Demo validation lab session
+金額: NT$ 45,000
+
+項目 B: Synthetic hardware planning appendix
+金額: NT$ 30,000
+
+四、金額彙總
+未稅小計: NT$ 75,000
+營業稅額: NT$ 3,750
+含稅總額: NT$ 78,750
+
+查詢證據:
+INTL-DEMO-2026-118 是 Intel 的 demo 發票，開立日期為 2026-03-09。
+含稅總額為 NT$ 78,750，營業稅額為 NT$ 3,750。

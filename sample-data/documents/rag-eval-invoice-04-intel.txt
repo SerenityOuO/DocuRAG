@@ -1,0 +1,24 @@
+Intel Demo Invoice Memo
+
+Safe-use notice:
+This is synthetic data for a local DocuRAG knowledge-base import demo. Intel is
+used only as the vendor label. No real Intel invoice, tax ID, logo, address,
+account number, or private purchase record is represented here.
+
+Invoice number: INTL-DEMO-2026-101
+Vendor: Intel
+Customer: DocuRAG RAG Eval Fixture Set
+Issue date: 2026-02-17
+Currency: TWD
+Payment terms: Net 7, due by 2026-02-24
+
+Line items
+- Edge CPU demo comparison worksheet: NT$ 7,000
+- Synthetic chipset compatibility note: NT$ 5,000
+
+Subtotal: NT$ 12,000
+Tax: NT$ 600
+Invoice total: NT$ 12,600
+
+Retrieval anchor:
+Intel invoice INTL-DEMO-2026-101 has a total amount of NT$ 12,600 and tax of NT$ 600.

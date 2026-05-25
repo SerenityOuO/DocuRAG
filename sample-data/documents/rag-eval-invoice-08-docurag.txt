@@ -1,0 +1,30 @@
+後台知識庫匯入測試發票
+
+文件性質:
+Synthetic demo invoice for DocuRAG AgentOps Phase 29. 本文件只用於展示
+後台知識庫匯入、RAG 檢索與評估，不是正式財務憑證。
+
+發票資料
+供應商名稱 = DocuRAG
+發票號碼 = DRAG-DEMO-2026-224
+發票日期 = 2026-04-19
+幣別 = TWD 新台幣
+客戶 = DocuRAG Demo Manager
+
+服務項目與金額
+RAG benchmark fixture design: NT$ 28,000
+Hybrid rerank evaluation note: NT$ 21,000
+Admin demo walkthrough script: NT$ 14,000
+
+金額合計
+未稅金額 = NT$ 63,000
+稅額 = NT$ 3,150
+應付總額 = NT$ 66,150
+
+付款資訊
+付款條件 = Net 14
+付款期限 = 2026-05-03
+
+安全聲明:
+DocuRAG invoice DRAG-DEMO-2026-224 is synthetic. It contains no real payment
+account, address, tax ID, or private customer information.

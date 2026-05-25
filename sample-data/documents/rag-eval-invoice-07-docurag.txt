@@ -1,0 +1,27 @@
+DocuRAG Synthetic Invoice
+
+Disclosure:
+This is an internal fictional invoice fixture for DocuRAG AgentOps. It is
+created only for demo import, RAG retrieval, citation, and evaluation testing.
+No real tax ID, address, account number, personal data, or commercial order is
+included.
+
+供應商: DocuRAG
+發票號碼: DRAG-DEMO-2026-201
+開立日期: 2026-04-05
+買受人: Demo Analyst Workspace
+付款條件: Due in 10 days
+付款到期日: 2026-04-15
+幣別: TWD
+
+Items:
+- Knowledge base import rehearsal, quantity 1, subtotal NT$ 4,500
+- Citation review checklist, quantity 1, subtotal NT$ 4,500
+
+未稅小計: NT$ 9,000
+稅額: NT$ 450
+總金額: NT$ 9,450
+
+Evidence:
+DocuRAG invoice DRAG-DEMO-2026-201 was issued on 2026-04-05.
+The total amount is NT$ 9,450 and the tax amount is NT$ 450.

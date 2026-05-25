@@ -1,0 +1,26 @@
+Synthetic Demo Invoice - Traditional Chinese Fixture
+
+Document purpose:
+This invoice is synthetic demo data for DocuRAG AgentOps RAG evaluation.
+Vendor label uses NVDLA only as a demo retrieval label. No real tax ID, logo,
+address, payment account, customer data, or transaction record is included.
+
+發票號碼: NV-DMO-2026-001
+供應商: NVDLA
+買受人: DocuRAG Demo Knowledge Base
+開立日期: 2026-01-12
+付款條件: Net 15, due by 2026-01-27
+幣別: TWD 新台幣
+
+品項明細:
+- Demo accelerator architecture briefing, quantity 1, unit price NT$ 8,000, amount NT$ 8,000
+- Synthetic inference benchmark note set, quantity 2, unit price NT$ 5,000, amount NT$ 10,000
+
+未稅小計: NT$ 18,000
+營業稅: NT$ 900
+發票總金額: NT$ 18,900
+
+RAG evidence summary:
+NVDLA invoice NV-DMO-2026-001 was issued on 2026-01-12.
+The total amount is NT$ 18,900 and the tax amount is NT$ 900.
+Payment is Net 15, due by 2026-01-27.

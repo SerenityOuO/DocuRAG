@@ -1,0 +1,29 @@
+Synthetic TWD Invoice Record
+
+Vendor label: Intel
+Invoice ID: INTL-DEMO-2026-143
+Date issued: 2026-03-28
+Buyer label: DocuRAG Admin Demo
+Currency: TWD
+
+This record is fictional demo data. It does not include real Intel billing
+information, registered address, tax number, logo, banking details, or purchase
+history. It is intended for retrieval benchmark testing only.
+
+費用明細:
+1) Synthetic platform note translation - NT$ 14,000
+2) Demo index quality checklist - NT$ 9,000
+3) Retrieval evidence review hour - NT$ 7,000
+
+Tax calculation:
+Subtotal before tax = NT$ 30,000
+Tax amount = NT$ 1,500
+Grand total = NT$ 31,500
+
+Terms:
+Payment condition is Net 20.
+Payment due date is 2026-04-17.
+
+Evaluation fact:
+Intel invoice INTL-DEMO-2026-143 total is NT$ 31,500.
+The invoice date is 2026-03-28 and tax is NT$ 1,500.

@@ -1,0 +1,32 @@
+發票文字樣本 - RAG 評估專用
+
+注意:
+本文件是 DocuRAG AgentOps 的 synthetic demo invoice fixture。DocuRAG
+為測試供應商名稱；內容不代表真實公司、真實交易或正式稅務文件。
+
+供應商資訊:
+供應商名稱: DocuRAG
+真實稅號: omitted for synthetic demo
+真實地址: omitted for synthetic demo
+
+發票資訊:
+發票號碼: DRAG-DEMO-2026-260
+開立日期: 2026-05-16
+幣別: TWD
+買受人: Phase 29 Built-in RAG Eval Demo
+
+明細:
+- Built-in eval API fixture preparation: NT$ 38,000
+- Frontend RAG test surface QA notes: NT$ 27,000
+- Retrieval citation evidence pack: NT$ 35,000
+
+未稅小計: NT$ 100,000
+營業稅: NT$ 5,000
+發票含稅總金額: NT$ 105,000
+
+付款條件:
+Net 30. Payment due date: 2026-06-15.
+
+RAG answer support:
+DocuRAG invoice DRAG-DEMO-2026-260 has total NT$ 105,000.
+The issue date is 2026-05-16, and tax is NT$ 5,000.

@@ -1,0 +1,36 @@
+測試用中文發票文字檔
+
+本文件為 DocuRAG AgentOps Phase 29 RAG 評估用 synthetic demo invoice。
+OpenAI 僅作為供應商標籤，方便檢索測試；內容不是 OpenAI 真實帳單，
+不包含真實公司地址、稅籍資料、logo、付款帳戶或任何敏感交易資訊。
+
+[基本資料]
+供應商: OpenAI
+發票號碼: OAI-TWD-2026-027
+開立日期: 2026-02-03
+客戶名稱: DocuRAG Demo Evaluation Team
+幣別: TWD
+
+[服務內容]
+Demo retrieval prompt review bundle
+數量: 3
+單價: NT$ 12,000
+小計: NT$ 36,000
+
+Synthetic model response audit worksheet
+數量: 2
+單價: NT$ 9,000
+小計: NT$ 18,000
+
+[金額]
+未稅金額: NT$ 54,000
+稅額: NT$ 2,700
+總金額: NT$ 56,700
+
+[付款]
+付款條件: Net 30
+付款到期日: 2026-03-05
+
+明確證據:
+OpenAI 發票 OAI-TWD-2026-027 的總金額是 NT$ 56,700。
+此張發票的稅額是 NT$ 2,700，開立日期是 2026-02-03。

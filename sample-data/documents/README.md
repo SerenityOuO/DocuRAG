@@ -6,6 +6,7 @@
 
 - `mock-invoice-aurora.txt`：虛構 invoice，適合查詢 `payment due date`、`AUR-2026-051` 或 `Net 15`。
 - `mock-invoice-orion.txt`：虛構 SaaS invoice，適合查詢 `ORN-2026-118`、`2026-06-30`、tax / amount due 或 line items。
+- `rag-eval-invoice-01-nvdla.txt` 到 `rag-eval-invoice-10-docurag.txt`：Phase 29 內建 RAG 評估用 synthetic 中文發票 fixture，共 10 張，供應商分布為 `NVDLA` 1 張、`GOOGLE` 1 張、`OpenAI` 1 張、`Intel` 3 張、`DocuRAG` 4 張；每份皆可作為 `.txt` direct ingestion 匯入後台知識庫。
 - `mock-contract-support.txt`：虛構 support contract excerpt，適合查詢 `SLA`、`renewal date` 或 `support credits`。
 - `mock-contract-harbor.txt`：虛構 data processing addendum，適合查詢 termination notice、confidentiality period 或 export request acknowledgement。
 - `mock-support-playbook.txt`：虛構 incident playbook，適合查詢 escalation channel、P1 response target、customer update cadence 或 demo-safe trace behavior。

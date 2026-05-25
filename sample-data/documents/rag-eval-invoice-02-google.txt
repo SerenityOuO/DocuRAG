@@ -1,0 +1,29 @@
+Demo Purchase Invoice
+
+Synthetic disclosure:
+This is public demo-safe data for DocuRAG AgentOps. GOOGLE is used only as a
+vendor label for retrieval testing. This document does not contain any real
+Google invoice, tax number, address, logo, payment instruction, or customer data.
+
+供應商名稱: GOOGLE
+Invoice No.: GGL-DEMO-2026-014
+Invoice Date: 2026-01-23
+Currency: TWD
+Buyer: DocuRAG Synthetic Admin Workspace
+
+Charges:
+1. Cloud search sandbox credit pack - NT$ 25,000
+2. Demo analytics export support - NT$ 15,000
+
+Subtotal before tax: NT$ 40,000
+Tax amount: NT$ 2,000
+Total payable: NT$ 42,000
+
+付款條件:
+Due on receipt. Demo payment reference: GGL-DEMO-2026-014.
+
+Evidence lines for evaluation:
+The vendor is GOOGLE.
+The invoice number is GGL-DEMO-2026-014.
+The issue date is 2026-01-23.
+The total amount is NT$ 42,000, including NT$ 2,000 tax.
