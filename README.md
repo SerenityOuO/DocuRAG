@@ -73,18 +73,48 @@ Optional Local AI Runtime
 
 ## 快速啟動
 
-Backend：
+Windows CMD 進階 demo 全開版：
 
-```powershell
-cd backend
-py -3.12 -m pip install -e ".[dev]"
-py -3.12 -m uvicorn app.main:app --reload
+```bat
+cd /d C:\Users\USER\Desktop\DocuRAG
+docker-compose -f infra\docker-compose.yml up -d qdrant
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\qdrant-collection-smoke.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\ollama-embedding-smoke.ps1
 ```
 
-Frontend：
+Backend terminal：
 
-```powershell
-cd frontend
+```bat
+cd /d C:\Users\USER\Desktop\DocuRAG\backend
+python -m pip install -e ".[dev,real-ocr]"
+
+set "DOCURAG_AUTH_MODE=demo"
+set "DOCURAG_AUTH_DEMO_SECRET=change-this-local-demo-secret"
+set "DOCURAG_OCR_PROVIDER=paddleocr"
+set "DOCURAG_LLM_PROVIDER=ollama"
+set "DOCURAG_LLM_BASE_URL=http://127.0.0.1:11434"
+set "DOCURAG_LLM_MODEL=qwen3.5:4b"
+set "DOCURAG_VLM_PROVIDER=ollama"
+set "DOCURAG_VLM_BASE_URL=http://127.0.0.1:11434"
+set "DOCURAG_VLM_MODEL=qwen3.5:4b"
+set "DOCURAG_RAG_RETRIEVAL_PROVIDER=hybrid_rerank"
+set "DOCURAG_EMBEDDING_PROVIDER=ollama"
+set "DOCURAG_EMBEDDING_BASE_URL=http://127.0.0.1:11434"
+set "DOCURAG_EMBEDDING_MODEL=qwen3-embedding:0.6b"
+set "DOCURAG_QDRANT_URL=http://127.0.0.1:6333"
+set "DOCURAG_QDRANT_COLLECTION=docurag_chunks_v1"
+set "DOCURAG_QDRANT_VECTOR_SIZE=1024"
+set "DOCURAG_RERANK_PROVIDER=fastembed"
+set "DOCURAG_RERANK_MODEL=BAAI/bge-reranker-base"
+
+python -m uvicorn app.main:app --reload
+```
+
+Frontend terminal：
+
+```bat
+cd /d C:\Users\USER\Desktop\DocuRAG\frontend
+set "VITE_API_BASE_URL=http://127.0.0.1:8000"
 npm.cmd install
 npm.cmd run dev
 ```
@@ -95,12 +125,7 @@ Demo UI：
 http://localhost:5173
 ```
 
-Demo login mode：
-
-```powershell
-$env:DOCURAG_AUTH_MODE="demo"
-$env:DOCURAG_AUTH_DEMO_SECRET="change-this-local-demo-secret"
-```
+Demo login：`admin / demo-admin-pass`、`analyst / demo-analyst-pass`、`viewer / demo-viewer-pass`。
 
 API docs：
 
