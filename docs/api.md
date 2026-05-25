@@ -67,6 +67,21 @@ This is a demo-safe auth slice, not production JWT refresh rotation, PostgreSQL 
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/projects/{project_id}/eval-runs` | List sample eval metrics |
+| POST | `/eval/rag/built-in` | v0.29.0 built-in RAG benchmark for Admin / Analyst; fixed `hybrid_rerank`, synthetic Chinese invoice fixtures |
+
+## Phase 29 Built-in RAG Eval Contract
+
+`POST /eval/rag/built-in` wraps the existing retrieval eval runner for the backend admin surface. It is intentionally narrow:
+
+- Strategy is always `hybrid_rerank`; the endpoint does not accept a strategy selector.
+- Dataset is always `sample-data/eval/built-in-rag-eval-zh-invoices.json`.
+- The fixture set contains 10 demo-safe synthetic Chinese invoices: `NVDLA` 1, `GOOGLE` 1, `OpenAI` 1, `Intel` 3 and `DocuRAG` 4. Dates and TWD amounts are unique.
+- Response summary only exposes `hit_rate_at_k`, `mrr_at_k`, `average_latency_ms`, `failure_count` and `fallback_count` for the first admin UI slice.
+- `failed_cases` and `fallback_cases` are available for collapsible UI details, not a full dashboard or ranking table.
+- If embedding, Qdrant or reranker runtime is unavailable, the endpoint falls back to keyword evidence with explicit fallback metadata.
+- Demo auth mode uses the same ingestion write guard: Admin / Analyst may run it; Viewer receives 403.
+
+This endpoint is not production eval history, custom dataset upload, OCR accuracy evaluation, VLM parser evaluation, LLM-as-judge, answer faithfulness scoring or citation quality scoring.
 
 ## Phase 28 Document Source Router Contract
 

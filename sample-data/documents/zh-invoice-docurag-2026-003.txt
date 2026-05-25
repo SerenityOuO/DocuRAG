@@ -1,0 +1,10 @@
+Synthetic demo invoice / demo-safe fixture. Amounts and dates are invented for benchmark coverage.
+發票號碼: DOCURAG-2026-003
+供應商: DocuRAG
+台幣幣別: TWD
+開立日期: 2026-05-17
+總金額: NT$33,880
+稅額: NT$1,613
+付款期限: 2026-06-14
+備註: 中文欄位順序不同，用於測試查詢命中。
+檢索摘要: 發票 DOCURAG-2026-003 供應商 DocuRAG 開立日期 2026-05-17 總金額 NT$33,880 稅額 NT$1,613 付款期限 2026-06-14 幣別 TWD 台幣。

@@ -1,0 +1,10 @@
+Synthetic demo invoice / demo-safe fixture. DocuRAG vendor record for built-in RAG evaluation.
+發票號碼: DOCURAG-2026-001
+供應商: DocuRAG
+開立日期: 2026-05-13
+幣別: TWD
+費用名稱: 文件客服 demo 測試包
+付款期限: 2026-05-30
+稅額: NT$460
+總金額: NT$9,650
+檢索摘要: 發票 DOCURAG-2026-001 供應商 DocuRAG 開立日期 2026-05-13 總金額 NT$9,650 稅額 NT$460 付款期限 2026-05-30 幣別 TWD 台幣。

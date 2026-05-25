@@ -1,0 +1,10 @@
+Synthetic demo invoice / demo-safe fixture. Vendor label is used only for benchmark variety.
+發票號碼: INTEL-2026-002
+供應商: Intel
+付款資訊: 付款期限 2026-05-28
+日期欄位: 開立日期 2026-05-09
+幣別: TWD
+稅額: NT$1,309
+總金額: NT$27,490
+備註: 台幣 synthetic invoice for RAG retrieval eval.
+檢索摘要: 發票 INTEL-2026-002 供應商 Intel 開立日期 2026-05-09 總金額 NT$27,490 稅額 NT$1,309 付款期限 2026-05-28 幣別 TWD 台幣。

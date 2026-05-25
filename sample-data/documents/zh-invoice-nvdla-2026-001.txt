@@ -1,0 +1,10 @@
+Synthetic demo invoice / demo-safe fixture. This file is not a real company invoice.
+供應商: NVDLA
+發票號碼: NVDLA-2026-001
+開立日期: 2026-05-01
+付款期限: 2026-05-16
+幣別: TWD
+品項: 邊緣推論模組測試套件
+稅額: NT$594
+總金額: NT$12,480
+檢索摘要: 發票 NVDLA-2026-001 供應商 NVDLA 開立日期 2026-05-01 總金額 NT$12,480 稅額 NT$594 付款期限 2026-05-16 幣別 TWD 台幣。

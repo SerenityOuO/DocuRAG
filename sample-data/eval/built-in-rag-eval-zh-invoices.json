@@ -1,0 +1,102 @@
+[
+  {
+    "id": "built_in_zh_invoice_nvdla_001_total",
+    "query": "NVDLA-2026-001 這張中文發票的台幣總金額與付款期限是什麼？",
+    "top_k": 5,
+    "expected_document_filenames": ["zh-invoice-nvdla-2026-001.txt"],
+    "expected_chunk_hints": ["發票 NVDLA-2026-001 供應商 NVDLA 開立日期 2026-05-01 總金額 NT$12,480"],
+    "expected_terms": ["NVDLA-2026-001", "NVDLA", "2026-05-01", "NT$12,480", "2026-05-16", "TWD"],
+    "tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:NVDLA"],
+    "notes": "Synthetic NVDLA invoice, TWD amount and due date lookup."
+  },
+  {
+    "id": "built_in_zh_invoice_google_001_total",
+    "query": "GOOGLE-2026-001 的總金額、稅額、開立日期各是多少？",
+    "top_k": 5,
+    "expected_document_filenames": ["zh-invoice-google-2026-001.txt"],
+    "expected_chunk_hints": ["發票 GOOGLE-2026-001 供應商 GOOGLE 開立日期 2026-05-03 總金額 NT$31,860"],
+    "expected_terms": ["GOOGLE-2026-001", "GOOGLE", "2026-05-03", "NT$31,860", "NT$1,517", "TWD"],
+    "tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:GOOGLE"],
+    "notes": "Synthetic GOOGLE invoice with explicit tax and amount evidence."
+  },
+  {
+    "id": "built_in_zh_invoice_openai_001_due",
+    "query": "OPENAI-2026-001 的付款期限與台幣總金額是什麼？",
+    "top_k": 5,
+    "expected_document_filenames": ["zh-invoice-openai-2026-001.txt"],
+    "expected_chunk_hints": ["發票 OPENAI-2026-001 供應商 OpenAI 開立日期 2026-05-05 總金額 NT$45,210"],
+    "expected_terms": ["OPENAI-2026-001", "OpenAI", "2026-05-05", "NT$45,210", "2026-06-04", "TWD"],
+    "tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:OpenAI"],
+    "notes": "Synthetic OpenAI invoice, no real transaction data."
+  },
+  {
+    "id": "built_in_zh_invoice_intel_001_amount",
+    "query": "INTEL-2026-001 發票的供應商、開立日期與總金額是什麼？",
+    "top_k": 5,
+    "expected_document_filenames": ["zh-invoice-intel-2026-001.txt"],
+    "expected_chunk_hints": ["發票 INTEL-2026-001 供應商 Intel 開立日期 2026-05-07 總金額 NT$18,640"],
+    "expected_terms": ["INTEL-2026-001", "Intel", "2026-05-07", "NT$18,640", "NT$888", "TWD"],
+    "tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:Intel"],
+    "notes": "First synthetic Intel invoice."
+  },
+  {
+    "id": "built_in_zh_invoice_intel_002_due",
+    "query": "INTEL-2026-002 的付款期限、稅額和總金額是多少？",
+    "top_k": 5,
+    "expected_document_filenames": ["zh-invoice-intel-2026-002.txt"],
+    "expected_chunk_hints": ["發票 INTEL-2026-002 供應商 Intel 開立日期 2026-05-09 總金額 NT$27,490"],
+    "expected_terms": ["INTEL-2026-002", "Intel", "2026-05-09", "NT$27,490", "NT$1,309", "2026-05-28", "TWD"],
+    "tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:Intel"],
+    "notes": "Second synthetic Intel invoice."
+  },
+  {
+    "id": "built_in_zh_invoice_intel_003_date",
+    "query": "請找出 INTEL-2026-003 發票的開立日期、付款期限與總金額。",
+    "top_k": 5,
+    "expected_document_filenames": ["zh-invoice-intel-2026-003.txt"],
+    "expected_chunk_hints": ["發票 INTEL-2026-003 供應商 Intel 開立日期 2026-05-11 總金額 NT$39,175"],
+    "expected_terms": ["INTEL-2026-003", "Intel", "2026-05-11", "NT$39,175", "2026-06-10", "TWD"],
+    "tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:Intel"],
+    "notes": "Third synthetic Intel invoice."
+  },
+  {
+    "id": "built_in_zh_invoice_docurag_001_total",
+    "query": "DOCURAG-2026-001 的總金額、稅額與幣別是什麼？",
+    "top_k": 5,
+    "expected_document_filenames": ["zh-invoice-docurag-2026-001.txt"],
+    "expected_chunk_hints": ["發票 DOCURAG-2026-001 供應商 DocuRAG 開立日期 2026-05-13 總金額 NT$9,650"],
+    "expected_terms": ["DOCURAG-2026-001", "DocuRAG", "2026-05-13", "NT$9,650", "NT$460", "TWD"],
+    "tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:DocuRAG"],
+    "notes": "First synthetic DocuRAG invoice."
+  },
+  {
+    "id": "built_in_zh_invoice_docurag_002_due",
+    "query": "DOCURAG-2026-002 付款期限是哪一天？總金額是多少？",
+    "top_k": 5,
+    "expected_document_filenames": ["zh-invoice-docurag-2026-002.txt"],
+    "expected_chunk_hints": ["發票 DOCURAG-2026-002 供應商 DocuRAG 開立日期 2026-05-15 總金額 NT$21,730"],
+    "expected_terms": ["DOCURAG-2026-002", "DocuRAG", "2026-05-15", "NT$21,730", "2026-06-08", "TWD"],
+    "tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:DocuRAG"],
+    "notes": "Second synthetic DocuRAG invoice."
+  },
+  {
+    "id": "built_in_zh_invoice_docurag_003_tax",
+    "query": "DOCURAG-2026-003 的稅額、總金額與開立日期是什麼？",
+    "top_k": 5,
+    "expected_document_filenames": ["zh-invoice-docurag-2026-003.txt"],
+    "expected_chunk_hints": ["發票 DOCURAG-2026-003 供應商 DocuRAG 開立日期 2026-05-17 總金額 NT$33,880"],
+    "expected_terms": ["DOCURAG-2026-003", "DocuRAG", "2026-05-17", "NT$33,880", "NT$1,613", "TWD"],
+    "tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:DocuRAG"],
+    "notes": "Third synthetic DocuRAG invoice."
+  },
+  {
+    "id": "built_in_zh_invoice_docurag_004_due",
+    "query": "DOCURAG-2026-004 這張發票的付款期限和台幣總金額是什麼？",
+    "top_k": 5,
+    "expected_document_filenames": ["zh-invoice-docurag-2026-004.txt"],
+    "expected_chunk_hints": ["發票 DOCURAG-2026-004 供應商 DocuRAG 開立日期 2026-05-19 總金額 NT$58,720"],
+    "expected_terms": ["DOCURAG-2026-004", "DocuRAG", "2026-05-19", "NT$58,720", "2026-06-20", "TWD"],
+    "tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:DocuRAG"],
+    "notes": "Fourth synthetic DocuRAG invoice."
+  }
+]

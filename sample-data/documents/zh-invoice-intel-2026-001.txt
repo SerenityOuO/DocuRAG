@@ -1,0 +1,11 @@
+Synthetic demo invoice / demo-safe fixture. Do not treat this as real billing data.
+版面 A / 發票
+發票號碼: INTEL-2026-001
+供應商: Intel
+開立日期: 2026-05-07
+幣別: TWD
+付款期限: 2026-05-22
+服務: 晶片規格資料清理
+總金額: NT$18,640
+稅額: NT$888
+檢索摘要: 發票 INTEL-2026-001 供應商 Intel 開立日期 2026-05-07 總金額 NT$18,640 稅額 NT$888 付款期限 2026-05-22 幣別 TWD 台幣。

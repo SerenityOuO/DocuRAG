@@ -1,6 +1,6 @@
 # DocuRAG AgentOps Frontend
 
-最小 Vue 3 + Vite demo UI 目前已拆成前台 Viewer Chat 與後台 Admin / Analyst Ingestion 兩個 surface。v0.27.0 起預設先打開後台 Admin / Analyst Ingestion，讓 demo 第一眼呈現上傳、provider-selected OCR、VLM-first parser、Agent trace 與 best-effort Qdrant vector indexing。v0.27.1 起 backend VLM parser 會同時使用原始圖片與 OCR context，欄位結果可在 API / smoke trace 中看到 OCR evidence mapping 或 unmatched 狀態。Phase 28 Document Source Router contract 已明確標記 upload flow 應分成 `image_ocr`、`text_upload`、`pdf_text` 與 `pdf_scanned_pending_ocr`；目前 UI 對 `.txt` 會跳過 OCR 並顯示直接文字匯入，對 text-native PDF 會顯示 `pdf_text` ready，對 scanned / empty PDF 只顯示 `pdf_scanned_pending_ocr`。若 backend 以 `DOCURAG_AUTH_MODE=demo` 啟動，UI 會先顯示 demo login screen，Admin / Analyst 可進後台 ingestion，Viewer 只能使用前台查詢且後台入口 disabled。Viewer Chat 可切換使用，只查詢後端已建立的文件知識庫，並顯示 answer、answer source、retrieval source 與 citation summary。OCR detail、raw JSON、retrieval trace table 與 eval metrics 可由 backend API、smoke scripts 或 CLI 檢查，不屬於 Viewer Chat 主流程；正式知識庫 worker / DB pipeline 尚未實作。backend 預設使用 `hybrid_rerank` RAG / Agent search、Ollama embedding 與 FastEmbed rerank adapter；Ollama embedding、Qdrant 或 reranker 不可用時，UI 會顯示 fallback 狀態。這仍不是 production VLM parser、autonomous Agent dashboard 或正式 RBAC。
+最小 Vue 3 + Vite demo UI 目前已拆成前台 Viewer Chat 與後台 Admin / Analyst Ingestion 兩個 surface。v0.27.0 起預設先打開後台 Admin / Analyst Ingestion，讓 demo 第一眼呈現上傳、provider-selected OCR、VLM-first parser、Agent trace 與 best-effort Qdrant vector indexing。v0.27.1 起 backend VLM parser 會同時使用原始圖片與 OCR context，欄位結果可在 API / smoke trace 中看到 OCR evidence mapping 或 unmatched 狀態。Phase 28 Document Source Router contract 已明確標記 upload flow 應分成 `image_ocr`、`text_upload`、`pdf_text` 與 `pdf_scanned_pending_ocr`；目前 UI 對 `.txt` 會跳過 OCR 並顯示直接文字匯入，對 text-native PDF 會顯示 `pdf_text` ready，對 scanned / empty PDF 只顯示 `pdf_scanned_pending_ocr`。v0.29.0 起後台新增「測試RAG」，Admin / Analyst 可直接執行固定 `hybrid_rerank` 的 10 張 synthetic 中文發票 built-in benchmark，並只看 Hit Rate@K、MRR@K、平均延遲與 Failure / Fallback；Agent 執行紀錄改成可摺疊。若 backend 以 `DOCURAG_AUTH_MODE=demo` 啟動，UI 會先顯示 demo login screen，Admin / Analyst 可進後台 ingestion，Viewer 只能使用前台查詢且後台入口 disabled。Viewer Chat 可切換使用，只查詢後端已建立的文件知識庫，並顯示 answer、answer source、retrieval source 與 citation summary。OCR detail、raw JSON、retrieval trace table 與完整 eval trace 可由 backend API、smoke scripts 或 CLI 檢查，不屬於 Viewer Chat 主流程；正式知識庫 worker / DB pipeline 尚未實作。backend 預設使用 `hybrid_rerank` RAG / Agent search、Ollama embedding 與 FastEmbed rerank adapter；Ollama embedding、Qdrant 或 reranker 不可用時，UI 會顯示 fallback 狀態。這仍不是 production VLM parser、autonomous Agent dashboard、production eval dashboard 或正式 RBAC。
 
 ## Install
 
@@ -61,6 +61,8 @@ npm.cmd run build
 - 回答結果：顯示 answer、answer source、retrieval source 與簡化引用來源。
 - 空知識庫狀態：以 Viewer 角度提示需先由後台知識庫管理流程建立資料，不在前台查詢畫面提供文件上傳或 OCR 操作。
 - 後台 Admin / Analyst Ingestion：預設入口，呼叫 `POST /documents/upload` 與 provider-selected `POST /documents/{document_id}/ocr`，顯示 document / OCR / parser / local chunks 狀態；OCR 成功後會 best-effort 執行 `POST /documents/{document_id}/parse` 與 `POST /documents/{document_id}/index/vector`；real OCR 失敗時才提供手動 `POST /documents/{document_id}/ocr/mock` fallback。
+- 測試RAG：後台固定呼叫 `POST /eval/rag/built-in`，使用 `hybrid_rerank` 內建中文發票 benchmark，顯示 Hit Rate@K、MRR@K、平均延遲與 Failure / Fallback；fallback / failed cases 只在摺疊明細中呈現。
+- Agent 執行紀錄：後台 Agent trace surface 改成可展開 / 收合，收合時仍保留標題與目前狀態。
 - Phase 28 source router runtime：frontend 遇到 `.txt` 會顯示 direct text path，跳過 provider-selected OCR，直接接 best-effort parser / vector indexing；text-native PDF 會顯示 `pdf_text` path 並接 best-effort parser / vector indexing；scanned / empty PDF 顯示 `pdf_scanned_pending_ocr`，不自動送 OCR。
 - 欄位解析：OCR 完成後可在後台觸發 `POST /documents/{document_id}/parse`，並顯示 parser status、document type、invoice number、vendor、issue date、total amount、currency、confidence 與 source text 摘要；v0.27.1 起 VLM 欄位若可對回 OCR line 會保存 source text / page / bbox，無法對回時以 evidence unmatched / unavailable 標示；詳細 JSON 留給 `GET /documents/{document_id}/fields` 或 API docs。
 - Phase 26 parser source comparison：API response 會透過 `parser_source`、`trace_metadata.fallback_chain`、`trace_metadata.fallback_reason`、`trace_metadata.confidence_summary` 與 source input metadata 區分 `vlm_invoice` 與 `deterministic_invoice`；frontend 仍只呈現 demo-friendly structured fields 摘要，不新增 production parser comparison dashboard。
@@ -68,6 +70,7 @@ npm.cmd run build
 - 工程細節：OCR text、extracted fields、document list、metadata JSON、retrieved chunks、trace metadata 與 eval metrics 改由 backend API、`scripts/demo-smoke-test.ps1`、`scripts/retrieval-eval-smoke.ps1` 或 API docs 檢查，不放在 frontend 主畫面；正式知識庫 ingestion / indexing pipeline 尚未實作。
 - backend 預設嘗試 Ollama LLM provider；generation 成功時 answer source 顯示 `ollama/qwen3.5:4b`，Ollama 不可用時顯示 `LLM unavailable fallback`，若以 `DOCURAG_LLM_PROVIDER=` 明確關閉則顯示 `確定性基準回答`。
 - backend 預設使用 `hybrid_rerank`；retrieval source 可能顯示 `hybrid_rerank`、`hybrid_rerank 備援：vector_unavailable`、`hybrid_rerank 備援：reranker_unavailable`、`vector/qdrant` 或舊 keyword baseline override。
+- Viewer 在 demo auth mode 下看不到後台「測試RAG」與 Agent 操作；Admin / Analyst 才能操作。
 
 建議面試前先 seed demo knowledge base，讓前台客服聊天一打開就能問：
 
@@ -97,3 +100,4 @@ payment due date Net 15
 - v0.27.0: Aggressive Demo Defaults 已完成；後台預設入口、OCR 後 best-effort parser + vector indexing、default `hybrid_rerank` retrieval source / fallback 顯示與版本文件同步已完成。
 - v0.27.1: OCR / VLM Evidence Alignment 已完成；backend VLM parser 使用 image + OCR context，欄位結果可保留 OCR line / bbox evidence 或明確 unmatched 狀態。
 - v0.28.0: Document Sources / Demo Auth Mode 已完成；UI 會依 `text_upload`、`pdf_text`、`pdf_scanned_pending_ocr` 顯示來源狀態，demo auth mode 會先顯示 login screen，Admin / Analyst 可使用 ingestion，Viewer 只能查詢。
+- v0.29.0: Built-in RAG Eval Admin Surface 已完成；後台新增「測試RAG」固定 `hybrid_rerank` metrics，Agent 執行紀錄可摺疊，Viewer 不顯示後台測試與 Agent 操作。

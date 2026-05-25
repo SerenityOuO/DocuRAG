@@ -192,6 +192,39 @@ export type RagQueryResponse = {
   retrieved_chunks: RetrievedChunk[];
 };
 
+export type BuiltInRagEvalSummary = {
+  case_count: number;
+  hit_rate_at_k: number;
+  mrr_at_k: number;
+  average_latency_ms: number;
+  failure_count: number;
+  fallback_count: number;
+};
+
+export type BuiltInRagEvalCaseResult = {
+  case_id: string;
+  query: string;
+  top_k: number;
+  hit: boolean;
+  first_relevant_rank: number | null;
+  matched_expected_terms: string[];
+  error: string | null;
+  fallback_reasons: string[];
+};
+
+export type BuiltInRagEvalResponse = {
+  run_id: string;
+  created_at: string;
+  strategy: "hybrid_rerank";
+  dataset_name: string;
+  dataset_path: string;
+  case_count: number;
+  summary: BuiltInRagEvalSummary;
+  environment: Record<string, string | number | boolean | null>;
+  failed_cases: BuiltInRagEvalCaseResult[];
+  fallback_cases: BuiltInRagEvalCaseResult[];
+};
+
 export type AgentToolStatus = "completed" | "failed";
 
 export type AgentRunStatus = "pending" | "running" | "completed" | "failed";
@@ -429,6 +462,15 @@ export async function queryRag(query: string, topK: number): Promise<RagQueryRes
   });
 
   return readJson<RagQueryResponse>(response);
+}
+
+export async function runBuiltInRagEval(): Promise<BuiltInRagEvalResponse> {
+  const response = await fetch(`${API_BASE_URL}/eval/rag/built-in`, {
+    method: "POST",
+    headers: jsonHeaders(),
+  });
+
+  return readJson<BuiltInRagEvalResponse>(response);
 }
 
 export async function runAgent(request: AgentRunRequest): Promise<AgentRun> {

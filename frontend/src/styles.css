@@ -306,6 +306,7 @@ td {
 .upload-surface,
 .ingestion-surface,
 .ingestion-status,
+.eval-surface,
 .agent-surface,
 .auth-surface {
   min-height: 360px;
@@ -431,8 +432,14 @@ td {
 }
 
 .collapsible-status summary h2,
+.collapsible-status summary h3,
 .collapsible-status summary p {
   margin: 0;
+}
+
+.collapsible-status summary h3 {
+  color: #172033;
+  font-size: 15px;
 }
 
 .collapsible-status summary p {
@@ -647,8 +654,100 @@ td {
   border-color: #fecaca;
 }
 
+.eval-surface,
 .agent-surface {
   grid-column: 1 / -1;
+}
+
+.eval-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.eval-result {
+  display: grid;
+  gap: 14px;
+}
+
+.eval-metric-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.eval-metric-cell {
+  background: #f8fafc;
+  border: 1px solid #e5edf4;
+  border-left: 3px solid #2563eb;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.eval-metric-cell span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.eval-metric-cell strong {
+  color: #172033;
+  font-size: 19px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.eval-dataset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.eval-case-details {
+  margin-top: 0;
+}
+
+.eval-case-list {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.eval-case-list li {
+  background: #f8fafc;
+  border: 1px solid #e5edf4;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.eval-case-list strong {
+  color: #172033;
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.eval-case-list p,
+.eval-case-list small {
+  color: #64748b;
+  line-height: 1.45;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.agent-collapsible .collapsible-body {
+  margin-top: 16px;
 }
 
 .agent-form {
@@ -1454,6 +1553,7 @@ pre {
   .minimal-chat-form,
   .auth-form,
   .role-picker,
+  .eval-metric-grid,
   .agent-form,
   .agent-tool-details {
     grid-template-columns: 1fr;

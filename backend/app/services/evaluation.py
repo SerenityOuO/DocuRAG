@@ -28,6 +28,9 @@ ResultStrategy = Literal[
     "hybrid_rerank",
     "vector_unavailable_fallback",
 ]
+BUILT_IN_RAG_EVAL_STRATEGY: EvalStrategy = "hybrid_rerank"
+BUILT_IN_RAG_EVAL_DATASET_NAME = "zh_invoice_hybrid_rerank_v1"
+BUILT_IN_RAG_EVAL_DATASET_FILENAME = "built-in-rag-eval-zh-invoices.json"
 
 
 @dataclass(frozen=True)
@@ -510,6 +513,69 @@ class HybridRerankEvalProvider:
         return "none"
 
 
+class UnavailableVectorEvalProvider:
+    name = "vector_unavailable"
+
+    def __init__(
+        self,
+        keyword_provider: KeywordRagProvider,
+        reason: str,
+        settings: Settings,
+    ) -> None:
+        self.keyword_provider = keyword_provider
+        self.reason = reason
+        self.settings = settings
+
+    def query(
+        self,
+        query: str,
+        top_k: int,
+        documents: list[DocumentMetadata],
+    ) -> RagQueryResponse:
+        response = self.keyword_provider.query(query, top_k, documents)
+        fallback_metadata = {
+            "retrieval_provider": "keyword",
+            "vector_retrieval_status": "failed",
+            "vector_store": "qdrant",
+            "qdrant_collection": self.settings.qdrant_collection,
+            "embedding_provider": str(self.settings.embedding_provider or "disabled"),
+            "embedding_model": self.settings.embedding_model,
+            "vector_retrieval_error": self.reason[:500],
+        }
+        citations = [
+            citation.model_copy(
+                update={
+                    "trace_metadata": {
+                        **citation.trace_metadata,
+                        **fallback_metadata,
+                    }
+                }
+            )
+            for citation in response.citations
+        ]
+        retrieved_chunks = [
+            chunk.model_copy(
+                update={
+                    "metadata": {
+                        **chunk.metadata,
+                        **fallback_metadata,
+                    }
+                }
+            )
+            for chunk in response.retrieved_chunks
+        ]
+        return response.model_copy(
+            update={
+                "answer": (
+                    f"{response.answer}\n\n"
+                    f"Vector retrieval unavailable; fallback to keyword retrieval. Error: {self.reason}"
+                ),
+                "citations": citations,
+                "retrieved_chunks": retrieved_chunks,
+            }
+        )
+
+
 def evaluate_retrieval_response(
     case: RetrievalEvalCase,
     response: RagQueryResponse,
@@ -667,6 +733,122 @@ def create_eval_provider(
         ), environment
 
     return VectorRerankEvalProvider(vector_provider, keyword_provider, rerank_service), environment
+
+
+def built_in_rag_eval_dataset_path(repo_root: Path | None = None) -> Path:
+    root = repo_root or default_repo_root()
+    return root / "sample-data" / "eval" / BUILT_IN_RAG_EVAL_DATASET_FILENAME
+
+
+def run_built_in_rag_eval(settings: Settings, repo_root: Path | None = None) -> RetrievalEvalRun:
+    root = repo_root or default_repo_root()
+    dataset_path = built_in_rag_eval_dataset_path(root)
+    cases = load_eval_cases(dataset_path)
+    documents = build_eval_documents(cases, root / "sample-data" / "documents")
+    provider, environment = create_built_in_hybrid_rerank_provider(documents, settings)
+    environment = {
+        **environment,
+        "dataset_name": BUILT_IN_RAG_EVAL_DATASET_NAME,
+        "document_fixture_count": len({filename for case in cases for filename in case.expected_document_filenames}),
+        "case_count": len(cases),
+    }
+    return run_retrieval_eval(
+        cases=cases,
+        documents=documents,
+        provider=provider,
+        strategy=BUILT_IN_RAG_EVAL_STRATEGY,
+        dataset_path=dataset_path,
+        environment=environment,
+    )
+
+
+def create_built_in_hybrid_rerank_provider(
+    documents: list[DocumentMetadata],
+    settings: Settings,
+) -> tuple[RagProvider, dict[str, object]]:
+    eval_settings = _built_in_eval_settings(settings)
+    keyword_provider = KeywordRagProvider()
+    embedding_provider = create_embedding_provider(eval_settings)
+    vector_store = create_qdrant_vector_store(eval_settings)
+    environment: dict[str, object] = {
+        "retrieval_provider": BUILT_IN_RAG_EVAL_STRATEGY,
+        "fallback_safe": True,
+        "embedding_provider": embedding_provider.name,
+        "embedding_model": str(getattr(embedding_provider, "model", eval_settings.embedding_model)),
+        "qdrant_collection": vector_store.collection_name,
+        "qdrant_vector_size": vector_store.vector_size,
+        "merge_policy": "rank_based_fusion",
+        "dedupe_key": "document_id_chunk_id",
+    }
+
+    vector_provider: RagProvider | None = None
+    embedding_health = embedding_provider.check_health()
+    environment.update(
+        {
+            "embedding_health_available": embedding_health.available,
+            "embedding_health_message": embedding_health.message,
+        }
+    )
+
+    if not embedding_health.available:
+        reason = embedding_health.message
+        vector_provider = UnavailableVectorEvalProvider(keyword_provider, reason, eval_settings)
+        environment.update(
+            {
+                "vector_preflight_status": "failed",
+                "vector_preflight_reason": reason,
+                "indexed_document_count": 0,
+                "indexed_chunk_count": 0,
+            }
+        )
+    else:
+        try:
+            collection = vector_store.ensure_collection()
+            indexing_service = VectorIndexingService(embedding_provider, vector_store)
+            indexing_results = [indexing_service.index_document(document) for document in documents]
+            failed_indexing = [result for result in indexing_results if result.status != "completed"]
+            if failed_indexing:
+                details = "; ".join(result.error or result.reason or result.status for result in failed_indexing)
+                raise RuntimeError(f"Built-in eval vector indexing did not complete. {details}")
+
+            vector_provider = VectorRagProvider(keyword_provider, embedding_provider, vector_store)
+            environment.update(
+                {
+                    "vector_preflight_status": "completed",
+                    "qdrant_collection_exists": collection.exists,
+                    "indexed_document_count": len(indexing_results),
+                    "indexed_chunk_count": sum(result.indexed_chunk_count for result in indexing_results),
+                }
+            )
+        except Exception as exc:
+            reason = str(exc)
+            vector_provider = UnavailableVectorEvalProvider(keyword_provider, reason, eval_settings)
+            environment.update(
+                {
+                    "vector_preflight_status": "failed",
+                    "vector_preflight_reason": reason,
+                    "indexed_document_count": 0,
+                    "indexed_chunk_count": 0,
+                }
+            )
+
+    rerank_service = create_rerank_service(eval_settings)
+    environment.update(
+        {
+            "rerank_provider": rerank_service.provider.name,
+            "rerank_model": str(rerank_service.provider.model or ""),
+            "rerank_top_k": rerank_service.top_k,
+            "rerank_timeout_seconds": rerank_service.timeout_seconds,
+        }
+    )
+    return (
+        HybridRerankEvalProvider(
+            HybridEvalProvider(keyword_provider, vector_provider),
+            keyword_provider,
+            rerank_service,
+        ),
+        environment,
+    )
 
 
 def default_repo_root() -> Path:
@@ -841,6 +1023,19 @@ def _result_fallback_reasons(result: RetrievalEvalResult) -> list[str]:
             reasons.append(f"rerank_status={rerank_status}")
 
     return list(dict.fromkeys(reasons))
+
+
+def result_fallback_reasons(result: RetrievalEvalResult) -> list[str]:
+    return _result_fallback_reasons(result)
+
+
+def _built_in_eval_settings(settings: Settings) -> Settings:
+    return settings.model_copy(
+        update={
+            "embedding_timeout_seconds": min(settings.embedding_timeout_seconds, 2.0),
+            "qdrant_timeout_seconds": min(settings.qdrant_timeout_seconds, 2.0),
+        }
+    )
 
 
 def _failed_result(

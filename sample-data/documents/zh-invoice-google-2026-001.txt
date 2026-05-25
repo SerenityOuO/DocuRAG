@@ -1,0 +1,11 @@
+Synthetic demo invoice / demo-safe fixture. Brand name is a synthetic vendor label only.
+文件類型: 中文發票測試資料
+發票號碼: GOOGLE-2026-001
+供應商: GOOGLE
+幣別: TWD
+開立日期: 2026-05-03
+小計: NT$30,343
+稅額: NT$1,517
+總金額: NT$31,860
+付款期限: 2026-06-02
+檢索摘要: 發票 GOOGLE-2026-001 供應商 GOOGLE 開立日期 2026-05-03 總金額 NT$31,860 稅額 NT$1,517 付款期限 2026-06-02 幣別 TWD 台幣。

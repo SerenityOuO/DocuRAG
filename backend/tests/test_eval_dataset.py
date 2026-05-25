@@ -4,6 +4,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATASET_PATH = REPO_ROOT / "sample-data" / "eval" / "retrieval-eval.json"
+BUILT_IN_RAG_EVAL_DATASET_PATH = REPO_ROOT / "sample-data" / "eval" / "built-in-rag-eval-zh-invoices.json"
 SAMPLE_DOCUMENTS_DIR = REPO_ROOT / "sample-data" / "documents"
 REQUIRED_FIELDS = {
     "id",
@@ -18,6 +19,14 @@ REQUIRED_FIELDS = {
 
 def load_dataset() -> list[dict[str, object]]:
     with DATASET_PATH.open(encoding="utf-8") as dataset_file:
+        dataset = json.load(dataset_file)
+
+    assert isinstance(dataset, list)
+    return dataset
+
+
+def load_built_in_rag_eval_dataset() -> list[dict[str, object]]:
+    with BUILT_IN_RAG_EVAL_DATASET_PATH.open(encoding="utf-8") as dataset_file:
         dataset = json.load(dataset_file)
 
     assert isinstance(dataset, list)
@@ -99,5 +108,74 @@ def test_retrieval_eval_expected_terms_are_backed_by_sample_documents() -> None:
             for filename in case["expected_document_filenames"]
         ).casefold()
 
+        for term in case["expected_terms"]:
+            assert term.casefold() in source_text
+
+
+def test_built_in_rag_eval_dataset_has_expected_invoice_distribution() -> None:
+    dataset = load_built_in_rag_eval_dataset()
+
+    assert len(dataset) == 10
+    assert len({case["id"] for case in dataset}) == len(dataset)
+
+    filenames = [
+        filename
+        for case in dataset
+        for filename in case["expected_document_filenames"]
+    ]
+    assert len(filenames) == 10
+    assert len(set(filenames)) == 10
+
+    vendor_counts: dict[str, int] = {}
+    dates: set[str] = set()
+    amounts: set[str] = set()
+
+    for case in dataset:
+        assert REQUIRED_FIELDS.issubset(case)
+        assert case["top_k"] == 5
+        vendor_tags = [
+            str(tag).removeprefix("vendor:")
+            for tag in case["tags"]
+            if str(tag).startswith("vendor:")
+        ]
+        assert len(vendor_tags) == 1
+        vendor_counts[vendor_tags[0]] = vendor_counts.get(vendor_tags[0], 0) + 1
+
+        filename = case["expected_document_filenames"][0]
+        document_text = (SAMPLE_DOCUMENTS_DIR / filename).read_text(encoding="utf-8")
+        assert "Synthetic demo invoice" in document_text
+        assert "幣別: TWD" in document_text
+        assert "台幣" in document_text
+        assert "真實" not in document_text
+
+        date_terms = [term for term in case["expected_terms"] if str(term).startswith("2026-05-")]
+        amount_terms = [term for term in case["expected_terms"] if str(term).startswith("NT$")]
+        assert date_terms
+        assert amount_terms
+        dates.add(date_terms[0])
+        amounts.add(amount_terms[0])
+
+    assert vendor_counts == {
+        "DocuRAG": 4,
+        "GOOGLE": 1,
+        "Intel": 3,
+        "NVDLA": 1,
+        "OpenAI": 1,
+    }
+    assert len(dates) == 10
+    assert len(amounts) == 10
+
+
+def test_built_in_rag_eval_expected_terms_are_backed_by_invoice_fixtures() -> None:
+    dataset = load_built_in_rag_eval_dataset()
+
+    for case in dataset:
+        source_text = "\n".join(
+            (SAMPLE_DOCUMENTS_DIR / filename).read_text(encoding="utf-8")
+            for filename in case["expected_document_filenames"]
+        ).casefold()
+
+        for hint in case["expected_chunk_hints"]:
+            assert hint.casefold() in source_text
         for term in case["expected_terms"]:
             assert term.casefold() in source_text

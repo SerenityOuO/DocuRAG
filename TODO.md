@@ -879,7 +879,7 @@ Phase 28 guardrails：
 
 ## MVP v0.29.0 Built-in RAG Eval Admin Surface
 
-- [ ] `tasks/phase-29-rag-eval-admin-surface/29-01-built-in-rag-eval-admin-surface.md`: 在後台知識庫管理新增「測試RAG」內建基準測試，固定 `hybrid_rerank`，只顯示 Hit Rate@K、MRR@K、平均延遲與 Failure / Fallback，並把 Agent 執行紀錄改成可摺疊。
+- [x] `tasks/phase-29-rag-eval-admin-surface/29-01-built-in-rag-eval-admin-surface.md`: 在後台知識庫管理新增「測試RAG」內建基準測試，固定 `hybrid_rerank`，只顯示 Hit Rate@K、MRR@K、平均延遲與 Failure / Fallback，並把 Agent 執行紀錄改成可摺疊。
 
 Phase 29 goal：
 
@@ -895,6 +895,16 @@ Phase 29 guardrails：
 - 不新增 Recall@K、LLM-as-judge、answer faithfulness、citation quality scoring 或人工標註流程。
 - 不把中文發票 fixture 說成 OCR 準確率測試；本 phase 測 retrieval evidence 是否被找回，不測 OCR、PDF rendering、layout analysis 或 VLM parser。
 - 不新增 PostgreSQL schema、migration、Redis、NATS、worker、async queue、正式 RBAC、tenant isolation、OpenAI API、vLLM、K8s 或 deployment 設定。
+
+Phase 29 validation：
+
+- Backend targeted eval tests：`python -m pytest backend/tests/test_evaluation.py backend/tests/test_eval_dataset.py backend/tests/test_evaluation_api.py -q` 通過，`27 passed, 1 warning`。
+- Backend full suite：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/test-backend.ps1` 通過，`191 passed, 1 warning`（pytest cache 權限警告）。
+- Frontend build：`npm.cmd run build` 通過，frontend package version 顯示 `0.29.0`。
+- Retrieval eval smoke：既有 `127.0.0.1:8000` 因 demo auth 回 `401`，改用 temporary auth-disabled backend（port `8019`、Temp data dir）執行 `retrieval-eval-smoke.ps1 -RunHybridRerank` 通過；`case_count=20`、`hit_rate_at_k=0.65`、`mrr_at_k=0.575`、`failure_count=0`、`fallback_count=0`。
+- Browser validation：Admin 可登入後台執行「測試RAG」，顯示 `10 cases`、Hit Rate@K `100%`、MRR@K `1.00`、Failure / Fallback `0 / 10`；Agent 執行紀錄預設收合且可展開；desktop `1280px` 與 mobile `390px` 無 horizontal overflow。
+- Demo auth role validation：Viewer 只看到前台查詢，不顯示或不可操作後台「測試RAG」與 Agent 操作。
+- Ticket search / whitespace：`rg -n "測試RAG|hybrid_rerank|Hit Rate@K|MRR@K|fallback_count|Agent 執行紀錄" frontend/src backend/app sample-data docs TODO.md tasks/phase-29-rag-eval-admin-surface` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 ## Documentation Maintenance
 
@@ -943,3 +953,4 @@ Phase 29 guardrails：
 - [x] v0.27.0: Aggressive Demo Defaults 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、TODO、ROADMAP、API、architecture、PRD 與 `.env.example` 已同步到 `v0.27.0`；default `hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter、frontend parser + vector indexing best-effort flow、fallback-safe demo smoke 與 Browser default surface validation 已補齊。
 - [x] v0.27.1: OCR / VLM Evidence Alignment 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、README_DEV、backend README、frontend README、demo script、TODO、ROADMAP、API 與 architecture 文件已同步到 `v0.27.1`；VLM request 帶 image + OCR context，欄位 evidence mapping、unmatched trace、deterministic fallback 與 Agent structured fields + OCR chunk validation 已補齊。
 - [x] v0.28.0: Document Sources / Demo Auth Mode 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、demo script、TODO、ROADMAP、API 與 architecture 文件已同步到 `v0.28.0`；`.txt` direct ingestion、text-native PDF extraction、scanned PDF pending state、demo login / role guard、demo auth smoke 與 Browser login / role gate validation 已補齊。
+- [x] v0.29.0: Built-in RAG Eval Admin Surface 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、demo script、TODO、ROADMAP、API、architecture 與 PRD 已同步到 `v0.29.0`；後台「測試RAG」內建 `hybrid_rerank` benchmark、10 張 synthetic 中文發票 fixture、built-in eval API、fallback-aware metrics、Agent 執行紀錄摺疊、Viewer role guard、backend tests、frontend build、hybrid rerank smoke、Browser desktop / mobile validation 與 `git diff --check` 已補齊。

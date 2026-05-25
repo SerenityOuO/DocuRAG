@@ -13,12 +13,15 @@ import {
   parseDocumentFields,
   queryRag,
   runAgent,
+  runBuiltInRagEval,
   runMockOcr,
   runSelectedOcr,
   uploadDocument,
   type AgentRun,
   type AuthRole,
   type AuthUser,
+  type BuiltInRagEvalCaseResult,
+  type BuiltInRagEvalResponse,
   type DocumentMetadata,
   type DocumentFields,
   type ExtractedField,
@@ -78,6 +81,9 @@ const agentDocumentId = ref("");
 const agentQuery = ref("付款期限 / payment terms");
 const agentTopK = ref(3);
 const agentError = ref("");
+const ragEvalState = ref<RequestState>("idle");
+const ragEvalResult = ref<BuiltInRagEvalResponse | null>(null);
+const ragEvalError = ref("");
 const loginUsername = ref("admin");
 const loginPassword = ref("demo-admin-pass");
 
@@ -87,7 +93,7 @@ const suggestedQuestions = [
   "When is the renewal date?",
 ];
 
-const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.28.0"));
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.29.0"));
 
 const demoAuthRequired = computed(() => authMode.value === "demo" && authUser.value === null);
 const canUseIngestion = computed(() => {
@@ -195,6 +201,18 @@ const citedSources = computed<SourceSummary[]>(() => {
 
 const latestDocuments = computed(() => documents.value.slice(0, 5));
 const agentDocumentOptions = computed(() => latestDocuments.value);
+
+const ragEvalStatusLabel = computed(() => {
+  if (ragEvalState.value === "loading") {
+    return "測試中";
+  }
+
+  if (ragEvalResult.value) {
+    return `完成 ${ragEvalResult.value.summary.case_count} cases`;
+  }
+
+  return "尚未執行";
+});
 
 const demoUsers: Array<{ role: AuthRole; label: string; username: string; password: string }> = [
   {
@@ -470,6 +488,22 @@ function formatAmount(fields: DocumentFields): string {
 
   const currency = fields.currency.value ? ` ${fields.currency.value}` : "";
   return `${amount}${currency}`;
+}
+
+function formatPercent(value: number): string {
+  return `${Math.round(value * 1000) / 10}%`;
+}
+
+function formatLatency(value: number): string {
+  return `${value.toLocaleString(undefined, { maximumFractionDigits: 1 })} ms`;
+}
+
+function ragEvalCaseRank(caseResult: BuiltInRagEvalCaseResult): string {
+  if (!caseResult.hit || caseResult.first_relevant_rank === null) {
+    return "未命中";
+  }
+
+  return `Rank ${caseResult.first_relevant_rank}`;
 }
 
 function parserFieldDisplay(result: ParserResult, fieldName: InvoiceFieldKey): string {
@@ -963,6 +997,25 @@ async function submitAgentRun(): Promise<void> {
   }
 }
 
+async function submitBuiltInRagEval(): Promise<void> {
+  if (!canUseIngestion.value) {
+    ragEvalError.value = "Viewer 角色不能執行測試RAG。";
+    return;
+  }
+
+  ragEvalState.value = "loading";
+  ragEvalError.value = "";
+
+  try {
+    ragEvalResult.value = await runBuiltInRagEval();
+    ragEvalState.value = "success";
+  } catch (error) {
+    ragEvalResult.value = null;
+    ragEvalError.value = error instanceof Error ? error.message : "測試RAG 執行失敗";
+    ragEvalState.value = "error";
+  }
+}
+
 onMounted(() => {
   void checkAuth();
   void checkHealth();
@@ -1295,137 +1348,246 @@ onMounted(() => {
         </details>
       </article>
 
-      <article class="panel agent-surface" aria-label="Agent 執行紀錄">
+      <article class="panel eval-surface" aria-label="測試RAG">
         <div class="panel-heading">
           <div>
-            <h2>Agent 執行紀錄</h2>
-            <p>Admin / Analyst 可在這裡查看確定性工具流程、觀察結果與引用來源。</p>
+            <h2>測試RAG</h2>
+            <p>內建中文發票基準測試，固定使用 hybrid_rerank。</p>
           </div>
-          <span class="status-pill" :class="documentStatusTone(agentRun?.status ?? 'pending')">
-            {{ statusLabel(agentRun?.status ?? "pending") }}
-          </span>
+          <span class="status-pill status-ready">hybrid_rerank</span>
         </div>
 
-        <form class="agent-form" @submit.prevent="submitAgentRun">
-          <label class="agent-task-field">
-            <span>任務</span>
-            <textarea v-model="agentTask" rows="3" />
-          </label>
-
-          <label>
-            <span>文件</span>
-            <select v-model="agentDocumentId">
-              <option value="" disabled>選擇文件</option>
-              <option v-for="document in agentDocumentOptions" :key="document.document_id" :value="document.document_id">
-                {{ document.filename }}
-              </option>
-            </select>
-          </label>
-
-          <label>
-            <span>查詢關鍵字</span>
-            <input v-model="agentQuery" type="text" placeholder="payment terms" />
-          </label>
-
-          <label>
-            <span>Top K</span>
-            <input v-model.number="agentTopK" type="number" min="1" max="10" />
-          </label>
-
-          <button type="submit" class="button" :disabled="agentState === 'loading'">
-            {{ agentState === "loading" ? "執行中..." : "執行 Agent" }}
+        <div class="eval-toolbar">
+          <button
+            type="button"
+            class="button"
+            :disabled="ragEvalState === 'loading'"
+            @click="submitBuiltInRagEval"
+          >
+            {{ ragEvalState === "loading" ? "測試中..." : "執行測試" }}
           </button>
-        </form>
+          <span class="status-pill" :class="`status-${ragEvalState}`">{{ ragEvalStatusLabel }}</span>
+        </div>
 
-        <p v-if="agentError" class="error">{{ agentError }}</p>
-        <p v-if="!agentRun" class="muted compact-note">
-          Agent 只會使用 Phase 25 已允許的唯讀工具，不會執行任意外部操作。
+        <p v-if="ragEvalError" class="error">{{ ragEvalError }}</p>
+        <p v-if="!ragEvalResult" class="muted compact-note">
+          使用 10 張 demo-safe 中文發票 fixture，顯示 retrieval benchmark 第一版核心指標。
         </p>
 
-        <section v-if="agentRun" class="agent-result" aria-label="Agent 執行結果">
-          <div class="trace-facts">
-            <div>
-              <dt>執行 ID</dt>
-              <dd>{{ agentRun.run_id }}</dd>
+        <section v-if="ragEvalResult" class="eval-result" aria-label="測試RAG 結果">
+          <div class="eval-metric-grid">
+            <div class="eval-metric-cell">
+              <span>Hit Rate@K</span>
+              <strong>{{ formatPercent(ragEvalResult.summary.hit_rate_at_k) }}</strong>
             </div>
-            <div>
-              <dt>規劃器</dt>
-              <dd>{{ agentTraceValue(agentRun.trace.planner) }}</dd>
+            <div class="eval-metric-cell">
+              <span>MRR@K</span>
+              <strong>{{ ragEvalResult.summary.mrr_at_k.toFixed(2) }}</strong>
             </div>
-            <div>
-              <dt>工具政策</dt>
-              <dd>{{ agentTraceValue(agentRun.trace.tool_policy) }}</dd>
+            <div class="eval-metric-cell">
+              <span>平均延遲</span>
+              <strong>{{ formatLatency(ragEvalResult.summary.average_latency_ms) }}</strong>
             </div>
-            <div>
-              <dt>備援次數</dt>
-              <dd>{{ agentRun.trace.fallback_count }}</dd>
+            <div class="eval-metric-cell">
+              <span>Failure / Fallback</span>
+              <strong>{{ ragEvalResult.summary.failure_count }} / {{ ragEvalResult.summary.fallback_count }}</strong>
             </div>
           </div>
 
-          <section class="agent-section">
-            <h3>執行計畫</h3>
-            <ol class="agent-step-list">
-              <li v-for="step in agentRun.plan_steps" :key="step.step_id">
+          <div class="eval-dataset-row">
+            <span class="status-pill status-ready">{{ ragEvalResult.dataset_name }}</span>
+            <span class="status-pill status-success">{{ ragEvalResult.case_count }} cases</span>
+            <span
+              v-if="ragEvalResult.environment.vector_preflight_status"
+              class="status-pill"
+              :class="ragEvalResult.environment.vector_preflight_status === 'completed' ? 'status-success' : 'status-failed'"
+            >
+              vector {{ ragEvalResult.environment.vector_preflight_status }}
+            </span>
+            <span
+              v-if="ragEvalResult.environment.rerank_provider"
+              class="status-pill"
+              :class="ragEvalResult.summary.fallback_count ? 'status-ready' : 'status-success'"
+            >
+              rerank {{ ragEvalResult.environment.rerank_provider }}
+            </span>
+          </div>
+
+          <details v-if="ragEvalResult.fallback_cases.length" class="collapsible-status eval-case-details">
+            <summary>
+              <div>
+                <h3>Fallback cases</h3>
+                <p>{{ ragEvalResult.fallback_cases.length }} 筆 case 使用 fallback。</p>
+              </div>
+            </summary>
+            <ul class="eval-case-list">
+              <li v-for="caseResult in ragEvalResult.fallback_cases" :key="caseResult.case_id">
                 <div>
-                  <strong>{{ agentStepTitle(step.title) }}</strong>
-                  <small>{{ toolLabel(step.tool_name) }}</small>
+                  <strong>{{ caseResult.case_id }}</strong>
+                  <small>{{ ragEvalCaseRank(caseResult) }} / Top {{ caseResult.top_k }}</small>
                 </div>
-                <span class="status-pill" :class="documentStatusTone(step.status)">{{ statusLabel(step.status) }}</span>
-                <p>{{ agentMessage(step.observation_summary) }}</p>
-                <small v-if="step.fallback_reason" class="fallback-note">{{ fallbackReasonLabel(step.fallback_reason) }}</small>
-              </li>
-            </ol>
-          </section>
-
-          <section class="agent-section">
-            <h3>工具呼叫</h3>
-            <div class="agent-tool-list">
-              <article v-for="toolCall in agentRun.tool_calls" :key="`${agentRun.run_id}-${toolCall.tool_name}`">
-                <div class="agent-tool-heading">
-                  <strong>{{ toolLabel(toolCall.tool_name) }}</strong>
-                  <span class="status-pill" :class="documentStatusTone(toolCall.status)">{{ statusLabel(toolCall.status) }}</span>
-                </div>
-                <dl class="agent-tool-details">
-                  <div>
-                    <dt>輸入摘要</dt>
-                    <dd>{{ agentInputSummary(toolCall.input_summary) }}</dd>
-                  </div>
-                  <div>
-                    <dt>觀察結果</dt>
-                    <dd>{{ agentMessage(toolCall.observation.message) }}</dd>
-                  </div>
-                  <div v-if="toolCall.output_summary">
-                    <dt>輸出摘要</dt>
-                    <dd>{{ agentSummary(toolCall.output_summary) }}</dd>
-                  </div>
-                  <div v-if="toolCall.observation.fallback_reason">
-                    <dt>備援原因</dt>
-                    <dd>{{ fallbackReasonLabel(toolCall.observation.fallback_reason) }}</dd>
-                  </div>
-                </dl>
-                <p v-if="toolCall.observation.missing_fields.length" class="muted compact-note">
-                  缺少欄位：{{ missingFieldText(toolCall.observation.missing_fields) }}
-                </p>
-              </article>
-            </div>
-          </section>
-
-          <section class="agent-section">
-            <h3>最終回答</h3>
-            <pre class="answer-text">{{ agentAnswerText(agentRun.final_answer.text) }}</pre>
-          </section>
-
-          <section class="agent-section">
-            <h3>引用來源</h3>
-            <ul v-if="agentRun.citations.length" class="citation-list">
-              <li v-for="citation in agentRun.citations" :key="`${citation.document_id}-${citation.chunk_id}`">
-                <span>{{ citation.filename }}</span>
-                <code>{{ citation.chunk_id }}</code>
+                <p>{{ caseResult.query }}</p>
+                <small>{{ caseResult.fallback_reasons.join("；") }}</small>
               </li>
             </ul>
-            <p v-else class="muted compact-note">這次 Agent 執行沒有回傳引用來源。</p>
-          </section>
+          </details>
+
+          <details v-if="ragEvalResult.failed_cases.length" class="collapsible-status eval-case-details">
+            <summary>
+              <div>
+                <h3>Failed cases</h3>
+                <p>{{ ragEvalResult.failed_cases.length }} 筆 case 未命中或發生錯誤。</p>
+              </div>
+            </summary>
+            <ul class="eval-case-list">
+              <li v-for="caseResult in ragEvalResult.failed_cases" :key="caseResult.case_id">
+                <div>
+                  <strong>{{ caseResult.case_id }}</strong>
+                  <small>{{ ragEvalCaseRank(caseResult) }} / Top {{ caseResult.top_k }}</small>
+                </div>
+                <p>{{ caseResult.query }}</p>
+                <small>{{ caseResult.error ?? caseResult.matched_expected_terms.join("、") }}</small>
+              </li>
+            </ul>
+          </details>
         </section>
+      </article>
+
+      <article class="panel agent-surface" aria-label="Agent 執行紀錄">
+        <details class="collapsible-status agent-collapsible">
+          <summary>
+            <div>
+              <h2>Agent 執行紀錄</h2>
+              <p>Admin / Analyst 可在這裡查看確定性工具流程、觀察結果與引用來源。</p>
+            </div>
+            <span class="status-pill" :class="documentStatusTone(agentRun?.status ?? 'pending')">
+              {{ statusLabel(agentRun?.status ?? "pending") }}
+            </span>
+          </summary>
+
+          <div class="collapsible-body">
+            <form class="agent-form" @submit.prevent="submitAgentRun">
+              <label class="agent-task-field">
+                <span>任務</span>
+                <textarea v-model="agentTask" rows="3" />
+              </label>
+
+              <label>
+                <span>文件</span>
+                <select v-model="agentDocumentId">
+                  <option value="" disabled>選擇文件</option>
+                  <option v-for="document in agentDocumentOptions" :key="document.document_id" :value="document.document_id">
+                    {{ document.filename }}
+                  </option>
+                </select>
+              </label>
+
+              <label>
+                <span>查詢關鍵字</span>
+                <input v-model="agentQuery" type="text" placeholder="payment terms" />
+              </label>
+
+              <label>
+                <span>Top K</span>
+                <input v-model.number="agentTopK" type="number" min="1" max="10" />
+              </label>
+
+              <button type="submit" class="button" :disabled="agentState === 'loading'">
+                {{ agentState === "loading" ? "執行中..." : "執行 Agent" }}
+              </button>
+            </form>
+
+            <p v-if="agentError" class="error">{{ agentError }}</p>
+            <p v-if="!agentRun" class="muted compact-note">
+              Agent 只會使用 Phase 25 已允許的唯讀工具，不會執行任意外部操作。
+            </p>
+
+            <section v-if="agentRun" class="agent-result" aria-label="Agent 執行結果">
+              <div class="trace-facts">
+                <div>
+                  <dt>執行 ID</dt>
+                  <dd>{{ agentRun.run_id }}</dd>
+                </div>
+                <div>
+                  <dt>規劃器</dt>
+                  <dd>{{ agentTraceValue(agentRun.trace.planner) }}</dd>
+                </div>
+                <div>
+                  <dt>工具政策</dt>
+                  <dd>{{ agentTraceValue(agentRun.trace.tool_policy) }}</dd>
+                </div>
+                <div>
+                  <dt>備援次數</dt>
+                  <dd>{{ agentRun.trace.fallback_count }}</dd>
+                </div>
+              </div>
+
+              <section class="agent-section">
+                <h3>執行計畫</h3>
+                <ol class="agent-step-list">
+                  <li v-for="step in agentRun.plan_steps" :key="step.step_id">
+                    <div>
+                      <strong>{{ agentStepTitle(step.title) }}</strong>
+                      <small>{{ toolLabel(step.tool_name) }}</small>
+                    </div>
+                    <span class="status-pill" :class="documentStatusTone(step.status)">{{ statusLabel(step.status) }}</span>
+                    <p>{{ agentMessage(step.observation_summary) }}</p>
+                    <small v-if="step.fallback_reason" class="fallback-note">{{ fallbackReasonLabel(step.fallback_reason) }}</small>
+                  </li>
+                </ol>
+              </section>
+
+              <section class="agent-section">
+                <h3>工具呼叫</h3>
+                <div class="agent-tool-list">
+                  <article v-for="toolCall in agentRun.tool_calls" :key="`${agentRun.run_id}-${toolCall.tool_name}`">
+                    <div class="agent-tool-heading">
+                      <strong>{{ toolLabel(toolCall.tool_name) }}</strong>
+                      <span class="status-pill" :class="documentStatusTone(toolCall.status)">{{ statusLabel(toolCall.status) }}</span>
+                    </div>
+                    <dl class="agent-tool-details">
+                      <div>
+                        <dt>輸入摘要</dt>
+                        <dd>{{ agentInputSummary(toolCall.input_summary) }}</dd>
+                      </div>
+                      <div>
+                        <dt>觀察結果</dt>
+                        <dd>{{ agentMessage(toolCall.observation.message) }}</dd>
+                      </div>
+                      <div v-if="toolCall.output_summary">
+                        <dt>輸出摘要</dt>
+                        <dd>{{ agentSummary(toolCall.output_summary) }}</dd>
+                      </div>
+                      <div v-if="toolCall.observation.fallback_reason">
+                        <dt>備援原因</dt>
+                        <dd>{{ fallbackReasonLabel(toolCall.observation.fallback_reason) }}</dd>
+                      </div>
+                    </dl>
+                    <p v-if="toolCall.observation.missing_fields.length" class="muted compact-note">
+                      缺少欄位：{{ missingFieldText(toolCall.observation.missing_fields) }}
+                    </p>
+                  </article>
+                </div>
+              </section>
+
+              <section class="agent-section">
+                <h3>最終回答</h3>
+                <pre class="answer-text">{{ agentAnswerText(agentRun.final_answer.text) }}</pre>
+              </section>
+
+              <section class="agent-section">
+                <h3>引用來源</h3>
+                <ul v-if="agentRun.citations.length" class="citation-list">
+                  <li v-for="citation in agentRun.citations" :key="`${citation.document_id}-${citation.chunk_id}`">
+                    <span>{{ citation.filename }}</span>
+                    <code>{{ citation.chunk_id }}</code>
+                  </li>
+                </ul>
+                <p v-else class="muted compact-note">這次 Agent 執行沒有回傳引用來源。</p>
+              </section>
+            </section>
+          </div>
+        </details>
       </article>
     </section>
 

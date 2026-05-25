@@ -1,0 +1,10 @@
+Synthetic demo invoice / demo-safe fixture. This contains invented invoice content for retrieval tests.
+收款標籤: OpenAI
+發票號碼: OPENAI-2026-001
+幣別: TWD
+開立日期: 2026-05-05
+付款期限: 2026-06-04
+總金額: NT$45,210
+稅額: NT$2,153
+備註: demo RAG eval only, no real transaction.
+檢索摘要: 發票 OPENAI-2026-001 供應商 OpenAI 開立日期 2026-05-05 總金額 NT$45,210 稅額 NT$2,153 付款期限 2026-06-04 幣別 TWD 台幣。

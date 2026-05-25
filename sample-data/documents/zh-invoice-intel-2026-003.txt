@@ -1,0 +1,10 @@
+Synthetic demo invoice / demo-safe fixture. No real tax id, address, logo, or purchase record is included.
+供應商 Intel 測試發票
+發票號碼: INTEL-2026-003
+開立日期: 2026-05-11
+付款期限: 2026-06-10
+幣別: TWD
+總金額: NT$39,175
+稅額: NT$1,865
+用途: 混合檢索與 rerank baseline.
+檢索摘要: 發票 INTEL-2026-003 供應商 Intel 開立日期 2026-05-11 總金額 NT$39,175 稅額 NT$1,865 付款期限 2026-06-10 幣別 TWD 台幣。

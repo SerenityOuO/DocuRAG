@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release 與 v0.29.0 Built-in RAG Eval Admin Surface backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release 與 v0.29.0 Built-in RAG Eval Admin Surface release。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.28.0 Document Sources / Demo Auth Mode checklist。
+- TODO 包含 Phase 00 到 v0.29.0 Built-in RAG Eval Admin Surface checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -108,6 +108,10 @@ Expected Outcome：
 - Runtime 不可用時在 UI 顯示 fallback，不假裝 vector / rerank 完整成功。
 - Agent 執行紀錄可展開 / 收合；收合時保留標題與狀態。
 - 不新增 production eval dashboard、歷史趨勢、自訂 dataset、LLM-as-judge、OCR eval、DB、worker、正式 RBAC 或 deployment hardening。
+
+Status：
+
+- 已完成。v0.29.0 新增 `POST /eval/rag/built-in`、10 張 demo-safe synthetic 中文發票 fixture、後台「測試RAG」summary metrics、fallback / failed cases 摺疊明細與 Agent 執行紀錄摺疊；Viewer 在 demo auth mode 下不顯示後台測試與 Agent 操作。
 
 ## v0.2.0 Demo UI Milestone
 

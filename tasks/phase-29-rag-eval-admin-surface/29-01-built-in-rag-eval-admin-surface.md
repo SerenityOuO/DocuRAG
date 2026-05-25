@@ -70,15 +70,15 @@
 
 ## Acceptance Criteria
 
-- [ ] 後台知識庫管理內出現「測試RAG」區塊。
-- [ ] 「測試RAG」只執行 `hybrid_rerank` 內建基準測試，不提供策略選擇。
-- [ ] 測試結果顯示 Hit Rate@K、MRR@K、平均延遲、Failure / Fallback。
-- [ ] 內建中文發票 fixture 共 10 張，供應商分布符合 `NVDLA` 1、`GOOGLE` 1、`OpenAI` 1、`Intel` 3、`DocuRAG` 4，日期 / 金額皆不同且幣別皆為台幣。
-- [ ] 每個 eval case 都有 expected evidence，且可由 fixture 文件文字明確支撐。
-- [ ] Runtime 不可用時，`hybrid_rerank` fallback 狀態清楚呈現，不讓 UI 靜默假裝完整 vector / rerank 成功。
-- [ ] Agent 執行紀錄改成可摺疊，收合時仍可看到標題與目前狀態。
-- [ ] Viewer role 在 demo auth mode 下不顯示或不可操作後台「測試RAG」與 Agent 操作。
-- [ ] README / docs 明確說明這是 built-in retrieval benchmark，不是 production eval dashboard、OCR eval 或 LLM-as-judge。
+- [x] 後台知識庫管理內出現「測試RAG」區塊。
+- [x] 「測試RAG」只執行 `hybrid_rerank` 內建基準測試，不提供策略選擇。
+- [x] 測試結果顯示 Hit Rate@K、MRR@K、平均延遲、Failure / Fallback。
+- [x] 內建中文發票 fixture 共 10 張，供應商分布符合 `NVDLA` 1、`GOOGLE` 1、`OpenAI` 1、`Intel` 3、`DocuRAG` 4，日期 / 金額皆不同且幣別皆為台幣。
+- [x] 每個 eval case 都有 expected evidence，且可由 fixture 文件文字明確支撐。
+- [x] Runtime 不可用時，`hybrid_rerank` fallback 狀態清楚呈現，不讓 UI 靜默假裝完整 vector / rerank 成功。
+- [x] Agent 執行紀錄改成可摺疊，收合時仍可看到標題與目前狀態。
+- [x] Viewer role 在 demo auth mode 下不顯示或不可操作後台「測試RAG」與 Agent 操作。
+- [x] README / docs 明確說明這是 built-in retrieval benchmark，不是 production eval dashboard、OCR eval 或 LLM-as-judge。
 
 ## Validation
 
@@ -89,3 +89,14 @@
 - Demo auth Browser check: Viewer 看不到或不能操作「測試RAG」與 Agent 操作；Admin / Analyst 可操作。
 - `rg -n "測試RAG|hybrid_rerank|Hit Rate@K|MRR@K|fallback_count|Agent 執行紀錄" frontend/src backend/app sample-data docs TODO.md tasks/phase-29-rag-eval-admin-surface`
 - `git diff --check`
+
+## Validation Result
+
+- `python -m pytest backend/tests/test_evaluation.py backend/tests/test_eval_dataset.py backend/tests/test_evaluation_api.py -q` 通過：`27 passed, 1 warning`。
+- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/test-backend.ps1` 通過：`191 passed, 1 warning`（pytest cache 權限警告）。
+- `npm.cmd run build` 通過，frontend package version 為 `0.29.0`。
+- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/retrieval-eval-smoke.ps1 -RunHybridRerank -ApiBaseUrl http://127.0.0.1:8019` 通過；使用 temporary auth-disabled backend 驗證，因既有 `127.0.0.1:8000` demo auth 對 smoke script 回 `401`。結果包含 `case_count=20`、`hit_rate_at_k=0.65`、`mrr_at_k=0.575`、`failure_count=0`、`fallback_count=0`。
+- Browser validation 通過：Admin 可執行「測試RAG」，顯示 `10 cases`、Hit Rate@K `100%`、MRR@K `1.00`、Failure / Fallback `0 / 10`；Agent 執行紀錄預設收合且可展開；desktop `1280px` 與 mobile `390px` 無 horizontal overflow。
+- Demo auth Viewer validation 通過：Viewer 只看到前台查詢，不顯示或不可操作「測試RAG」與 Agent 操作。
+- `rg -n "測試RAG|hybrid_rerank|Hit Rate@K|MRR@K|fallback_count|Agent 執行紀錄" frontend/src backend/app sample-data docs TODO.md tasks/phase-29-rag-eval-admin-surface` 通過。
+- `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
