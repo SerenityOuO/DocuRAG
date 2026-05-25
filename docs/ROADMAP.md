@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch 與 v0.28.0 Document Sources / Demo Auth Mode release。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release 與 v0.29.0 Built-in RAG Eval Admin Surface backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -87,8 +87,27 @@ Expected Outcome：
 - v0.26.0 Real VLM Parser Provider Spike 只做 VLM-first provider contract、demo-safe image input resolver、`vlm_invoice` adapter、parser source comparison 與 release sync；`deterministic_invoice` 只作 fallback / debug override，不新增 production VLM parser、PDF rendering、多頁 parser pipeline、DB、worker、RBAC 或 Agent 直接呼叫 VLM。
 - v0.27.0 Aggressive Demo Defaults 只把已完成且有 fallback 的 demo 能力改成預設：default `hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter、frontend parser + vector indexing best-effort flow；不新增 DB、worker、Auth/RBAC、OpenAI API、vLLM、PDF rendering 或 production indexing pipeline。
 - v0.28.0 Document Sources / Demo Auth Mode 只做 `.txt` direct ingestion、text-native PDF extraction、scanned PDF pending state 與 demo-safe login / role guard；不新增正式 RBAC、tenant isolation、PostgreSQL schema、Redis、NATS、worker、SSO、OAuth、MFA、K8s 或 scanned PDF OCR pipeline。
+- v0.29.0 Built-in RAG Eval Admin Surface 只做後台「測試RAG」內建基準測試與 Agent 執行紀錄摺疊；策略固定 `hybrid_rerank`，summary 只顯示 Hit Rate@K、MRR@K、平均延遲與 Failure / Fallback；不新增 production eval dashboard、自訂 dataset 上傳、LLM-as-judge、OCR eval、DB、worker、正式 RBAC 或 deployment 設定。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
+
+## v0.29.0 Built-in RAG Eval Admin Surface
+
+Goal：把既有 retrieval eval runner 變成後台可操作的 demo surface，讓 Admin / Analyst 在「後台知識庫管理」直接執行固定 `hybrid_rerank` 的內建 RAG 基準測試，並將 Agent 執行紀錄改成可摺疊，維持後台頁面可讀性。
+
+Ticket：
+
+- `tasks/phase-29-rag-eval-admin-surface/29-01-built-in-rag-eval-admin-surface.md`
+
+Expected Outcome：
+
+- 後台知識庫管理新增「測試RAG」區塊。
+- 測試策略固定為 `hybrid_rerank`，不提供策略下拉選單。
+- Summary metrics 僅顯示 Hit Rate@K、MRR@K、average latency 與 Failure / Fallback。
+- 內建 benchmark 使用 10 張 demo-safe synthetic 中文發票 fixture：`NVDLA` 1 張、`GOOGLE` 1 張、`OpenAI` 1 張、`Intel` 3 張、`DocuRAG` 4 張，金額 / 日期皆不同且幣別皆為台幣。
+- Runtime 不可用時在 UI 顯示 fallback，不假裝 vector / rerank 完整成功。
+- Agent 執行紀錄可展開 / 收合；收合時保留標題與狀態。
+- 不新增 production eval dashboard、歷史趨勢、自訂 dataset、LLM-as-judge、OCR eval、DB、worker、正式 RBAC 或 deployment hardening。
 
 ## v0.2.0 Demo UI Milestone
 

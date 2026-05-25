@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.28 Document Sources / Demo Auth Mode backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.29 Built-in RAG Eval Admin Surface backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -29,6 +29,7 @@
 - Phase 27 -> `v0.27.0`
 - Phase 27 evidence hardening -> `v0.27.1` when `27-02` is implemented
 - Phase 28 -> `v0.28.0`
+- Phase 29 -> `v0.29.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README / README_DEV、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -875,6 +876,25 @@ Phase 28 guardrails：
 - 已完成。`28-03` 使用 `pypdf` 抽 text-native PDF 文字層並建立 `pdf_text` chunks；scanned / empty PDF 只標示 `pdf_scanned_pending_ocr`，invalid PDF 顯示 `pdf_text_extraction_failed`。backend tests `178 passed`（僅 pytest cache 權限警告）；frontend build、demo smoke、ticket `rg` 與 `git diff --check` 已通過。
 - 已完成。`28-04` 做 demo login mode 與基本 role gates，但不做正式多租戶 RBAC；backend tests `185 passed`（僅 pytest cache 權限警告）、frontend build、`DOCURAG_AUTH_MODE=demo` demo smoke、Browser login / role gate 檢查、ticket `rg` 與 `git diff --check` 已通過。
 - 已完成。`28-05` 完成 `v0.28.0` release sync 與 validation；backend tests `185 passed`（僅 pytest cache 權限警告）、frontend build、`DOCURAG_AUTH_MODE=demo` demo smoke、Browser `v0.28.0` login / role gate / overflow 檢查、final `rg` 與 `git diff --check` 已通過。
+
+## MVP v0.29.0 Built-in RAG Eval Admin Surface
+
+- [ ] `tasks/phase-29-rag-eval-admin-surface/29-01-built-in-rag-eval-admin-surface.md`: 在後台知識庫管理新增「測試RAG」內建基準測試，固定 `hybrid_rerank`，只顯示 Hit Rate@K、MRR@K、平均延遲與 Failure / Fallback，並把 Agent 執行紀錄改成可摺疊。
+
+Phase 29 goal：
+
+- 讓 Admin / Analyst 可以在後台直接跑內建 retrieval benchmark，不需要切到 CLI 才能展示 RAG 評估能力。
+- 第一版策略固定 `hybrid_rerank`，避免策略比較 UI 擴張；重點是把現有 eval runner 變成面試可展示的後台操作。
+- 內建 benchmark 使用 10 張 demo-safe synthetic 中文發票 fixture：`NVDLA` 1 張、`GOOGLE` 1 張、`OpenAI` 1 張、`Intel` 3 張、`DocuRAG` 4 張；每張日期 / 金額不同且幣別皆為台幣。
+- 後台 trace 區塊維持可讀性：Agent 執行紀錄預設可收合，使用者需要時再展開。
+
+Phase 29 guardrails：
+
+- 不新增策略選擇；第一版只跑 `hybrid_rerank`。
+- 不新增 production eval dashboard、歷史趨勢、圖表分析、自訂 eval dataset 上傳、case builder 或 DB-backed eval runs。
+- 不新增 Recall@K、LLM-as-judge、answer faithfulness、citation quality scoring 或人工標註流程。
+- 不把中文發票 fixture 說成 OCR 準確率測試；本 phase 測 retrieval evidence 是否被找回，不測 OCR、PDF rendering、layout analysis 或 VLM parser。
+- 不新增 PostgreSQL schema、migration、Redis、NATS、worker、async queue、正式 RBAC、tenant isolation、OpenAI API、vLLM、K8s 或 deployment 設定。
 
 ## Documentation Maintenance
 
