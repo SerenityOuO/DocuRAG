@@ -30,7 +30,7 @@
 - Phase 27 evidence hardening -> `v0.27.1` when `27-02` is implemented
 - Phase 28 -> `v0.28.0`
 
-後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
+後續 ticket 若完成整個 Phase，必須同步更新版本號、README / README_DEV、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
 目前已完成優先順序：
 
@@ -875,6 +875,8 @@ Phase 28 guardrails：
 
 - [x] `tasks/docs-readme-interview-dev-split.md`: 將 root README 切分為面試官入口 `README.md` 與開發紀錄 `README_DEV.md`；不 bump version、不改 runtime。
 - [x] README split validation：`rg -n "README_DEV.md|開發紀錄|面試官|技術亮點|Release Status" README.md README_DEV.md TODO.md tasks/docs-readme-interview-dev-split.md` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+- [x] `tasks/docs-agents-readme-split-guidelines.md`: 更新 `AGENTS.md` 雙 README 分工規範，讓後續 ticket 區分面試官入口與開發紀錄；不 bump version、不改 runtime。
+- [x] AGENTS README split validation：`rg -n "README_DEV.md|README 分工|面試官|Release Status|開發紀錄" AGENTS.md TODO.md tasks/docs-agents-readme-split-guidelines.md` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 ## Release Verification Status
 

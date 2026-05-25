@@ -10,11 +10,27 @@
 - 若任務超出 ticket 的 `Scope`，先停止並回報，不要順手擴張。
 - 嚴格遵守 `Out of Scope`，尤其不要提前實作 OCR、RAG、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
 - 開始任何 ticket 前，必須先閱讀 `goal.md`，確認目前專案目標、當前階段與下一步優先順序，再用它判斷要執行哪張 ticket；若 `goal.md` 不存在，先停止並回報，不要自行猜測下一步。
-- 實作前先檢查 `goal.md`、`README.md`、`TODO.md`、`docs/PRD.md`、`docs/architecture.md`、`docs/ROADMAP.md` 與當前 ticket。
+- 實作前先檢查 `goal.md`、`README.md`、`README_DEV.md`、`TODO.md`、`docs/PRD.md`、`docs/architecture.md`、`docs/ROADMAP.md` 與當前 ticket；其中 `README.md` 用來確認對外展示敘事，`README_DEV.md` 用來確認開發紀錄、release log 與本地驗證脈絡。
 - 每次完成後更新 `TODO.md` 中對應 checklist，執行 ticket 指定的 validation，並再次檢查 `goal.md`，確認本次修改沒有偏離目標、沒有超出 ticket scope，也沒有提前實作未排定功能。
 - 文件 ticket 只改 Markdown；程式 ticket 才能新增或修改程式碼。
 - 優先最小改動、貼合既有風格，不為未來擴充提前抽象化。
 - 當使用者已在當前對話明確確認某個 Phase 的 ticket 草案、文件更新清單或規劃寫入後，Codex 可直接寫入該次已確認的 Markdown / ticket / TODO / ROADMAP 變更，後續同類文件寫入不需要重複詢問；但仍必須遵守 ticket-first、Scope / Out of Scope、validation、git 流程與安全限制，不得因此自動新增外部依賴、資料庫 schema、認證權限、部署設定或程式碼實作。
+
+README 分工規範：
+
+- `README.md` 是面試官、HR、技術主管看的公開入口。
+  - 聚焦專案定位、目前可展示能力、技術亮點、架構概覽、demo path、驗證方式與明確邊界。
+  - 不放長篇 release log、完整 ticket 流水帳、本地除錯紀錄或大量開發備忘。
+  - 開頭必須保留連到 `README_DEV.md` 的超連結。
+- `README_DEV.md` 是開發者與專案作者看的開發紀錄。
+  - 放完整更新日誌、ticket 進度、release status、本地開發指令、validation 紀錄、除錯備忘與 decision notes。
+  - 可保留較長的 phase / version / ticket 歷史。
+  - 若 `README.md` 做了面試敘事調整，必要時同步補充 `README_DEV.md` 的開發紀錄。
+- 更新規則：
+  - 面試展示、專案介紹、demo 說法、技術亮點或公開入口改動，優先更新 `README.md`。
+  - ticket 進度、release log、本地啟動細節、validation 結果或開發備忘，優先更新 `README_DEV.md`。
+  - release sync ticket 若會影響對外展示與開發紀錄，通常兩者都要更新，但內容不可直接複製貼上；`README.md` 寫精簡展示重點，`README_DEV.md` 寫完整版本紀錄與驗證細節。
+  - 不得把 `README_DEV.md` 的長篇 release log 回填到 `README.md`，避免面試官入口變得難讀。
 
 預設切換規範：
 
@@ -27,8 +43,8 @@
 
 - 已完成的舊 ticket 不強制回填 `Release Impact`；從後續 ticket 起，每個 Phase 必須對應明確版本號。一般 Phase 使用 `v0.<phase>.0`，例如 Phase 08 對應 `v0.8.0`、Phase 09 對應 `v0.9.0`、Phase 10 對應 `v0.10.0`。
 - 若同一 Phase 需要 patch hardening，可使用 `v0.<phase>.<patch>`，但 ticket 必須在 `Release Impact` 寫明 target version 與原因。
-- 完成會產生 release 的 Phase ticket 時，必須同步更新 backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、`README.md`、`backend/README.md`、`frontend/README.md`、`TODO.md` 與 `docs/ROADMAP.md`。
-- `README.md` 的 `Release Status` 只能列版本號，不要用裸 `Phase XX` 當 release 條目；Phase 細節放在 `docs/ROADMAP.md`。
+- 完成會產生 release 的 Phase ticket 時，必須同步更新 backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION`、`README.md`、`README_DEV.md`、`backend/README.md`、`frontend/README.md`、`TODO.md` 與 `docs/ROADMAP.md`。
+- `README.md` 不放長篇 `Release Status`；若需要對外呈現版本狀態，只寫精簡展示摘要。完整 `Release Status` 放在 `README_DEV.md`，且只能列版本號，不要用裸 `Phase XX` 當 release 條目；Phase 細節放在 `docs/ROADMAP.md`。
 - 若 ticket 不 bump version，必須在 `Release Impact` 明確寫 `Version bump required: no`，並說明不更新版本的理由。
 
 建議執行順序：
