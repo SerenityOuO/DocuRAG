@@ -1,10 +1,12 @@
 from datetime import UTC, datetime
+from io import BytesIO
 import json
 from pathlib import Path
 import re
 from uuid import uuid4
 
 from fastapi import UploadFile
+from pypdf import PdfReader
 
 from app.schemas.agent import AgentRun
 from app.schemas.documents import (
@@ -175,6 +177,10 @@ class DocumentStorage:
             ProcessingStepStatus.COMPLETED,
             created_at,
         )
+        if self._is_text_upload(document):
+            self._ingest_text_upload(document, content, created_at)
+        elif self._is_pdf_upload(document):
+            self._ingest_pdf_upload(document, content, created_at)
 
         documents = self._read_documents()
         documents.append(document)
@@ -373,6 +379,7 @@ class DocumentStorage:
         created_at: datetime,
         source: str = "ocr_mock",
         ocr_lines: list[OcrTextLine] | None = None,
+        chunk_metadata: dict[str, str] | None = None,
     ) -> list[DocumentChunk]:
         if ocr_lines:
             chunks = []
@@ -409,6 +416,7 @@ class DocumentStorage:
         current_lines: list[str] = []
         current_size = 0
         max_chunk_size = 360
+        metadata = chunk_metadata or {"origin": "ocr_text", "provider": source}
 
         for line in text.splitlines():
             clean_line = line.strip()
@@ -428,7 +436,7 @@ class DocumentStorage:
                         source=source,
                         created_at=created_at,
                         source_type=source,
-                        metadata={"origin": "ocr_text", "provider": source},
+                        metadata=metadata,
                     )
                 )
                 current_lines = []
@@ -445,11 +453,246 @@ class DocumentStorage:
                     document_id=document_id,
                     text=chunk_text,
                     source=source,
-                    created_at=created_at,
-                    source_type=source,
-                    metadata={"origin": "ocr_text", "provider": source},
-                )
+                created_at=created_at,
+                source_type=source,
+                metadata=metadata,
             )
+        )
+
+        return chunks
+
+    def _is_text_upload(self, document: DocumentMetadata) -> bool:
+        return document.file_type.lower() == "txt"
+
+    def _is_pdf_upload(self, document: DocumentMetadata) -> bool:
+        return document.file_type.lower() == "pdf" or document.content_type.lower() == "application/pdf"
+
+    def _ingest_text_upload(self, document: DocumentMetadata, content: bytes, timestamp: datetime) -> None:
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            document.status = DocumentStatus.FAILED
+            document.processing = ProcessingStatus(
+                upload=ProcessingStepStatus.COMPLETED,
+                ocr=ProcessingStepStatus.PENDING,
+                indexing=ProcessingStepStatus.FAILED,
+                ready=False,
+                failed_reason="Text upload must be UTF-8.",
+                updated_at=timestamp,
+            )
+            self._record_job(
+                document,
+                ProcessingJobType.TEXT_INGESTION,
+                ProcessingStepStatus.FAILED,
+                timestamp,
+                error_message="Text upload must be UTF-8.",
+            )
+            return
+
+        normalized_text = self._normalize_text_upload(text)
+        if not normalized_text:
+            document.status = DocumentStatus.FAILED
+            document.processing = ProcessingStatus(
+                upload=ProcessingStepStatus.COMPLETED,
+                ocr=ProcessingStepStatus.PENDING,
+                indexing=ProcessingStepStatus.FAILED,
+                ready=False,
+                failed_reason="Text upload was empty.",
+                updated_at=timestamp,
+            )
+            self._record_job(
+                document,
+                ProcessingJobType.TEXT_INGESTION,
+                ProcessingStepStatus.FAILED,
+                timestamp,
+                error_message="Text upload was empty.",
+            )
+            return
+
+        document.chunks = self._build_chunks(
+            document.document_id,
+            normalized_text,
+            timestamp,
+            source="text_upload",
+            chunk_metadata={
+                "origin": "uploaded_text",
+                "content_source": "text_upload",
+                "source_router": "text_upload",
+            },
+        )
+        document.status = DocumentStatus.READY
+        document.processing = ProcessingStatus(
+            upload=ProcessingStepStatus.COMPLETED,
+            ocr=ProcessingStepStatus.PENDING,
+            indexing=ProcessingStepStatus.COMPLETED,
+            ready=True,
+            updated_at=timestamp,
+        )
+        self._record_job(
+            document,
+            ProcessingJobType.TEXT_INGESTION,
+            ProcessingStepStatus.COMPLETED,
+            timestamp,
+        )
+        self._record_job(
+            document,
+            ProcessingJobType.LOCAL_INDEXING,
+            ProcessingStepStatus.COMPLETED,
+            timestamp,
+        )
+
+    def _normalize_text_upload(self, text: str) -> str:
+        lines = []
+        for line in text.splitlines():
+            clean_line = re.sub(r"\s+", " ", line.strip())
+            if clean_line:
+                lines.append(clean_line)
+
+        return "\n".join(lines)
+
+    def _ingest_pdf_upload(self, document: DocumentMetadata, content: bytes, timestamp: datetime) -> None:
+        try:
+            pages = self._extract_pdf_text_pages(content)
+        except Exception as exc:
+            message = f"pdf_text_extraction_failed: {exc}"
+            document.status = DocumentStatus.FAILED
+            document.processing = ProcessingStatus(
+                upload=ProcessingStepStatus.COMPLETED,
+                ocr=ProcessingStepStatus.PENDING,
+                indexing=ProcessingStepStatus.FAILED,
+                ready=False,
+                failed_reason=message,
+                updated_at=timestamp,
+            )
+            self._record_job(
+                document,
+                ProcessingJobType.PDF_TEXT_EXTRACTION,
+                ProcessingStepStatus.FAILED,
+                timestamp,
+                error_message=message,
+            )
+            return
+
+        if not pages:
+            message = (
+                "pdf_scanned_pending_ocr: PDF text layer is empty; "
+                "PDF rendering / OCR pipeline is required."
+            )
+            document.status = DocumentStatus.UPLOADED
+            document.chunks = []
+            document.processing = ProcessingStatus(
+                upload=ProcessingStepStatus.COMPLETED,
+                ocr=ProcessingStepStatus.PENDING,
+                indexing=ProcessingStepStatus.PENDING,
+                ready=False,
+                failed_reason=message,
+                updated_at=timestamp,
+            )
+            self._record_job(
+                document,
+                ProcessingJobType.PDF_TEXT_EXTRACTION,
+                ProcessingStepStatus.FAILED,
+                timestamp,
+                error_message=message,
+            )
+            return
+
+        document.chunks = self._build_pdf_text_chunks(document.document_id, pages, timestamp)
+        document.status = DocumentStatus.READY
+        document.processing = ProcessingStatus(
+            upload=ProcessingStepStatus.COMPLETED,
+            ocr=ProcessingStepStatus.PENDING,
+            indexing=ProcessingStepStatus.COMPLETED,
+            ready=True,
+            updated_at=timestamp,
+        )
+        self._record_job(
+            document,
+            ProcessingJobType.PDF_TEXT_EXTRACTION,
+            ProcessingStepStatus.COMPLETED,
+            timestamp,
+        )
+        self._record_job(
+            document,
+            ProcessingJobType.LOCAL_INDEXING,
+            ProcessingStepStatus.COMPLETED,
+            timestamp,
+        )
+
+    def _extract_pdf_text_pages(self, content: bytes) -> list[tuple[int, str]]:
+        reader = PdfReader(BytesIO(content))
+        pages: list[tuple[int, str]] = []
+
+        for page_index, page in enumerate(reader.pages, start=1):
+            raw_text = page.extract_text() or ""
+            normalized_text = self._normalize_text_upload(raw_text)
+            if normalized_text:
+                pages.append((page_index, normalized_text))
+
+        return pages
+
+    def _build_pdf_text_chunks(
+        self,
+        document_id: str,
+        pages: list[tuple[int, str]],
+        created_at: datetime,
+    ) -> list[DocumentChunk]:
+        chunks: list[DocumentChunk] = []
+        max_chunk_size = 360
+
+        for page_number, text in pages:
+            current_lines: list[str] = []
+            current_size = 0
+
+            for line in text.splitlines():
+                clean_line = line.strip()
+                if not clean_line:
+                    continue
+
+                separator_size = 1 if current_lines else 0
+                next_size = current_size + len(clean_line) + separator_size
+                if current_lines and next_size > max_chunk_size:
+                    chunks.append(
+                        DocumentChunk(
+                            chunk_id=f"{document_id}-chunk-{len(chunks) + 1:03d}",
+                            document_id=document_id,
+                            text="\n".join(current_lines),
+                            source="pdf_text",
+                            created_at=created_at,
+                            page_number=page_number,
+                            source_type="pdf_text",
+                            metadata={
+                                "origin": "pdf_text",
+                                "content_source": "pdf_text",
+                                "source_router": "pdf_text",
+                                "page_number": str(page_number),
+                            },
+                        )
+                    )
+                    current_lines = []
+                    current_size = 0
+
+                current_lines.append(clean_line)
+                current_size += len(clean_line) + separator_size
+
+            if current_lines:
+                chunks.append(
+                    DocumentChunk(
+                        chunk_id=f"{document_id}-chunk-{len(chunks) + 1:03d}",
+                        document_id=document_id,
+                        text="\n".join(current_lines),
+                        source="pdf_text",
+                        created_at=created_at,
+                        page_number=page_number,
+                        source_type="pdf_text",
+                        metadata={
+                            "origin": "pdf_text",
+                            "content_source": "pdf_text",
+                            "source_router": "pdf_text",
+                            "page_number": str(page_number),
+                        },
+                    )
+                )
 
         return chunks
 

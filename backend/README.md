@@ -1,6 +1,6 @@
 # Backend
 
-DocuRAG AgentOps backend MVP v0.27.1 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、OCR mock API、provider-selected OCR API、VLM-first invoice parser spike、OCR / VLM evidence alignment、deterministic invoice parser fallback、parse / fields API、Agent run / lookup API、manual vector indexing API、local RAG query API、retrieval evaluation runner、FastEmbed rerank adapter、hybrid / `hybrid_rerank` runtime provider、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.27.0 起 backend 採 aggressive demo defaults：`DOCURAG_RAG_RETRIEVAL_PROVIDER=hybrid_rerank`、`DOCURAG_EMBEDDING_PROVIDER=ollama`、`DOCURAG_RERANK_PROVIDER=fastembed`。v0.27.1 起 VLM parser request 會同時帶原始圖片與 compact OCR context；欄位值可對回 OCR line / bbox，未命中時會標示 evidence unmatched / unavailable。Phase 27 source contract 已固定 `ocr_image`、`text_upload`、`pdf_text` 與 `pdf_scanned_pending_ocr` 的 vector ingestion 邊界；目前 runtime 仍主要索引 OCR chunks，`.txt` direct chunks 與 PDF 分流留給後續票。`/rag/query` 與 Agent `search_documents` 會優先使用 hybrid rerank；Ollama embedding、Qdrant 或 FastEmbed runtime 不可用時，會 fallback 到 keyword evidence 並寫入 trace。LLM provider 未覆寫時仍預設嘗試 Ollama `qwen3.5:4b` generation，Ollama 不可用時 fallback 到 retrieved OCR chunks。此階段不接資料庫、OpenAI API、vLLM、production VLM / LLM parser、production eval dashboard、Redis、NATS、worker、登入權限、production autonomous Agent、LLM planner、任意 SQL 或 production indexing pipeline。
+DocuRAG AgentOps backend MVP v0.28.0 是最小 FastAPI 服務，提供 healthcheck、文件本機上傳、metadata 保存、文件列表、文件詳情、`.txt` direct ingestion、text-native PDF ingestion、OCR mock API、provider-selected OCR API、VLM-first invoice parser spike、OCR / VLM evidence alignment、deterministic invoice parser fallback、parse / fields API、Agent run / lookup API、manual vector indexing API、local RAG query API、demo auth API、retrieval evaluation runner、FastEmbed rerank adapter、hybrid / `hybrid_rerank` runtime provider、demo seed script 與 API smoke test，並允許 local frontend 透過 CORS 呼叫。v0.27.0 起 backend 採 aggressive demo defaults：`DOCURAG_RAG_RETRIEVAL_PROVIDER=hybrid_rerank`、`DOCURAG_EMBEDDING_PROVIDER=ollama`、`DOCURAG_RERANK_PROVIDER=fastembed`。v0.27.1 起 VLM parser request 會同時帶原始圖片與 compact OCR context；欄位值可對回 OCR line / bbox，未命中時會標示 evidence unmatched / unavailable。v0.28.0 已固定 `image_ocr`、`text_upload`、`pdf_text` 與 `pdf_scanned_pending_ocr` 的上傳分流；目前 runtime 已支援 `.txt` 直接建立 `text_upload` chunks，也會用 `pypdf` 抽取 text-native PDF 文字層建立 `pdf_text` chunks。`DOCURAG_AUTH_MODE=demo` 會啟用 demo login / me / logout 與 write API role guard，Admin / Analyst 可操作 ingestion，Viewer 只能查詢與下載。`/rag/query` 與 Agent `search_documents` 會優先使用 hybrid rerank；Ollama embedding、Qdrant 或 FastEmbed runtime 不可用時，會 fallback 到 keyword evidence 並寫入 trace。LLM provider 未覆寫時仍預設嘗試 Ollama `qwen3.5:4b` generation，Ollama 不可用時 fallback 到 retrieved chunks。此階段不接資料庫、OpenAI API、vLLM、production VLM / LLM parser、production eval dashboard、Redis、NATS、worker、正式登入權限、production autonomous Agent、LLM planner、任意 SQL 或 production indexing pipeline。
 
 ## Install
 
@@ -91,6 +91,31 @@ Agent run lookup：
 curl http://127.0.0.1:8000/agent/runs/{run_id}
 ```
 
+Demo auth mode：
+
+```powershell
+$env:DOCURAG_AUTH_MODE="demo"
+$env:DOCURAG_AUTH_DEMO_SECRET="change-this-local-demo-secret"
+```
+
+Demo auth endpoints：
+
+```powershell
+curl -X POST http://127.0.0.1:8000/auth/login `
+  -H "Content-Type: application/json" `
+  -d "{\"username\":\"admin\",\"password\":\"demo-admin-pass\"}"
+curl http://127.0.0.1:8000/auth/me -H "Authorization: Bearer {token}"
+curl -X POST http://127.0.0.1:8000/auth/logout -H "Authorization: Bearer {token}"
+```
+
+Phase 28 demo auth boundary：
+
+- Auth mode 預設為 `disabled`；只有 `DOCURAG_AUTH_MODE=demo` 時才要求 bearer token。
+- Demo users 固定為 `admin` / `analyst` / `viewer`，只供本機面試 demo 與測試使用；API 不回傳 password。
+- Admin / Analyst 可呼叫 upload、provider-selected OCR、mock OCR、parse 與 vector index；Viewer 對這些 ingestion write API 會收到 403 forbidden。
+- Demo mode 下 download 需要登入，但 Admin / Analyst / Viewer 都可下載已存在文件。
+- 這不是 PostgreSQL users table、正式 JWT refresh rotation、SSO、OAuth、MFA、tenant isolation、project permission、Redis session、audit log 或 production RBAC。
+
 Phase 24 parser boundary：
 
 - Parser MVP source 為 `deterministic_invoice`，只從既有 OCR text / OCR lines 抽取 demo-safe invoice fields。
@@ -106,6 +131,16 @@ Phase 25 Agent boundary：
 - `POST /agent/run` 會保存 `AgentRun` 到 local JSON metadata store；`GET /agent/runs/{run_id}` 只讀保存結果，不重跑 planner 或 tools。
 - Agent trace 會顯示 plan、tool calls、observation、final answer、citations、planner route、tool policy 與 fallback count。
 - 這不是 production autonomous Agent、Agent permission model、任意 SQL、shell / file system command、worker、Redis、NATS、DB-backed tool console 或 destructive tool execution。
+
+Phase 28 Document Source Router contract：
+
+- Source router 依 `file_type`、`content_type` 與 future detection result 選擇 `image_ocr`、`text_upload`、`pdf_text` 或 `pdf_scanned_pending_ocr`。
+- `image_ocr` 沿用 provider-selected OCR，產生 OCR text / OCR lines / chunks；`ocr_mock` 只保留為手動 fallback 或 validation path，不是 `.txt` 的正式來源。
+- `.txt` 目前已走 `text_upload` direct ingestion，直接讀 UTF-8 原文、做基本空白 normalization 並建立 chunks；OCR status 保持 pending，不標成 OCR completed。
+- PDF 必須分成 text-native PDF 與 scanned PDF：`pdf_text` 代表已用 `pypdf` 抽到文字層並建立 chunks；`pdf_scanned_pending_ocr` 代表需要 PDF rendering / OCR pipeline，未完成前只能顯示 pending / unsupported。
+- Normalized document text contract 至少保留 `document_id`、`source_type`、`text`、`page_number`、`bbox`、`confidence`、`metadata` 與 `created_at`，讓 RAG、Qdrant payload 與 Agent citations 不再永久綁死 OCR chunks。
+- `POST /documents/{document_id}/index/vector` 可索引 `text_upload` 與 `pdf_text` chunks；Qdrant / embedding runtime 不可用時仍回傳清楚 fallback error。
+- 本階段新增的 PDF dependency 僅限 `pypdf` text extraction，不新增 PDF rendering、scanned PDF OCR、worker、DB schema、正式 Auth / RBAC、Redis、NATS 或 deployment 設定。
 
 Phase 26 VLM parser provider spike：
 
@@ -242,8 +277,8 @@ Phase 12 manual Vector Indexing：
 - Endpoint 預設使用 `DOCURAG_EMBEDDING_PROVIDER=ollama`，且 Qdrant collection 可用時有機會成功；provider disabled、embedding failure、Qdrant unavailable 或 vector size mismatch 會回傳清楚錯誤。
 - 成功 response 會包含 `indexed_chunk_count`、`point_ids`、`collection_name`、`vector_size`、`embedding_provider` 與 `embedding_model`。
 - Empty chunks 會回傳 `status=skipped`，未完成 OCR 的 document 會回傳 `409`；backend upload / OCR endpoint 本身不啟動 worker，frontend v0.27.0 後台 ingestion 會在 OCR 成功後 best-effort 呼叫此 API。
-- Phase 27 source contract 將目前 runtime 來源標為 `ocr_image`：OCR lines / chunks 是 Qdrant payload 的文字來源，payload 至少保留 `document_id`、`filename`、`chunk_id`、`source_type`、`content_source`、`page_number`、`created_at` 與 future `project_id` / `tenant_id` metadata 位置。
-- 後續 `.txt` 檔應走 `text_upload` direct chunks，不需要假裝經過 OCR；text-native PDF 應走 `pdf_text` extraction；scanned PDF 在 PDF rendering / OCR pipeline 完成前只能標為 `pdf_scanned_pending_ocr`，不得宣稱已可索引。
+- Phase 28 source router contract 將目前圖片 runtime 路由標為 `image_ocr`，而 vector payload 來源仍可保留 `source_type=ocr_image`：OCR lines / chunks 是 Qdrant payload 的文字來源，payload 至少保留 `document_id`、`filename`、`chunk_id`、`source_type`、`content_source`、`page_number`、`created_at` 與 future `project_id` / `tenant_id` metadata 位置。
+- `.txt` 檔已走 `text_upload` direct chunks，不需要假裝經過 OCR；text-native PDF 已走 `pdf_text` extraction；scanned PDF 在 PDF rendering / OCR pipeline 完成前只能標為 `pdf_scanned_pending_ocr`，不得宣稱已可索引。
 - VLM structured fields 不會在本 contract 自動寫入 retrieval chunks；若未來要索引欄位，需要另開 field-indexing policy ticket。
 
 ```powershell
@@ -321,11 +356,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 
 OCR mock API 會透過 `MockOcrProvider` 產生 deterministic OCR result，再由 `DocumentStorage` 將 OCR status、text、extracted fields、updated timestamp 與 local chunks 寫回同一份 `data/documents.json`。未執行 OCR 的文件會回傳 `pending` OCR status。
 
-document metadata 會包含 `processing` contract，明確記錄 `upload`、`ocr`、`indexing`、`ready`、`failed_reason` 與 `updated_at`。upload 完成後 OCR / indexing 會保持 pending；mock OCR 成功後 OCR 與 indexing 會標記 completed 並進入 ready；provider 回傳 failed 時會保存 failed_reason，但不啟動 background worker 或 queue。
+document metadata 會包含 `processing` contract，明確記錄 `upload`、`ocr`、`indexing`、`ready`、`failed_reason` 與 `updated_at`。圖片 upload 完成後 OCR / indexing 會保持 pending；`.txt` direct ingestion 與 text-native PDF extraction 會直接完成 local indexing；mock OCR 成功後 OCR 與 indexing 會標記 completed 並進入 ready；provider 回傳 failed 時會保存 failed_reason，但不啟動 background worker 或 queue。
 
 document metadata 也會保存 `processing_jobs` history 與 `latest_job` summary。同步 upload 會記錄 completed upload job；mock OCR 成功會記錄 completed OCR 與 local indexing job；provider failed 會記錄 failed OCR job。這些 job metadata 只是 contract，不代表已引入 worker、queue、Redis 或 NATS。
 
-v0.5.1 chunks 由 OCR mock text 產生，每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。v0.6 chunk / citation schema 另外補齊 optional `page_number`、`bbox`、`confidence`、`source_type`、chunk `metadata` 與 citation `trace_metadata` 欄位；mock OCR chunk 只填 `source_type=ocr_mock` 與 metadata safe default，不產生真正 OCR bbox 或 confidence。v0.7 real OCR output 先正規化到 `OcrResult.lines`，再將 line-level page、bbox、confidence 與 metadata 寫入 `DocumentChunk`，讓 citations 與 retrieved chunks 不依賴 PaddleOCR 私有格式。v0.27.0 起 `POST /rag/query` 預設透過 `HybridRerankRagProvider` 嘗試 keyword + vector merge 與 rerank；設定 `DOCURAG_RAG_RETRIEVAL_PROVIDER=keyword` 可回到舊 keyword baseline。對 `text/plain`、`.txt`、`.md`、`.csv` sample，OCR mock 會把上傳文字納入 deterministic mock OCR text，方便 demo query 引用具體欄位；`hybrid_rerank` 不是 LLM-as-judge 或 answer quality evaluation，也不代表 production indexing pipeline 已完成。
+v0.5.1 chunks 由 OCR mock text 產生，每個 chunk 包含 `chunk_id`、`document_id`、`text`、`source` 與 `created_at`。v0.6 chunk / citation schema 另外補齊 optional `page_number`、`bbox`、`confidence`、`source_type`、chunk `metadata` 與 citation `trace_metadata` 欄位；mock OCR chunk 只填 `source_type=ocr_mock` 與 metadata safe default，不產生真正 OCR bbox 或 confidence。v0.7 real OCR output 先正規化到 `OcrResult.lines`，再將 line-level page、bbox、confidence 與 metadata 寫入 `DocumentChunk`，讓 citations 與 retrieved chunks 不依賴 PaddleOCR 私有格式。v0.27.0 起 `POST /rag/query` 預設透過 `HybridRerankRagProvider` 嘗試 keyword + vector merge 與 rerank；設定 `DOCURAG_RAG_RETRIEVAL_PROVIDER=keyword` 可回到舊 keyword baseline。v0.28.0 起 `.txt` 直接產生 `source_type=text_upload` chunks，text-native PDF 產生 `source_type=pdf_text` chunks，不再把 direct text path 包成 mock OCR；`hybrid_rerank` 不是 LLM-as-judge 或 answer quality evaluation，也不代表 production indexing pipeline 已完成。
 
 可用環境變數覆寫資料目錄：
 
@@ -465,3 +500,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 
 - v0.26.0: Real VLM Parser Provider Spike、VLM-first `vlm_invoice` adapter、demo-safe image input resolver、fake / stub success smoke、provider unavailable fallback 與 Agent `get_document_fields` consumption validation 已完成。
 - v0.27.0: Aggressive Demo Defaults、default `hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter、frontend parser + vector indexing best-effort flow 與 fallback-safe smoke validation 已完成。
 - v0.27.1: OCR / VLM Evidence Alignment 已完成；VLM request 帶 image + OCR context，欄位結果會保存 OCR evidence 或標示 evidence unmatched / unavailable，RAG / vector indexing 仍使用 OCR chunks。
+- v0.28.0: Document Sources / Demo Auth Mode 已完成；`.txt` direct `text_upload` chunks、text-native PDF `pdf_text` chunks、scanned PDF pending state、demo login / me / logout API、Admin / Analyst write access 與 Viewer forbidden guard 已完成。

@@ -42,6 +42,50 @@ def client(tmp_path: Path) -> TestClient:
     app.dependency_overrides.clear()
 
 
+def _pdf_bytes(text_lines: list[str]) -> bytes:
+    text_commands = ["BT", "/F1 12 Tf", "72 720 Td"]
+    for line_index, line in enumerate(text_lines):
+        if line_index > 0:
+            text_commands.append("0 -16 Td")
+
+        safe_line = line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+        text_commands.append(f"({safe_line}) Tj")
+
+    text_commands.append("ET")
+    content_stream = "\n".join(text_commands)
+    objects = [
+        "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+        "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
+        (
+            "3 0 obj\n"
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+            "/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\n"
+            "endobj\n"
+        ),
+        "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
+        (
+            "5 0 obj\n"
+            f"<< /Length {len(content_stream.encode('latin-1'))} >>\n"
+            "stream\n"
+            f"{content_stream}\n"
+            "endstream\n"
+            "endobj\n"
+        ),
+    ]
+    content = "%PDF-1.4\n"
+    offsets = [0]
+    for obj in objects:
+        offsets.append(len(content.encode("latin-1")))
+        content += obj
+
+    xref_offset = len(content.encode("latin-1"))
+    content += "xref\n0 6\n0000000000 65535 f \n"
+    content += "".join(f"{offset:010d} 00000 n \n" for offset in offsets[1:])
+    content += "trailer\n<< /Size 6 /Root 1 0 R >>\n"
+    content += f"startxref\n{xref_offset}\n%%EOF\n"
+    return content.encode("latin-1")
+
+
 def test_rag_query_returns_answer_citations_and_retrieved_chunks(client: TestClient) -> None:
     upload_response = client.post(
         "/documents/upload",
@@ -116,7 +160,6 @@ def test_rag_query_retrieves_uploaded_text_sample_content(client: TestClient) ->
         },
     )
     document_id = upload_response.json()["document_id"]
-    client.post(f"/documents/{document_id}/ocr/mock")
 
     response = client.post(
         "/rag/query",
@@ -126,8 +169,49 @@ def test_rag_query_retrieves_uploaded_text_sample_content(client: TestClient) ->
     assert response.status_code == 200
     body = response.json()
     assert body["citations"][0]["filename"] == "mock-invoice-aurora.txt"
+    assert body["citations"][0]["source_type"] == "text_upload"
+    assert body["citations"][0]["trace_metadata"]["origin"] == "uploaded_text"
     assert "AUR-2026-051" in body["retrieved_chunks"][0]["text"]
     assert "Payment terms: Net 15" in body["retrieved_chunks"][0]["text"]
+    assert body["retrieved_chunks"][0]["source_type"] == "text_upload"
+
+
+def test_rag_query_retrieves_text_native_pdf_chunks(client: TestClient) -> None:
+    upload_response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "invoice.pdf",
+                _pdf_bytes(
+                    [
+                        "Invoice number: AUR-2026-051",
+                        "Payment terms: Net 15",
+                        "Total: USD 1248.50",
+                    ]
+                ),
+                "application/pdf",
+            )
+        },
+    )
+    document_id = upload_response.json()["document_id"]
+
+    response = client.post(
+        "/rag/query",
+        json={"query": "payment terms Net 15", "top_k": 3},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["citations"][0]["document_id"] == document_id
+    assert body["citations"][0]["filename"] == "invoice.pdf"
+    assert body["citations"][0]["source_type"] == "pdf_text"
+    assert body["citations"][0]["page_number"] == 1
+    assert body["citations"][0]["bbox"] is None
+    assert body["citations"][0]["confidence"] is None
+    assert body["citations"][0]["trace_metadata"]["origin"] == "pdf_text"
+    assert body["retrieved_chunks"][0]["source_type"] == "pdf_text"
+    assert body["retrieved_chunks"][0]["page_number"] == 1
+    assert "AUR-2026-051" in body["retrieved_chunks"][0]["text"]
 
 
 def test_keyword_rag_provider_retrieves_english_chunk_from_chinese_payment_query() -> None:

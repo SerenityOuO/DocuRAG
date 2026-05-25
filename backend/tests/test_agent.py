@@ -44,11 +44,11 @@ def _create_parsed_invoice(client: TestClient) -> str:
         files={"file": ("mock-invoice-aurora.txt", invoice_text.encode("utf-8"), "text/plain")},
     )
     document_id = upload_response.json()["document_id"]
-    ocr_response = client.post(f"/documents/{document_id}/ocr/mock")
     parser_response = client.post(f"/documents/{document_id}/parse")
 
     assert upload_response.status_code == 200
-    assert ocr_response.status_code == 200
+    assert upload_response.json()["ocr"]["status"] == "pending"
+    assert upload_response.json()["chunks"][0]["source_type"] == "text_upload"
     assert parser_response.status_code == 200
 
     return document_id
@@ -85,6 +85,7 @@ def test_agent_run_returns_plan_tool_calls_answer_and_citations(client: TestClie
     assert "Tool trace: get_document_fields=completed -> search_documents=completed" in body["final_answer"]["text"]
     assert body["citations"][0]["document_id"] == document_id
     assert body["citations"][0]["chunk_id"].endswith("chunk-001")
+    assert body["citations"][0]["source_type"] == "text_upload"
     assert body["trace"]["planner"] == "deterministic"
     assert body["trace"]["tool_policy"] == "allowlisted_read_only"
     assert body["trace"]["tool_count"] == "3"

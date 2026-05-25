@@ -12,9 +12,21 @@
 
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/auth/login` | Demo login |
-| POST | `/auth/logout` | Logout |
-| GET | `/auth/me` | Current user |
+| POST | `/auth/login` | Phase 28 demo login; available only when `DOCURAG_AUTH_MODE=demo` |
+| POST | `/auth/logout` | Stateless demo logout response; frontend clears its local token |
+| GET | `/auth/me` | Current demo auth mode and user |
+
+Phase 28 demo auth mode is disabled by default. Set `DOCURAG_AUTH_MODE=demo` to enable fixed local demo users:
+
+| Username | Role | Demo usage |
+|---|---|---|
+| `admin` | `admin` | Can upload, OCR, parse, vector index, download and query. |
+| `analyst` | `analyst` | Can upload, OCR, parse, vector index, download and query. |
+| `viewer` | `viewer` | Can query and download existing files, but cannot run ingestion write APIs. |
+
+`POST /auth/login` returns a bearer token and user object, never a password. In demo mode, write / ingestion endpoints require `Authorization: Bearer {token}`. Viewer receives 403 forbidden for upload, provider-selected OCR, mock OCR, parse and vector index. Download requires login in demo mode but is allowed for all three demo roles.
+
+This is a demo-safe auth slice, not production JWT refresh rotation, PostgreSQL users table, SSO, OAuth, MFA, tenant isolation, project permission, Redis session or formal RBAC.
 
 ## Projects
 
@@ -33,7 +45,7 @@
 | GET | `/documents/{document_id}` | Document detail |
 | GET | `/documents/{document_id}/pages` | OCR page text |
 | GET | `/documents/{document_id}/fields` | Extracted fields |
-| POST | `/documents/{document_id}/parse` | Run the MVP parser for an OCR-completed document |
+| POST | `/documents/{document_id}/parse` | Run the MVP parser for an OCR-completed, direct text, or text-native PDF document |
 | GET | `/documents/{document_id}/chunks` | Document chunks |
 | POST | `/documents/{document_id}/index/vector` | Index document chunks into Qdrant when embedding / Qdrant runtime is available; frontend v0.27.0 calls this best-effort after OCR |
 
@@ -56,20 +68,60 @@
 |---|---|---|
 | GET | `/projects/{project_id}/eval-runs` | List sample eval metrics |
 
+## Phase 28 Document Source Router Contract
+
+`28-01` 固定 upload 後的 source router 與 normalized document text contract；`28-02` / `28-03` 已分別補上 `.txt` direct ingestion 與 text-native PDF extraction；`28-04` 補上 demo auth mode 與 role guard。v0.28.0 runtime 不應把 `.txt`、PDF、OCR 與 VLM fields 混在同一路徑。
+
+### Source Router
+
+| Router target | Detection input | Runtime meaning | Notes |
+|---|---|---|---|
+| `image_ocr` | image file type or image content type | 走既有 provider-selected OCR，產生 OCR text / OCR lines / chunks。 | `ocr_mock` 只作手動 fallback / validation path，不是正式來源。 |
+| `text_upload` | `.txt` | 直接讀 UTF-8 原文、做基本空白 normalization 並建立 chunks。 | Current runtime；不需要 OCR job，也不標示為 OCR completed。 |
+| `pdf_text` | PDF with extractable text layer | 使用 `pypdf` 抽取 text-native PDF 文字並建立 chunks。 | 保留 `page_number`；`bbox` 可為 `null`，不可假造座標。 |
+| `pdf_scanned_pending_ocr` | PDF without extractable text or future scanned detection | 等待 PDF rendering / OCR pipeline。 | 目前只顯示 pending / unsupported，不自動送 OCR，也不宣稱已支援 scanned PDF OCR。 |
+
+### Normalized Document Text
+
+後續 source router 輸出應整理成同一個 chunk input contract，讓 RAG、Qdrant payload 與 Agent citations 不依賴單一路徑：
+
+```json
+{
+  "document_id": "doc_123",
+  "source_type": "text_upload",
+  "text": "Payment terms: Net 15",
+  "page_number": null,
+  "bbox": null,
+  "confidence": null,
+  "metadata": {
+    "filename": "invoice.txt",
+    "content_source": "text_upload",
+    "origin": "uploaded_text",
+    "project_id": null,
+    "tenant_id": null
+  },
+  "created_at": "2026-05-25T10:00:00Z"
+}
+```
+
+Frontend ingestion flow 依 source type 顯示不同狀態：`text_upload` 可直接建立知識庫並接 best-effort parser / vector indexing，`image_ocr` 先 OCR，`pdf_text` 顯示 text-native PDF extraction ready，`pdf_scanned_pending_ocr` 顯示需要 PDF rendering / OCR pipeline。
+
+`28-03` 新增的 PDF dependency 僅限 `pypdf` text extraction；仍不新增 PDF rendering、多頁 OCR pipeline、worker、DB schema、正式 auth / RBAC、Redis、NATS 或 deployment 設定。
+
 ## Phase 24 Parser Contract Draft
 
 ## Phase 27 Vector Source Contract
 
-`27-03` 只固定 normalized text source 與 vector source 邊界，不新增 runtime。現有 `POST /documents/{document_id}/index/vector` 仍讀取文件已保存的 chunks；在 v0.27.1 runtime 中，主要來源是 OCR 完成後產生的 `ocr_image` chunks。
+`27-03` 只固定 normalized text source 與 vector source 邊界，不新增 runtime。現有 `POST /documents/{document_id}/index/vector` 仍讀取文件已保存的 chunks；v0.28.0 runtime 已讓 `text_upload` 與 `pdf_text` 也能成為索引來源。
 
 ### Source Taxonomy
 
 | Source type | Content source | Runtime status | Notes |
 |---|---|---|---|
 | `ocr_image` | OCR text / OCR lines from image upload | Current demo path | 圖片或掃描類文件先走 OCR，再用 OCR chunks 寫入 Qdrant。 |
-| `text_upload` | Original text file body | Future runtime ticket | `.txt` 應直接建立 chunks，不需要假裝經過 OCR。 |
-| `pdf_text` | Text-native PDF extraction | Future runtime ticket | 只代表 PDF 內已有文字層；不包含 scanned PDF。 |
-| `pdf_scanned_pending_ocr` | PDF page images pending rendering / OCR | Planning only | 未實作 PDF rendering / OCR pipeline 前，不宣稱可索引 scanned PDF。 |
+| `text_upload` | Original text file body | Current runtime | `.txt` 直接建立 chunks，不需要假裝經過 OCR。 |
+| `pdf_text` | Text-native PDF extraction | Current runtime | 只代表 PDF 內已有文字層；不包含 scanned PDF。 |
+| `pdf_scanned_pending_ocr` | PDF page images pending rendering / OCR | Current unsupported state | 未實作 PDF rendering / OCR pipeline 前，不宣稱可索引 scanned PDF。 |
 
 ### Normalized Text Source
 

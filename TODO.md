@@ -847,11 +847,11 @@ Phase 27 guardrails：
 
 ## MVP v0.28.0 Document Sources / Demo Auth Mode
 
-- [ ] `tasks/phase-28-document-sources-auth-mode/28-01-document-source-router.md`: 固定 image OCR、`.txt` direct text、text-native PDF 與 scanned PDF pending OCR 的 source router contract；planning ticket，不 bump version。
-- [ ] `tasks/phase-28-document-sources-auth-mode/28-02-direct-text-upload-ingestion.md`: 讓 `.txt` 直接建立 `text_upload` chunks，接到 RAG、Qdrant vector indexing 與 Agent search。
-- [ ] `tasks/phase-28-document-sources-auth-mode/28-03-text-native-pdf-ingestion.md`: 支援 text-native PDF 文字抽取並建立 `pdf_text` chunks；scanned PDF 清楚標示 pending / unsupported。
-- [ ] `tasks/phase-28-document-sources-auth-mode/28-04-demo-login-mode-and-role-gates.md`: 新增 demo login mode、`/auth/login` / `/auth/me` / `/auth/logout`、frontend login screen 與基本 role gates。
-- [ ] `tasks/phase-28-document-sources-auth-mode/28-05-phase-28-demo-release-sync.md`: 重跑 final validation，並同步 `v0.28.0` 版本與文件。
+- [x] `tasks/phase-28-document-sources-auth-mode/28-01-document-source-router.md`: 固定 image OCR、`.txt` direct text、text-native PDF 與 scanned PDF pending OCR 的 source router contract；planning ticket，不 bump version。
+- [x] `tasks/phase-28-document-sources-auth-mode/28-02-direct-text-upload-ingestion.md`: 讓 `.txt` 直接建立 `text_upload` chunks，接到 RAG、Qdrant vector indexing 與 Agent search。
+- [x] `tasks/phase-28-document-sources-auth-mode/28-03-text-native-pdf-ingestion.md`: 支援 text-native PDF 文字抽取並建立 `pdf_text` chunks；scanned PDF 清楚標示 pending / unsupported。
+- [x] `tasks/phase-28-document-sources-auth-mode/28-04-demo-login-mode-and-role-gates.md`: 新增 demo login mode、`/auth/login` / `/auth/me` / `/auth/logout`、frontend login screen 與基本 role gates。
+- [x] `tasks/phase-28-document-sources-auth-mode/28-05-phase-28-demo-release-sync.md`: 重跑 final validation，並同步 `v0.28.0` 版本與文件。
 
 Phase 28 goal：
 
@@ -869,11 +869,11 @@ Phase 28 guardrails：
 
 28-01 to 28-05 backlog status：
 
-- 待執行。`28-01` 先固定 source router contract，避免後續把 text、PDF、OCR 混成同一路徑。
-- 待執行。`28-02` 讓 `.txt` 正式直接進 chunks / RAG / vector / Agent，不再透過 mock OCR。
-- 待執行。`28-03` 先做 text-native PDF；scanned PDF 只標示 pending / unsupported。
-- 待執行。`28-04` 做 demo login mode 與基本 role gates，但不做正式多租戶 RBAC。
-- 待執行。`28-05` 完成 `v0.28.0` release sync 與 validation。
+- 已完成。`28-01` 已固定 source router contract，避免後續把 text、PDF、OCR 混成同一路徑；validation `rg` 與 `git diff --check` 通過。
+- 已完成。`28-02` 讓 `.txt` 正式直接進 chunks / RAG / vector / Agent，不再透過 mock OCR；backend tests、frontend build、demo smoke、ticket `rg` 與 `git diff --check` 已通過。
+- 已完成。`28-03` 使用 `pypdf` 抽 text-native PDF 文字層並建立 `pdf_text` chunks；scanned / empty PDF 只標示 `pdf_scanned_pending_ocr`，invalid PDF 顯示 `pdf_text_extraction_failed`。backend tests `178 passed`（僅 pytest cache 權限警告）；frontend build、demo smoke、ticket `rg` 與 `git diff --check` 已通過。
+- 已完成。`28-04` 做 demo login mode 與基本 role gates，但不做正式多租戶 RBAC；backend tests `185 passed`（僅 pytest cache 權限警告）、frontend build、`DOCURAG_AUTH_MODE=demo` demo smoke、Browser login / role gate 檢查、ticket `rg` 與 `git diff --check` 已通過。
+- 已完成。`28-05` 完成 `v0.28.0` release sync 與 validation；backend tests `185 passed`（僅 pytest cache 權限警告）、frontend build、`DOCURAG_AUTH_MODE=demo` demo smoke、Browser `v0.28.0` login / role gate / overflow 檢查、final `rg` 與 `git diff --check` 已通過。
 
 ## Documentation Maintenance
 
@@ -921,3 +921,4 @@ Phase 28 guardrails：
 - [x] v0.26.0: Real VLM Parser Provider Spike 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、TODO、ROADMAP、API 與 architecture 文件已同步到 `v0.26.0`；VLM-first parser provider boundary、demo-safe image input resolver、`vlm_invoice` adapter、parser source comparison、fake / stub success smoke、provider unavailable fallback 與 Agent `get_document_fields` consumption validation 已補齊。
 - [x] v0.27.0: Aggressive Demo Defaults 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、backend README、frontend README、demo script、TODO、ROADMAP、API、architecture、PRD 與 `.env.example` 已同步到 `v0.27.0`；default `hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter、frontend parser + vector indexing best-effort flow、fallback-safe demo smoke 與 Browser default surface validation 已補齊。
 - [x] v0.27.1: OCR / VLM Evidence Alignment 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、README_DEV、backend README、frontend README、demo script、TODO、ROADMAP、API 與 architecture 文件已同步到 `v0.27.1`；VLM request 帶 image + OCR context，欄位 evidence mapping、unmatched trace、deterministic fallback 與 Agent structured fields + OCR chunk validation 已補齊。
+- [x] v0.28.0: Document Sources / Demo Auth Mode 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、demo script、TODO、ROADMAP、API 與 architecture 文件已同步到 `v0.28.0`；`.txt` direct ingestion、text-native PDF extraction、scanned PDF pending state、demo login / role guard、demo auth smoke 與 Browser login / role gate validation 已補齊。

@@ -58,12 +58,12 @@
 
 ## Acceptance Criteria
 
-- [ ] Frontend 首次進入 demo 時顯示 login screen 或清楚的 demo auth state。
-- [ ] Admin / Analyst 登入後可以操作 ingestion；Viewer 登入後只能查詢與查看，不可 upload / OCR / parse / index。
-- [ ] Backend write API 對 Viewer 回傳 403 或等價 forbidden response。
-- [ ] `GET /auth/me` 可回傳目前登入使用者與 role。
-- [ ] 登出後 frontend 清除登入狀態，受保護操作不可繼續執行。
-- [ ] 文件清楚說明這是 demo auth mode，不是正式 RBAC / tenant isolation。
+- [x] Frontend 首次進入 demo 時顯示 login screen 或清楚的 demo auth state。
+- [x] Admin / Analyst 登入後可以操作 ingestion；Viewer 登入後只能查詢與查看，不可 upload / OCR / parse / index。
+- [x] Backend write API 對 Viewer 回傳 403 或等價 forbidden response。
+- [x] `GET /auth/me` 可回傳目前登入使用者與 role。
+- [x] 登出後 frontend 清除登入狀態，受保護操作不可繼續執行。
+- [x] 文件清楚說明這是 demo auth mode，不是正式 RBAC / tenant isolation。
 
 ## Validation
 
@@ -73,3 +73,11 @@
 - Browser check for local frontend login flow: Admin / Analyst ingestion allowed, Viewer upload controls hidden or disabled, no horizontal overflow on desktop and mobile.
 - `rg -n "DOCURAG_AUTH_MODE|/auth/login|/auth/me|demo auth|role guard|Viewer|Analyst|Admin|forbidden" backend/app backend/tests frontend/src README.md backend/README.md frontend/README.md docs/api.md docs/architecture.md docs/demo-script.md TODO.md docs/ROADMAP.md tasks/phase-28-document-sources-auth-mode`
 - `git diff --check`
+
+## Validation Result
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`185 passed`（僅 pytest cache 權限警告）。
+- `npm.cmd run build` 通過。
+- `DOCURAG_AUTH_MODE=demo` backend 下執行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1` 通過，包含 admin login、direct text ingestion、parser、Agent run、vector fallback 與 RAG query。
+- Browser check 通過：login screen 可見，Admin 登入後可看到 ingestion upload control，Viewer 登入後 upload controls 隱藏且後台入口 disabled；desktop 1280px 與 mobile 390px 無 horizontal overflow。
+- `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。

@@ -140,6 +140,48 @@ def test_search_documents_returns_keyword_results_and_citations(tmp_path: Path) 
     assert result.trace_metadata["retrieved_chunk_count"] == "1"
 
 
+def test_search_documents_returns_pdf_text_results_and_citations(tmp_path: Path) -> None:
+    storage = DocumentStorage(tmp_path / "data")
+    chunk = DocumentChunk(
+        chunk_id="chunk-pdf-payment",
+        document_id="doc-agent-001",
+        text="Payment terms: Net 15",
+        source="pdf_text",
+        created_at=datetime(2026, 5, 24, tzinfo=UTC),
+        page_number=1,
+        source_type="pdf_text",
+        metadata={
+            "origin": "pdf_text",
+            "content_source": "pdf_text",
+            "source_router": "pdf_text",
+            "page_number": "1",
+        },
+    )
+    _write_documents(storage, [_document(chunks=[chunk])])
+
+    result = AgentToolService(storage).search_documents(
+        "payment terms",
+        top_k=3,
+        document_id="doc-agent-001",
+    )
+
+    assert result.status == AgentToolStatus.COMPLETED
+    assert result.output["retrieved_chunks"][0]["chunk_id"] == "chunk-pdf-payment"
+    assert result.output["retrieved_chunks"][0]["source_type"] == "pdf_text"
+    assert result.citations[0].chunk_id == "chunk-pdf-payment"
+    assert result.citations[0].source_type == "pdf_text"
+    assert result.citations[0].page_number == 1
+    assert result.citations[0].bbox is None
+    assert result.citations[0].confidence is None
+    assert result.citations[0].trace_metadata == {
+        "source": "pdf_text",
+        "origin": "pdf_text",
+        "content_source": "pdf_text",
+        "source_router": "pdf_text",
+        "page_number": "1",
+    }
+
+
 def test_search_documents_returns_failure_when_query_has_no_match(tmp_path: Path) -> None:
     storage = DocumentStorage(tmp_path / "data")
     chunk = DocumentChunk(

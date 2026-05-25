@@ -12,7 +12,7 @@ param(
     [string]$QdrantUrl = "http://127.0.0.1:6333",
     [string]$QdrantCollection = "docurag_chunks_v1",
     [int]$QdrantVectorSize = 1024,
-    [string]$ExpectedVersion = "0.27.1",
+    [string]$ExpectedVersion = "0.28.0",
     [switch]$RunVlmFake
 )
 
@@ -175,12 +175,19 @@ function Invoke-FileUpload {
     param(
         [string]$Url,
         [string]$FilePath,
-        [string]$ContentType
+        [string]$ContentType,
+        [hashtable]$Headers = @{}
     )
 
     $tempBody = [System.IO.Path]::GetTempFileName()
     try {
-        $httpStatus = & curl.exe -sS -o $tempBody -w "%{http_code}" -X POST $Url -F "file=@$FilePath;type=$ContentType"
+        $curlArgs = @("-sS", "-o", $tempBody, "-w", "%{http_code}", "-X", "POST", $Url)
+        foreach ($header in $Headers.GetEnumerator()) {
+            $curlArgs += @("-H", "$($header.Key): $($header.Value)")
+        }
+        $curlArgs += @("-F", "file=@$FilePath;type=$ContentType")
+
+        $httpStatus = & curl.exe @curlArgs
         if ($LASTEXITCODE -ne 0) {
             throw "Upload failed with curl exit code $LASTEXITCODE"
         }
@@ -266,17 +273,40 @@ Assert-Condition (-not [string]::IsNullOrWhiteSpace($health.version)) "Expected 
 Assert-Condition ($health.version -eq $ExpectedVersion) "Expected /health version $ExpectedVersion. Got $($health.version). Restart the backend after release sync."
 Write-Host "Health OK: version $($health.version)"
 
-$upload = Invoke-FileUpload "$ApiBaseUrl/documents/upload" $resolvedSamplePath "text/plain"
+$authHeaders = @{}
+$authState = Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/auth/me"
+if ($authState.auth_mode -eq "demo" -and $authState.authenticated -ne $true) {
+    $loginBody = @{
+        username = "admin"
+        password = "demo-admin-pass"
+    } | ConvertTo-Json
+    $login = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/auth/login" -ContentType "application/json" -Body $loginBody
+    Assert-Condition ($login.user.role -eq "admin") "Demo auth login did not return admin role."
+    $authHeaders = @{
+        Authorization = "Bearer $($login.access_token)"
+    }
+    Write-Host "Demo auth OK: admin login"
+}
+elseif ($authState.auth_mode -eq "demo") {
+    Write-Host "Demo auth OK: existing session"
+}
+else {
+    Write-Host "Demo auth disabled"
+}
+
+$upload = Invoke-FileUpload "$ApiBaseUrl/documents/upload" $resolvedSamplePath "text/plain" $authHeaders
 Assert-Condition (-not [string]::IsNullOrWhiteSpace($upload.document_id)) "Upload did not return document_id."
 Assert-Condition ($upload.filename -eq "mock-invoice-aurora.txt") "Upload returned unexpected filename."
+Assert-Condition ($upload.ocr.status -eq "pending") "Direct text upload should not mark OCR completed."
+Assert-Condition ($upload.processing.ocr -eq "pending") "Direct text upload processing should keep OCR pending."
+Assert-Condition ($upload.processing.indexing -eq "completed") "Direct text upload did not complete local indexing."
+Assert-Condition ($upload.chunks.Count -gt 0) "Direct text upload did not create chunks."
+Assert-Condition ($upload.chunks[0].source_type -eq "text_upload") "Direct text upload chunk source_type was '$($upload.chunks[0].source_type)'; expected text_upload."
+Assert-Condition ($upload.chunks[0].metadata.origin -eq "uploaded_text") "Direct text upload chunk origin was '$($upload.chunks[0].metadata.origin)'; expected uploaded_text."
 Write-Host "Upload OK: $($upload.document_id)"
+Write-Host "Direct text ingestion OK"
 
-$ocr = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($upload.document_id)/ocr/mock"
-Assert-Condition ($ocr.status -eq "completed") "OCR mock did not complete."
-Assert-Condition ($ocr.text -match "AUR-2026-051") "OCR mock did not include sample invoice content."
-Write-Host "OCR mock OK"
-
-$parser = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($upload.document_id)/parse"
+$parser = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($upload.document_id)/parse" -Headers $authHeaders
 Assert-Condition ($parser.status -eq "parsed") "Parser did not return parsed status."
 Assert-Condition ($parser.parser_source -eq "deterministic_invoice") "Parser source was '$($parser.parser_source)'; expected deterministic_invoice."
 Assert-Condition ($parser.fallback_reason -eq "unsupported_file") "Parser fallback reason was '$($parser.fallback_reason)'; expected unsupported_file."
@@ -315,6 +345,7 @@ Assert-Condition ($agentToolNames[2] -eq "summarize_invoice_fields") "Agent thir
 Assert-Condition ($agentRun.final_answer.status -eq "completed") "Agent final answer did not complete."
 Assert-Condition ($agentRun.final_answer.text -match "Invoice AUR-2026-051") "Agent final answer did not include expected invoice summary."
 Assert-Condition ($agentRun.citations.Count -gt 0) "Agent run did not return citations."
+Assert-Condition ($agentRun.citations[0].source_type -eq "text_upload") "Agent citation source_type was '$($agentRun.citations[0].source_type)'; expected text_upload."
 Assert-Condition ($agentRun.tool_calls[0].observation.fallback_reason -eq "unsupported_file") "Agent get_document_fields did not expose parser fallback reason unsupported_file."
 Assert-Condition ($agentRun.tool_calls[0].output.parser_source -eq "deterministic_invoice") "Agent get_document_fields did not expose deterministic parser source."
 
@@ -327,13 +358,13 @@ $vlmFakeEnabled = $RunVlmFake -or ([string]$env:DOCURAG_VLM_PROVIDER).Trim().ToL
 if ($vlmFakeEnabled) {
     Write-Host "VLM fake provider success check"
 
-    $vlmUpload = Invoke-FileUpload "$ApiBaseUrl/documents/upload" $resolvedRealOcrSamplePath "image/png"
+    $vlmUpload = Invoke-FileUpload "$ApiBaseUrl/documents/upload" $resolvedRealOcrSamplePath "image/png" $authHeaders
     Assert-Condition (-not [string]::IsNullOrWhiteSpace($vlmUpload.document_id)) "VLM fake upload did not return document_id."
 
-    $vlmOcr = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($vlmUpload.document_id)/ocr/mock"
+    $vlmOcr = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($vlmUpload.document_id)/ocr/mock" -Headers $authHeaders
     Assert-Condition ($vlmOcr.status -eq "completed") "VLM fake OCR mock did not complete."
 
-    $vlmParser = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($vlmUpload.document_id)/parse"
+    $vlmParser = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($vlmUpload.document_id)/parse" -Headers $authHeaders
     Assert-Condition ($vlmParser.status -eq "parsed") "VLM fake parser did not return parsed status."
     Assert-Condition ($vlmParser.parser_source -eq "vlm_invoice") "VLM fake parser source was '$($vlmParser.parser_source)'; expected vlm_invoice."
     Assert-Condition ($null -eq $vlmParser.fallback_reason) "VLM fake parser fallback reason should be null. Got '$($vlmParser.fallback_reason)'."
@@ -368,7 +399,7 @@ if ($RunVector) {
     Write-Host "Manual vector indexing"
 
     try {
-        $vectorIndexing = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($upload.document_id)/index/vector"
+        $vectorIndexing = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($upload.document_id)/index/vector" -Headers $authHeaders
     }
     catch {
         $errorBody = Get-ErrorResponseBody $_
@@ -391,7 +422,7 @@ else {
     Write-Host "Aggressive default vector indexing best-effort"
 
     try {
-        $defaultVectorIndexing = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($upload.document_id)/index/vector"
+        $defaultVectorIndexing = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($upload.document_id)/index/vector" -Headers $authHeaders
         if ($defaultVectorIndexing.status -eq "completed") {
             Write-Host "Aggressive vector indexing OK: indexed chunks $($defaultVectorIndexing.indexed_chunk_count)"
         }
@@ -419,6 +450,7 @@ $rag = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/rag/query" -ContentType 
 Assert-Condition ($rag.citations.Count -gt 0) "RAG did not return citations."
 Assert-Condition ($rag.retrieved_chunks.Count -gt 0) "RAG did not return retrieved chunks."
 Assert-Condition (($rag.retrieved_chunks | ConvertTo-Json -Depth 8) -match "AUR-2026-051") "Retrieved chunks did not include expected invoice evidence."
+Assert-Condition ($rag.citations[0].source_type -eq "text_upload") "RAG citation source_type was '$($rag.citations[0].source_type)'; expected text_upload."
 $ragAnswerSource = Get-RagAnswerSource $rag
 $ragRetrievalSource = Get-RagRetrievalSource $rag
 
@@ -463,10 +495,10 @@ if ($RunRealOcr) {
     Write-Host "Real OCR check"
     Write-Host "Real OCR sample: $resolvedRealOcrSamplePath"
 
-    $realUpload = Invoke-FileUpload "$ApiBaseUrl/documents/upload" $resolvedRealOcrSamplePath "image/png"
+    $realUpload = Invoke-FileUpload "$ApiBaseUrl/documents/upload" $resolvedRealOcrSamplePath "image/png" $authHeaders
 
     try {
-        $realOcr = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($realUpload.document_id)/ocr"
+        $realOcr = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/documents/$($realUpload.document_id)/ocr" -Headers $authHeaders
         Assert-Condition ($realOcr.status -eq "completed") "Provider-selected OCR did not complete."
         Assert-Condition (-not [string]::IsNullOrWhiteSpace($realOcr.text)) "Provider-selected OCR returned empty text."
         Write-Host "Provider-selected OCR OK: $($realOcr.status)"

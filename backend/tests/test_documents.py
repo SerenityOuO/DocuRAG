@@ -45,20 +45,67 @@ def client(tmp_path: Path) -> TestClient:
     app.dependency_overrides.clear()
 
 
+def _pdf_bytes(text_lines: list[str]) -> bytes:
+    text_commands = ["BT", "/F1 12 Tf", "72 720 Td"]
+    for line_index, line in enumerate(text_lines):
+        if line_index > 0:
+            text_commands.append("0 -16 Td")
+
+        safe_line = line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+        text_commands.append(f"({safe_line}) Tj")
+
+    text_commands.append("ET")
+    content_stream = "\n".join(text_commands) if text_lines else ""
+    objects = [
+        "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+        "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
+        (
+            "3 0 obj\n"
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+            "/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\n"
+            "endobj\n"
+        ),
+        "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
+        (
+            "5 0 obj\n"
+            f"<< /Length {len(content_stream.encode('latin-1'))} >>\n"
+            "stream\n"
+            f"{content_stream}\n"
+            "endstream\n"
+            "endobj\n"
+        ),
+    ]
+
+    content = "%PDF-1.4\n"
+    offsets = [0]
+    for obj in objects:
+        offsets.append(len(content.encode("latin-1")))
+        content += obj
+
+    xref_offset = len(content.encode("latin-1"))
+    content += "xref\n0 6\n"
+    content += "0000000000 65535 f \n"
+    content += "".join(f"{offset:010d} 00000 n \n" for offset in offsets[1:])
+    content += "trailer\n<< /Size 6 /Root 1 0 R >>\n"
+    content += f"startxref\n{xref_offset}\n%%EOF\n"
+
+    return content.encode("latin-1")
+
+
 def test_upload_document_returns_uploaded_metadata(client: TestClient) -> None:
     response = client.post(
         "/documents/upload",
-        files={"file": ("invoice.pdf", b"sample document", "application/pdf")},
+        files={"file": ("invoice.png", b"sample document", "image/png")},
     )
 
     assert response.status_code == 200
     body = response.json()
     assert body["document_id"]
     assert "project_id" in body
-    assert body["filename"] == "invoice.pdf"
-    assert body["stored_filename"].endswith("-invoice.pdf")
-    assert body["file_type"] == "pdf"
-    assert body["content_type"] == "application/pdf"
+    assert body["filename"] == "invoice.png"
+    assert body["stored_filename"].endswith("-invoice.png")
+    assert body["file_type"] == "png"
+    assert body["content_type"] == "image/png"
     assert body["size"] == len(b"sample document")
     assert body["status"] == "uploaded"
     assert body["processing"]["upload"] == "completed"
@@ -75,7 +122,7 @@ def test_upload_document_saves_file_and_metadata(client: TestClient, tmp_path: P
 
     response = client.post(
         "/documents/upload",
-        files={"file": ("invoice.pdf", content, "application/pdf")},
+        files={"file": ("invoice.png", content, "image/png")},
     )
 
     assert response.status_code == 200
@@ -86,12 +133,143 @@ def test_upload_document_saves_file_and_metadata(client: TestClient, tmp_path: P
     assert upload_path.read_bytes() == content
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     assert metadata[0]["document_id"] == body["document_id"]
-    assert metadata[0]["filename"] == "invoice.pdf"
+    assert metadata[0]["filename"] == "invoice.png"
     assert metadata[0]["processing"]["upload"] == "completed"
     assert metadata[0]["processing"]["ocr"] == "pending"
     assert metadata[0]["processing"]["indexing"] == "pending"
     assert metadata[0]["latest_job"]["job_type"] == "upload"
     assert metadata[0]["processing_jobs"][0]["document_id"] == body["document_id"]
+
+
+def test_upload_txt_direct_ingestion_creates_text_upload_chunks(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    content = (
+        "Fictitious Demo Invoice\r\n"
+        "Invoice number: AUR-2026-051\r\n"
+        "Payment terms:   Net 15\r\n"
+    )
+
+    response = client.post(
+        "/documents/upload",
+        files={"file": ("invoice.txt", content.encode("utf-8"), "text/plain")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ready"
+    assert body["ocr"]["status"] == "pending"
+    assert body["processing"]["ocr"] == "pending"
+    assert body["processing"]["indexing"] == "completed"
+    assert body["processing"]["ready"] is True
+    assert [job["job_type"] for job in body["processing_jobs"]] == [
+        "upload",
+        "text_ingestion",
+        "local_indexing",
+    ]
+    assert body["latest_job"]["job_type"] == "local_indexing"
+    assert body["chunks"][0]["source"] == "text_upload"
+    assert body["chunks"][0]["source_type"] == "text_upload"
+    assert body["chunks"][0]["metadata"] == {
+        "origin": "uploaded_text",
+        "content_source": "text_upload",
+        "source_router": "text_upload",
+    }
+    assert "Payment terms: Net 15" in body["chunks"][0]["text"]
+
+    metadata_path = tmp_path / "data" / "documents.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata[0]["ocr"]["status"] == "pending"
+    assert metadata[0]["chunks"][0]["source_type"] == "text_upload"
+
+
+def test_upload_text_native_pdf_extracts_pdf_text_chunks(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    content = _pdf_bytes(
+        [
+            "Fictitious Demo Invoice",
+            "Vendor: Aurora Office Supplies Demo LLC",
+            "Invoice number: AUR-2026-051",
+            "Issue date: 2026-05-31",
+            "Total: USD 1248.50",
+            "Payment terms: Net 15",
+        ]
+    )
+
+    response = client.post(
+        "/documents/upload",
+        files={"file": ("invoice.pdf", content, "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ready"
+    assert body["ocr"]["status"] == "pending"
+    assert body["processing"]["ocr"] == "pending"
+    assert body["processing"]["indexing"] == "completed"
+    assert body["processing"]["ready"] is True
+    assert [job["job_type"] for job in body["processing_jobs"]] == [
+        "upload",
+        "pdf_text_extraction",
+        "local_indexing",
+    ]
+    assert body["latest_job"]["job_type"] == "local_indexing"
+    assert body["chunks"][0]["source"] == "pdf_text"
+    assert body["chunks"][0]["source_type"] == "pdf_text"
+    assert body["chunks"][0]["page_number"] == 1
+    assert body["chunks"][0]["bbox"] is None
+    assert body["chunks"][0]["confidence"] is None
+    assert body["chunks"][0]["metadata"] == {
+        "origin": "pdf_text",
+        "content_source": "pdf_text",
+        "source_router": "pdf_text",
+        "page_number": "1",
+    }
+    assert "AUR-2026-051" in body["chunks"][0]["text"]
+
+    metadata_path = tmp_path / "data" / "documents.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata[0]["chunks"][0]["source_type"] == "pdf_text"
+
+
+def test_upload_empty_pdf_marks_scanned_pending_ocr(client: TestClient) -> None:
+    response = client.post(
+        "/documents/upload",
+        files={"file": ("scanned.pdf", _pdf_bytes([]), "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "uploaded"
+    assert body["ocr"]["status"] == "pending"
+    assert body["processing"]["ocr"] == "pending"
+    assert body["processing"]["indexing"] == "pending"
+    assert body["processing"]["ready"] is False
+    assert body["chunks"] == []
+    assert "pdf_scanned_pending_ocr" in body["processing"]["failed_reason"]
+    assert "PDF rendering / OCR pipeline" in body["processing"]["failed_reason"]
+    assert body["latest_job"]["job_type"] == "pdf_text_extraction"
+    assert body["latest_job"]["status"] == "failed"
+
+
+def test_upload_invalid_pdf_marks_pdf_extraction_failed(client: TestClient) -> None:
+    response = client.post(
+        "/documents/upload",
+        files={"file": ("broken.pdf", b"not a pdf", "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "failed"
+    assert body["processing"]["indexing"] == "failed"
+    assert body["processing"]["ready"] is False
+    assert body["chunks"] == []
+    assert body["processing"]["failed_reason"].startswith("pdf_text_extraction_failed:")
+    assert body["latest_job"]["job_type"] == "pdf_text_extraction"
+    assert body["latest_job"]["status"] == "failed"
 
 
 def test_list_documents_returns_uploaded_documents_newest_first(client: TestClient) -> None:
@@ -117,7 +295,7 @@ def test_list_documents_returns_uploaded_documents_newest_first(client: TestClie
 def test_get_document_returns_uploaded_document(client: TestClient) -> None:
     upload_response = client.post(
         "/documents/upload",
-        files={"file": ("invoice.pdf", b"sample document", "application/pdf")},
+        files={"file": ("invoice.png", b"sample document", "image/png")},
     )
     document_id = upload_response.json()["document_id"]
 
@@ -126,7 +304,7 @@ def test_get_document_returns_uploaded_document(client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["document_id"] == document_id
-    assert body["filename"] == "invoice.pdf"
+    assert body["filename"] == "invoice.png"
     assert body["ocr"]["status"] == "pending"
 
 
@@ -139,7 +317,7 @@ def test_get_document_returns_404_for_unknown_document(client: TestClient) -> No
 def test_get_ocr_result_returns_pending_for_uploaded_document(client: TestClient) -> None:
     upload_response = client.post(
         "/documents/upload",
-        files={"file": ("invoice.pdf", b"sample document", "application/pdf")},
+        files={"file": ("invoice.png", b"sample document", "image/png")},
     )
     document_id = upload_response.json()["document_id"]
 
@@ -160,7 +338,7 @@ def test_run_mock_ocr_saves_result_to_metadata(
 ) -> None:
     upload_response = client.post(
         "/documents/upload",
-        files={"file": ("invoice.pdf", b"sample document", "application/pdf")},
+        files={"file": ("invoice.png", b"sample document", "image/png")},
     )
     document_id = upload_response.json()["document_id"]
 
@@ -170,11 +348,11 @@ def test_run_mock_ocr_saves_result_to_metadata(
     body = response.json()
     assert body["document_id"] == document_id
     assert body["status"] == "completed"
-    assert "Mock OCR result for invoice.pdf" in body["text"]
+    assert "Mock OCR result for invoice.png" in body["text"]
     assert body["extracted_fields"] == {
-        "filename": "invoice.pdf",
-        "file_type": "pdf",
-        "content_type": "application/pdf",
+        "filename": "invoice.png",
+        "file_type": "png",
+        "content_type": "image/png",
         "size_bytes": str(len(b"sample document")),
     }
     assert body["updated_at"]
@@ -205,7 +383,7 @@ def test_run_mock_ocr_saves_result_to_metadata(
         "origin": "ocr_text",
         "provider": "ocr_mock",
     }
-    assert "Mock OCR result for invoice.pdf" in metadata[0]["chunks"][0]["text"]
+    assert "Mock OCR result for invoice.png" in metadata[0]["chunks"][0]["text"]
     assert metadata[0]["chunks"][0]["created_at"]
 
 
@@ -261,7 +439,6 @@ def test_parse_document_fields_saves_parser_result_to_metadata(
         files={"file": ("invoice.txt", invoice_text.encode("utf-8"), "text/plain")},
     )
     document_id = upload_response.json()["document_id"]
-    client.post(f"/documents/{document_id}/ocr/mock")
 
     response = client.post(f"/documents/{document_id}/parse")
 
@@ -280,6 +457,7 @@ def test_parse_document_fields_saves_parser_result_to_metadata(
     assert body["fallback_reason"] == "unsupported_file"
     assert body["trace_metadata"]["fallback_chain"] == "vlm_invoice -> deterministic_invoice"
     assert body["trace_metadata"]["fallback_reason"] == "unsupported_file"
+    assert body["trace_metadata"]["source_input_type"] == "text_upload"
 
     metadata_path = tmp_path / "data" / "documents.json"
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
@@ -288,12 +466,40 @@ def test_parse_document_fields_saves_parser_result_to_metadata(
     assert metadata[0]["processing"]["parser"] == "completed"
     assert [job["job_type"] for job in metadata[0]["processing_jobs"]] == [
         "upload",
-        "ocr_mock",
+        "text_ingestion",
         "local_indexing",
         "parser",
     ]
     assert metadata[0]["latest_job"]["job_type"] == "parser"
     assert metadata[0]["latest_job"]["status"] == "completed"
+
+
+def test_parse_document_fields_uses_pdf_text_chunks(client: TestClient) -> None:
+    content = _pdf_bytes(
+        [
+            "Fictitious Demo Invoice",
+            "Invoice number: AUR-2026-051",
+            "Vendor: Aurora Office Supplies Demo LLC",
+            "Issue date: 2026-05-31",
+            "Amount due: USD 1,248.50",
+        ]
+    )
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("invoice.pdf", content, "application/pdf")},
+    )
+    document_id = upload_response.json()["document_id"]
+
+    response = client.post(f"/documents/{document_id}/parse")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "parsed"
+    assert body["fields"]["invoice_number"]["value"] == "AUR-2026-051"
+    assert body["fields"]["invoice_number"]["source_page"] == 1
+    assert body["fields"]["invoice_number"]["source_bbox"] is None
+    assert body["fallback_reason"] == "unsupported_file"
+    assert body["trace_metadata"]["source_input_type"] == "pdf_text"
 
 
 def test_get_fields_returns_saved_parser_result_after_storage_reload(
@@ -327,7 +533,7 @@ def test_get_fields_returns_saved_parser_result_after_storage_reload(
 def test_parse_document_fields_rejects_document_before_ocr(client: TestClient) -> None:
     upload_response = client.post(
         "/documents/upload",
-        files={"file": ("invoice.txt", b"sample document", "text/plain")},
+        files={"file": ("invoice.pdf", b"sample document", "application/pdf")},
     )
     document_id = upload_response.json()["document_id"]
 
@@ -435,10 +641,15 @@ def test_vector_indexing_endpoint_returns_indexing_result(client: TestClient) ->
     app.dependency_overrides[get_vector_indexing_service] = lambda: service
     upload_response = client.post(
         "/documents/upload",
-        files={"file": ("invoice.pdf", b"sample document", "application/pdf")},
+        files={
+            "file": (
+                "invoice.txt",
+                b"Invoice number: AUR-2026-051\nPayment terms: Net 15",
+                "text/plain",
+            )
+        },
     )
     document_id = upload_response.json()["document_id"]
-    client.post(f"/documents/{document_id}/ocr/mock")
 
     response = client.post(f"/documents/{document_id}/index/vector")
 
@@ -446,6 +657,7 @@ def test_vector_indexing_endpoint_returns_indexing_result(client: TestClient) ->
     assert service.document is not None
     assert service.document.document_id == document_id
     assert service.document.chunks[0].chunk_id == f"{document_id}-chunk-001"
+    assert service.document.chunks[0].source_type == "text_upload"
     assert response.json() == {
         "document_id": document_id,
         "status": "completed",
@@ -459,6 +671,48 @@ def test_vector_indexing_endpoint_returns_indexing_result(client: TestClient) ->
         "reason": None,
         "error": None,
     }
+
+
+def test_vector_indexing_endpoint_accepts_pdf_text_chunks(client: TestClient) -> None:
+    class StubVectorIndexingService:
+        def __init__(self) -> None:
+            self.document: DocumentMetadata | None = None
+
+        def index_document(self, document: DocumentMetadata) -> VectorIndexingResult:
+            self.document = document
+            return VectorIndexingResult(
+                document_id=document.document_id,
+                status="completed",
+                indexed_chunk_count=1,
+                point_ids=["point-pdf-001"],
+                collection_name="docurag_chunks_v1",
+                vector_size=1024,
+                embedding_provider="ollama",
+                embedding_model="qwen3-embedding:0.6b",
+            )
+
+    service = StubVectorIndexingService()
+    app.dependency_overrides[get_vector_indexing_service] = lambda: service
+    upload_response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "invoice.pdf",
+                _pdf_bytes(["Invoice number: AUR-2026-051", "Payment terms: Net 15"]),
+                "application/pdf",
+            )
+        },
+    )
+    document_id = upload_response.json()["document_id"]
+
+    response = client.post(f"/documents/{document_id}/index/vector")
+
+    assert response.status_code == 200
+    assert service.document is not None
+    assert service.document.chunks[0].source_type == "pdf_text"
+    assert service.document.chunks[0].page_number == 1
+    assert response.json()["status"] == "completed"
+    assert response.json()["point_ids"] == ["point-pdf-001"]
 
 
 def test_vector_indexing_endpoint_returns_404_for_unknown_document(client: TestClient) -> None:
@@ -481,7 +735,7 @@ def test_vector_indexing_endpoint_rejects_document_before_ocr(client: TestClient
     assert response.json()["detail"] == {
         "document_id": document_id,
         "status": "failed",
-        "error": "Document OCR must be completed before vector indexing.",
+        "error": "Document OCR or direct text extraction must be completed before vector indexing.",
     }
 
 
@@ -1123,7 +1377,7 @@ def test_run_mock_ocr_persists_failed_processing_status(
     app.dependency_overrides[get_mock_ocr_provider] = FailingOcrProvider
     upload_response = client.post(
         "/documents/upload",
-        files={"file": ("failed-ocr.txt", b"sample document", "text/plain")},
+        files={"file": ("failed-ocr.png", b"sample document", "image/png")},
     )
     document_id = upload_response.json()["document_id"]
 

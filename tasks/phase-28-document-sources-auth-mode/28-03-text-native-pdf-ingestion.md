@@ -56,13 +56,13 @@
 
 ## Acceptance Criteria
 
-- [ ] Text-native PDF 上傳後可抽出文字並建立 chunks，chunk `source_type=pdf_text`。
-- [ ] PDF chunks 保留 page number metadata；沒有 bbox 時明確為 `null`。
-- [ ] Scanned / empty PDF 不被標示為 ready，狀態或 trace 需顯示 `pdf_scanned_pending_ocr` 或等價原因。
-- [ ] PDF text chunks 可被 `/rag/query` 搜尋並回傳 citation。
-- [ ] PDF text chunks 可被 Qdrant vector indexing 使用；Qdrant 不可用時 fallback 清楚。
-- [ ] Agent `search_documents` 可命中 PDF text chunks。
-- [ ] 文件明確說明 Phase 28 支援的是 text-native PDF，不是 scanned PDF OCR。
+- [x] Text-native PDF 上傳後可抽出文字並建立 chunks，chunk `source_type=pdf_text`。
+- [x] PDF chunks 保留 page number metadata；沒有 bbox 時明確為 `null`。
+- [x] Scanned / empty PDF 不被標示為 ready，狀態或 trace 需顯示 `pdf_scanned_pending_ocr` 或等價原因。
+- [x] PDF text chunks 可被 `/rag/query` 搜尋並回傳 citation。
+- [x] PDF text chunks 可被 Qdrant vector indexing 使用；Qdrant 不可用時 fallback 清楚。
+- [x] Agent `search_documents` 可命中 PDF text chunks。
+- [x] 文件明確說明 Phase 28 支援的是 text-native PDF，不是 scanned PDF OCR。
 
 ## Validation
 
@@ -71,3 +71,11 @@
 - `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
 - `rg -n "pdf_text|pdf_scanned_pending_ocr|text-native PDF|PDF text|scanned PDF|source_type" backend/app backend/tests frontend/src README.md backend/README.md frontend/README.md docs/api.md docs/architecture.md docs/demo-script.md TODO.md docs/ROADMAP.md tasks/phase-28-document-sources-auth-mode`
 - `git diff --check`
+
+Validation result:
+
+- Backend validation passed: `178 passed`（僅 `.pytest_cache` 權限 warning）。
+- Frontend build passed.
+- Demo smoke passed；Qdrant unavailable path 回傳清楚 fallback，RAG 仍完成。
+- Ticket `rg` passed.
+- `git diff --check` passed（僅 Windows LF/CRLF warning）。

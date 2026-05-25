@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch 與 Phase 27 source contract backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch 與 v0.28.0 Document Sources / Demo Auth Mode release。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.27.1 OCR / VLM Evidence Alignment checklist。
+- TODO 包含 Phase 00 到 v0.28.0 Document Sources / Demo Auth Mode checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -86,6 +86,7 @@ Expected Outcome：
 - v0.25.0 Agent Tool-use Minimal MVP 只做 deterministic planner、allowlisted tool adapters、Agent run API、frontend trace surface 與 release sync；不新增 LLM autonomous planner、任意 SQL、DB、RBAC、worker、Redis/NATS 或 destructive tools。
 - v0.26.0 Real VLM Parser Provider Spike 只做 VLM-first provider contract、demo-safe image input resolver、`vlm_invoice` adapter、parser source comparison 與 release sync；`deterministic_invoice` 只作 fallback / debug override，不新增 production VLM parser、PDF rendering、多頁 parser pipeline、DB、worker、RBAC 或 Agent 直接呼叫 VLM。
 - v0.27.0 Aggressive Demo Defaults 只把已完成且有 fallback 的 demo 能力改成預設：default `hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter、frontend parser + vector indexing best-effort flow；不新增 DB、worker、Auth/RBAC、OpenAI API、vLLM、PDF rendering 或 production indexing pipeline。
+- v0.28.0 Document Sources / Demo Auth Mode 只做 `.txt` direct ingestion、text-native PDF extraction、scanned PDF pending state 與 demo-safe login / role guard；不新增正式 RBAC、tenant isolation、PostgreSQL schema、Redis、NATS、worker、SSO、OAuth、MFA、K8s 或 scanned PDF OCR pipeline。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -1652,27 +1653,40 @@ Expected Outcome：
 - Frontend upload flow 依來源顯示不同處理狀態：文字直接匯入、圖片 OCR、PDF text extraction 或 scanned PDF pending OCR。
 - Demo auth mode 提供 login / logout / me API，Admin / Analyst 可操作 ingestion，Viewer 只能查詢與查看。
 - Backend write API 至少對 upload、OCR、parse、vector index 做 demo role guard，避免 Viewer 透過 API 操作 ingestion。
-- Backend / frontend / health / Docker Compose version 在 `28-05` 同步到 `0.28.0` / `v0.28.0`。
+- Backend / frontend / health / Docker Compose version 已在 `28-05` 同步到 `0.28.0` / `v0.28.0`。
 
 28-01 Document Source Router Contract Status：
 
-- 待執行。此 ticket 只固定 source router 與 normalized text contract，不改 runtime；它會明確回答 `.txt` 不該走 mock OCR，PDF 也不該被當成單一簡單能力。
+- 已完成。此 ticket 只固定 source router 與 normalized text contract，不改 runtime；文件已明確回答 `.txt` 不該走 mock OCR，PDF 也不該被當成單一簡單能力。
+- Source router target 已固定為 `image_ocr`、`text_upload`、`pdf_text` 與 `pdf_scanned_pending_ocr`；normalized document text contract 至少包含 document id、source type、text、page number、bbox、confidence、metadata 與 created time。
 - 本 ticket 不 bump version，且不新增 PDF extraction dependency、worker、DB、正式 Auth / RBAC 或 deployment。
 
 28-02 Direct Text Upload Ingestion Status：
 
-- 待執行。此 ticket 讓 `.txt` 成為 first-class source：直接建立 `text_upload` chunks，接到 RAG、Qdrant vector indexing、parser fallback 與 Agent search。
-- 完成後 `.txt` 不應再顯示為 OCR 成功，也不應以 `ocr_mock` 作為正式 retrieval source。
+- 已完成。此 ticket 讓 `.txt` 成為 first-class source：直接建立 `text_upload` chunks，接到 RAG、Qdrant vector indexing、parser fallback 與 Agent search。
+- `.txt` 不再顯示為 OCR 成功，也不再以 `ocr_mock` 作為正式 retrieval source；frontend 會跳過 provider-selected OCR，顯示 direct text path，並 best-effort 執行 parser / vector indexing。
+- Validation 已通過：backend tests `170 passed`（僅 pytest cache 權限警告）；frontend build 通過；demo smoke 通過，`.txt` upload 直接產生 `text_upload` chunks，Qdrant 不可用時保留清楚 fallback；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 28-03 Text-Native PDF Ingestion Status：
 
-- 待執行。此 ticket 支援 text-native PDF extraction 與 `pdf_text` chunks；scanned PDF 僅標示 `pdf_scanned_pending_ocr` 或等價 pending state。
-- 本 ticket 不做 PDF rendering、多頁 OCR pipeline、layout analysis 或 scanned PDF OCR。
+- 已完成。此 ticket 使用 `pypdf` 支援 text-native PDF extraction 與 `pdf_text` chunks，保留 page number；`bbox` / `confidence` 沒有來源時維持 `null`。
+- Scanned / empty PDF 只標示 `pdf_scanned_pending_ocr`，不自動送 OCR；invalid PDF 會顯示 `pdf_text_extraction_failed`。
+- RAG、Qdrant vector indexing 與 Agent `search_documents` 已可使用 `pdf_text` chunks；本 ticket 不做 PDF rendering、多頁 OCR pipeline、layout analysis 或 scanned PDF OCR。
+- Validation 已通過：backend tests `178 passed`（僅 pytest cache 權限警告）；frontend build 通過；demo smoke 通過，Qdrant 不可用時保留清楚 fallback；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 28-04 Demo Login Mode and Role Gates Status：
 
-- 待執行。此 ticket 新增 demo login mode、demo users、Auth API、frontend login screen 與基本 role gates。
+- 已完成。此 ticket 新增 demo login mode、demo users、Auth API、frontend login screen 與基本 role gates。
+- `DOCURAG_AUTH_MODE=demo` 時，`/auth/login` 會回傳 signed demo bearer token，`/auth/me` 會回傳目前使用者與 role，`/auth/logout` 是 stateless logout acknowledgement。
+- Admin / Analyst 可操作 upload、provider-selected OCR、mock OCR、parse 與 vector index；Viewer 在 frontend 只看到查詢 surface，且 backend ingestion write API 會回傳 403 forbidden。Download 在 demo mode 下需登入，但三種 demo role 都可使用。
 - 本 ticket 不做 PostgreSQL users table、organization / project isolation、正式 RBAC、SSO、OAuth、MFA、Redis session 或 production audit log。
+- Validation 已通過：backend tests `185 passed`（僅 pytest cache 權限警告）；frontend build 通過；`DOCURAG_AUTH_MODE=demo` demo smoke 通過；Browser 檢查 login flow、Admin ingestion、Viewer read-only、desktop 1280px 與 mobile 390px 無 horizontal overflow；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+28-05 Phase 28 Demo Release Sync Status：
+
+- 已完成。Backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、docs/api.md、docs/architecture.md、docs/demo-script.md、TODO 與 ROADMAP 已同步到 `0.28.0` / `v0.28.0`。
+- Final validation 已通過：backend tests `185 passed`（僅 pytest cache 權限警告）；frontend build 通過；`DOCURAG_AUTH_MODE=demo` demo smoke 通過，health version `0.28.0`、admin login、direct text ingestion、Agent run、RAG query 與 Qdrant unavailable fallback 都符合預期；Browser 檢查 `v0.28.0` label、login flow、Admin ingestion、Viewer read-only、desktop 1280px 與 mobile 390px 無 horizontal overflow；final `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+- 本 release 不新增 tag，不新增 PostgreSQL schema、Redis、NATS、worker、SSO、OAuth、MFA、K8s、scanned PDF rendering / OCR pipeline、embedding model 變更、rerank algorithm 變更、Agent planner 變更或 VLM parser behavior 變更。
 
 Acceptance Criteria：
 

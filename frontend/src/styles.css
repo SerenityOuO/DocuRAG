@@ -169,6 +169,11 @@ td {
   text-align: left;
 }
 
+.mode-button:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
 .mode-button-active {
   background: #0f766e;
   border-color: #0f766e;
@@ -301,7 +306,8 @@ td {
 .upload-surface,
 .ingestion-surface,
 .ingestion-status,
-.agent-surface {
+.agent-surface,
+.auth-surface {
   min-height: 360px;
 }
 
@@ -380,6 +386,43 @@ td {
 .surface-note span {
   color: #526173;
   line-height: 1.45;
+}
+
+.role-picker {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 120px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.auth-form span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.auth-form input {
+  background: #ffffff;
+  border: 1px solid #c4d0df;
+  border-radius: 8px;
+  color: #172033;
+  min-height: 42px;
+  min-width: 0;
+  padding: 10px 12px;
+  width: 100%;
 }
 
 .success-message {
@@ -1345,6 +1388,8 @@ pre {
 
   .minimal-grid,
   .minimal-chat-form,
+  .auth-form,
+  .role-picker,
   .agent-form,
   .agent-tool-details {
     grid-template-columns: 1fr;

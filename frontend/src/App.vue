@@ -3,9 +3,13 @@ import { computed, onMounted, ref } from "vue";
 
 import {
   API_BASE_URL,
+  clearAuthToken,
   getHealth,
+  getMe,
   indexDocumentVector,
   listDocuments,
+  login as loginDemo,
+  logout as logoutDemo,
   parseDocumentFields,
   queryRag,
   runAgent,
@@ -13,6 +17,8 @@ import {
   runSelectedOcr,
   uploadDocument,
   type AgentRun,
+  type AuthRole,
+  type AuthUser,
   type DocumentMetadata,
   type DocumentFields,
   type ExtractedField,
@@ -20,9 +26,11 @@ import {
   type ParserResult,
   type RagQueryResponse,
   type UploadResponse,
+  setAuthToken,
 } from "./api/client";
 
 type RequestState = "idle" | "loading" | "success" | "error";
+type AuthRequestState = RequestState | "checking";
 type ViewMode = "viewer" | "admin";
 
 type SourceSummary = {
@@ -40,10 +48,13 @@ type InvoiceFieldKey =
   | "currency";
 
 const healthState = ref<RequestState>("idle");
+const authState = ref<AuthRequestState>("checking");
 const chatState = ref<RequestState>("idle");
 const documentsState = ref<RequestState>("idle");
 const uploadState = ref<RequestState>("idle");
 const viewMode = ref<ViewMode>("admin");
+const authMode = ref("disabled");
+const authUser = ref<AuthUser | null>(null);
 const health = ref<HealthResponse | null>(null);
 const ragResult = ref<RagQueryResponse | null>(null);
 const documents = ref<DocumentMetadata[]>([]);
@@ -53,6 +64,7 @@ const uploadFallbackAvailable = ref(false);
 const ragQuery = ref("");
 const ragTopK = ref(3);
 const healthError = ref("");
+const authError = ref("");
 const ragError = ref("");
 const documentsError = ref("");
 const uploadError = ref("");
@@ -66,6 +78,8 @@ const agentDocumentId = ref("");
 const agentQuery = ref("payment terms");
 const agentTopK = ref(3);
 const agentError = ref("");
+const loginUsername = ref("admin");
+const loginPassword = ref("demo-admin-pass");
 
 const suggestedQuestions = [
   "payment due date Net 15",
@@ -73,7 +87,16 @@ const suggestedQuestions = [
   "When is the renewal date?",
 ];
 
-const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.27.1"));
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.28.0"));
+
+const demoAuthRequired = computed(() => authMode.value === "demo" && authUser.value === null);
+const canUseIngestion = computed(() => {
+  if (authMode.value !== "demo") {
+    return true;
+  }
+
+  return authUser.value?.role === "admin" || authUser.value?.role === "analyst";
+});
 
 const heroCopy = computed(() =>
   viewMode.value === "admin"
@@ -173,6 +196,27 @@ const citedSources = computed<SourceSummary[]>(() => {
 const latestDocuments = computed(() => documents.value.slice(0, 5));
 const agentDocumentOptions = computed(() => latestDocuments.value);
 
+const demoUsers: Array<{ role: AuthRole; label: string; username: string; password: string }> = [
+  {
+    role: "admin",
+    label: "Admin",
+    username: "admin",
+    password: "demo-admin-pass",
+  },
+  {
+    role: "analyst",
+    label: "Analyst",
+    username: "analyst",
+    password: "demo-analyst-pass",
+  },
+  {
+    role: "viewer",
+    label: "Viewer",
+    username: "viewer",
+    password: "demo-viewer-pass",
+  },
+];
+
 const invoiceFieldLabels: Array<[InvoiceFieldKey, string]> = [
   ["document_type", "文件類型"],
   ["invoice_number", "發票號碼"],
@@ -200,6 +244,11 @@ function openViewerSurface(): void {
 }
 
 function openAdminSurface(): void {
+  if (!canUseIngestion.value) {
+    viewMode.value = "viewer";
+    return;
+  }
+
   viewMode.value = "admin";
   if (documentsState.value === "idle") {
     void refreshDocuments();
@@ -219,12 +268,78 @@ function handleFileChange(event: Event): void {
   uploadError.value = "";
 }
 
+function isTextUploadFile(file: File): boolean {
+  return file.name.toLowerCase().endsWith(".txt");
+}
+
+function isPdfUploadFile(file: File): boolean {
+  return file.name.toLowerCase().endsWith(".pdf");
+}
+
+function hasDirectTextChunks(document: DocumentMetadata): boolean {
+  return document.chunks.some((chunk) => ["text_upload", "pdf_text"].includes(chunk.source_type));
+}
+
+function processingReason(document: DocumentMetadata): string {
+  return document.processing.failed_reason ?? "";
+}
+
 function chunkReadiness(document: DocumentMetadata): string {
   if (document.chunks.length > 0) {
+    const sourceType = document.chunks[0]?.source_type;
+    if (sourceType === "text_upload") {
+      return `text_upload chunks ready (${document.chunks.length})`;
+    }
+
+    if (sourceType === "pdf_text") {
+      return `pdf_text chunks ready (${document.chunks.length})`;
+    }
+
     return `local chunks ready (${document.chunks.length})`;
   }
 
+  if (processingReason(document).includes("pdf_scanned_pending_ocr")) {
+    return "pdf_scanned_pending_ocr";
+  }
+
+  if (processingReason(document).includes("pdf_text_extraction_failed")) {
+    return "PDF text extraction failed";
+  }
+
   return "local chunks not ready";
+}
+
+function documentSourceLabel(document: DocumentMetadata): string {
+  const sourceType = document.chunks[0]?.source_type;
+  if (sourceType === "text_upload") {
+    return "直接文字匯入";
+  }
+
+  if (sourceType === "pdf_text") {
+    return "text-native PDF";
+  }
+
+  if (sourceType) {
+    return sourceType;
+  }
+
+  if (processingReason(document).includes("pdf_scanned_pending_ocr")) {
+    return "scanned PDF pending OCR";
+  }
+
+  if (processingReason(document).includes("pdf_text_extraction_failed")) {
+    return "PDF extraction failed";
+  }
+
+  if (document.file_type === "txt") {
+    return "文字待匯入";
+  }
+
+  if (document.file_type === "pdf") {
+    return "PDF text pending";
+  }
+
+  return "image_ocr";
 }
 
 function documentStatusTone(status: string): string {
@@ -248,7 +363,11 @@ function parserStatus(document: DocumentMetadata): string {
 }
 
 function canParseDocument(document: DocumentMetadata): boolean {
-  return document.ocr.status === "completed" || document.processing.ocr === "completed";
+  return (
+    document.ocr.status === "completed" ||
+    document.processing.ocr === "completed" ||
+    hasDirectTextChunks(document)
+  );
 }
 
 function formatFieldValue(field: ExtractedField): string {
@@ -316,6 +435,88 @@ function syncAgentDocumentSelection(): void {
 
 function useSuggestedQuestion(question: string): void {
   ragQuery.value = question;
+}
+
+function selectDemoUser(role: AuthRole): void {
+  const demoUser = demoUsers.find((user) => user.role === role);
+  if (!demoUser) {
+    return;
+  }
+
+  loginUsername.value = demoUser.username;
+  loginPassword.value = demoUser.password;
+}
+
+function syncViewModeToRole(): void {
+  if (authMode.value === "demo" && authUser.value?.role === "viewer") {
+    viewMode.value = "viewer";
+    return;
+  }
+
+  if (canUseIngestion.value) {
+    viewMode.value = "admin";
+  }
+}
+
+async function checkAuth(): Promise<void> {
+  authState.value = "checking";
+  authError.value = "";
+
+  try {
+    const response = await getMe();
+    authMode.value = response.auth_mode;
+    authUser.value = response.authenticated ? response.user : null;
+    if (authMode.value === "demo" && authUser.value === null) {
+      viewMode.value = "viewer";
+    } else {
+      syncViewModeToRole();
+    }
+    authState.value = "success";
+  } catch (error) {
+    clearAuthToken();
+    authMode.value = "demo";
+    authUser.value = null;
+    authError.value = error instanceof Error ? error.message : "Demo auth 狀態讀取失敗";
+    authState.value = "error";
+  }
+}
+
+async function submitLogin(): Promise<void> {
+  authState.value = "loading";
+  authError.value = "";
+
+  try {
+    const response = await loginDemo(loginUsername.value, loginPassword.value);
+    setAuthToken(response.access_token);
+    authMode.value = response.auth_mode;
+    authUser.value = response.user;
+    syncViewModeToRole();
+    authState.value = "success";
+    await refreshDocuments();
+  } catch (error) {
+    clearAuthToken();
+    authUser.value = null;
+    authError.value = error instanceof Error ? error.message : "Demo login failed";
+    authState.value = "error";
+  }
+}
+
+async function submitLogout(): Promise<void> {
+  authState.value = "loading";
+  authError.value = "";
+
+  try {
+    await logoutDemo();
+  } catch {
+    // Logout is stateless in demo mode; clearing the local token is the important part.
+  }
+
+  clearAuthToken();
+  authUser.value = null;
+  viewMode.value = "viewer";
+  uploadResult.value = null;
+  uploadFallbackAvailable.value = false;
+  authState.value = "success";
 }
 
 async function checkHealth(): Promise<void> {
@@ -393,6 +594,11 @@ async function runAggressivePostOcr(documentId: string, baseMessage: string): Pr
 }
 
 async function submitUpload(): Promise<void> {
+  if (!canUseIngestion.value) {
+    uploadError.value = "Viewer 角色不能執行 ingestion 操作。";
+    return;
+  }
+
   if (!selectedFile.value) {
     uploadError.value = "請先選擇檔案。";
     return;
@@ -411,6 +617,44 @@ async function submitUpload(): Promise<void> {
     uploadedDocumentId = response.document_id;
     await refreshDocuments();
     syncAgentDocumentSelection();
+
+    if (isTextUploadFile(selectedFile.value)) {
+      uploadMessage.value = await runAggressivePostOcr(
+        uploadedDocumentId,
+        "文件已完成直接文字匯入，並產生 text_upload local chunks。",
+      );
+      uploadState.value = "success";
+      await refreshDocuments();
+      return;
+    }
+
+    if (isPdfUploadFile(selectedFile.value)) {
+      if (response.chunks.some((chunk) => chunk.source_type === "pdf_text")) {
+        uploadMessage.value = await runAggressivePostOcr(
+          uploadedDocumentId,
+          "文件已完成 text-native PDF 文字抽取，並產生 pdf_text local chunks。",
+        );
+        uploadState.value = "success";
+        await refreshDocuments();
+        return;
+      }
+
+      const failedReason = response.processing.failed_reason ?? "";
+      if (failedReason.includes("pdf_scanned_pending_ocr")) {
+        uploadMessage.value =
+          "PDF 未偵測到可抽取文字層，已標示為 pdf_scanned_pending_ocr；需要後續 PDF rendering / OCR pipeline。";
+        uploadState.value = "success";
+        await refreshDocuments();
+        return;
+      }
+
+      uploadError.value = failedReason
+        ? `PDF 文字抽取失敗：${failedReason}`
+        : "PDF 文字抽取失敗。";
+      uploadState.value = "error";
+      await refreshDocuments();
+      return;
+    }
   } catch (error) {
     uploadResult.value = null;
     uploadError.value = error instanceof Error ? error.message : "文件上傳失敗";
@@ -447,6 +691,11 @@ async function submitUpload(): Promise<void> {
 }
 
 async function submitMockFallback(): Promise<void> {
+  if (!canUseIngestion.value) {
+    uploadError.value = "Viewer 角色不能執行 OCR fallback。";
+    return;
+  }
+
   if (!uploadResult.value) {
     uploadError.value = "請先完成文件上傳。";
     return;
@@ -472,6 +721,14 @@ async function submitMockFallback(): Promise<void> {
 }
 
 async function submitFieldParse(document: DocumentMetadata): Promise<void> {
+  if (!canUseIngestion.value) {
+    parseErrors.value = {
+      ...parseErrors.value,
+      [document.document_id]: "Viewer 角色不能執行欄位解析。",
+    };
+    return;
+  }
+
   parseStates.value = {
     ...parseStates.value,
     [document.document_id]: "loading",
@@ -536,6 +793,7 @@ async function submitAgentRun(): Promise<void> {
 }
 
 onMounted(() => {
+  void checkAuth();
   void checkHealth();
   void refreshDocuments();
 });
@@ -558,6 +816,17 @@ onMounted(() => {
           <span>服務狀態</span>
           <strong>{{ healthLabel }}</strong>
           <small>{{ health?.version ? `Backend ${health.version}` : API_BASE_URL }}</small>
+          <span>Demo Auth</span>
+          <strong>{{ authUser ? `${authUser.display_name} / ${authUser.role}` : authMode }}</strong>
+          <button
+            v-if="authMode === 'demo' && authUser"
+            type="button"
+            class="button secondary-button compact-button"
+            :disabled="authState === 'loading'"
+            @click="submitLogout"
+          >
+            登出
+          </button>
           <div class="mode-switch" aria-label="產品入口">
             <button
               type="button"
@@ -571,6 +840,7 @@ onMounted(() => {
               type="button"
               class="mode-button"
               :class="{ 'mode-button-active': viewMode === 'admin' }"
+              :disabled="!canUseIngestion"
               @click="openAdminSurface"
             >
               後台知識庫管理
@@ -580,6 +850,59 @@ onMounted(() => {
       </div>
     </header>
 
+    <section v-if="authState === 'checking'" class="minimal-grid viewer-grid" aria-label="demo auth loading">
+      <article class="panel auth-surface">
+        <div class="panel-heading">
+          <div>
+            <h2>Demo Auth</h2>
+            <p>讀取登入狀態中...</p>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section v-else-if="demoAuthRequired" class="minimal-grid viewer-grid" aria-label="demo login">
+      <article class="panel auth-surface">
+        <div class="panel-heading">
+          <div>
+            <h2>Demo Login</h2>
+            <p>選擇一個 demo role 進入對應 surface。</p>
+          </div>
+          <span class="status-pill status-ready">demo auth</span>
+        </div>
+
+        <div class="role-picker" aria-label="demo roles">
+          <button
+            v-for="demoUser in demoUsers"
+            :key="demoUser.role"
+            type="button"
+            class="mode-button"
+            :class="{ 'mode-button-active': loginUsername === demoUser.username }"
+            @click="selectDemoUser(demoUser.role)"
+          >
+            {{ demoUser.label }}
+          </button>
+        </div>
+
+        <form class="auth-form" @submit.prevent="submitLogin">
+          <label>
+            <span>Username</span>
+            <input v-model="loginUsername" type="text" autocomplete="username" />
+          </label>
+          <label>
+            <span>Password</span>
+            <input v-model="loginPassword" type="password" autocomplete="current-password" />
+          </label>
+          <button type="submit" class="button" :disabled="authState === 'loading'">
+            {{ authState === "loading" ? "登入中..." : "登入" }}
+          </button>
+        </form>
+
+        <p v-if="authError" class="error">{{ authError }}</p>
+      </article>
+    </section>
+
+    <template v-else>
     <section v-if="viewMode === 'viewer'" class="minimal-grid viewer-grid" aria-label="前台文件客服查詢入口">
       <article class="panel chat-surface">
         <div class="panel-heading">
@@ -656,7 +979,7 @@ onMounted(() => {
 
         <div class="surface-note">
           <strong>目前階段</strong>
-          <span>backend upload + provider-selected OCR + local chunking。real OCR 失敗時保留文件並提供 mock OCR fallback；Phase 27 預設會 best-effort 執行 VLM-first parser 與 Qdrant vector indexing，但仍不是 production worker pipeline、DB 或正式權限系統。</span>
+          <span>backend upload + source router + local chunking。`.txt` 直接建立 text_upload chunks；text-native PDF 會抽文字層建立 pdf_text chunks；scanned PDF 只標示 pdf_scanned_pending_ocr；圖片走 provider-selected OCR。real OCR 失敗時保留文件並提供 mock OCR fallback；Phase 27 預設會 best-effort 執行 VLM-first parser 與 Qdrant vector indexing，但仍不是 production worker pipeline、DB 或正式權限系統。</span>
         </div>
 
         <label class="file-picker">
@@ -675,7 +998,15 @@ onMounted(() => {
           :disabled="!selectedFile || uploadState === 'loading'"
           @click="submitUpload"
         >
-          {{ uploadState === "loading" ? "後台處理中..." : "建立進階 demo 知識庫資料" }}
+          {{
+            uploadState === "loading"
+              ? "後台處理中..."
+              : selectedFile && isTextUploadFile(selectedFile)
+                ? "建立 direct text 知識庫資料"
+                : selectedFile && isPdfUploadFile(selectedFile)
+                  ? "建立 text-native PDF 知識庫資料"
+                  : "建立進階 demo 知識庫資料"
+          }}
         </button>
 
         <p v-if="uploadMessage" class="success-message">{{ uploadMessage }}</p>
@@ -716,6 +1047,9 @@ onMounted(() => {
               <span class="status-pill" :class="documentStatusTone(document.status)">
                 document {{ document.status }}
               </span>
+              <span class="status-pill status-ready">
+                {{ documentSourceLabel(document) }}
+              </span>
               <span class="status-pill" :class="documentStatusTone(document.processing.ocr)">
                 OCR {{ document.processing.ocr }}
               </span>
@@ -741,7 +1075,7 @@ onMounted(() => {
                       : "解析欄位"
                 }}
               </button>
-              <small v-if="!canParseDocument(document)">OCR 完成後才能解析欄位。</small>
+              <small v-if="!canParseDocument(document)">OCR 完成、直接文字匯入或 text-native PDF 後才能解析欄位。</small>
             </div>
             <p v-if="parseErrors[document.document_id]" class="error">
               {{ parseErrors[document.document_id] }}
@@ -923,5 +1257,6 @@ onMounted(() => {
     </section>
 
     <p v-if="healthError" class="error footer-error">{{ healthError }}</p>
+    </template>
   </main>
 </template>

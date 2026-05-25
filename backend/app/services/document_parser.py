@@ -276,14 +276,19 @@ class VlmInvoiceParser:
         parsed_at = parsed_at or datetime.now(UTC)
 
         if document.ocr.status != OcrStatus.COMPLETED:
+            descriptor = self.input_resolver.resolve(document)
             result = self.fallback_parser.parse(document, parsed_at=parsed_at)
+            parser_fallback_reason = descriptor.fallback_reason or result.fallback_reason or "ocr_not_completed"
             trace_metadata = dict(result.trace_metadata)
             trace_metadata.update(
                 {
                     "parser_route": "vlm_first",
-                    "fallback_chain": "deterministic_invoice",
-                    "fallback_reason": result.fallback_reason or "ocr_not_completed",
+                    "fallback_chain": "vlm_invoice -> deterministic_invoice",
+                    "fallback_reason": parser_fallback_reason,
                     "source_input_type": trace_metadata.get("input", "ocr_text"),
+                    "source_input": descriptor.input_source,
+                    "ocr_context_state": "available" if descriptor.ocr_context_lines else "unavailable",
+                    "ocr_context_line_count": str(len(descriptor.ocr_context_lines)),
                 }
             )
             return ParserResult(
@@ -292,7 +297,7 @@ class VlmInvoiceParser:
                 parser_source=result.parser_source,
                 schema_version=result.schema_version,
                 fields=result.fields,
-                fallback_reason=result.fallback_reason,
+                fallback_reason=parser_fallback_reason if result.status == ParserStatus.PARSED else result.fallback_reason,
                 error_message=result.error_message,
                 source_ocr_status=result.source_ocr_status,
                 source_ocr_updated_at=result.source_ocr_updated_at,
@@ -595,15 +600,27 @@ class DeterministicInvoiceParser:
         parsed_at = parsed_at or datetime.now(UTC)
         source_ocr_status = document.ocr.status
 
+        source_input_type = "ocr_lines" if document.ocr.lines else "ocr_text"
         if source_ocr_status != OcrStatus.COMPLETED:
-            return self._failed_result(
-                document,
-                parsed_at,
-                fallback_reason="ocr_not_completed",
-                error_message="Document OCR must be completed before invoice parsing.",
+            source_lines = self._direct_text_source_lines(document)
+            if not source_lines:
+                return self._failed_result(
+                    document,
+                    parsed_at,
+                    fallback_reason="ocr_not_completed",
+                    error_message="Document OCR must be completed before invoice parsing.",
+                )
+            source_input_type = next(
+                (
+                    chunk.source_type
+                    for chunk in document.chunks
+                    if chunk.source_type in {"text_upload", "pdf_text"}
+                ),
+                "text_upload",
             )
+        else:
+            source_lines = self._source_lines(document.ocr)
 
-        source_lines = self._source_lines(document.ocr)
         if not source_lines:
             return self._failed_result(
                 document,
@@ -611,6 +628,8 @@ class DeterministicInvoiceParser:
                 fallback_reason="empty_ocr_text",
                 error_message="Document OCR text is empty.",
             )
+
+        input_kind = source_input_type
 
         fields = DocumentFields(
             document_type=self._document_type_field(source_lines),
@@ -625,11 +644,11 @@ class DeterministicInvoiceParser:
 
         missing_fields = self._missing_field_names(fields)
         trace_metadata = {
-            "input": "ocr_lines" if document.ocr.lines else "ocr_text",
+            "input": input_kind,
             "parser_mode": "deterministic",
             "parser_route": "deterministic_only",
             "fallback_chain": "deterministic_invoice",
-            "source_input_type": "ocr_lines" if document.ocr.lines else "ocr_text",
+            "source_input_type": input_kind,
             "line_count": str(len(source_lines)),
             "line_items_count": str(len(fields.line_items)),
             "missing_fields": ",".join(missing_fields),
@@ -696,6 +715,28 @@ class DeterministicInvoiceParser:
             for line in ocr_result.text.splitlines()
             if line.strip()
         ]
+
+    def _direct_text_source_lines(self, document: DocumentMetadata) -> list[SourceLine]:
+        lines = []
+        for chunk in document.chunks:
+            if chunk.source_type not in {"text_upload", "pdf_text"}:
+                continue
+
+            for line in chunk.text.splitlines():
+                clean_line = line.strip()
+                if not clean_line:
+                    continue
+
+                lines.append(
+                    SourceLine(
+                        text=clean_line,
+                        page_number=chunk.page_number,
+                        bbox=chunk.bbox,
+                        confidence=chunk.confidence,
+                    )
+                )
+
+        return lines
 
     def _document_type_field(self, source_lines: list[SourceLine]) -> ExtractedField:
         for line in source_lines:

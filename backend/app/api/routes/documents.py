@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from app.core.config import get_settings
+from app.api.routes.auth import require_authenticated_user, require_ingestion_user
+from app.schemas.auth import AuthUser
 from app.schemas.documents import (
     DocumentDetailResponse,
     DocumentListResponse,
@@ -165,11 +167,14 @@ MockOcrProviderDep = Annotated[MockOcrProvider, Depends(get_mock_ocr_provider)]
 SelectedOcrProviderDep = Annotated[OcrProvider, Depends(get_selected_ocr_provider)]
 VectorIndexingServiceDep = Annotated[VectorIndexingService, Depends(get_vector_indexing_service)]
 DocumentParserDep = Annotated[object, Depends(get_document_parser)]
+AuthenticatedUserDep = Annotated[AuthUser | None, Depends(require_authenticated_user)]
+IngestionUserDep = Annotated[AuthUser | None, Depends(require_ingestion_user)]
 
 
 @router.post("/upload", response_model=DocumentUploadResponse)
 async def upload_document(
     storage: DocumentStorageDep,
+    _auth_user: IngestionUserDep,
     file: UploadFile = File(...),
 ) -> DocumentUploadResponse:
     document = await storage.save_upload(file)
@@ -200,6 +205,7 @@ async def get_document(
 async def run_mock_ocr(
     document_id: str,
     storage: DocumentStorageDep,
+    _auth_user: IngestionUserDep,
     provider: MockOcrProviderDep,
 ) -> OcrResultResponse:
     ocr_result = storage.run_ocr(document_id, provider)
@@ -214,6 +220,7 @@ async def run_mock_ocr(
 async def run_selected_ocr(
     document_id: str,
     storage: DocumentStorageDep,
+    _auth_user: IngestionUserDep,
     provider: SelectedOcrProviderDep,
 ) -> OcrResultResponse:
     ocr_result = storage.run_ocr(document_id, provider)
@@ -252,6 +259,7 @@ async def get_ocr_result(
 async def parse_document_fields(
     document_id: str,
     storage: DocumentStorageDep,
+    _auth_user: IngestionUserDep,
     parser: DocumentParserDep,
 ) -> ParserResult:
     parser_result = storage.run_parser(document_id, parser)
@@ -282,6 +290,7 @@ async def get_document_fields(
 async def index_document_vector(
     document_id: str,
     storage: DocumentStorageDep,
+    _auth_user: IngestionUserDep,
     service: VectorIndexingServiceDep,
 ) -> VectorIndexingResponse:
     document = storage.get_document(document_id)
@@ -289,13 +298,17 @@ async def index_document_vector(
     if document is None:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    if document.ocr.status != OcrStatus.COMPLETED:
+    has_direct_text_chunks = any(
+        chunk.source_type in {"text_upload", "pdf_text"}
+        for chunk in document.chunks
+    )
+    if document.ocr.status != OcrStatus.COMPLETED and not has_direct_text_chunks:
         raise HTTPException(
             status_code=409,
             detail={
                 "document_id": document_id,
                 "status": "failed",
-                "error": "Document OCR must be completed before vector indexing.",
+                "error": "Document OCR or direct text extraction must be completed before vector indexing.",
             },
         )
 
@@ -310,6 +323,7 @@ async def index_document_vector(
 async def download_document(
     document_id: str,
     storage: DocumentStorageDep,
+    _auth_user: AuthenticatedUserDep,
 ) -> FileResponse:
     document = storage.get_document(document_id)
 

@@ -19,9 +19,11 @@ def default_data_dir() -> Path:
 
 class Settings(BaseSettings):
     app_name: str = "DocuRAG AgentOps Backend"
-    version: str = "0.27.1"
+    version: str = "0.28.0"
     environment: str = "local"
     data_dir: Path = Field(default_factory=default_data_dir)
+    auth_mode: str = "disabled"
+    auth_demo_secret: str = "docurag-demo-auth-secret"
     ocr_provider: str = "paddleocr"
     ocr_language: str = "ch"
     ocr_version: str = "PP-OCRv4"

@@ -51,12 +51,12 @@
 
 ## Acceptance Criteria
 
-- [ ] `/health` 回傳 `0.28.0`。
-- [ ] `.txt` demo flow 可完成 direct ingestion、RAG query、Agent search。
-- [ ] text-native PDF demo flow 可完成 PDF text extraction、RAG query、Agent search；scanned PDF 顯示 clear pending / unsupported state。
-- [ ] Demo auth flow 可登入 Admin / Analyst / Viewer；Viewer 無法操作 ingestion write API。
-- [ ] README / docs 明確說明 Phase 28 不等於正式 RBAC、tenant isolation、production worker 或 scanned PDF OCR。
-- [ ] `TODO.md` 與 `docs/ROADMAP.md` 的 Phase 28 狀態與 validation 結果已同步。
+- [x] `/health` 回傳 `0.28.0`。
+- [x] `.txt` demo flow 可完成 direct ingestion、RAG query、Agent search。
+- [x] text-native PDF demo flow 可完成 PDF text extraction、RAG query、Agent search；scanned PDF 顯示 clear pending / unsupported state。
+- [x] Demo auth flow 可登入 Admin / Analyst / Viewer；Viewer 無法操作 ingestion write API。
+- [x] README / docs 明確說明 Phase 28 不等於正式 RBAC、tenant isolation、production worker 或 scanned PDF OCR。
+- [x] `TODO.md` 與 `docs/ROADMAP.md` 的 Phase 28 狀態與 validation 結果已同步。
 
 ## Validation
 
@@ -66,3 +66,11 @@
 - Browser check for local frontend: login flow, Admin / Analyst ingestion, Viewer read-only, desktop and mobile width without horizontal overflow.
 - `rg -n "v0.28.0|Phase 28|text_upload|pdf_text|pdf_scanned_pending_ocr|DOCURAG_AUTH_MODE|demo auth|role guard" README.md backend/README.md frontend/README.md docs/api.md docs/architecture.md docs/demo-script.md docs/ROADMAP.md TODO.md backend/app frontend/src scripts infra tasks/phase-28-document-sources-auth-mode`
 - `git diff --check`
+
+## Validation Result
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`185 passed`（僅 pytest cache 權限警告）；測試涵蓋 direct text、text-native PDF、scanned / empty PDF pending state、demo auth role guard 與 health version `0.28.0`。
+- `npm.cmd run build` 通過。
+- `DOCURAG_AUTH_MODE=demo` backend 下執行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1` 通過，health version `0.28.0`，包含 admin login、direct text ingestion、parser、Agent run、vector fallback 與 RAG query。
+- Browser check 通過：`v0.28.0` label 可見，login screen 可見，Admin 登入後可看到 ingestion upload control，Viewer 登入後 upload controls 隱藏且後台入口 disabled；desktop 1280px 與 mobile 390px 無 horizontal overflow。
+- `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。

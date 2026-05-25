@@ -49,13 +49,18 @@
 
 ## Acceptance Criteria
 
-- [ ] 文件明確回答 `.txt` 不應再透過 mock OCR 變成 chunks。
-- [ ] 文件明確回答 PDF 不是單一路徑，必須分成 text-native PDF 與 scanned PDF。
-- [ ] Source router contract 明確列出 `image_ocr`、`text_upload`、`pdf_text`、`pdf_scanned_pending_ocr`。
-- [ ] Frontend flow 說法清楚區分：text 直接進知識庫、image 先 OCR、PDF 依可抽文字與否分流。
-- [ ] 文件明確說明本 ticket 不新增 worker、DB、正式 auth 或 production PDF pipeline。
+- [x] 文件明確回答 `.txt` 不應再透過 mock OCR 變成 chunks。
+- [x] 文件明確回答 PDF 不是單一路徑，必須分成 text-native PDF 與 scanned PDF。
+- [x] Source router contract 明確列出 `image_ocr`、`text_upload`、`pdf_text`、`pdf_scanned_pending_ocr`。
+- [x] Frontend flow 說法清楚區分：text 直接進知識庫、image 先 OCR、PDF 依可抽文字與否分流。
+- [x] 文件明確說明本 ticket 不新增 worker、DB、正式 auth 或 production PDF pipeline。
 
 ## Validation
 
 - `rg -n "image_ocr|text_upload|pdf_text|pdf_scanned_pending_ocr|source router|Document Source Router" README.md backend/README.md frontend/README.md docs/api.md docs/architecture.md docs/demo-script.md TODO.md docs/ROADMAP.md tasks/phase-28-document-sources-auth-mode`
 - `git diff --check`
+
+Validation result：
+
+- Ticket `rg` passed.
+- `git diff --check` passed（僅 Windows LF/CRLF 提示）。

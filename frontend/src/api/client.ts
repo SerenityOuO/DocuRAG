@@ -4,6 +4,32 @@ export type HealthResponse = {
   version: string;
 };
 
+export type AuthRole = "admin" | "analyst" | "viewer";
+
+export type AuthUser = {
+  username: string;
+  display_name: string;
+  role: AuthRole;
+};
+
+export type LoginResponse = {
+  auth_mode: string;
+  access_token: string;
+  token_type: string;
+  user: AuthUser;
+};
+
+export type MeResponse = {
+  auth_mode: string;
+  authenticated: boolean;
+  user: AuthUser | null;
+};
+
+export type LogoutResponse = {
+  auth_mode: string;
+  status: string;
+};
+
 export type UploadResponse = {
   document_id: string;
   project_id: string | null;
@@ -232,8 +258,38 @@ export type AgentRunRequest = {
 };
 
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
+const authTokenStorageKey = "docurag_demo_auth_token";
+let authToken =
+  typeof window === "undefined" ? "" : window.localStorage.getItem(authTokenStorageKey) ?? "";
 
 export const API_BASE_URL = configuredBaseUrl.replace(/\/$/, "");
+
+export function setAuthToken(token: string): void {
+  authToken = token;
+  window.localStorage.setItem(authTokenStorageKey, token);
+}
+
+export function clearAuthToken(): void {
+  authToken = "";
+  window.localStorage.removeItem(authTokenStorageKey);
+}
+
+function authHeaders(): Record<string, string> {
+  if (!authToken) {
+    return {};
+  }
+
+  return {
+    Authorization: `Bearer ${authToken}`,
+  };
+}
+
+function jsonHeaders(): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    ...authHeaders(),
+  };
+}
 
 async function readJson<T>(response: Response): Promise<T> {
   const body = (await response.json()) as unknown;
@@ -261,12 +317,45 @@ export async function getHealth(): Promise<HealthResponse> {
   return readJson<HealthResponse>(response);
 }
 
+export async function login(username: string, password: string): Promise<LoginResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      username,
+      password,
+    }),
+  });
+
+  return readJson<LoginResponse>(response);
+}
+
+export async function logout(): Promise<LogoutResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+
+  return readJson<LogoutResponse>(response);
+}
+
+export async function getMe(): Promise<MeResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/me`, {
+    headers: authHeaders(),
+  });
+
+  return readJson<MeResponse>(response);
+}
+
 export async function uploadDocument(file: File): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
 
   const response = await fetch(`${API_BASE_URL}/documents/upload`, {
     method: "POST",
+    headers: authHeaders(),
     body: formData,
   });
 
@@ -286,6 +375,7 @@ export async function getDocument(documentId: string): Promise<DocumentMetadata>
 export async function runMockOcr(documentId: string): Promise<OcrResultResponse> {
   const response = await fetch(`${API_BASE_URL}/documents/${documentId}/ocr/mock`, {
     method: "POST",
+    headers: authHeaders(),
   });
 
   return readJson<OcrResultResponse>(response);
@@ -294,6 +384,7 @@ export async function runMockOcr(documentId: string): Promise<OcrResultResponse>
 export async function runSelectedOcr(documentId: string): Promise<OcrResultResponse> {
   const response = await fetch(`${API_BASE_URL}/documents/${documentId}/ocr`, {
     method: "POST",
+    headers: authHeaders(),
   });
 
   return readJson<OcrResultResponse>(response);
@@ -307,6 +398,7 @@ export async function getOcrResult(documentId: string): Promise<OcrResultRespons
 export async function parseDocumentFields(documentId: string): Promise<ParserResult> {
   const response = await fetch(`${API_BASE_URL}/documents/${documentId}/parse`, {
     method: "POST",
+    headers: authHeaders(),
   });
 
   return readJson<ParserResult>(response);
@@ -320,6 +412,7 @@ export async function getDocumentFields(documentId: string): Promise<ParserResul
 export async function indexDocumentVector(documentId: string): Promise<VectorIndexingResponse> {
   const response = await fetch(`${API_BASE_URL}/documents/${documentId}/index/vector`, {
     method: "POST",
+    headers: authHeaders(),
   });
 
   return readJson<VectorIndexingResponse>(response);
@@ -328,9 +421,7 @@ export async function indexDocumentVector(documentId: string): Promise<VectorInd
 export async function queryRag(query: string, topK: number): Promise<RagQueryResponse> {
   const response = await fetch(`${API_BASE_URL}/rag/query`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: jsonHeaders(),
     body: JSON.stringify({
       query,
       top_k: topK,
@@ -343,9 +434,7 @@ export async function queryRag(query: string, topK: number): Promise<RagQueryRes
 export async function runAgent(request: AgentRunRequest): Promise<AgentRun> {
   const response = await fetch(`${API_BASE_URL}/agent/run`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: jsonHeaders(),
     body: JSON.stringify(request),
   });
 

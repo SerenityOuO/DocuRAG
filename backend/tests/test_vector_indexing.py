@@ -138,6 +138,88 @@ def test_vector_indexing_service_upserts_chunk_payload() -> None:
     }
 
 
+def test_vector_indexing_service_preserves_text_upload_payload_metadata() -> None:
+    embedding_provider = StubEmbeddingProvider(vector_size=3)
+    vector_store = StubVectorStore(vector_size=3)
+    service = VectorIndexingService(embedding_provider, vector_store)
+    chunk = DocumentChunk(
+        chunk_id="chunk-001",
+        document_id="doc-001",
+        text="Payment terms are Net 15.",
+        source="text_upload",
+        created_at="2026-05-20T00:00:00Z",
+        source_type="text_upload",
+        metadata={
+            "origin": "uploaded_text",
+            "content_source": "text_upload",
+            "source_router": "text_upload",
+        },
+    )
+
+    result = service.index_document(make_document([chunk]))
+
+    assert result.status == "completed"
+    point = vector_store.points[0]
+    assert point.payload["source"] == "text_upload"
+    assert point.payload["source_type"] == "text_upload"
+    assert point.payload["ocr_provider"] == "text_upload"
+    assert point.payload["metadata"] == {
+        "origin": "uploaded_text",
+        "content_source": "text_upload",
+        "source_router": "text_upload",
+        "ocr_provider": "text_upload",
+        "indexing_provider": "vector",
+        "vector_store": "qdrant",
+        "qdrant_collection": "docurag_chunks_v1",
+        "embedding_provider": "ollama",
+        "embedding_model": "qwen3-embedding:0.6b",
+    }
+
+
+def test_vector_indexing_service_preserves_pdf_text_payload_metadata() -> None:
+    embedding_provider = StubEmbeddingProvider(vector_size=3)
+    vector_store = StubVectorStore(vector_size=3)
+    service = VectorIndexingService(embedding_provider, vector_store)
+    chunk = DocumentChunk(
+        chunk_id="chunk-001",
+        document_id="doc-001",
+        text="Payment terms are Net 15.",
+        source="pdf_text",
+        created_at="2026-05-20T00:00:00Z",
+        page_number=1,
+        source_type="pdf_text",
+        metadata={
+            "origin": "pdf_text",
+            "content_source": "pdf_text",
+            "source_router": "pdf_text",
+            "page_number": "1",
+        },
+    )
+
+    result = service.index_document(make_document([chunk]))
+
+    assert result.status == "completed"
+    point = vector_store.points[0]
+    assert point.payload["source"] == "pdf_text"
+    assert point.payload["source_type"] == "pdf_text"
+    assert point.payload["page_number"] == 1
+    assert point.payload["bbox"] is None
+    assert point.payload["confidence"] is None
+    assert point.payload["ocr_provider"] == "pdf_text"
+    assert point.payload["metadata"] == {
+        "origin": "pdf_text",
+        "content_source": "pdf_text",
+        "source_router": "pdf_text",
+        "page_number": "1",
+        "ocr_provider": "pdf_text",
+        "indexing_provider": "vector",
+        "vector_store": "qdrant",
+        "qdrant_collection": "docurag_chunks_v1",
+        "embedding_provider": "ollama",
+        "embedding_model": "qwen3-embedding:0.6b",
+    }
+
+
 def test_vector_indexing_service_uses_stable_point_ids() -> None:
     service = VectorIndexingService(StubEmbeddingProvider(), StubVectorStore())
 

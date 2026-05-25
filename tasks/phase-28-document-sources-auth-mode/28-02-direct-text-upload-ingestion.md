@@ -54,12 +54,12 @@
 
 ## Acceptance Criteria
 
-- [ ] 上傳 `.txt` 後，系統可直接建立 local chunks，且 chunk `source_type=text_upload`。
-- [ ] `.txt` direct ingestion 不呼叫 provider-selected OCR，也不使用 `ocr_mock` 當正式來源。
-- [ ] `.txt` 文件可被 `/rag/query` 搜尋並回傳 citation。
-- [ ] `.txt` 文件可被 `POST /documents/{document_id}/index/vector` 索引；Qdrant 不可用時仍有清楚 fallback。
-- [ ] Agent `search_documents` 可命中 `.txt` chunks，trace 可看出來源是 text upload。
-- [ ] Frontend 對 `.txt` 顯示「直接文字匯入」或等價狀態，不顯示成 OCR 成功。
+- [x] 上傳 `.txt` 後，系統可直接建立 local chunks，且 chunk `source_type=text_upload`。
+- [x] `.txt` direct ingestion 不呼叫 provider-selected OCR，也不使用 `ocr_mock` 當正式來源。
+- [x] `.txt` 文件可被 `/rag/query` 搜尋並回傳 citation。
+- [x] `.txt` 文件可被 `POST /documents/{document_id}/index/vector` 索引；Qdrant 不可用時仍有清楚 fallback。
+- [x] Agent `search_documents` 可命中 `.txt` chunks，trace 可看出來源是 text upload。
+- [x] Frontend 對 `.txt` 顯示「直接文字匯入」或等價狀態，不顯示成 OCR 成功。
 
 ## Validation
 
@@ -68,3 +68,11 @@
 - `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
 - `rg -n "text_upload|uploaded_text|direct text|Direct Text|ocr_mock|source_type" backend/app backend/tests frontend/src README.md backend/README.md frontend/README.md docs/api.md docs/architecture.md docs/demo-script.md TODO.md docs/ROADMAP.md tasks/phase-28-document-sources-auth-mode`
 - `git diff --check`
+
+Validation result：
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` passed: `170 passed`（僅 pytest cache 權限警告）。
+- `npm.cmd run build` passed.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1` passed；第一次使用 repo root `.tmp` data dir 時因本機權限無法建立測試資料夾，改用 `backend/.tmp/phase28-smoke-data` 後通過。
+- Ticket `rg` passed.
+- `git diff --check` passed（僅 Windows LF/CRLF 提示）。

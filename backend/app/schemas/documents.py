@@ -21,6 +21,8 @@ class ProcessingStepStatus(StrEnum):
 
 class ProcessingJobType(StrEnum):
     UPLOAD = "upload"
+    TEXT_INGESTION = "text_ingestion"
+    PDF_TEXT_EXTRACTION = "pdf_text_extraction"
     OCR_MOCK = "ocr_mock"
     OCR_REAL = "ocr_real"
     LOCAL_INDEXING = "local_indexing"
