@@ -879,6 +879,8 @@ Phase 28 guardrails：
 - [x] AGENTS README split validation：`rg -n "README_DEV.md|README 分工|面試官|Release Status|開發紀錄" AGENTS.md TODO.md tasks/docs-agents-readme-split-guidelines.md` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 - [x] `tasks/docs-agents-auto-push-authorization.md`: 更新 `AGENTS.md` Git 自動上傳規範，記錄使用者授權完成 ticket 後自動 push 目前分支 upstream；不 bump version、不改 runtime。
 - [x] AGENTS auto push authorization validation：`rg -n "自動 push|自動上傳|授權|force push|安全審核|upstream" AGENTS.md TODO.md tasks/docs-agents-auto-push-authorization.md` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+- [x] `AGENTS.md`：註記回覆語氣偏好，預設少用工程黑話、先用白話講重點；使用者追問相關細節時補上必要名詞、背景與實際影響。
+- [x] AGENTS tone preference validation：`rg -n "工程黑話|白話|語氣|相關細節" AGENTS.md TODO.md` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 ## Release Verification Status
 
