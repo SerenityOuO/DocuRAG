@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.27 Aggressive Demo Defaults backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.27 Aggressive Demo Defaults 與 Phase 27 patch backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -27,6 +27,7 @@
 - Phase 25 -> `v0.25.0`
 - Phase 26 -> `v0.26.0`
 - Phase 27 -> `v0.27.0`
+- Phase 27 evidence hardening -> `v0.27.1` when `27-02` is implemented
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -811,15 +812,20 @@ Phase 26 guardrails：
 ## MVP v0.27.0 Aggressive Demo Defaults
 
 - [x] `tasks/phase-27-aggressive-defaults/27-01-aggressive-demo-defaults.md`: 啟用 default `hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter、frontend parser + vector indexing best-effort flow 與 `v0.27.0` release/version bump。
+- [ ] `tasks/phase-27-aggressive-defaults/27-02-ocr-vlm-evidence-alignment.md`: 讓 VLM parser 同時使用圖片與 OCR context，並把 VLM 欄位結果對回 OCR line / bbox；target `v0.27.1`。
+- [ ] `tasks/phase-27-aggressive-defaults/27-03-vector-source-expansion-contract.md`: 固定 vector DB source contract，明確規劃 `.txt` direct chunks、text-native PDF 與 scanned PDF 的不同路徑；planning ticket，不 bump version。
 
 Phase 27 goal：
 - 把已實作、已有 fallback、可驗證的進階 demo 能力改成預設路徑：`hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter，以及 Admin ingestion 後的 parser + vector indexing best-effort flow。
 - 讓 demo 開場就走最完整的先進路徑；本機模型、Qdrant 或 reranker 不可用時，回到 keyword evidence，並在 trace / UI 顯示原因。
+- Phase 27 patch backlog 需補齊 OCR / VLM evidence alignment：OCR 產生文字層，VLM 同時看圖片與 OCR context，欄位結果可對回 OCR line / bbox，RAG 與 Agent 仍使用 OCR chunks 作為 retrieval evidence。
+- Vector DB 長期不應只依賴 OCR chunks；`.txt` 應走 direct text chunking，PDF 需拆成 text-native PDF extraction 與 scanned PDF rendering / OCR pipeline。
 
 Phase 27 guardrails：
 - 不新增 PostgreSQL schema、migration、Redis、NATS、worker、async queue、Auth / RBAC、OpenAI SDK、vLLM、production VLM parser、PDF rendering、K8s 或 deployment 設定。
 - 不把 best-effort vector indexing 說成正式背景任務或 production ingestion pipeline。
 - 不移除 keyword、deterministic parser 或 mock OCR；它們只作 fallback、manual override、debug path 或 validation path。
+- 不把 text-native PDF 與 scanned PDF 混成同一個已完成能力；未實作 PDF rendering 前，不宣稱支援 scanned PDF ingestion。
 
 27-01 aggressive defaults status：
 
@@ -828,6 +834,11 @@ Phase 27 guardrails：
 - Frontend 預設進入 Admin / Analyst ingestion surface；OCR 成功後會 best-effort 執行 parser 與 vector indexing，失敗時保留明確訊息，不阻斷主要 demo。
 - README、backend README、frontend README、docs/demo-script.md、docs/api.md、docs/architecture.md、PRD、TODO、ROADMAP、Docker Compose、`.env.example` 與 demo smoke script 已同步 `v0.27.0` aggressive default 說法。
 - [x] 27-01 validation：backend tests 通過，`166 passed`（僅 pytest cache 權限警告）；frontend build 通過；baseline demo smoke 通過，health version `0.27.0`、retrieval source `hybrid_rerank fallback: reranker_unavailable`；Browser 檢查 desktop 1280px 與 mobile 390px 預設皆為 Admin / Analyst ingestion surface，且無 horizontal overflow；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+27-02 / 27-03 patch backlog status：
+
+- 待執行。`27-02` 是 runtime hardening ticket，完成後應讓 VLM request 同時帶圖片與 OCR context，並在 VLM 欄位結果中保存 OCR evidence mapping。
+- 待執行。`27-03` 是 source contract / planning ticket，用來拆清楚 OCR image、direct text upload、text-native PDF 與 scanned PDF 的 vector ingestion 邊界。
 
 ## Release Verification Status
 

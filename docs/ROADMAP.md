@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release 與 v0.27.0 Aggressive Demo Defaults release。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release 與 Phase 27 patch backlog。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -1560,6 +1560,8 @@ Goal：依使用者確認，將已實作、已驗證、可 fallback 的先進 de
 Ticket：
 
 - `tasks/phase-27-aggressive-defaults/27-01-aggressive-demo-defaults.md`
+- `tasks/phase-27-aggressive-defaults/27-02-ocr-vlm-evidence-alignment.md`
+- `tasks/phase-27-aggressive-defaults/27-03-vector-source-expansion-contract.md`
 
 Expected Outcome：
 
@@ -1568,12 +1570,24 @@ Expected Outcome：
 - `/rag/query` 與 Agent `search_documents` 支援 default `hybrid_rerank`，外部 runtime 不可用時 fallback 到 keyword evidence 並保留 trace。
 - Frontend 預設開啟 Admin / Analyst ingestion surface，OCR 成功後 best-effort 執行 VLM-first parser 與 Qdrant vector indexing。
 - Demo smoke baseline 在沒有 Qdrant / FastEmbed runtime 時仍可通過，並驗證 aggressive fallback source。
+- 後續 `v0.27.1` patch 目標是補齊 OCR / VLM evidence alignment：VLM 同時看圖片與 OCR context，VLM JSON 欄位可對回 OCR line / bbox，RAG 與 Agent 仍以 OCR chunks 作為 retrieval evidence。
+- Vector source expansion contract 需明確區分 OCR image chunks、`.txt` direct text chunks、text-native PDF extraction 與 scanned PDF rendering / OCR pipeline；未實作 PDF rendering 前不得宣稱 scanned PDF 已支援。
 
 27-01 Aggressive Demo Defaults Status：
 
 - 已完成。Backend default provider selection、frontend default surface、demo smoke、Docker Compose advanced env、README / backend README / frontend README / API / architecture / demo script / TODO / ROADMAP 已同步。
 - 本 release 不新增 PostgreSQL、Redis、NATS、worker、Auth、RBAC、OpenAI API、vLLM、production parser dashboard、PDF rendering 或 release tag。
 - Validation 已通過：backend tests `166 passed`（僅 pytest cache 權限警告）；frontend build 通過；baseline demo smoke 通過，health version `0.27.0`，retrieval source `hybrid_rerank fallback: reranker_unavailable`；Browser 檢查 desktop 1280px 與 mobile 390px 預設皆為 Admin / Analyst ingestion surface，且無 horizontal overflow；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+27-02 OCR / VLM Evidence Alignment Status：
+
+- 待執行。此 ticket 會把 Phase 26 VLM-first parser 從「VLM 看圖片、OCR 主要作為前置門檻與 fallback」補強為「VLM 看圖片並參考 OCR lines，欄位結果可連回 OCR evidence」。
+- Target version: `v0.27.1`。完成時需同步 backend / frontend / health / Docker Compose version、README、backend README、frontend README、docs/api.md、docs/architecture.md、docs/demo-script.md、TODO 與 ROADMAP。
+
+27-03 Vector Source Expansion Contract Status：
+
+- 待執行。此 ticket 只固定 source contract，不改 runtime：vector DB 長期不應只吃 OCR chunks；`.txt` 應走 direct text chunks，text-native PDF 與 scanned PDF 需分開規劃。
+- 本 ticket 不 bump version，且不新增 PDF rendering、PDF text extraction dependency、worker、DB、Auth / RBAC 或 deployment。
 
 Acceptance Criteria：
 
@@ -1600,3 +1614,5 @@ Release Impact：
 Out of Scope：
 
 - 不新增 production indexing worker、DB-backed ingestion、PostgreSQL schema、Redis、NATS、Auth、RBAC、OpenAI SDK、vLLM、PDF rendering、多頁 parser pipeline 或 production eval dashboard。
+- `27-02` 不新增 production VLM parser，只做 demo-grade image + OCR context 與欄位 evidence mapping。
+- `27-03` 不實作 PDF runtime；PDF 支援需拆成 text-native PDF extraction 與 scanned PDF rendering / OCR pipeline 後續票。
