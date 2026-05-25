@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.27 Aggressive Demo Defaults 與 Phase 27 patch backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.28 Document Sources / Demo Auth Mode backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -28,6 +28,7 @@
 - Phase 26 -> `v0.26.0`
 - Phase 27 -> `v0.27.0`
 - Phase 27 evidence hardening -> `v0.27.1` when `27-02` is implemented
+- Phase 28 -> `v0.28.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -839,6 +840,36 @@ Phase 27 guardrails：
 
 - 待執行。`27-02` 是 runtime hardening ticket，完成後應讓 VLM request 同時帶圖片與 OCR context，並在 VLM 欄位結果中保存 OCR evidence mapping。
 - 待執行。`27-03` 是 source contract / planning ticket，用來拆清楚 OCR image、direct text upload、text-native PDF 與 scanned PDF 的 vector ingestion 邊界。
+
+## MVP v0.28.0 Document Sources / Demo Auth Mode
+
+- [ ] `tasks/phase-28-document-sources-auth-mode/28-01-document-source-router.md`: 固定 image OCR、`.txt` direct text、text-native PDF 與 scanned PDF pending OCR 的 source router contract；planning ticket，不 bump version。
+- [ ] `tasks/phase-28-document-sources-auth-mode/28-02-direct-text-upload-ingestion.md`: 讓 `.txt` 直接建立 `text_upload` chunks，接到 RAG、Qdrant vector indexing 與 Agent search。
+- [ ] `tasks/phase-28-document-sources-auth-mode/28-03-text-native-pdf-ingestion.md`: 支援 text-native PDF 文字抽取並建立 `pdf_text` chunks；scanned PDF 清楚標示 pending / unsupported。
+- [ ] `tasks/phase-28-document-sources-auth-mode/28-04-demo-login-mode-and-role-gates.md`: 新增 demo login mode、`/auth/login` / `/auth/me` / `/auth/logout`、frontend login screen 與基本 role gates。
+- [ ] `tasks/phase-28-document-sources-auth-mode/28-05-phase-28-demo-release-sync.md`: 重跑 final validation，並同步 `v0.28.0` 版本與文件。
+
+Phase 28 goal：
+
+- 把文件上傳從「圖片 OCR 主線」擴充成更合理的文件來源主線：圖片走 OCR、`.txt` 直接進 chunks、text-native PDF 抽文字、scanned PDF 等待 PDF rendering / OCR pipeline。
+- 讓 vector DB 的來源不只依賴 OCR chunks；`.txt` 與 text-native PDF 都要能成為 first-class retrieval evidence。
+- 新增 demo-safe 使用者登入模式，讓 Admin / Analyst / Viewer 不再只是前端文字區分，而是能透過登入狀態與基本 API guard 呈現。
+
+Phase 28 guardrails：
+
+- 不把 `.txt` direct ingestion 說成 OCR；source 必須是 `text_upload` 或等價命名。
+- 不把 text-native PDF 和 scanned PDF 混成同一個已完成能力；未實作 PDF rendering 前，不宣稱 scanned PDF OCR 已支援。
+- Demo login mode 不等於正式 RBAC、tenant isolation、organization / project permission 或 production auth。
+- 不新增 PostgreSQL schema、migration、Redis、NATS、worker、async queue、SSO、OAuth、MFA、K8s 或 deployment 設定。
+- `28-05` 才允許 `v0.28.0` version bump；`28-01` 若只做 planning 必須寫 `Version bump required: no`。
+
+28-01 to 28-05 backlog status：
+
+- 待執行。`28-01` 先固定 source router contract，避免後續把 text、PDF、OCR 混成同一路徑。
+- 待執行。`28-02` 讓 `.txt` 正式直接進 chunks / RAG / vector / Agent，不再透過 mock OCR。
+- 待執行。`28-03` 先做 text-native PDF；scanned PDF 只標示 pending / unsupported。
+- 待執行。`28-04` 做 demo login mode 與基本 role gates，但不做正式多租戶 RBAC。
+- 待執行。`28-05` 完成 `v0.28.0` release sync 與 validation。
 
 ## Release Verification Status
 

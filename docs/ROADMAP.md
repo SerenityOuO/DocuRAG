@@ -1616,3 +1616,82 @@ Out of Scope：
 - 不新增 production indexing worker、DB-backed ingestion、PostgreSQL schema、Redis、NATS、Auth、RBAC、OpenAI SDK、vLLM、PDF rendering、多頁 parser pipeline 或 production eval dashboard。
 - `27-02` 不新增 production VLM parser，只做 demo-grade image + OCR context 與欄位 evidence mapping。
 - `27-03` 不實作 PDF runtime；PDF 支援需拆成 text-native PDF extraction 與 scanned PDF rendering / OCR pipeline 後續票。
+
+## v0.28.0 Document Sources / Demo Auth Mode
+
+Goal：擴充文件來源與 demo 登入模式。Phase 28 把 `.txt` 與 text-native PDF 從「可以保存檔案」提升為可進 chunks / RAG / Qdrant / Agent 的來源；同時新增 demo-safe login mode，讓 Admin / Analyst / Viewer 的差異可以透過登入與基本 API guard 展示。
+
+Goal.md 對齊：
+
+- `F-001 使用者登入與 RBAC 權限`：長期目標是帳號登入、角色權限與 project access；Phase 28 只做 demo auth slice，不做正式 tenant isolation。
+- `F-003 文件上傳`：長期支援 PDF / JPG / PNG；Phase 28 補上使用者要求的 `.txt` direct upload path，並讓 PDF 分成 text-native PDF 與 scanned PDF。
+- `F-004 OCR 文字解析`：PDF 轉頁面圖片與 scanned PDF OCR 仍是後續工作；Phase 28 先做 text-native PDF extraction，不假裝 scanned PDF 已完成。
+- `F-006 Chunking 與 Indexing`：Qdrant payload 需保留 document metadata；Phase 28 將 source 擴充為 `text_upload` 與 `pdf_text`，不只依賴 OCR chunks。
+
+Ticket：
+
+- `tasks/phase-28-document-sources-auth-mode/28-01-document-source-router.md`
+- `tasks/phase-28-document-sources-auth-mode/28-02-direct-text-upload-ingestion.md`
+- `tasks/phase-28-document-sources-auth-mode/28-03-text-native-pdf-ingestion.md`
+- `tasks/phase-28-document-sources-auth-mode/28-04-demo-login-mode-and-role-gates.md`
+- `tasks/phase-28-document-sources-auth-mode/28-05-phase-28-demo-release-sync.md`
+
+Expected Outcome：
+
+- Backend source router 明確區分 `image_ocr`、`text_upload`、`pdf_text` 與 `pdf_scanned_pending_ocr`。
+- `.txt` 上傳後直接建立 `text_upload` chunks，並可被 RAG、Qdrant vector indexing 與 Agent search 使用。
+- Text-native PDF 上傳後抽出文字並建立 `pdf_text` chunks；scanned PDF 顯示 clear pending / unsupported state。
+- Frontend upload flow 依來源顯示不同處理狀態：文字直接匯入、圖片 OCR、PDF text extraction 或 scanned PDF pending OCR。
+- Demo auth mode 提供 login / logout / me API，Admin / Analyst 可操作 ingestion，Viewer 只能查詢與查看。
+- Backend write API 至少對 upload、OCR、parse、vector index 做 demo role guard，避免 Viewer 透過 API 操作 ingestion。
+- Backend / frontend / health / Docker Compose version 在 `28-05` 同步到 `0.28.0` / `v0.28.0`。
+
+28-01 Document Source Router Contract Status：
+
+- 待執行。此 ticket 只固定 source router 與 normalized text contract，不改 runtime；它會明確回答 `.txt` 不該走 mock OCR，PDF 也不該被當成單一簡單能力。
+- 本 ticket 不 bump version，且不新增 PDF extraction dependency、worker、DB、正式 Auth / RBAC 或 deployment。
+
+28-02 Direct Text Upload Ingestion Status：
+
+- 待執行。此 ticket 讓 `.txt` 成為 first-class source：直接建立 `text_upload` chunks，接到 RAG、Qdrant vector indexing、parser fallback 與 Agent search。
+- 完成後 `.txt` 不應再顯示為 OCR 成功，也不應以 `ocr_mock` 作為正式 retrieval source。
+
+28-03 Text-Native PDF Ingestion Status：
+
+- 待執行。此 ticket 支援 text-native PDF extraction 與 `pdf_text` chunks；scanned PDF 僅標示 `pdf_scanned_pending_ocr` 或等價 pending state。
+- 本 ticket 不做 PDF rendering、多頁 OCR pipeline、layout analysis 或 scanned PDF OCR。
+
+28-04 Demo Login Mode and Role Gates Status：
+
+- 待執行。此 ticket 新增 demo login mode、demo users、Auth API、frontend login screen 與基本 role gates。
+- 本 ticket 不做 PostgreSQL users table、organization / project isolation、正式 RBAC、SSO、OAuth、MFA、Redis session 或 production audit log。
+
+Acceptance Criteria：
+
+- `/health` 在 Phase 28 release sync 後回傳 `0.28.0`。
+- `.txt` 文件可 direct ingestion，chunks source 為 `text_upload`，並能被 RAG / Agent 命中。
+- Text-native PDF 文件可抽文字，chunks source 為 `pdf_text`；scanned PDF 不被標示為 ready。
+- Demo auth flow 可登入 Admin / Analyst / Viewer；Viewer 無法 upload / OCR / parse / index。
+- 文件明確說明 Phase 28 不等於正式 RBAC、tenant isolation、production worker 或 scanned PDF OCR。
+
+Validation：
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
+- `npm.cmd run build`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
+- Browser 檢查 local frontend：login flow、Admin / Analyst ingestion、Viewer read-only、桌面與手機寬度無 horizontal overflow。
+- `rg -n "v0.28.0|Phase 28|text_upload|pdf_text|pdf_scanned_pending_ocr|DOCURAG_AUTH_MODE|demo auth|role guard" README.md backend/README.md frontend/README.md docs/api.md docs/architecture.md docs/demo-script.md docs/ROADMAP.md TODO.md backend/app frontend/src scripts infra tasks/phase-28-document-sources-auth-mode`
+- `git diff --check`
+
+Release Impact：
+
+- Target version: `v0.28.0`。
+- Version bump required: yes for `28-05`; no for `28-01` unless it changes runtime behavior.
+- 原因：Phase 28 改變 upload / ingestion / login 的使用者可見主流程，需形成明確 release 紀錄。
+
+Out of Scope：
+
+- 不新增 scanned PDF rendering / OCR pipeline、多頁 production OCR、table reconstruction 或 layout analysis。
+- 不新增 PostgreSQL schema、migration、Redis、NATS、worker、async queue、SSO、OAuth、MFA、K8s 或 deployment 設定。
+- 不把 demo login mode 說成正式 Auth / RBAC / tenant isolation。
+- 不修改 embedding model、rerank algorithm、Agent planner、VLM parser behavior 或 eval metric 定義，除非前置 ticket 另有明確 scope。

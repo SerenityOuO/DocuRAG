@@ -228,6 +228,7 @@ Agent 會選擇 SQL 查詢工具與文件檢索工具，產生表格化答案，
 - PDF
 - JPG
 - PNG
+- TXT
 
 功能：
 
@@ -236,6 +237,8 @@ Agent 會選擇 SQL 查詢工具與文件檢索工具，產生表格化答案，
 - 建立 document record。
 - 顯示文件處理狀態。
 - 發送非同步 OCR 任務。
+- TXT / text-native 文件可直接進入文字切分與索引流程，不需 OCR。
+- PDF 需區分 text-native PDF 與 scanned PDF；scanned PDF 需先完成 PDF rendering / OCR pipeline。
 
 文件狀態：
 
@@ -265,6 +268,7 @@ Agent 會選擇 SQL 查詢工具與文件檢索工具，產生表格化答案，
 
 功能：
 
+- text-native PDF 文字抽取。
 - PDF 轉頁面圖片。
 - 圖片 OCR。
 - 儲存每頁 OCR 文字。
@@ -365,7 +369,7 @@ chunk metadata：
   "page_number": 1,
   "chunk_type": "text",
   "document_type": "invoice",
-  "source": "ocr",
+  "source": "ocr | text_upload | pdf_text",
   "created_at": "2026-05-20T00:00:00Z"
 }
 ```
