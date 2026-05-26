@@ -126,20 +126,37 @@ class QdrantVectorStore:
         }
         self._request_json("PUT", f"/collections/{self.collection_name}/points?wait=true", payload)
 
-    def search(self, vector: list[float], limit: int) -> list[QdrantSearchResult]:
+    def search(
+        self,
+        vector: list[float],
+        limit: int,
+        document_ids: list[str] | None = None,
+    ) -> list[QdrantSearchResult]:
         if not vector:
             raise ValueError("vector must not be empty")
         if limit <= 0:
             raise ValueError("limit must be greater than zero")
 
+        payload: dict[str, Any] = {
+            "vector": vector,
+            "limit": limit,
+            "with_payload": True,
+        }
+        if document_ids:
+            payload["filter"] = {
+                "should": [
+                    {
+                        "key": "document_id",
+                        "match": {"value": document_id},
+                    }
+                    for document_id in document_ids
+                ]
+            }
+
         data = self._request_json(
             "POST",
             f"/collections/{self.collection_name}/points/search",
-            {
-                "vector": vector,
-                "limit": limit,
-                "with_payload": True,
-            },
+            payload,
         )
         results = data.get("result")
         if not isinstance(results, list):

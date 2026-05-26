@@ -261,6 +261,36 @@ def test_qdrant_search_sends_vector_query_and_parses_results() -> None:
     assert results[0].payload == {"chunk_id": "chunk-001"}
 
 
+def test_qdrant_search_can_filter_to_document_ids() -> None:
+    captured: dict[str, Any] = {}
+
+    def transport(request: urllib.request.Request, timeout: float) -> FakeResponse:
+        captured["body"] = json.loads(request.data.decode("utf-8"))
+        return FakeResponse({"result": []})
+
+    store = QdrantVectorStore(
+        base_url="http://127.0.0.1:6333",
+        collection_name="docurag_chunks_v1",
+        vector_size=1024,
+        transport=transport,
+    )
+
+    results = store.search([0.1, 0.2], 3, ["doc-001", "doc-002"])
+
+    assert results == []
+    assert captured["body"] == {
+        "vector": [0.1, 0.2],
+        "limit": 3,
+        "with_payload": True,
+        "filter": {
+            "should": [
+                {"key": "document_id", "match": {"value": "doc-001"}},
+                {"key": "document_id", "match": {"value": "doc-002"}},
+            ]
+        },
+    }
+
+
 def test_qdrant_search_reports_malformed_results() -> None:
     def transport(request: urllib.request.Request, timeout: float) -> FakeResponse:
         return FakeResponse({"result": [{"id": "point-001"}]})

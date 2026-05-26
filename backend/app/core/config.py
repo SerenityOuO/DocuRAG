@@ -40,6 +40,8 @@ class Settings(BaseSettings):
     llm_base_url: str = "http://127.0.0.1:11434"
     llm_model: str = "qwen3.5:4b"
     llm_timeout_seconds: float = 30.0
+    llm_think: bool = False
+    llm_num_predict: int = 512
     parser_source: str = "vlm_invoice"
     vlm_provider: str | None = "ollama"
     vlm_base_url: str = "http://127.0.0.1:11434"

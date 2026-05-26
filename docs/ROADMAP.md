@@ -1758,3 +1758,58 @@ Out of Scope：
 - 不新增 PostgreSQL schema、migration、Redis、NATS、worker、async queue、SSO、OAuth、MFA、K8s 或 deployment 設定。
 - 不把 demo login mode 說成正式 Auth / RBAC / tenant isolation。
 - 不修改 embedding model、rerank algorithm、Agent planner、VLM parser behavior 或 eval metric 定義，除非前置 ticket 另有明確 scope。
+
+## v0.29.0 Follow-up Parser / RAG Hardening
+
+Goal：在 `v0.29.0` Built-in RAG Eval Admin Surface 完成後，修正本機 demo 會直接遇到的 parser、ingestion 與 RAG runtime 摩擦；本段都是 focused hardening，不 bump release version。
+
+Ticket：
+
+- `tasks/phase-30-parser-ingestion-hardening/30-01-vlm-response-and-multi-upload-hardening.md`
+- `tasks/phase-30-parser-ingestion-hardening/30-03-rag-vector-stale-filter-hardening.md`
+- `tasks/phase-30-parser-ingestion-hardening/30-04-ollama-rag-generation-latency-guardrails.md`
+
+Expected Outcome：
+
+- Ollama VLM parser 可處理 `response` / `thinking` / markdown fenced JSON、金額字串、confidence label 與 line item alias，降低 `vlm_invalid_response`。
+- 後台 ingestion file picker 支援多檔選擇，frontend 逐檔走既有 upload / OCR / parser / vector indexing flow；不新增 batch API 或 worker。
+- Default `hybrid_rerank` vector branch 查 Qdrant 時會限制在目前 backend 已載入且有 chunks 的 document ids，避免 stale demo / eval vectors 消耗 `top_k` 後誤報 `vector_unavailable`。
+- Ollama RAG generation 預設使用 demo latency guardrails：`think=false`、`options.num_predict=512`，並在 citation trace 中顯示 `llm_think` 與 `llm_num_predict`。
+
+30-01 VLM Response and Multi Upload Hardening Status：
+
+- 已完成。VLM response parser 已支援 `response` / `thinking` / fenced JSON、金額字串、confidence label 與 line item alias；後台檔案選擇可多選並逐檔處理。
+- Validation 已通過：backend parser targeted tests、backend full tests、frontend build、Browser desktop / mobile 檢查、ticket `rg` 與 `git diff --check`。
+
+30-03 RAG Vector Stale Filter Hardening Status：
+
+- 已完成。`QdrantVectorStore.search()` 支援 document-scoped filter，`VectorRagProvider` 以目前 document ids 查詢 Qdrant，讓 stale vectors 不再先消耗 final `top_k`。
+- 保留現有 fallback：embedding / Qdrant unavailable、collection missing、vector size mismatch 或真正沒有 matching vector result 時仍回 keyword evidence，並保留清楚 trace。
+- Validation 已通過：targeted pytest `32 passed`（僅 pytest cache 權限警告）；本次 full backend validation `199 passed` 與 30-04 一併通過。
+
+30-04 Ollama RAG Generation Latency Guardrails Status：
+
+- 已完成。`OllamaLlmProvider` 預設送出 `think=false` 與 `options.num_predict=512`；`DOCURAG_LLM_THINK` 與 `DOCURAG_LLM_NUM_PREDICT` 可用於手動 debug / model behavior comparison。
+- `/rag/query` generation success trace 會顯示 `llm_think` 與 `llm_num_predict`；Ollama unavailable、timeout、malformed response 或 empty final response 仍 fallback 到 retrieved evidence。
+- Validation 已通過：targeted pytest `33 passed`（僅 pytest cache 權限警告）；full backend validation `199 passed`（僅 pytest cache 權限警告）；兩張 ticket 的 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+Validation：
+
+- `python -m pytest backend/tests/test_vector_store.py backend/tests/test_rag.py -q`
+- `python -m pytest backend/tests/test_llm.py backend/tests/test_rag.py -q`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
+- `rg -n "document_id|vector_unavailable|Vector search returned no chunks|hybrid_rerank|stale" backend/app backend/tests TODO.md docs/ROADMAP.md tasks/phase-30-parser-ingestion-hardening/30-03-rag-vector-stale-filter-hardening.md`
+- `rg -n "llm.*think|num_predict|qwen3.5|Ollama|latency guardrail|DOCURAG_LLM" backend/app backend/tests .env.example README.md README_DEV.md backend/README.md docs/ROADMAP.md TODO.md tasks/phase-30-parser-ingestion-hardening/30-04-ollama-rag-generation-latency-guardrails.md`
+- `git diff --check`
+
+Release Impact：
+
+- Target version: `v0.29.0` follow-up hardening。
+- Version bump required: no。
+- 原因：這些 ticket 只修正既有 parser / ingestion / RAG runtime 的 demo hardening，不更新 `/health` version、frontend package version、Docker Compose `DOCURAG_VERSION` 或 release artifact。
+
+Out of Scope：
+
+- 不新增 Qdrant cleanup endpoint、DB-backed ingestion pipeline、Redis、NATS、worker、queue、production eval dashboard 或正式 RBAC。
+- 不更換預設 LLM / embedding / rerank model，不新增 OpenAI API、vLLM、server-side streaming 或 frontend token streaming。
+- 不修改 retrieval ranking、rerank algorithm、Agent planner、VLM prompt 主體或 citation scoring。

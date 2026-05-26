@@ -20,6 +20,7 @@ from app.services.rag import (
     KeywordRagProvider,
     VectorRagProvider,
 )
+from app.services.rerank import RerankResult
 from app.services.vector_store import (
     QdrantCollectionStatus,
     QdrantPoint,
@@ -382,6 +383,8 @@ def test_keyword_rag_provider_uses_llm_generation_with_retrieved_chunks() -> Non
                 completion_tokens=9,
                 total_duration_ms=123.45,
                 load_duration_ms=10.0,
+                think=False,
+                num_predict=512,
             )
 
     llm_provider = StubLlmProvider()
@@ -431,8 +434,53 @@ def test_keyword_rag_provider_uses_llm_generation_with_retrieved_chunks() -> Non
         "llm_completion_tokens": "9",
         "llm_total_duration_ms": "123.45",
         "llm_load_duration_ms": "10.00",
+        "llm_think": "false",
+        "llm_num_predict": "512",
         "llm_generation_latency_ms": response.citations[0].trace_metadata["llm_generation_latency_ms"],
     }
+
+
+def test_keyword_rag_provider_falls_back_when_llm_returns_empty_answer() -> None:
+    class EmptyLlmProvider:
+        name = "ollama"
+        model = "qwen3.5:4b"
+
+        def generate(self, prompt: str, system: str | None = None) -> LlmGeneration:
+            return LlmGeneration(
+                text="",
+                model="qwen3.5:4b",
+                think=False,
+                num_predict=512,
+                raw={"thinking": "model spent time thinking but produced no final response"},
+            )
+
+    document = DocumentMetadata(
+        document_id="doc-001",
+        filename="invoice-a.txt",
+        stored_filename="doc-001-invoice-a.txt",
+        file_type="txt",
+        content_type="text/plain",
+        size=100,
+        status=DocumentStatus.READY,
+        created_at="2026-05-20T00:00:00Z",
+        chunks=[
+            DocumentChunk(
+                chunk_id="chunk-001",
+                document_id="doc-001",
+                text="Invoice total is USD 42.00.",
+                source="ocr_paddleocr",
+                created_at="2026-05-20T00:00:00Z",
+            )
+        ],
+    )
+
+    response = KeywordRagProvider(llm_provider=EmptyLlmProvider()).query("invoice total", 3, [document])
+
+    assert "model returned an empty answer" in response.answer
+    assert response.citations[0].trace_metadata["llm_generation_status"] == "failed"
+    assert response.citations[0].trace_metadata["llm_provider"] == "ollama"
+    assert response.citations[0].trace_metadata["llm_model"] == "qwen3.5:4b"
+    assert response.citations[0].trace_metadata["llm_error"] == "model returned an empty answer"
 
 
 def test_keyword_rag_provider_falls_back_when_llm_generation_fails() -> None:
@@ -507,9 +555,15 @@ def test_vector_rag_provider_uses_embedding_and_qdrant_results() -> None:
         def upsert_points(self, points: list[QdrantPoint]) -> None:
             self.upsert_called = True
 
-        def search(self, vector: list[float], limit: int) -> list[QdrantSearchResult]:
+        def search(
+            self,
+            vector: list[float],
+            limit: int,
+            document_ids: list[str] | None = None,
+        ) -> list[QdrantSearchResult]:
             assert vector == [float(len("payment due date Net 15")), 1.0]
             assert limit == 3
+            assert document_ids == ["doc-001"]
             return [
                 QdrantSearchResult(
                     point_id="point-001",
@@ -572,6 +626,108 @@ def test_vector_rag_provider_uses_embedding_and_qdrant_results() -> None:
     assert response.citations[0].trace_metadata["retrieval_provider"] == "vector"
     assert response.citations[0].trace_metadata["vector_store"] == "qdrant"
     assert response.citations[0].trace_metadata["vector_score"] == "0.880000"
+
+
+def test_hybrid_rerank_uses_document_scoped_vector_search_for_stale_collections() -> None:
+    class StubEmbeddingProvider:
+        name = "ollama"
+        model = "qwen3-embedding:0.6b"
+
+        def embed(self, text: str) -> EmbeddingResult:
+            return EmbeddingResult(embedding=[1.0, 2.0], model=self.model)
+
+    class StubVectorStore:
+        collection_name = "docurag_chunks_v1"
+        vector_size = 1024
+
+        def __init__(self, payload: dict[str, object]) -> None:
+            self.payload = payload
+            self.document_ids: list[str] | None = None
+
+        def get_collection(self) -> QdrantCollectionStatus:
+            return QdrantCollectionStatus(
+                collection_name=self.collection_name,
+                exists=True,
+                vector_size=1024,
+                distance="Cosine",
+            )
+
+        def search(
+            self,
+            vector: list[float],
+            limit: int,
+            document_ids: list[str] | None = None,
+        ) -> list[QdrantSearchResult]:
+            self.document_ids = document_ids
+            assert limit == 2
+            return [
+                QdrantSearchResult(
+                    point_id="current-point",
+                    score=0.92,
+                    payload=self.payload,
+                )
+            ]
+
+    class PassthroughRerankService:
+        def rerank(self, query: str, candidates: list) -> RerankResult:
+            return RerankResult(
+                chunks=candidates,
+                status="completed",
+                provider="fake",
+                model="fake-reranker",
+                input_candidate_count=len(candidates),
+                output_candidate_count=len(candidates),
+                rerank_top_k=2,
+                latency_ms=1.0,
+            )
+
+    document = DocumentMetadata(
+        document_id="doc-current",
+        filename="invoice-current.txt",
+        stored_filename="doc-current-invoice-current.txt",
+        file_type="txt",
+        content_type="text/plain",
+        size=100,
+        status=DocumentStatus.READY,
+        created_at="2026-05-20T00:00:00Z",
+        chunks=[
+            DocumentChunk(
+                chunk_id="chunk-current",
+                document_id="doc-current",
+                text="Semantic vector-only evidence.",
+                source="ocr_mock",
+                created_at="2026-05-20T00:00:00Z",
+                source_type="ocr_mock",
+            )
+        ],
+    )
+    payload = {
+        **document.chunks[0].model_dump(mode="json"),
+        "filename": document.filename,
+    }
+    vector_store = StubVectorStore(payload)
+    vector_provider = VectorRagProvider(
+        keyword_provider=KeywordRagProvider(),
+        embedding_provider=StubEmbeddingProvider(),
+        vector_store=vector_store,
+    )
+    provider = HybridRerankRagProvider(
+        hybrid_provider=HybridRagProvider(
+            keyword_provider=KeywordRagProvider(),
+            vector_provider=vector_provider,
+        ),
+        response_builder=KeywordRagProvider(),
+        rerank_service=PassthroughRerankService(),
+    )
+
+    response = provider.query("stale collection lookup", 2, [document])
+
+    assert vector_store.document_ids == ["doc-current"]
+    assert response.retrieved_chunks[0].document_id == "doc-current"
+    assert response.retrieved_chunks[0].metadata["strategy_label"] == "hybrid_rerank"
+    assert response.retrieved_chunks[0].metadata["vector_retrieval_status"] == "completed"
+    assert response.retrieved_chunks[0].metadata["fallback_state"] == "none"
+    assert "vector_retrieval_error" not in response.retrieved_chunks[0].metadata
 
 
 def test_vector_rag_provider_falls_back_to_keyword_when_embedding_fails() -> None:

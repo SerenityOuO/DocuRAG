@@ -46,6 +46,22 @@ def test_settings_enable_ollama_provider_by_default(monkeypatch: pytest.MonkeyPa
     assert isinstance(provider, OllamaLlmProvider)
     assert provider.name == "ollama"
     assert provider.model == "qwen3.5:4b"
+    assert provider.think is False
+    assert provider.num_predict == 512
+
+
+def test_create_llm_provider_applies_generation_guardrail_settings() -> None:
+    provider = create_llm_provider(
+        Settings(
+            llm_provider="ollama",
+            llm_think=True,
+            llm_num_predict=128,
+        )
+    )
+
+    assert isinstance(provider, OllamaLlmProvider)
+    assert provider.think is True
+    assert provider.num_predict == 128
 
 
 def test_ollama_generate_sends_non_streaming_request_and_parses_response() -> None:
@@ -85,6 +101,8 @@ def test_ollama_generate_sends_non_streaming_request_and_parses_response() -> No
             "model": "qwen3.5:4b",
             "prompt": "hello",
             "stream": False,
+            "think": False,
+            "options": {"num_predict": 512},
             "system": "Only answer from context.",
         },
     }
@@ -94,6 +112,45 @@ def test_ollama_generate_sends_non_streaming_request_and_parses_response() -> No
     assert result.completion_tokens == 3
     assert result.total_duration_ms == 12.0
     assert result.load_duration_ms == 2.0
+    assert result.think is False
+    assert result.num_predict == 512
+
+
+def test_ollama_generate_allows_think_and_num_predict_overrides() -> None:
+    captured: dict[str, Any] = {}
+
+    def transport(request: urllib.request.Request, timeout: float) -> FakeResponse:
+        captured["body"] = json.loads(request.data.decode("utf-8"))
+        return FakeResponse({"model": "qwen3.5:4b", "response": "Local answer"})
+
+    provider = OllamaLlmProvider(
+        base_url="http://127.0.0.1:11434",
+        model="qwen3.5:4b",
+        think=True,
+        num_predict=128,
+        transport=transport,
+    )
+
+    result = provider.generate("hello")
+
+    assert captured["body"]["think"] is True
+    assert captured["body"]["options"] == {"num_predict": 128}
+    assert result.think is True
+    assert result.num_predict == 128
+
+
+def test_ollama_generate_reports_malformed_response_without_final_text() -> None:
+    def transport(request: urllib.request.Request, timeout: float) -> FakeResponse:
+        return FakeResponse({"model": "qwen3.5:4b", "thinking": "no final response"})
+
+    provider = OllamaLlmProvider(
+        base_url="http://127.0.0.1:11434",
+        model="qwen3.5:4b",
+        transport=transport,
+    )
+
+    with pytest.raises(LlmProviderError, match="string 'response' field"):
+        provider.generate("hello")
 
 
 def test_ollama_health_reports_model_available() -> None:

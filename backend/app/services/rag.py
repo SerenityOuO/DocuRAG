@@ -246,6 +246,12 @@ class KeywordRagProvider:
         if generation.load_duration_ms is not None:
             fields["llm_load_duration_ms"] = f"{generation.load_duration_ms:.2f}"
 
+        if generation.think is not None:
+            fields["llm_think"] = str(generation.think).lower()
+
+        if generation.num_predict is not None:
+            fields["llm_num_predict"] = str(generation.num_predict)
+
         return fields
 
     def _llm_failure_trace_metadata(self, error: str) -> dict[str, str]:
@@ -314,7 +320,11 @@ class VectorRagProvider:
             )
 
         query_embedding = self.embedding_provider.embed(query)
-        search_results = self.vector_store.search(query_embedding.embedding, top_k)
+        search_results = self.vector_store.search(
+            query_embedding.embedding,
+            top_k,
+            sorted(indexed_document_ids),
+        )
         retrieved_chunks = []
         for result in search_results:
             payload_document_id = result.payload.get("document_id")

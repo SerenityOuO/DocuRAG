@@ -20,6 +20,7 @@ DocuRAG 是技術探索導向的 AI 文件知識庫專案，將文件上傳、OC
 - PaddleOCR 優先 OCR
 - VLM-first 欄位解析
 - Hybrid rerank 檢索
+- Ollama 回答延遲 guardrails
 - 內建 RAG 測試
 - Agent tool-use trace
 
@@ -86,7 +87,7 @@ viewer / demo-viewer-pass
 - Frontend：Vue 3、Vite、TypeScript
 - Backend：FastAPI、Pydantic、pytest
 - OCR / VLM：PaddleOCR、Ollama-compatible VLM
-- RAG：Ollama embedding、Qdrant、FastEmbed reranker
+- RAG：Ollama embedding、Qdrant、FastEmbed reranker、Ollama generation guardrails
 - Storage：本機 JSON metadata 與 uploaded files
 - Workflow：ticket-first 小步開發
 

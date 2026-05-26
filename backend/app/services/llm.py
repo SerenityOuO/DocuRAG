@@ -21,6 +21,8 @@ class LlmGeneration:
     completion_tokens: int | None = None
     total_duration_ms: float | None = None
     load_duration_ms: float | None = None
+    think: bool | None = None
+    num_predict: int | None = None
     raw: dict[str, Any] = field(default_factory=dict)
 
 
@@ -79,11 +81,15 @@ class OllamaLlmProvider:
         base_url: str,
         model: str,
         timeout_seconds: float = 30.0,
+        think: bool = False,
+        num_predict: int | None = 512,
         transport: Transport | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout_seconds = timeout_seconds
+        self.think = think
+        self.num_predict = num_predict if num_predict is None or num_predict > 0 else None
         self._transport = transport or (lambda request, timeout: urllib.request.urlopen(request, timeout=timeout))
 
     def generate(self, prompt: str, system: str | None = None) -> LlmGeneration:
@@ -95,7 +101,10 @@ class OllamaLlmProvider:
             "model": self.model,
             "prompt": cleaned_prompt,
             "stream": False,
+            "think": self.think,
         }
+        if self.num_predict is not None:
+            payload["options"] = {"num_predict": self.num_predict}
         if system:
             payload["system"] = system
 
@@ -111,6 +120,8 @@ class OllamaLlmProvider:
             completion_tokens=self._optional_int(data.get("eval_count")),
             total_duration_ms=self._nanoseconds_to_milliseconds(data.get("total_duration")),
             load_duration_ms=self._nanoseconds_to_milliseconds(data.get("load_duration")),
+            think=self.think,
+            num_predict=self.num_predict,
             raw=data,
         )
 
@@ -242,6 +253,8 @@ def create_llm_provider(settings: Settings) -> LlmProvider:
             base_url=settings.llm_base_url,
             model=settings.llm_model,
             timeout_seconds=settings.llm_timeout_seconds,
+            think=settings.llm_think,
+            num_predict=settings.llm_num_predict,
         )
 
     return DisabledLlmProvider(
