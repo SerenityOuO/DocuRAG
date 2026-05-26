@@ -112,6 +112,7 @@
 53. `tasks/phase-30-parser-ingestion-hardening/30-01-vlm-response-and-multi-upload-hardening.md` 已完成，強化 Ollama VLM response parsing 與後台多檔依序 ingestion；focused hardening ticket，不 bump version。
 54. `tasks/phase-30-parser-ingestion-hardening/30-02-rag-structured-field-evidence.md` 已完成，讓 RAG prompt 可附加 retrieved documents 對應的 parsed structured fields，並補強中文總額問法；focused hardening ticket，不 bump version。
 55. `tasks/phase-30-parser-ingestion-hardening/30-03-rag-vector-stale-filter-hardening.md`：補強 default `hybrid_rerank` 的 Qdrant document scope filtering，避免 stale vectors 消耗 `top_k` 後被 backend 過濾成 `vector_unavailable`；focused hardening ticket，不 bump version。
+56. `tasks/phase-30-parser-ingestion-hardening/30-04-ollama-rag-generation-latency-guardrails.md`：補強 Ollama RAG generation 預設 latency guardrails，避免 `qwen3.5:4b` thinking tokens 或無上限生成讓 Viewer Chat 等待數十秒；focused hardening ticket，不 bump version。
 
 ## Phase 30 Parser / Ingestion Hardening
 
@@ -123,6 +124,8 @@
 - [x] 30-02 validation：`python -m pytest backend/tests/test_rag.py -q` 通過，`21 passed`（僅 pytest cache 權限警告）；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`194 passed`（僅 pytest cache 權限警告）；ticket `rg` 與 `git diff --check` 通過。
 - [ ] `tasks/phase-30-parser-ingestion-hardening/30-03-rag-vector-stale-filter-hardening.md`: 補強 `/rag/query` default `hybrid_rerank` 的 Qdrant search document scope，避免 collection 內舊 eval / demo vectors 先佔滿 `top_k`、再被 backend document id 過濾成空結果並誤顯示 `vector_unavailable`。
 - Release Impact: Version bump required: no。此 ticket 只補強 vector retrieval stale collection resilience，不更新 backend / frontend / Docker version。
+- [ ] `tasks/phase-30-parser-ingestion-hardening/30-04-ollama-rag-generation-latency-guardrails.md`: 補強 Ollama `qwen3.5:4b` RAG generation 預設 guardrails，要求 request 關閉 thinking 並限制 output token 數，避免本機 Viewer Chat 單次回答等待數十秒。
+- Release Impact: Version bump required: no。此 ticket 只補強既有 Ollama generation latency guardrails 與文件說明，不更新 backend / frontend / Docker version。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 

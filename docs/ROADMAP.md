@@ -88,7 +88,7 @@ Expected Outcome：
 - v0.27.0 Aggressive Demo Defaults 只把已完成且有 fallback 的 demo 能力改成預設：default `hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter、frontend parser + vector indexing best-effort flow；不新增 DB、worker、Auth/RBAC、OpenAI API、vLLM、PDF rendering 或 production indexing pipeline。
 - v0.28.0 Document Sources / Demo Auth Mode 只做 `.txt` direct ingestion、text-native PDF extraction、scanned PDF pending state 與 demo-safe login / role guard；不新增正式 RBAC、tenant isolation、PostgreSQL schema、Redis、NATS、worker、SSO、OAuth、MFA、K8s 或 scanned PDF OCR pipeline。
 - v0.29.0 Built-in RAG Eval Admin Surface 只做後台「測試RAG」內建基準測試與 Agent 執行紀錄摺疊；策略固定 `hybrid_rerank`，summary 只顯示 Hit Rate@K、MRR@K、平均延遲與 Failure / Fallback；不新增 production eval dashboard、自訂 dataset 上傳、LLM-as-judge、OCR eval、DB、worker、正式 RBAC 或 deployment 設定。
-- Phase 30 parser / ingestion / retrieval hardening 只修正 Ollama VLM response normalization、frontend 多檔依序 ingestion ergonomics、RAG structured field evidence 與 Qdrant stale vector filtering；不新增 batch API、queue、worker、DB schema、OpenAI SDK、vLLM、production parser dashboard、cleanup endpoint 或 release version bump。
+- Phase 30 parser / ingestion / retrieval hardening 只修正 Ollama VLM response normalization、frontend 多檔依序 ingestion ergonomics、RAG structured field evidence、Qdrant stale vector filtering 與 Ollama RAG generation latency guardrails；不新增 batch API、queue、worker、DB schema、OpenAI SDK、vLLM、production parser dashboard、cleanup endpoint、streaming UI 或 release version bump。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -123,6 +123,7 @@ Ticket：
 - `tasks/phase-30-parser-ingestion-hardening/30-01-vlm-response-and-multi-upload-hardening.md`
 - `tasks/phase-30-parser-ingestion-hardening/30-02-rag-structured-field-evidence.md`
 - `tasks/phase-30-parser-ingestion-hardening/30-03-rag-vector-stale-filter-hardening.md`
+- `tasks/phase-30-parser-ingestion-hardening/30-04-ollama-rag-generation-latency-guardrails.md`
 
 Status：
 
@@ -131,8 +132,9 @@ Status：
 - Frontend 後台 file input 支援多檔選擇；多檔時逐檔執行既有 upload / source router / OCR / parser / vector indexing flow，並分檔呈現成功與失敗。
 - 30-02 已完成。`/rag/query` prompt 會附加 retrieved documents 對應的 parsed structured fields，並補強中文總額問法 alias，讓 `total_amount` / `currency` 不只依賴 OCR chunk 是否剛好含金額。
 - 30-03 待實作。目標是讓 vector retrieval 在 Qdrant collection 混有舊 eval / demo points 時，仍以目前 backend document list scope 查詢，避免 stale points 消耗 `top_k` 後被過濾成 `Vector search returned no chunks.`。
+- 30-04 待實作。目標是讓 Ollama `qwen3.5:4b` RAG generation 預設關閉 thinking 並限制 output token 數，避免本機 Viewer Chat 在 RTX 5070 Ti 等 GPU 上仍因 thinking tokens 等待數十秒。
 - Release Impact：Version bump required: no。這是 `v0.29.0` 後的 focused hardening，不更新 backend / frontend / Docker version。
-- Out of Scope：不新增 batch upload API、async queue、worker、Redis、NATS、DB schema、OpenAI SDK、vLLM、production parser dashboard、PDF rendering、Qdrant cleanup endpoint 或 Agent planner / RAG ranking 大改。
+- Out of Scope：不新增 batch upload API、async queue、worker、Redis、NATS、DB schema、OpenAI SDK、vLLM、production parser dashboard、PDF rendering、Qdrant cleanup endpoint、streaming UI 或 Agent planner / RAG ranking 大改。
 
 ## v0.2.0 Demo UI Milestone
 
