@@ -473,7 +473,7 @@ Phase 26 VLM input resolver 只解析既有 upload metadata 與 `data/uploads/` 
 
 ### Output Contract
 
-VLM provider 必須回傳 JSON object，並由 adapter 正規化成既有 Phase 24 schema，不新增平行欄位 schema：
+VLM provider 必須回傳 JSON object，並由 adapter 正規化成既有 Phase 24 schema，不新增平行欄位 schema。Ollama adapter 會優先讀取 `response`，若 `response` 為空則讀取 `thinking`；內容可以是純 JSON、markdown fenced JSON，或前後帶少量文字但包含第一個 JSON object 的 response：
 
 ```json
 {
@@ -521,7 +521,8 @@ Phase 25 Agent contract 不變：`get_document_fields` 只讀已保存的 `Parse
 ### 26-03 Runtime Notes
 
 - `get_document_parser()` now builds a VLM-first `VlmInvoiceParser` unless `DOCURAG_PARSER_SOURCE=deterministic_invoice` is explicitly set.
-- The default `ollama` provider uses the local HTTP `/api/generate` shape with `stream=false`, image base64 and compact OCR context; `DOCURAG_VLM_PROVIDER=fake` is a built-in demo / smoke stub and is not a production VLM runtime.
+- The default `ollama` provider uses the local HTTP `/api/generate` shape with `stream=false`, `format=json`, image base64 and compact OCR context; `DOCURAG_VLM_PROVIDER=fake` is a built-in demo / smoke stub and is not a production VLM runtime.
+- Ollama response parsing accepts JSON in `response`, JSON in `thinking` when `response` is empty, markdown fenced JSON and the first JSON object embedded in text. Amount-like strings, confidence labels and line item `total` / `total_price` / `subtotal` aliases are normalized before writing the existing `DocumentFields` schema.
 - VLM success returns `ParserResult.parser_source=vlm_invoice` and field-level `parser_source=vlm_invoice`.
 - Provider unavailable, timeout, invalid response, missing required fields, unsupported file or low confidence falls back to `deterministic_invoice`; fallback details are preserved in `trace_metadata.fallback_chain` and `trace_metadata.fallback_reason`.
 - Existing Phase 25 Agent APIs are unchanged because `get_document_fields` reads the saved `ParserResult` regardless of parser source.
@@ -581,7 +582,9 @@ Phase 27 將已完成且有 fallback 的進階能力改成預設體驗。這是 
 
 ### Frontend Ingestion Behavior
 
-Admin / Analyst ingestion surface v0.27.0 起預設為第一屏。上傳與 provider-selected OCR 成功後，frontend 會 best-effort 呼叫：
+Admin / Analyst ingestion surface v0.27.0 起預設為第一屏。Phase 30 focused hardening 起，檔案選擇器可一次選多個檔案；frontend 會在單一頁面 session 內逐檔走既有 upload / source router / provider-selected OCR / parser / vector indexing 流程，並分檔顯示成功或失敗。這只是 frontend orchestration，不新增 batch upload API、async queue、worker 或 DB-backed ingestion pipeline。
+
+上傳與 provider-selected OCR 成功後，frontend 會 best-effort 呼叫：
 
 1. `POST /documents/{document_id}/parse`
 2. `POST /documents/{document_id}/index/vector`

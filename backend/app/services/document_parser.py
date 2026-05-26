@@ -104,6 +104,7 @@ class OllamaVlmProvider:
                     "model": self.model_name,
                     "prompt": prompt,
                     "images": [image_base64],
+                    "format": "json",
                     "stream": False,
                 },
                 timeout=self.timeout_seconds,
@@ -119,19 +120,62 @@ class OllamaVlmProvider:
         except ValueError as exc:
             raise VlmProviderError("vlm_invalid_response", "VLM provider returned non-JSON response.") from exc
 
-        raw_content = payload.get("response", payload)
-        if isinstance(raw_content, str):
-            try:
-                parsed_content = json.loads(raw_content)
-            except ValueError as exc:
-                raise VlmProviderError("vlm_invalid_response", "VLM provider response was not a JSON object.") from exc
-        else:
-            parsed_content = raw_content
+        return _parse_vlm_json_payload(payload)
 
-        if not isinstance(parsed_content, dict):
-            raise VlmProviderError("vlm_invalid_response", "VLM provider response was not a JSON object.")
 
-        return parsed_content
+def _parse_vlm_json_payload(payload: object) -> dict:
+    candidates: list[object] = []
+    if isinstance(payload, dict):
+        for key in ("response", "thinking"):
+            value = payload.get(key)
+            if value not in (None, ""):
+                candidates.append(value)
+
+        if not candidates:
+            candidates.append(payload)
+    else:
+        candidates.append(payload)
+
+    for candidate in candidates:
+        parsed_content = _parse_json_object_candidate(candidate)
+        if parsed_content is not None:
+            return parsed_content
+
+    raise VlmProviderError("vlm_invalid_response", "VLM provider response was not a JSON object.")
+
+
+def _parse_json_object_candidate(candidate: object) -> dict | None:
+    if isinstance(candidate, dict):
+        return candidate
+
+    if not isinstance(candidate, str):
+        return None
+
+    text = candidate.strip()
+    if not text:
+        return None
+
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, dict):
+            return parsed
+    except ValueError:
+        pass
+
+    decoder = json.JSONDecoder()
+    for index, character in enumerate(text):
+        if character != "{":
+            continue
+
+        try:
+            parsed, _end = decoder.raw_decode(text[index:])
+        except ValueError:
+            continue
+
+        if isinstance(parsed, dict):
+            return parsed
+
+    return None
 
 
 def create_vlm_provider(
@@ -259,6 +303,13 @@ class VlmInvoiceParser:
     schema_version = "invoice_fields_v1"
 
     required_fields = ["document_type", "vendor_name", "invoice_number", "issue_date", "total_amount", "currency"]
+    field_aliases = {
+        "total_amount": ("total_amount", "amount_due", "grand_total", "total"),
+        "tax_amount": ("tax_amount", "tax", "vat"),
+        "unit_price": ("unit_price", "unitPrice", "price"),
+        "amount": ("amount", "total", "total_price", "line_total", "subtotal"),
+    }
+    numeric_fields = {"total_amount", "tax_amount", "quantity", "unit_price", "amount"}
 
     def __init__(
         self,
@@ -432,7 +483,7 @@ class VlmInvoiceParser:
         descriptor: VlmInputDescriptor,
         required: bool = True,
     ) -> ExtractedField:
-        value = payload.get(field_name)
+        value = self._payload_value(payload, field_name)
         if value is None or value == "":
             return ExtractedField(
                 parser_source=self.parser_source,
@@ -445,6 +496,32 @@ class VlmInvoiceParser:
             descriptor=descriptor,
             field_name=field_name,
         )
+
+    def _payload_value(self, payload: dict, field_name: str) -> object:
+        keys = self.field_aliases.get(field_name, (field_name,))
+        for key in keys:
+            value = payload.get(key)
+            if value not in (None, ""):
+                return self._normalize_payload_value(field_name, value)
+
+        return None
+
+    def _normalize_payload_value(self, field_name: str, value: object) -> object:
+        if field_name in self.numeric_fields and isinstance(value, str):
+            number_match = re.search(r"[-+]?\d[\d,]*(?:\.\d+)?", value)
+            if number_match:
+                number = self.fallback_parser._number_value(number_match.group(0))
+                if number is not None:
+                    return number
+
+        if field_name == "currency" and isinstance(value, str):
+            currency_match = DeterministicInvoiceParser.currency_pattern.search(value)
+            if currency_match:
+                normalized_currency = self.fallback_parser._normalize_currency(currency_match.group(0))
+                if normalized_currency:
+                    return normalized_currency
+
+        return value
 
     def _line_items_from_payload(
         self,
@@ -562,6 +639,30 @@ class VlmInvoiceParser:
         }
 
     def _confidence(self, value: object) -> float:
+        if isinstance(value, str):
+            normalized_value = value.strip().lower()
+            confidence_labels = {
+                "very high": 0.95,
+                "high": 0.9,
+                "medium": 0.7,
+                "low": 0.4,
+            }
+            if normalized_value in confidence_labels:
+                return confidence_labels[normalized_value]
+
+            try:
+                if normalized_value.endswith("%"):
+                    confidence = float(normalized_value.rstrip("%")) / 100
+                else:
+                    confidence = float(normalized_value)
+            except ValueError as exc:
+                raise VlmProviderError("vlm_invalid_response", "VLM response confidence must be numeric.") from exc
+
+            if confidence < 0 or confidence > 1:
+                raise VlmProviderError("vlm_invalid_response", "VLM response confidence must be between 0 and 1.")
+
+            return confidence
+
         if not isinstance(value, (int, float)):
             raise VlmProviderError("vlm_invalid_response", "VLM response confidence must be numeric.")
 

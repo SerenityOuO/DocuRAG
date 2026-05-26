@@ -12,6 +12,7 @@ from app.schemas.documents import (
 )
 from app.api.routes.documents import get_document_parser
 from app.core.config import get_settings
+from app.services import document_parser as document_parser_module
 from app.services.document_parser import (
     DeterministicInvoiceParser,
     FakeVlmProvider as RuntimeFakeVlmProvider,
@@ -37,6 +38,17 @@ class FakeVlmProvider:
             raise VlmProviderError(self.fallback_reason, "fake provider failure")
 
         return self.payload
+
+
+class FakeHttpResponse:
+    def __init__(self, payload: dict) -> None:
+        self.payload = payload
+
+    def json(self):
+        return self.payload
+
+    def raise_for_status(self) -> None:
+        return None
 
 
 def _document_with_ocr(
@@ -224,6 +236,101 @@ def test_runtime_fake_vlm_provider_returns_demo_invoice_payload(tmp_path: Path) 
     assert result.trace_metadata["vlm_model"] == RuntimeFakeVlmProvider.model_name
 
 
+def test_ollama_vlm_provider_accepts_fenced_json_and_alias_fields(tmp_path: Path, monkeypatch) -> None:
+    document, resolver = _vlm_document(tmp_path, _complete_invoice_text())
+
+    def fake_post(*args, **kwargs):
+        assert kwargs["json"]["format"] == "json"
+        return FakeHttpResponse(
+            {
+                "response": """```json
+{
+  "document_type": "invoice",
+  "vendor_name": "openai 模型評估服務",
+  "invoice_number": "INV-2026-0510-OA01",
+  "issue_date": "2026-05-10",
+  "total_amount": "4,260",
+  "tax_amount": "203",
+  "currency": "TWD / 新台幣",
+  "line_items": [
+    {
+      "description": "模型回覆品質測試",
+      "quantity": "1",
+      "unit_price": "2600",
+      "total_price": "2600"
+    }
+  ],
+  "confidence": "high"
+}
+```""",
+            }
+        )
+
+    monkeypatch.setattr(document_parser_module.httpx, "post", fake_post)
+    parser = VlmInvoiceParser(
+        resolver,
+        create_vlm_provider("ollama", "http://127.0.0.1:11434", "qwen3.5:4b", 30),
+    )
+
+    result = parser.parse(document)
+
+    assert result.status == ParserStatus.PARSED
+    assert result.parser_source == "vlm_invoice"
+    assert result.fields.invoice_number.value == "INV-2026-0510-OA01"
+    assert result.fields.total_amount.value == 4260
+    assert result.fields.tax_amount.value == 203
+    assert result.fields.currency.value == "TWD"
+    assert result.fields.line_items[0].amount.value == 2600
+    assert result.fields.invoice_number.confidence == 0.9
+    assert result.trace_metadata["fallback_chain"] == "vlm_invoice"
+    assert result.trace_metadata["confidence_summary"] == "0.9000"
+
+
+def test_ollama_vlm_provider_accepts_thinking_json_when_response_is_empty(tmp_path: Path, monkeypatch) -> None:
+    document, resolver = _vlm_document(tmp_path, _complete_invoice_text())
+
+    def fake_post(*args, **kwargs):
+        return FakeHttpResponse(
+            {
+                "response": "",
+                "thinking": """
+{
+  "document_type": "invoice",
+  "vendor_name": "Aurora Office Supplies Demo LLC",
+  "invoice_number": "AUR-2026-051",
+  "issue_date": "2026-05-31",
+  "total_amount": 1248.5,
+  "tax_amount": 80.0,
+  "currency": "USD",
+  "line_items": [
+    {
+      "description": "Printer paper",
+      "quantity": 5,
+      "unit_price": 18.5,
+      "total": 92.5
+    }
+  ],
+  "confidence": "82%"
+}
+""",
+            }
+        )
+
+    monkeypatch.setattr(document_parser_module.httpx, "post", fake_post)
+    parser = VlmInvoiceParser(
+        resolver,
+        create_vlm_provider("ollama", "http://127.0.0.1:11434", "qwen3.5:4b", 30),
+    )
+
+    result = parser.parse(document)
+
+    assert result.status == ParserStatus.PARSED
+    assert result.parser_source == "vlm_invoice"
+    assert result.fields.invoice_number.value == "AUR-2026-051"
+    assert result.fields.line_items[0].amount.value == 92.5
+    assert result.fields.invoice_number.confidence == 0.82
+
+
 def test_vlm_invoice_parser_falls_back_when_provider_is_unavailable(tmp_path: Path) -> None:
     document, resolver = _vlm_document(tmp_path, _complete_invoice_text())
     parser = VlmInvoiceParser(resolver, FakeVlmProvider(fallback_reason="vlm_provider_unavailable"))
@@ -251,7 +358,7 @@ def test_vlm_invoice_parser_falls_back_on_timeout_or_provider_failure(tmp_path: 
 
 def test_vlm_invoice_parser_falls_back_on_invalid_json_shape(tmp_path: Path) -> None:
     document, resolver = _vlm_document(tmp_path, _complete_invoice_text())
-    parser = VlmInvoiceParser(resolver, FakeVlmProvider({"confidence": "high"}))
+    parser = VlmInvoiceParser(resolver, FakeVlmProvider({"confidence": {"score": 0.8}}))
 
     result = parser.parse(document)
 
