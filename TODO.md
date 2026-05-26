@@ -926,6 +926,8 @@ Phase 29 validation：
 
 ## Documentation Maintenance
 
+- [x] `tasks/docs-readme-image-refresh.md`: 使用使用者提供的兩張 demo 截圖，將 root README 改成精簡繁中展示入口；不 bump version、不改 runtime。
+- [x] README image refresh validation：`rg -n "readme-viewer-query.jpg|readme-admin-ingestion.jpg|文件知識庫問答|README_DEV.md" README.md TODO.md tasks/docs-readme-image-refresh.md` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 - [x] `tasks/docs-readme-interview-dev-split.md`: 將 root README 切分為面試官入口 `README.md` 與開發紀錄 `README_DEV.md`；不 bump version、不改 runtime。
 - [x] README split validation：`rg -n "README_DEV.md|開發紀錄|面試官|技術亮點|Release Status" README.md README_DEV.md TODO.md tasks/docs-readme-interview-dev-split.md` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 - [x] `tasks/docs-agents-readme-split-guidelines.md`: 更新 `AGENTS.md` 雙 README 分工規範，讓後續 ticket 區分面試官入口與開發紀錄；不 bump version、不改 runtime。
