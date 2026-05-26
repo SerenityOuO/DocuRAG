@@ -2,7 +2,7 @@ import re
 from time import perf_counter
 from typing import Protocol
 
-from app.schemas.documents import DocumentMetadata
+from app.schemas.documents import DocumentMetadata, ExtractedField, ParserStatus
 from app.schemas.rag import RagCitation, RagQueryResponse, RetrievedChunk
 from app.services.embedding import EmbeddingProvider, EmbeddingProviderError
 from app.services.llm import LlmGeneration, LlmProvider, LlmProviderError
@@ -26,6 +26,17 @@ QUERY_ALIASES = {
     "回覆時間": ["sla", "response", "target"],
     "客服目標": ["sla", "response", "target"],
 }
+
+QUERY_ALIASES.update(
+    {
+        "總共多少": ["total", "amount", "invoice"],
+        "發票總共多少": ["total", "amount", "invoice"],
+        "發掉總共多少": ["total", "amount", "invoice"],
+        "發票總共": ["total", "amount", "invoice"],
+        "發票金額": ["total", "amount", "invoice"],
+        "應付金額": ["total", "amount", "invoice"],
+    }
+)
 
 
 class RagProvider(Protocol):
@@ -53,12 +64,13 @@ class KeywordRagProvider:
         documents: list[DocumentMetadata],
     ) -> RagQueryResponse:
         retrieved_chunks = self.retrieve(query, top_k, documents)
-        return self.build_response(query, retrieved_chunks)
+        return self.build_response(query, retrieved_chunks, documents)
 
     def build_response(
         self,
         query: str,
         retrieved_chunks: list[RetrievedChunk],
+        documents: list[DocumentMetadata] | None = None,
     ) -> RagQueryResponse:
         citations = [
             RagCitation(
@@ -74,6 +86,8 @@ class KeywordRagProvider:
             for chunk in retrieved_chunks
         ]
 
+        field_evidence_blocks = self._build_structured_field_evidence(retrieved_chunks, documents or [])
+
         if not retrieved_chunks:
             answer = (
                 f"No OCR chunks matched query: {query}. "
@@ -85,10 +99,20 @@ class KeywordRagProvider:
                 for index, chunk in enumerate(retrieved_chunks, start=1)
             ]
             answer = "Local OCR chunks matched the query:\n" + "\n".join(evidence_lines)
+            if field_evidence_blocks:
+                answer += (
+                    "\n\nSaved structured invoice fields matched the retrieved documents:\n"
+                    + "\n".join(field_evidence_blocks)
+                )
 
         llm_trace_metadata: dict[str, str] = {}
         if retrieved_chunks and self.llm_provider is not None:
-            answer, llm_trace_metadata = self._generate_answer(query, retrieved_chunks, answer)
+            answer, llm_trace_metadata = self._generate_answer(
+                query,
+                retrieved_chunks,
+                answer,
+                field_evidence_blocks,
+            )
 
         if llm_trace_metadata:
             citations = [
@@ -165,22 +189,23 @@ class KeywordRagProvider:
         query: str,
         retrieved_chunks: list[RetrievedChunk],
         fallback_answer: str,
+        field_evidence_blocks: list[str],
     ) -> tuple[str, dict[str, str]]:
         assert self.llm_provider is not None
 
-        prompt = self._build_generation_prompt(query, retrieved_chunks)
+        prompt = self._build_generation_prompt(query, retrieved_chunks, field_evidence_blocks)
         started_at = perf_counter()
         try:
             generation = self.llm_provider.generate(
                 prompt,
                 system=(
-                    "You answer questions using only the supplied retrieved OCR chunks. "
-                    "If the answer is not present in those chunks, say that the retrieved chunks do not contain enough information."
+                    "You answer questions using only the supplied retrieved OCR chunks and saved structured invoice fields. "
+                    "If the answer is not present in those sources, say that the supplied evidence does not contain enough information."
                 ),
             )
         except LlmProviderError as exc:
             return (
-                f"{fallback_answer}\n\nLLM generation unavailable; returning retrieved OCR chunks only. Error: {exc}",
+                f"{fallback_answer}\n\nLLM generation unavailable; returning retrieved evidence only. Error: {exc}",
                 self._llm_failure_trace_metadata(str(exc)),
             )
 
@@ -188,13 +213,23 @@ class KeywordRagProvider:
         text = generation.text.strip()
         if not text:
             return (
-                f"{fallback_answer}\n\nLLM generation unavailable; model returned an empty answer.",
+                f"{fallback_answer}\n\nLLM generation unavailable; returning retrieved evidence only. Model returned an empty answer.",
                 self._llm_failure_trace_metadata("model returned an empty answer"),
             )
 
-        return text, self._llm_success_trace_metadata(generation, latency_ms, len(retrieved_chunks))
+        return text, self._llm_success_trace_metadata(
+            generation,
+            latency_ms,
+            len(retrieved_chunks),
+            len(field_evidence_blocks),
+        )
 
-    def _build_generation_prompt(self, query: str, retrieved_chunks: list[RetrievedChunk]) -> str:
+    def _build_generation_prompt(
+        self,
+        query: str,
+        retrieved_chunks: list[RetrievedChunk],
+        field_evidence_blocks: list[str],
+    ) -> str:
         evidence_blocks = []
         for index, chunk in enumerate(retrieved_chunks, start=1):
             page = chunk.page_number if chunk.page_number is not None else "unknown"
@@ -211,12 +246,14 @@ class KeywordRagProvider:
             )
 
         return (
-            "Use only the retrieved chunks below to answer the query. "
-            "Do not add facts that are not present in the chunks. "
+            "Use only the retrieved chunks and saved structured invoice fields below to answer the query. "
+            "Do not add facts that are not present in the supplied evidence. "
             "When possible, mention the supporting chunk numbers in the answer.\n\n"
             f"Query:\n{query}\n\n"
             "Retrieved chunks:\n"
             + "\n\n".join(evidence_blocks)
+            + "\n\nStructured fields:\n"
+            + ("\n".join(field_evidence_blocks) if field_evidence_blocks else "none")
         )
 
     def _llm_success_trace_metadata(
@@ -224,15 +261,19 @@ class KeywordRagProvider:
         generation: LlmGeneration,
         latency_ms: float,
         chunk_count: int,
+        field_evidence_count: int,
     ) -> dict[str, str]:
         fields = {
             "llm_generation_status": "completed",
             "llm_provider": self.llm_provider.name if self.llm_provider is not None else "unknown",
             "llm_model": generation.model,
-            "llm_prompt_source": "retrieved_chunks",
+            "llm_prompt_source": "retrieved_chunks_structured_fields" if field_evidence_count else "retrieved_chunks",
             "llm_prompt_chunk_count": str(chunk_count),
             "llm_generation_latency_ms": f"{latency_ms:.2f}",
         }
+
+        if field_evidence_count:
+            fields["llm_prompt_field_evidence_count"] = str(field_evidence_count)
 
         if generation.prompt_tokens is not None:
             fields["llm_prompt_tokens"] = str(generation.prompt_tokens)
@@ -247,6 +288,66 @@ class KeywordRagProvider:
             fields["llm_load_duration_ms"] = f"{generation.load_duration_ms:.2f}"
 
         return fields
+
+    def _build_structured_field_evidence(
+        self,
+        retrieved_chunks: list[RetrievedChunk],
+        documents: list[DocumentMetadata],
+    ) -> list[str]:
+        if not retrieved_chunks or not documents:
+            return []
+
+        document_ids = {chunk.document_id for chunk in retrieved_chunks}
+        documents_by_id = {
+            document.document_id: document
+            for document in documents
+            if document.document_id in document_ids
+        }
+
+        field_blocks = []
+        seen_document_ids: set[str] = set()
+        for chunk in retrieved_chunks:
+            if chunk.document_id in seen_document_ids:
+                continue
+
+            document = documents_by_id.get(chunk.document_id)
+            parser_result = document.parser_result if document is not None else None
+            if parser_result is None or parser_result.status != ParserStatus.PARSED:
+                continue
+
+            fields = parser_result.fields
+            values = [
+                self._field_line("vendor_name", fields.vendor_name),
+                self._field_line("invoice_number", fields.invoice_number),
+                self._field_line("issue_date", fields.issue_date),
+                self._field_line("total_amount", fields.total_amount),
+                self._field_line("tax_amount", fields.tax_amount),
+                self._field_line("currency", fields.currency),
+            ]
+            populated_values = [value for value in values if value]
+            if not populated_values:
+                continue
+
+            field_blocks.append(
+                "\n".join(
+                    [
+                        f"[field-{len(field_blocks) + 1}] filename={document.filename}",
+                        f"document_id={document.document_id}",
+                        f"parser_source={parser_result.parser_source}",
+                        *populated_values,
+                    ]
+                )
+            )
+            seen_document_ids.add(chunk.document_id)
+
+        return field_blocks
+
+    def _field_line(self, name: str, field: ExtractedField) -> str | None:
+        if field.value is None:
+            return None
+
+        source_text = f"; source_text={field.source_text}" if field.source_text else ""
+        return f"{name}={field.value}{source_text}"
 
     def _llm_failure_trace_metadata(self, error: str) -> dict[str, str]:
         provider_name = self.llm_provider.name if self.llm_provider is not None else "unknown"
@@ -289,7 +390,7 @@ class VectorRagProvider:
         except (EmbeddingProviderError, QdrantVectorStoreError, TimeoutError, ValueError) as exc:
             return self._fallback_to_keyword(query, top_k, documents, str(exc))
 
-        return self.keyword_provider.build_response(query, retrieved_chunks)
+        return self.keyword_provider.build_response(query, retrieved_chunks, documents)
 
     def retrieve(
         self,
@@ -433,7 +534,7 @@ class VectorRerankRagProvider:
             return vector_response
 
         rerank_result = self.rerank_service.rerank(query, vector_response.retrieved_chunks)
-        return self.response_builder.build_response(query, rerank_result.chunks)
+        return self.response_builder.build_response(query, rerank_result.chunks, documents)
 
 
 class HybridRagProvider:
@@ -461,10 +562,11 @@ class HybridRagProvider:
             return self.keyword_provider.build_response(
                 query,
                 self._annotate_keyword_fallback(keyword_chunks, vector_error),
+                documents,
             )
 
         merged_chunks = self._merge_candidates(keyword_chunks, vector_response.retrieved_chunks, top_k)
-        return self.keyword_provider.build_response(query, merged_chunks)
+        return self.keyword_provider.build_response(query, merged_chunks, documents)
 
     def _annotate_keyword_fallback(
         self,
@@ -612,7 +714,7 @@ class HybridRerankRagProvider:
         hybrid_response = self.hybrid_provider.query(query, top_k, documents)
         rerank_result = self.rerank_service.rerank(query, hybrid_response.retrieved_chunks)
         reranked_chunks = self._annotate_hybrid_rerank_chunks(rerank_result)
-        return self.response_builder.build_response(query, reranked_chunks)
+        return self.response_builder.build_response(query, reranked_chunks, documents)
 
     def _annotate_hybrid_rerank_chunks(self, rerank_result: RerankResult) -> list[RetrievedChunk]:
         annotated_chunks = []

@@ -9,7 +9,16 @@ from app.api.routes.rag import get_document_storage as get_rag_storage
 from app.api.routes.rag import get_rag_provider
 from app.core.config import get_settings
 from app.main import app
-from app.schemas.documents import BoundingBox, DocumentChunk, DocumentMetadata, DocumentStatus
+from app.schemas.documents import (
+    BoundingBox,
+    DocumentChunk,
+    DocumentFields,
+    DocumentMetadata,
+    DocumentStatus,
+    ExtractedField,
+    ParserResult,
+    ParserStatus,
+)
 from app.schemas.rag import RagCitation, RagQueryResponse
 from app.services.embedding import EmbeddingProviderError, EmbeddingResult
 from app.services.document_storage import DocumentStorage
@@ -435,6 +444,75 @@ def test_keyword_rag_provider_uses_llm_generation_with_retrieved_chunks() -> Non
     }
 
 
+def test_keyword_rag_provider_sends_structured_fields_for_retrieved_documents_to_llm() -> None:
+    class StubLlmProvider:
+        name = "ollama"
+
+        def __init__(self) -> None:
+            self.prompt = ""
+            self.system = ""
+
+        def generate(self, prompt: str, system: str | None = None) -> LlmGeneration:
+            self.prompt = prompt
+            self.system = system or ""
+            return LlmGeneration(
+                text="DocuRAG Supplies total is 12345.0 TWD.",
+                model="qwen3.5:4b",
+            )
+
+    llm_provider = StubLlmProvider()
+    document = DocumentMetadata(
+        document_id="doc-structured-001",
+        filename="docurag-supplies.txt",
+        stored_filename="doc-structured-001-docurag-supplies.txt",
+        file_type="txt",
+        content_type="text/plain",
+        size=100,
+        status=DocumentStatus.READY,
+        created_at="2026-05-20T00:00:00Z",
+        parser_result=ParserResult(
+            document_id="doc-structured-001",
+            status=ParserStatus.PARSED,
+            fields=DocumentFields(
+                document_type=ExtractedField(value="invoice"),
+                vendor_name=ExtractedField(value="DocuRAG Supplies Ltd."),
+                invoice_number=ExtractedField(value="DRS-2026-001"),
+                issue_date=ExtractedField(value="2026-05-20"),
+                total_amount=ExtractedField(value=12345.0, source_text="Total amount: NT$ 12,345"),
+                tax_amount=ExtractedField(value=588.0),
+                currency=ExtractedField(value="TWD"),
+            ),
+        ),
+        chunks=[
+            DocumentChunk(
+                chunk_id="chunk-supplier",
+                document_id="doc-structured-001",
+                text="Supplier: DocuRAG Supplies Ltd.",
+                source="ocr_paddleocr",
+                created_at="2026-05-20T00:00:00Z",
+                source_type="ocr_paddleocr",
+                metadata={"origin": "ocr_line", "provider": "ocr_paddleocr"},
+            )
+        ],
+    )
+
+    response = KeywordRagProvider(llm_provider=llm_provider).query(
+        "DocuRAG Supplies 發票總共多少",
+        3,
+        [document],
+    )
+
+    assert response.answer == "DocuRAG Supplies total is 12345.0 TWD."
+    assert "Supplier: DocuRAG Supplies Ltd." in llm_provider.prompt
+    assert "Structured fields:" in llm_provider.prompt
+    assert "vendor_name=DocuRAG Supplies Ltd." in llm_provider.prompt
+    assert "total_amount=12345.0; source_text=Total amount: NT$ 12,345" in llm_provider.prompt
+    assert "currency=TWD" in llm_provider.prompt
+    assert "retrieved OCR chunks and saved structured invoice fields" in llm_provider.system
+    assert response.citations[0].trace_metadata["llm_prompt_source"] == "retrieved_chunks_structured_fields"
+    assert response.citations[0].trace_metadata["llm_prompt_field_evidence_count"] == "1"
+
+
 def test_keyword_rag_provider_falls_back_when_llm_generation_fails() -> None:
     class FailingLlmProvider:
         name = "ollama"
@@ -466,7 +544,7 @@ def test_keyword_rag_provider_falls_back_when_llm_generation_fails() -> None:
     response = KeywordRagProvider(llm_provider=FailingLlmProvider()).query("invoice total", 3, [document])
 
     assert "Local OCR chunks matched the query" in response.answer
-    assert "LLM generation unavailable; returning retrieved OCR chunks only" in response.answer
+    assert "LLM generation unavailable; returning retrieved evidence only" in response.answer
     assert "Cannot connect to Ollama" in response.answer
     assert response.citations[0].trace_metadata["llm_generation_status"] == "failed"
     assert response.citations[0].trace_metadata["llm_provider"] == "ollama"
