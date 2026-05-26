@@ -62,7 +62,7 @@ const health = ref<HealthResponse | null>(null);
 const ragResult = ref<RagQueryResponse | null>(null);
 const documents = ref<DocumentMetadata[]>([]);
 const uploadResult = ref<UploadResponse | null>(null);
-const selectedFile = ref<File | null>(null);
+const selectedFiles = ref<File[]>([]);
 const uploadFallbackAvailable = ref(false);
 const ragQuery = ref("");
 const ragTopK = ref(3);
@@ -201,6 +201,38 @@ const citedSources = computed<SourceSummary[]>(() => {
 
 const latestDocuments = computed(() => documents.value.slice(0, 5));
 const agentDocumentOptions = computed(() => latestDocuments.value);
+const selectedFileSummary = computed(() => {
+  if (selectedFiles.value.length === 0) {
+    return "";
+  }
+
+  if (selectedFiles.value.length === 1) {
+    const [file] = selectedFiles.value;
+    return `${file.name} - ${formatBytes(file.size)}`;
+  }
+
+  return `已選擇 ${selectedFiles.value.length} 個檔案：${selectedFiles.value.map((file) => file.name).join("、")}`;
+});
+const uploadButtonLabel = computed(() => {
+  if (uploadState.value === "loading") {
+    return selectedFiles.value.length > 1 ? "後台依序處理中..." : "後台處理中...";
+  }
+
+  if (selectedFiles.value.length > 1) {
+    return "依序建立多檔知識庫資料";
+  }
+
+  const [file] = selectedFiles.value;
+  if (file && isTextUploadFile(file)) {
+    return "建立 direct text 知識庫資料";
+  }
+
+  if (file && isPdfUploadFile(file)) {
+    return "建立 text-native PDF 知識庫資料";
+  }
+
+  return "建立進階 demo 知識庫資料";
+});
 
 const ragEvalStatusLabel = computed(() => {
   if (ragEvalState.value === "loading") {
@@ -362,7 +394,7 @@ function toolLabel(toolName: string | null | undefined): string {
 
 function handleFileChange(event: Event): void {
   const input = event.target as HTMLInputElement;
-  selectedFile.value = input.files?.[0] ?? null;
+  selectedFiles.value = Array.from(input.files ?? []);
   uploadResult.value = null;
   uploadFallbackAvailable.value = false;
   uploadMessage.value = "";
@@ -798,13 +830,71 @@ async function runAggressivePostOcr(documentId: string, baseMessage: string): Pr
   return messages.join(" ");
 }
 
+async function processIngestionFile(file: File, allowMockFallback: boolean): Promise<string> {
+  let uploadedDocumentId = "";
+
+  try {
+    const response = await uploadDocument(file);
+    uploadResult.value = response;
+    uploadedDocumentId = response.document_id;
+    await refreshDocuments();
+    syncAgentDocumentSelection();
+
+    if (isTextUploadFile(file)) {
+      return await runAggressivePostOcr(
+        uploadedDocumentId,
+        "文件已完成直接文字匯入，並產生 text_upload local chunks。",
+      );
+    }
+
+    if (isPdfUploadFile(file)) {
+      if (response.chunks.some((chunk) => chunk.source_type === "pdf_text")) {
+        return await runAggressivePostOcr(
+          uploadedDocumentId,
+          "文件已完成 text-native PDF 文字抽取，並產生 pdf_text local chunks。",
+        );
+      }
+
+      const failedReason = response.processing.failed_reason ?? "";
+      if (failedReason.includes("pdf_scanned_pending_ocr")) {
+        return "PDF 未偵測到可抽取文字層，已標示為 pdf_scanned_pending_ocr；需要後續 PDF rendering / OCR pipeline。";
+      }
+
+      throw new Error(failedReason ? `PDF 文字抽取失敗：${failedReason}` : "PDF 文字抽取失敗。");
+    }
+  } catch (error) {
+    uploadResult.value = null;
+    throw new Error(error instanceof Error ? error.message : "文件上傳失敗");
+  }
+
+  try {
+    const ocrResult = await runSelectedOcr(uploadedDocumentId);
+    const selectedProvider = ocrResult.extracted_fields.provider ?? "";
+
+    if (selectedProvider !== "paddleocr") {
+      uploadFallbackAvailable.value = allowMockFallback;
+      throw new Error(selectedProvider
+        ? `目前後端 selected OCR provider 是 ${selectedProvider}。`
+        : "目前後端 selected OCR provider 不是 paddleocr。");
+    }
+
+    return await runAggressivePostOcr(
+      uploadedDocumentId,
+      "文件已完成 provider-selected OCR，並產生 local chunks。",
+    );
+  } catch (error) {
+    uploadFallbackAvailable.value = allowMockFallback;
+    throw new Error(error instanceof Error ? `GPU OCR 未完成：${error.message}` : "GPU OCR 未完成");
+  }
+}
+
 async function submitUpload(): Promise<void> {
   if (!canUseIngestion.value) {
     uploadError.value = "Viewer 角色不能執行 ingestion 操作。";
     return;
   }
 
-  if (!selectedFile.value) {
+  if (selectedFiles.value.length === 0) {
     uploadError.value = "請先選擇檔案。";
     return;
   }
@@ -814,85 +904,44 @@ async function submitUpload(): Promise<void> {
   uploadMessage.value = "";
   uploadFallbackAvailable.value = false;
 
-  let uploadedDocumentId = "";
+  const successMessages: string[] = [];
+  const failureMessages: string[] = [];
+  const singleFileMode = selectedFiles.value.length === 1;
 
-  try {
-    const response = await uploadDocument(selectedFile.value);
-    uploadResult.value = response;
-    uploadedDocumentId = response.document_id;
-    await refreshDocuments();
-    syncAgentDocumentSelection();
+  for (const [fileIndex, file] of selectedFiles.value.entries()) {
+    uploadMessage.value =
+      selectedFiles.value.length > 1 ? `處理中 ${fileIndex + 1}/${selectedFiles.value.length}：${file.name}` : "";
 
-    if (isTextUploadFile(selectedFile.value)) {
-      uploadMessage.value = await runAggressivePostOcr(
-        uploadedDocumentId,
-        "文件已完成直接文字匯入，並產生 text_upload local chunks。",
-      );
-      uploadState.value = "success";
+    try {
+      const message = await processIngestionFile(file, singleFileMode);
+      successMessages.push(`${file.name}：${message}`);
       await refreshDocuments();
-      return;
-    }
-
-    if (isPdfUploadFile(selectedFile.value)) {
-      if (response.chunks.some((chunk) => chunk.source_type === "pdf_text")) {
-        uploadMessage.value = await runAggressivePostOcr(
-          uploadedDocumentId,
-          "文件已完成 text-native PDF 文字抽取，並產生 pdf_text local chunks。",
-        );
-        uploadState.value = "success";
-        await refreshDocuments();
-        return;
-      }
-
-      const failedReason = response.processing.failed_reason ?? "";
-      if (failedReason.includes("pdf_scanned_pending_ocr")) {
-        uploadMessage.value =
-          "PDF 未偵測到可抽取文字層，已標示為 pdf_scanned_pending_ocr；需要後續 PDF rendering / OCR pipeline。";
-        uploadState.value = "success";
-        await refreshDocuments();
-        return;
-      }
-
-      uploadError.value = failedReason
-        ? `PDF 文字抽取失敗：${failedReason}`
-        : "PDF 文字抽取失敗。";
-      uploadState.value = "error";
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "處理失敗";
+      failureMessages.push(`${file.name}：${message}`);
       await refreshDocuments();
-      return;
     }
-  } catch (error) {
-    uploadResult.value = null;
-    uploadError.value = error instanceof Error ? error.message : "文件上傳失敗";
+  }
+
+  if (successMessages.length > 0) {
+    uploadMessage.value =
+      selectedFiles.value.length > 1
+        ? `已完成 ${successMessages.length}/${selectedFiles.value.length} 個檔案。${successMessages.join(" ")}`
+        : successMessages[0];
+  } else {
+    uploadMessage.value = "";
+  }
+
+  if (failureMessages.length > 0) {
+    uploadError.value =
+      selectedFiles.value.length > 1
+        ? `部分檔案處理失敗：${failureMessages.join(" ")}`
+        : failureMessages[0];
     uploadState.value = "error";
     return;
   }
 
-  try {
-    const ocrResult = await runSelectedOcr(uploadedDocumentId);
-    const selectedProvider = ocrResult.extracted_fields.provider ?? "";
-
-    if (selectedProvider !== "paddleocr") {
-      uploadFallbackAvailable.value = true;
-      uploadError.value = selectedProvider
-        ? `GPU OCR 未完成：目前後端 selected OCR provider 是 ${selectedProvider}。`
-        : "GPU OCR 未完成：目前後端 selected OCR provider 不是 paddleocr。";
-      uploadState.value = "error";
-      await refreshDocuments();
-      return;
-    }
-
-    uploadMessage.value = await runAggressivePostOcr(
-      uploadedDocumentId,
-      "文件已完成 provider-selected OCR，並產生 local chunks。",
-    );
-    uploadState.value = "success";
-    await refreshDocuments();
-  } catch (error) {
-    uploadFallbackAvailable.value = true;
-    uploadError.value = error instanceof Error ? `GPU OCR 未完成：${error.message}` : "GPU OCR 未完成";
-    uploadState.value = "error";
-    await refreshDocuments();
-  }
+  uploadState.value = "success";
 }
 
 async function submitMockFallback(): Promise<void> {
@@ -1203,29 +1252,21 @@ onMounted(() => {
 
         <label class="file-picker">
           <span>選擇文件</span>
-          <input type="file" @change="handleFileChange" />
+          <input type="file" multiple @change="handleFileChange" />
         </label>
 
-        <p v-if="selectedFile" class="selected-file">
-          {{ selectedFile.name }} - {{ formatBytes(selectedFile.size) }}
+        <p v-if="selectedFiles.length" class="selected-file">
+          {{ selectedFileSummary }}
         </p>
         <p v-else class="muted">尚未選擇文件。</p>
 
         <button
           type="button"
           class="button upload-button"
-          :disabled="!selectedFile || uploadState === 'loading'"
+          :disabled="selectedFiles.length === 0 || uploadState === 'loading'"
           @click="submitUpload"
         >
-          {{
-            uploadState === "loading"
-              ? "後台處理中..."
-              : selectedFile && isTextUploadFile(selectedFile)
-                ? "建立 direct text 知識庫資料"
-                : selectedFile && isPdfUploadFile(selectedFile)
-                  ? "建立 text-native PDF 知識庫資料"
-                  : "建立進階 demo 知識庫資料"
-          }}
+          {{ uploadButtonLabel }}
         </button>
 
         <p v-if="uploadMessage" class="success-message">{{ uploadMessage }}</p>

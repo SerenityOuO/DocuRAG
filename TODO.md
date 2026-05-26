@@ -30,6 +30,7 @@
 - Phase 27 evidence hardening -> `v0.27.1` when `27-02` is implemented
 - Phase 28 -> `v0.28.0`
 - Phase 29 -> `v0.29.0`
+- Phase 30 hardening -> no version bump unless a later release sync ticket is created
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README / README_DEV、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -108,6 +109,13 @@
 50. `tasks/phase-27-aggressive-defaults/27-01-aggressive-demo-defaults.md` 已完成，啟用 default `hybrid_rerank` RAG / Agent search、Ollama embedding、FastEmbed rerank adapter、frontend parser + vector indexing best-effort flow 與 `v0.27.0` release sync。
 51. `tasks/phase-27-aggressive-defaults/27-02-ocr-vlm-evidence-alignment.md` 已完成，讓 VLM parser request 帶 image + OCR context，並將 VLM 欄位結果對回 OCR line / bbox 或標示 evidence unmatched / unavailable；同步 `v0.27.1` patch release。
 52. `tasks/phase-27-aggressive-defaults/27-03-vector-source-expansion-contract.md` 已完成，固定 `ocr_image`、`text_upload`、`pdf_text` 與 `pdf_scanned_pending_ocr` vector source contract；planning ticket，不 bump version。
+53. `tasks/phase-30-parser-ingestion-hardening/30-01-vlm-response-and-multi-upload-hardening.md` 已完成，強化 Ollama VLM response parsing 與後台多檔依序 ingestion；focused hardening ticket，不 bump version。
+
+## Phase 30 Parser / Ingestion Hardening
+
+- [x] `tasks/phase-30-parser-ingestion-hardening/30-01-vlm-response-and-multi-upload-hardening.md`: 修正 VLM fenced JSON / thinking JSON / alias 欄位造成的 `vlm_invalid_response`，並讓後台知識庫管理支援多檔依序 upload / OCR / parser / vector indexing。
+- Release Impact: Version bump required: no。此 ticket 是 v0.29.0 後的 focused hardening，不更新 backend / frontend / Docker version。
+- [x] 30-01 validation：`python -m pytest backend/tests/test_document_parser.py -q` 通過，`15 passed`（僅 pytest cache 權限警告）；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`193 passed`（僅 pytest cache 權限警告）；`npm.cmd run build` 通過；Browser 檢查 `1280x900` 與 `390x844` 皆確認 file input `multiple=true`、未選檔 upload button disabled、horizontal overflow `0`；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
