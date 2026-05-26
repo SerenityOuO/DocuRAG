@@ -111,6 +111,7 @@
 52. `tasks/phase-27-aggressive-defaults/27-03-vector-source-expansion-contract.md` 已完成，固定 `ocr_image`、`text_upload`、`pdf_text` 與 `pdf_scanned_pending_ocr` vector source contract；planning ticket，不 bump version。
 53. `tasks/phase-30-parser-ingestion-hardening/30-01-vlm-response-and-multi-upload-hardening.md` 已完成，強化 Ollama VLM response parsing 與後台多檔依序 ingestion；focused hardening ticket，不 bump version。
 54. `tasks/phase-30-parser-ingestion-hardening/30-02-rag-structured-field-evidence.md` 已完成，讓 RAG prompt 可附加 retrieved documents 對應的 parsed structured fields，並補強中文總額問法；focused hardening ticket，不 bump version。
+55. `tasks/phase-30-parser-ingestion-hardening/30-03-rag-vector-stale-filter-hardening.md`：補強 default `hybrid_rerank` 的 Qdrant document scope filtering，避免 stale vectors 消耗 `top_k` 後被 backend 過濾成 `vector_unavailable`；focused hardening ticket，不 bump version。
 
 ## Phase 30 Parser / Ingestion Hardening
 
@@ -120,6 +121,8 @@
 - [x] `tasks/phase-30-parser-ingestion-hardening/30-02-rag-structured-field-evidence.md`: `/rag/query` 回答 prompt 會在 retrieved chunks 對應文件已有 parsed fields 時附加 read-only structured invoice fields evidence，讓 `total_amount` / `currency` 不再只依賴 OCR chunk 是否剛好含金額；同時補上「總共多少」「發票總共多少」「發票金額」「應付金額」等中文金額查詢 alias。
 - Release Impact: Version bump required: no。此 ticket 只補強 RAG prompt evidence 與 query normalization，不更新 backend / frontend / Docker version。
 - [x] 30-02 validation：`python -m pytest backend/tests/test_rag.py -q` 通過，`21 passed`（僅 pytest cache 權限警告）；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`194 passed`（僅 pytest cache 權限警告）；ticket `rg` 與 `git diff --check` 通過。
+- [ ] `tasks/phase-30-parser-ingestion-hardening/30-03-rag-vector-stale-filter-hardening.md`: 補強 `/rag/query` default `hybrid_rerank` 的 Qdrant search document scope，避免 collection 內舊 eval / demo vectors 先佔滿 `top_k`、再被 backend document id 過濾成空結果並誤顯示 `vector_unavailable`。
+- Release Impact: Version bump required: no。此 ticket 只補強 vector retrieval stale collection resilience，不更新 backend / frontend / Docker version。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
