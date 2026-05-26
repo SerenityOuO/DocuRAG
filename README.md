@@ -4,7 +4,7 @@
 
 文件知識庫問答與後台管理。
 
-DocuRAG 是面試展示用的 AI 文件客服助理，將文件上傳、OCR / VLM 解析、hybrid RAG、引用來源、RAG 評估與 Agent tool-use 串成可本機驗證的 demo。主線聚焦「前台查詢、後台建庫」：Viewer 詢問已建立的知識庫，Admin / Analyst 建立文件資料並查看解析細節。
+DocuRAG 是技術探索導向的 AI 文件知識庫專案，將文件上傳、OCR / VLM 解析、hybrid RAG、引用來源、RAG 評估與 Agent tool-use 串成可本機驗證的實驗流程。主線聚焦「前台查詢、後台建庫」：Viewer 詢問已建立的知識庫，Admin / Analyst 建立文件資料並查看解析細節。
 
 ## 畫面預覽
 
@@ -50,7 +50,7 @@ set "VITE_API_BASE_URL=http://127.0.0.1:8000"
 npm.cmd run dev
 ```
 
-Demo UI：
+Web UI：
 
 ```text
 http://localhost:5173
@@ -71,7 +71,7 @@ http://127.0.0.1:8000/docs
 5. 回到前台送出問題。
 6. 查看回答與引用來源。
 
-Demo 帳號：
+本機測試帳號：
 
 ```text
 admin / demo-admin-pass
@@ -79,7 +79,7 @@ analyst / demo-analyst-pass
 viewer / demo-viewer-pass
 ```
 
-若未啟用 `DOCURAG_AUTH_MODE=demo`，系統會以無登入的本機 demo 模式啟動。
+若未啟用 `DOCURAG_AUTH_MODE=demo`，系統會以無登入的本機模式啟動。
 
 ## 技術棧
 
@@ -99,7 +99,7 @@ viewer / demo-viewer-pass
 - `POST /documents/{document_id}/index/vector`：建立向量索引。
 - `POST /rag/query`：送出知識庫問題。
 - `POST /eval/rag/built-in`：執行內建 RAG 測試。
-- `POST /agent/run`：執行 demo-safe Agent task。
+- `POST /agent/run`：執行 read-only Agent task。
 
 ## 開發與驗證
 
@@ -109,7 +109,7 @@ Backend tests：
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1
 ```
 
-Demo smoke：
+Smoke test：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1
@@ -125,7 +125,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 
 ## 目前邊界
 
-目前是面試展示用 MVP，不宣稱已完成 production 系統。尚未包含正式 RBAC、tenant isolation、PostgreSQL schema、Redis、NATS、worker、scanned PDF OCR pipeline、K8s hardening、自訂 eval dashboard 或 production autonomous Agent。
+目前是技術探索用 MVP，不宣稱已完成 production 系統。尚未包含正式 RBAC、tenant isolation、PostgreSQL schema、Redis、NATS、worker、scanned PDF OCR pipeline、K8s hardening、自訂 eval dashboard 或 production autonomous Agent。
 
 ## 文件入口
 
@@ -133,6 +133,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 - [docs/PRD.md](./docs/PRD.md)：MVP 產品需求。
 - [docs/architecture.md](./docs/architecture.md)：目前架構與延後項目。
 - [docs/ROADMAP.md](./docs/ROADMAP.md)：phase / milestone 路線圖。
-- [docs/demo-script.md](./docs/demo-script.md)：面試 demo 講解腳本。
+- [docs/demo-script.md](./docs/demo-script.md)：本機操作流程筆記。
 - [docs/api.md](./docs/api.md)：API contract 補充。
 - [tasks/](./tasks/)：ticket-first 開發任務票。
