@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、Phase 31-39 enterprise completion roadmap 與 Phase 40 interview evidence hardening roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、v0.31.0 PostgreSQL / Schema / Repository Foundation release、Phase 32-39 enterprise completion roadmap 與 Phase 40 interview evidence hardening roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.29.0 Built-in RAG Eval Admin Surface checklist。
+- TODO 包含 Phase 00 到 v0.31.0 PostgreSQL / Schema / Repository Foundation checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -142,7 +142,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 roadmap planning，並已建立 Phase 31 到 Phase 39 的 future ticket backlog。`31-02` 已完成 PostgreSQL boundary / migration policy，`31-03` 已完成 Markdown-only DB schema contract，`31-04` 已完成 repository adapter / migration path；`31-05` release sync 尚未實作。不 bump version，也不宣稱 Phase 31 到 Phase 39 已完成。
+- 已完成 Phase 31 `v0.31.0` release sync，並已建立 Phase 32 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path 與 `31-05` release sync 均已完成；不宣稱 Phase 32 到 Phase 39 已完成。
 
 ### Phase 31 - PostgreSQL / Schema / Repository Foundation
 
@@ -183,6 +183,11 @@ Expected Outcome：
 - Added non-destructive `CREATE TABLE IF NOT EXISTS` schema bootstrap plus upsert writes for documents, chunks, parser fields, eval runs and Agent runs. No production DB connection, secret, Auth/RBAC, Redis/NATS, worker or deployment scope was added.
 - Added `scripts/migrate-local-json-to-postgresql.py` for explicit local JSON import; dry-run validation covers local metadata counts without connecting to PostgreSQL.
 - Validation passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` (`205 passed`, 1 pytest cache warning). Release Impact: Version bump required: no; `31-05` remains the Phase 31 release sync.
+
+31-05 Phase 31 Release Sync Status:
+- Completed `v0.31.0` release sync across backend package / app version, frontend package / lock / fallback version, health test, Docker Compose `DOCURAG_VERSION`, `.env.example`, README, README_DEV, backend README, frontend README, TODO, ROADMAP and the ticket.
+- Release boundary remains explicit: PostgreSQL mode is opt-in and local JSON remains the default fallback; Phase 31 does not add formal RBAC, Redis/NATS worker pipeline, production database operation or deployment hardening.
+- Validation passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` (`205 passed`, 1 pytest cache warning); `npm.cmd run build`; `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1` (health version `0.31.0`, local JSON fallback demo flow passed, Qdrant unavailable vector indexing fallback matched local baseline); ticket `rg` and `git diff --check` passed with Windows LF/CRLF warnings only.
 ### Phase 32 - Formal Auth / RBAC / Tenant Boundary
 
 Target version：`v0.32.0`

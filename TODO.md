@@ -149,7 +149,7 @@ Phase 31 `v0.31.0` - PostgreSQL / schema / repository foundation：
 - [x] `tasks/phase-31-enterprise-roadmap/31-02-postgresql-boundary-and-migration-policy.md`: 盤點 local JSON store 資料域、對應 future DB domain、固定 migration policy 與 local JSON fallback / migration path；文件 ticket，不 bump version。
 - [x] `tasks/phase-31-enterprise-roadmap/31-03-db-schema-contract.md`: 定義 `documents`、`document_pages`、`document_chunks`、`extracted_fields`、eval tables 與 Agent tables 的欄位、nullable、index / key、`project_id` future metadata 與 local JSON mapping；文件 ticket，不 bump version。
 - [x] `tasks/phase-31-enterprise-roadmap/31-04-repository-adapter-and-migration-path.md`: 完成 opt-in local JSON / PostgreSQL repository selection、PostgreSQL metadata adapter、local JSON migration command、optional `backend[postgres]` dependency 與 backend repository tests；不 bump version。
-- [ ] `tasks/phase-31-enterprise-roadmap/31-05-phase-31-release-sync.md`
+- [x] `tasks/phase-31-enterprise-roadmap/31-05-phase-31-release-sync.md`: 完成 `v0.31.0` release sync，更新 backend / frontend / Docker Compose / health test / `.env.example` 版本與 README / README_DEV / backend README / frontend README / TODO / ROADMAP；不新增 Phase 32、worker 或 production deployment。
 
 Phase 32 `v0.32.0` - Formal Auth / RBAC / tenant boundary：
 - [ ] `tasks/phase-32-auth-rbac-tenant-boundary/32-01-auth-rbac-contract.md`
@@ -202,7 +202,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- 除 `31-02` 已完成 PostgreSQL boundary / migration policy、`31-03` 已完成 DB schema contract、`31-04` 已完成 repository adapter / migration path 外，以上 tickets 目前仍是 future backlog，尚未實作。
+- Phase 31 已完成 `v0.31.0` release sync；除 Phase 31 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
@@ -228,6 +228,11 @@ Phase 31-39 guardrails：
 - 已新增 `PostgresDocumentRepository`，只做非破壞性 schema bootstrap 與 documents、chunks、parser fields、eval runs、Agent runs 的 upsert metadata writes；`LocalJsonDocumentRepository` 保留既有 local JSON fallback。
 - 已新增 `scripts/migrate-local-json-to-postgresql.py` 作為明確 local JSON import command，並新增 `backend[postgres]` optional dependency 供 `psycopg[binary]` 使用。
 - Validation passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` (`205 passed`, 1 pytest cache warning). Release Impact: Version bump required: no; `31-05` remains release sync.
+
+31-05 Phase 31 Release Sync Status：
+- 已完成 `v0.31.0` release sync：backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION` 與 `.env.example` 已同步到 `0.31.0`。
+- README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 ticket 已同步 Phase 31 release 狀態；文件明確保留正式 RBAC、worker pipeline 與 production deployment 尚未完成的邊界。
+- Validation 已通過：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`205 passed`，1 pytest cache warning）；`npm.cmd run build`；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`（health version `0.31.0`，local JSON fallback demo flow 通過，Qdrant unavailable vector indexing fallback 符合 local baseline）；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 ## Phase 40 Interview Evidence Hardening
 
 - [x] `tasks/phase-40-interview-evidence-hardening/40-01-phase-40-jd-evidence-plan.md`: 新增 Phase 40 `v0.40.0` JD evidence hardening roadmap；文件 ticket，不 bump version。
@@ -1093,3 +1098,4 @@ Phase 29 validation：
 - [x] v0.27.1: OCR / VLM Evidence Alignment 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、README、README_DEV、backend README、frontend README、demo script、TODO、ROADMAP、API 與 architecture 文件已同步到 `v0.27.1`；VLM request 帶 image + OCR context，欄位 evidence mapping、unmatched trace、deterministic fallback 與 Agent structured fields + OCR chunk validation 已補齊。
 - [x] v0.28.0: Document Sources / Demo Auth Mode 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、demo script、TODO、ROADMAP、API 與 architecture 文件已同步到 `v0.28.0`；`.txt` direct ingestion、text-native PDF extraction、scanned PDF pending state、demo login / role guard、demo auth smoke 與 Browser login / role gate validation 已補齊。
 - [x] v0.29.0: Built-in RAG Eval Admin Surface 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、demo script、TODO、ROADMAP、API、architecture 與 PRD 已同步到 `v0.29.0`；後台「測試RAG」內建 `hybrid_rerank` benchmark、10 張 synthetic 中文發票 fixture、built-in eval API、fallback-aware metrics、Agent 執行紀錄摺疊、Viewer role guard、backend tests、frontend build、hybrid rerank smoke、Browser desktop / mobile validation 與 `git diff --check` 已補齊。
+- [x] v0.31.0: PostgreSQL / Schema / Repository Foundation 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 Phase 31 ticket 已同步到 `v0.31.0`；local JSON fallback、opt-in PostgreSQL repository adapter、local JSON migration command、backend tests、frontend build、demo smoke、repository keyword validation 與 `git diff --check` 已補齊。

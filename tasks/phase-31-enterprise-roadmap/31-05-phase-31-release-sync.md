@@ -40,10 +40,10 @@
 
 ## Acceptance Criteria
 
-- [ ] `/health` 回傳 `0.31.0`。
-- [ ] README / README_DEV / backend README / frontend README / TODO / ROADMAP 均同步 Phase 31 release 狀態。
-- [ ] DB-backed mode 與 local JSON fallback validation 均有紀錄。
-- [ ] 文件明確說明 Phase 31 不等於正式 RBAC、worker pipeline 或 production deployment。
+- [x] `/health` 回傳 `0.31.0`。
+- [x] README / README_DEV / backend README / frontend README / TODO / ROADMAP 均同步 Phase 31 release 狀態。
+- [x] DB-backed mode 與 local JSON fallback validation 均有紀錄。
+- [x] 文件明確說明 Phase 31 不等於正式 RBAC、worker pipeline 或 production deployment。
 
 ## Validation
 
@@ -52,3 +52,11 @@
 - `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`
 - `rg -n "v0.31.0|Phase 31|PostgreSQL|repository|migration|local JSON" README.md README_DEV.md backend/README.md frontend/README.md docs/ROADMAP.md TODO.md backend frontend infra scripts tasks/phase-31-enterprise-roadmap`
 - `git diff --check`
+
+## Validation Result
+
+- Passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` (`205 passed`, 1 pytest cache warning). This includes `/health` version `0.31.0`, local JSON fallback coverage and repository tests for DB-backed mode.
+- Passed: `npm.cmd run build` in `frontend/` (`docurag-agentops-frontend@0.31.0`).
+- Passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1` against a temporary local backend on port `8017`; health version `0.31.0`, direct text ingestion, parser fields, Agent run and RAG query passed. Qdrant unavailable vector indexing fallback was expected for local baseline.
+- Passed: `rg -n "v0.31.0|Phase 31|PostgreSQL|repository|migration|local JSON" README.md README_DEV.md backend/README.md frontend/README.md docs/ROADMAP.md TODO.md backend frontend infra scripts tasks/phase-31-enterprise-roadmap`
+- Passed: `git diff --check` (Windows LF/CRLF warnings only).

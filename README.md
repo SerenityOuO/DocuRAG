@@ -88,7 +88,7 @@ viewer / demo-viewer-pass
 - Backend：FastAPI、Pydantic、pytest
 - OCR / VLM：PaddleOCR、Ollama-compatible VLM
 - RAG：Ollama embedding、Qdrant、FastEmbed reranker、Ollama generation guardrails
-- Storage：本機 JSON metadata 與 uploaded files
+- Storage：本機 JSON metadata / uploaded files，另有 opt-in PostgreSQL metadata repository
 - Workflow：ticket-first 小步開發
 
 ## API 串接
@@ -126,7 +126,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 
 ## 目前邊界
 
-目前是技術探索用 MVP，不宣稱已完成 production 系統。尚未包含正式 RBAC、tenant isolation、PostgreSQL schema、Redis、NATS、worker、scanned PDF OCR pipeline、K8s hardening、自訂 eval dashboard 或 production autonomous Agent。
+目前是技術探索用 MVP，不宣稱已完成 production 系統。PostgreSQL metadata repository 仍是 opt-in foundation，不代表 production database operation；尚未包含正式 RBAC、tenant isolation、Redis、NATS、worker、scanned PDF OCR pipeline、K8s hardening、自訂 eval dashboard 或 production autonomous Agent。
 
 ## 文件入口
 

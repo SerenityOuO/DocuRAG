@@ -93,7 +93,7 @@ const suggestedQuestions = [
   "When is the renewal date?",
 ];
 
-const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.29.0"));
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.31.0"));
 
 const demoAuthRequired = computed(() => authMode.value === "demo" && authUser.value === null);
 const canUseIngestion = computed(() => {
