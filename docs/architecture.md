@@ -492,6 +492,49 @@ Boundary rules：
 - Demo auth Viewer 不進入後台測試或 Agent 操作；backend endpoint 仍用 ingestion write guard 擋下 Viewer。
 - 不新增 production eval dashboard、DB-backed run history、custom dataset upload、LLM-as-judge、worker 或正式 RBAC。
 
+## Phase 36 Eval Dashboard / Rerank Analysis Contract
+
+`36-01` only defines the target contract for a broader RAG quality surface. It upgrades the Phase 29 built-in benchmark language into a future dashboard shape, but does not add runtime code, frontend routes, dataset persistence, DB-backed eval history, worker execution, new ranking algorithms or LLM-as-judge.
+
+Future architecture:
+
+```text
+Eval dataset
+    |
+    |-- eval items with query, expected documents / chunks, tags
+    |
+Eval run
+    |
+    |-- one or more strategies: keyword / vector / hybrid / vector_rerank / hybrid_rerank
+    |-- same project / tenant guard as document and RAG APIs
+    |
+Strategy comparison summary
+    |
+    |-- Hit Rate@K / MRR@K / Recall@K / Precision@K / latency
+    |-- failure count / fallback count
+    |
+Case detail
+    |
+    |-- retrieved candidates
+    |-- expected hit / miss
+    |-- fallback and failure reasons
+    |
+Rerank analysis
+    |
+    |-- pre-rerank rank / score
+    |-- post-rerank rank / score
+    |-- final score source and trace metadata coverage
+```
+
+Boundary rules:
+
+- A dashboard card or table may compare retrieval strategies, but the contract does not tune ranking behavior.
+- `failure_count` means expected evidence was not found or the strategy could not produce evaluable output.
+- `fallback_count` means the strategy returned a result with fallback metadata, such as vector unavailable or reranker unavailable.
+- Rerank analysis reads existing trace metadata (`rerank_score`, `pre_rerank_score`, `rerank_status`, `fallback_state`) and must not call the reranker outside an explicit eval run.
+- The first UI surface should remain a diagnostic tool for Admin / Analyst; Viewer access to eval results requires a later ticket.
+- LLM-as-judge, answer faithfulness, citation quality scoring, OCR eval and VLM parser accuracy eval remain out of scope.
+
 ## Near-Term Runtime Boundary
 
 目前 runtime 邊界如下：

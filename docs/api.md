@@ -474,6 +474,106 @@ Retrieval requests must apply tenant / project filters before narrowing to docum
 
 Stale vector cleanup identifies older Qdrant points by tenant / project / document scope and deletes only points for the same document that are not part of the latest successful point id set. Cleanup must not delete document metadata, OCR output, parser fields or source chunks.
 
+## Phase 36 Eval Dashboard / Rerank Analysis Contract
+
+`36-01` is a Markdown-only contract ticket. It defines the future evaluation dashboard and rerank analysis shape on top of the existing retrieval eval runner and built-in RAG benchmark. It does not add runtime endpoints, frontend UI, dataset persistence, LLM-as-judge, answer faithfulness scoring, citation quality scoring, OCR eval or ranking algorithm changes.
+
+### Future API Surface
+
+The current runtime remains `POST /eval/rag/built-in`. Future Phase 36 implementation tickets may expose the following contract:
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/eval/datasets` | List eval datasets visible to the active project. |
+| POST | `/eval/datasets` | Create a demo-safe eval dataset. |
+| GET | `/eval/datasets/{dataset_id}` | Read dataset metadata and item count. |
+| POST | `/eval/runs` | Run one or more retrieval strategies against a dataset. |
+| GET | `/eval/runs/{run_id}` | Read run summary, environment and strategy metrics. |
+| GET | `/eval/runs/{run_id}/items` | Read failed / fallback / selected case details. |
+
+Those endpoints are contract targets only in `36-01`. They must reuse existing project access checks: Viewer can read visible published results only if a later ticket explicitly allows it; Admin / Analyst run evaluation jobs. Cross-project dataset or run access must return generic `403 forbidden`.
+
+### Data Shapes
+
+`EvalDataset`:
+
+```json
+{
+  "dataset_id": "invoice_quality_v1",
+  "name": "Invoice retrieval quality v1",
+  "description": "Demo-safe retrieval cases for invoice evidence.",
+  "project_id": "project_demo",
+  "case_count": 12,
+  "schema_version": "eval_dataset_v1",
+  "created_at": "2026-06-07T00:00:00Z"
+}
+```
+
+`EvalItem`:
+
+```json
+{
+  "case_id": "invoice_due_date_001",
+  "query": "付款期限是什麼？",
+  "expected_document_ids": ["doc_aurora"],
+  "expected_chunk_ids": ["doc_aurora:chunk:payment_terms"],
+  "expected_answer_contains": ["Net 15"],
+  "tags": ["invoice", "payment_terms", "zh_tw"]
+}
+```
+
+`EvalRunSummary`:
+
+```json
+{
+  "run_id": "eval_run_001",
+  "dataset_id": "invoice_quality_v1",
+  "status": "completed",
+  "strategies": ["keyword", "vector", "hybrid", "vector_rerank", "hybrid_rerank"],
+  "metrics": {
+    "hybrid_rerank": {
+      "hit_rate_at_k": 0.83,
+      "mrr_at_k": 0.71,
+      "recall_at_k": 0.79,
+      "precision_at_k": 0.42,
+      "average_latency_ms": 118.4,
+      "failure_count": 1,
+      "fallback_count": 2
+    }
+  }
+}
+```
+
+### Metrics Contract
+
+| Metric | Contract |
+|---|---|
+| `hit_rate_at_k` | Fraction of cases where at least one expected document or chunk appears in top K. |
+| `mrr_at_k` | Mean reciprocal rank of the first expected hit within top K. |
+| `recall_at_k` | Fraction of expected evidence ids found in top K. |
+| `precision_at_k` | Fraction of retrieved top K items that match expected evidence ids. |
+| `average_latency_ms` | Average end-to-end retrieval latency for the strategy, excluding UI render time. |
+| `failure_count` | Cases with no expected hit or runtime error that prevents evaluation. |
+| `fallback_count` | Cases that completed with fallback metadata, such as vector unavailable or reranker unavailable. |
+
+### Case And Rerank Analysis
+
+Dashboard case detail rows should expose:
+
+- `case_id`, `query`, `tags`, `top_k`, `status`, `strategy`, `latency_ms`.
+- Retrieved candidates with `rank`, `document_id`, `chunk_id`, `score`, `source_type`, `page_number`, `trace_metadata`.
+- `expected_hit` and `matched_expected_ids`.
+- `failure_reasons` and `fallback_reasons`, both as arrays so multiple conditions can be shown without losing detail.
+
+Rerank analysis rows should expose:
+
+- `pre_rerank_rank`, `post_rerank_rank`, `pre_rerank_score`, `rerank_score`.
+- `final_score_source`, such as `rerank_score`, `hybrid_score`, `vector_score` or `keyword_score`.
+- `rerank_provider`, `rerank_model`, `rerank_status`, `rerank_latency_ms`.
+- `trace_metadata_coverage`, counting how many returned candidates include strategy, source, fallback and score metadata.
+
+UI contract for Phase 36 should stay operational and compact: summary metric cards, strategy comparison table, failure / fallback case lists, and a rerank analysis table. It must not display answer faithfulness, citation quality scoring or LLM-as-judge output unless a later ticket explicitly adds those features.
+
 VLM structured fields 不在本 ticket 自動寫入 retrieval chunks；若後續要把欄位索引進 Qdrant，必須另開 ticket 定義 field-indexing policy、dedupe key 與 citation semantics。
 
 Phase 24 的 parser contract 先支援 invoice MVP。`24-01` 固定文件與 API 草案，`24-02` 新增 deterministic parser service，`24-03` 新增 parse / fields API 與 local JSON persistence。此 contract 是 VLM-compatible，不代表目前已接真正 VLM、LLM parser、DB、worker 或 production parser pipeline。

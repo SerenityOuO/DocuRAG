@@ -397,6 +397,14 @@ Expected Outcome：
 - 顯示 rerank 前後排名、failure cases、fallback cases 與 trace metadata coverage。
 - 不新增 answer faithfulness、LLM-as-judge 或 citation quality scoring，除非另開 ticket。
 
+36-01 Eval Dashboard Contract Status：
+
+- 已完成 Phase 36 eval dashboard / rerank analysis contract：`docs/api.md` 定義未來 eval dataset、eval item、eval run、strategy comparison、failure / fallback cases 與 rerank analysis API / UI shape；`docs/architecture.md` 定義 dashboard data flow 與邊界。
+- Metrics contract 包含 Hit Rate@K、MRR@K、Recall@K、Precision@K、average latency、failure count 與 fallback count。
+- Rerank analysis contract 固定 pre-rerank / post-rerank rank、score、final score source、rerank status 與 trace metadata coverage。
+- Release Impact：Version bump required: no。這是 Markdown-only contract ticket，不新增 dashboard runtime、frontend UI、dataset persistence、LLM-as-judge、answer faithfulness、citation quality scoring、OCR eval、ranking algorithm 或 rerank provider。
+- Validation：通過 ticket `rg` 與 `git diff --check`。
+
 ### Phase 37 - Inference Ops / vLLM Serving
 
 Target version：`v0.37.0`

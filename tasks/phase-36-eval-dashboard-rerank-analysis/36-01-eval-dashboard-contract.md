@@ -34,12 +34,19 @@
 
 ## Acceptance Criteria
 
-- [ ] 文件定義 eval dashboard 的 API / UI contract。
-- [ ] Metrics contract 包含 Hit Rate、MRR、Recall、Precision、latency 與 fallback / failure counts。
-- [ ] Rerank analysis 欄位清楚區分 pre-rerank / post-rerank。
-- [ ] 明確標示 LLM-as-judge 與 answer faithfulness 不在本 ticket scope。
+- [x] 文件定義 eval dashboard 的 API / UI contract。
+- [x] Metrics contract 包含 Hit Rate、MRR、Recall、Precision、latency 與 fallback / failure counts。
+- [x] Rerank analysis 欄位清楚區分 pre-rerank / post-rerank。
+- [x] 明確標示 LLM-as-judge 與 answer faithfulness 不在本 ticket scope。
 
 ## Validation
 
 - `rg -n "eval dashboard|Hit Rate|MRR|Recall|Precision|rerank analysis|Phase 36" docs README_DEV.md TODO.md tasks/phase-36-eval-dashboard-rerank-analysis`
 - `git diff --check`
+
+## Completion Notes
+
+- `docs/api.md` 已新增 Phase 36 contract，定義 future eval datasets、eval items、eval runs、strategy comparison、failure / fallback case details 與 rerank analysis response shape。
+- `docs/architecture.md` 已新增 Phase 36 dashboard data flow 與邊界，明確保留 LLM-as-judge、answer faithfulness、citation quality scoring、OCR eval、ranking algorithm 與 rerank provider 到後續 ticket。
+- `docs/ROADMAP.md`、`README_DEV.md` 與 `TODO.md` 已記錄 36-01 狀態。
+- Validation 通過：ticket `rg` 與 `git diff --check`。
