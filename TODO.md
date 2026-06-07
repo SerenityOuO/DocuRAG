@@ -139,22 +139,67 @@
 
 - [x] `tasks/phase-31-enterprise-roadmap/31-01-phase-31-to-39-roadmap-plan.md`: 新增後續完成路線，將目前未完成的 DB、正式權限、Redis、NATS、worker、PDF OCR pipeline、RAG quality dashboard、vLLM、Agent runtime、K8s 與 fine-tuning 拆成 Phase 31 到 Phase 39；文件 ticket，不 bump version。
 
-後續建議優先順序：
+後續實作 ticket backlog：
 
-1. [ ] Phase 31 `v0.31.0` - PostgreSQL / schema / repository foundation：把 documents、chunks、fields、eval runs、agent runs 從 local JSON 遷移到 DB-backed contract；不做正式 RBAC、Redis、NATS 或 worker。
-2. [ ] Phase 32 `v0.32.0` - Formal Auth / RBAC / tenant boundary：建立正式 users、organizations、projects、roles、project access 與 API guard；不做 SSO / OAuth / MFA。
-3. [ ] Phase 33 `v0.33.0` - Redis + NATS worker pipeline：加入 Redis session / cache / rate limit 與 NATS JetStream worker skeleton，拆分 OCR / parser / indexing / eval jobs；不改 AI model 行為。
-4. [ ] Phase 34 `v0.34.0` - Production OCR / scanned PDF pipeline：補 PDF rendering、多頁 OCR、image preprocessing、OCR retry / failure handling 與 UI task status；不新增表格重建或 production VLM dashboard。
-5. [ ] Phase 35 `v0.35.0` - RAG indexing quality hardening：補 chunking strategy、Qdrant payload index、tenant / project metadata filter、reindex project 與 stale vector cleanup；不做 eval dashboard。
-6. [ ] Phase 36 `v0.36.0` - Eval dashboard / rerank analysis：補 strategy comparison UI、自訂 eval dataset、failure analysis、Hit Rate / MRR / Recall 趨勢與 rerank 前後比較；不做 LLM-as-judge。
-7. [ ] Phase 37 `v0.37.0` - Inference Ops / vLLM serving：加入 OpenAI-compatible provider boundary、vLLM deployment path、latency / token / GPU / KV cache metrics 與 benchmark docs；不把 vLLM 設為唯一 runtime。
-8. [ ] Phase 38 `v0.38.0` - Agent runtime hardening：從 deterministic planner 擴充到 LLM planner、tool permission、read-only / side-effect tool 分層、task planning trace 與 safe fallback；不允許任意 destructive tool。
-9. [ ] Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：補 K8s manifests、Loki / Grafana 或 OpenSearch observability、SFT / synthetic data / embedding tuning 實驗文件；不承諾 production autoscaling。
+Phase 31 `v0.31.0` - PostgreSQL / schema / repository foundation：
+- [ ] `tasks/phase-31-enterprise-roadmap/31-02-postgresql-boundary-and-migration-policy.md`
+- [ ] `tasks/phase-31-enterprise-roadmap/31-03-db-schema-contract.md`
+- [ ] `tasks/phase-31-enterprise-roadmap/31-04-repository-adapter-and-migration-path.md`
+- [ ] `tasks/phase-31-enterprise-roadmap/31-05-phase-31-release-sync.md`
+
+Phase 32 `v0.32.0` - Formal Auth / RBAC / tenant boundary：
+- [ ] `tasks/phase-32-auth-rbac-tenant-boundary/32-01-auth-rbac-contract.md`
+- [ ] `tasks/phase-32-auth-rbac-tenant-boundary/32-02-users-orgs-project-membership-schema.md`
+- [ ] `tasks/phase-32-auth-rbac-tenant-boundary/32-03-backend-permission-guards.md`
+- [ ] `tasks/phase-32-auth-rbac-tenant-boundary/32-04-frontend-role-surface-and-release-sync.md`
+
+Phase 33 `v0.33.0` - Redis + NATS worker pipeline：
+- [ ] `tasks/phase-33-redis-nats-worker-pipeline/33-01-redis-nats-worker-contract.md`
+- [ ] `tasks/phase-33-redis-nats-worker-pipeline/33-02-redis-cache-rate-limit-session-slice.md`
+- [ ] `tasks/phase-33-redis-nats-worker-pipeline/33-03-nats-worker-skeleton-and-task-status.md`
+- [ ] `tasks/phase-33-redis-nats-worker-pipeline/33-04-worker-demo-smoke-and-release-sync.md`
+
+Phase 34 `v0.34.0` - Production OCR / scanned PDF pipeline：
+- [ ] `tasks/phase-34-production-ocr-scanned-pdf/34-01-scanned-pdf-ocr-contract.md`
+- [ ] `tasks/phase-34-production-ocr-scanned-pdf/34-02-pdf-rendering-page-image-pipeline.md`
+- [ ] `tasks/phase-34-production-ocr-scanned-pdf/34-03-multipage-ocr-status-and-retry.md`
+- [ ] `tasks/phase-34-production-ocr-scanned-pdf/34-04-scanned-pdf-demo-release-sync.md`
+
+Phase 35 `v0.35.0` - RAG indexing quality hardening：
+- [ ] `tasks/phase-35-rag-indexing-quality/35-01-indexing-quality-contract.md`
+- [ ] `tasks/phase-35-rag-indexing-quality/35-02-chunking-strategy-runtime.md`
+- [ ] `tasks/phase-35-rag-indexing-quality/35-03-qdrant-payload-index-and-reindexing.md`
+- [ ] `tasks/phase-35-rag-indexing-quality/35-04-indexing-quality-demo-release-sync.md`
+
+Phase 36 `v0.36.0` - Eval dashboard / rerank analysis：
+- [ ] `tasks/phase-36-eval-dashboard-rerank-analysis/36-01-eval-dashboard-contract.md`
+- [ ] `tasks/phase-36-eval-dashboard-rerank-analysis/36-02-eval-dataset-management.md`
+- [ ] `tasks/phase-36-eval-dashboard-rerank-analysis/36-03-strategy-comparison-and-rerank-analysis.md`
+- [ ] `tasks/phase-36-eval-dashboard-rerank-analysis/36-04-eval-dashboard-release-sync.md`
+
+Phase 37 `v0.37.0` - Inference Ops / vLLM serving：
+- [ ] `tasks/phase-37-inference-ops-vllm/37-01-inference-provider-ops-contract.md`
+- [ ] `tasks/phase-37-inference-ops-vllm/37-02-openai-compatible-client-boundary.md`
+- [ ] `tasks/phase-37-inference-ops-vllm/37-03-vllm-local-serving-and-benchmark-docs.md`
+- [ ] `tasks/phase-37-inference-ops-vllm/37-04-inference-ops-release-sync.md`
+
+Phase 38 `v0.38.0` - Agent runtime hardening：
+- [ ] `tasks/phase-38-agent-runtime-hardening/38-01-agent-runtime-permission-contract.md`
+- [ ] `tasks/phase-38-agent-runtime-hardening/38-02-llm-planner-provider-boundary.md`
+- [ ] `tasks/phase-38-agent-runtime-hardening/38-03-tool-permission-guards-and-trace.md`
+- [ ] `tasks/phase-38-agent-runtime-hardening/38-04-agent-runtime-release-sync.md`
+
+Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
+- [ ] `tasks/phase-39-deployment-observability-finetuning/39-01-deployment-observability-research-contract.md`
+- [ ] `tasks/phase-39-deployment-observability-finetuning/39-02-k8s-manifest-baseline.md`
+- [ ] `tasks/phase-39-deployment-observability-finetuning/39-03-observability-stack-and-rag-trace-logs.md`
+- [ ] `tasks/phase-39-deployment-observability-finetuning/39-04-finetuning-synthetic-data-research-track.md`
+- [ ] `tasks/phase-39-deployment-observability-finetuning/39-05-phase-39-release-sync.md`
 
 Phase 31-39 guardrails：
 
-- 這些項目目前全部是 future roadmap，尚未實作。
-- 每個 Phase 仍必須拆成 3 到 5 張小 ticket，先做 contract / migration / validation，再做 runtime。
+- 以上 tickets 目前全部是 future backlog，尚未實作。
+- 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
 

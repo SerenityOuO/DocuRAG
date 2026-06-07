@@ -135,19 +135,26 @@ Status：
 
 Goal：把目前尚未完成的 enterprise / production 能力拆成可逐步 release 的後續 Phase。這段 roadmap 只規劃方向，真正實作仍必須逐張 ticket 執行。
 
-Ticket：
+Planning ticket：
 
 - `tasks/phase-31-enterprise-roadmap/31-01-phase-31-to-39-roadmap-plan.md`
 
 Status：
 
-- 已完成 roadmap planning。此 ticket 不 bump version、不新增 runtime，也不宣稱 Phase 31 到 Phase 39 已完成。
+- 已完成 roadmap planning，並已建立 Phase 31 到 Phase 39 的 future ticket backlog。這些後續 tickets 尚未實作，不 bump version、不新增 runtime，也不宣稱 Phase 31 到 Phase 39 已完成。
 
 ### Phase 31 - PostgreSQL / Schema / Repository Foundation
 
 Target version：`v0.31.0`
 
 Goal：將目前 local JSON store 的核心資料轉成 DB-backed contract，讓文件、chunks、OCR results、parser fields、eval runs 與 Agent runs 有可遷移、可測試的資料模型。
+
+Tickets：
+
+- `tasks/phase-31-enterprise-roadmap/31-02-postgresql-boundary-and-migration-policy.md`
+- `tasks/phase-31-enterprise-roadmap/31-03-db-schema-contract.md`
+- `tasks/phase-31-enterprise-roadmap/31-04-repository-adapter-and-migration-path.md`
+- `tasks/phase-31-enterprise-roadmap/31-05-phase-31-release-sync.md`
 
 Expected Outcome：
 
@@ -162,6 +169,13 @@ Target version：`v0.32.0`
 
 Goal：把 Phase 28 demo auth 升級為正式 multi-user / project permission 邊界。
 
+Tickets：
+
+- `tasks/phase-32-auth-rbac-tenant-boundary/32-01-auth-rbac-contract.md`
+- `tasks/phase-32-auth-rbac-tenant-boundary/32-02-users-orgs-project-membership-schema.md`
+- `tasks/phase-32-auth-rbac-tenant-boundary/32-03-backend-permission-guards.md`
+- `tasks/phase-32-auth-rbac-tenant-boundary/32-04-frontend-role-surface-and-release-sync.md`
+
 Expected Outcome：
 
 - 建立 users、organizations、projects、roles 與 memberships schema。
@@ -174,6 +188,13 @@ Expected Outcome：
 Target version：`v0.33.0`
 
 Goal：加入可展示的高併發與非同步任務架構，讓 ingestion 不再只依賴同步 API path。
+
+Tickets：
+
+- `tasks/phase-33-redis-nats-worker-pipeline/33-01-redis-nats-worker-contract.md`
+- `tasks/phase-33-redis-nats-worker-pipeline/33-02-redis-cache-rate-limit-session-slice.md`
+- `tasks/phase-33-redis-nats-worker-pipeline/33-03-nats-worker-skeleton-and-task-status.md`
+- `tasks/phase-33-redis-nats-worker-pipeline/33-04-worker-demo-smoke-and-release-sync.md`
 
 Expected Outcome：
 
@@ -188,6 +209,13 @@ Target version：`v0.34.0`
 
 Goal：補上目前明確延後的 scanned PDF 與多頁 OCR pipeline。
 
+Tickets：
+
+- `tasks/phase-34-production-ocr-scanned-pdf/34-01-scanned-pdf-ocr-contract.md`
+- `tasks/phase-34-production-ocr-scanned-pdf/34-02-pdf-rendering-page-image-pipeline.md`
+- `tasks/phase-34-production-ocr-scanned-pdf/34-03-multipage-ocr-status-and-retry.md`
+- `tasks/phase-34-production-ocr-scanned-pdf/34-04-scanned-pdf-demo-release-sync.md`
+
 Expected Outcome：
 
 - PDF rendering 產生 page images，區分 text-native PDF 與 scanned PDF。
@@ -200,6 +228,13 @@ Expected Outcome：
 Target version：`v0.35.0`
 
 Goal：把目前的 hybrid / rerank demo default 補強成可管理的 indexing quality layer。
+
+Tickets：
+
+- `tasks/phase-35-rag-indexing-quality/35-01-indexing-quality-contract.md`
+- `tasks/phase-35-rag-indexing-quality/35-02-chunking-strategy-runtime.md`
+- `tasks/phase-35-rag-indexing-quality/35-03-qdrant-payload-index-and-reindexing.md`
+- `tasks/phase-35-rag-indexing-quality/35-04-indexing-quality-demo-release-sync.md`
 
 Expected Outcome：
 
@@ -214,6 +249,13 @@ Target version：`v0.36.0`
 
 Goal：把目前 built-in benchmark 升級為可比較策略與追蹤失敗案例的 RAG quality surface。
 
+Tickets：
+
+- `tasks/phase-36-eval-dashboard-rerank-analysis/36-01-eval-dashboard-contract.md`
+- `tasks/phase-36-eval-dashboard-rerank-analysis/36-02-eval-dataset-management.md`
+- `tasks/phase-36-eval-dashboard-rerank-analysis/36-03-strategy-comparison-and-rerank-analysis.md`
+- `tasks/phase-36-eval-dashboard-rerank-analysis/36-04-eval-dashboard-release-sync.md`
+
 Expected Outcome：
 
 - 支援自訂 eval dataset / eval item 管理。
@@ -226,6 +268,13 @@ Expected Outcome：
 Target version：`v0.37.0`
 
 Goal：補上推論維運展示，讓 Ollama demo path 可以擴充到 OpenAI-compatible / vLLM serving。
+
+Tickets：
+
+- `tasks/phase-37-inference-ops-vllm/37-01-inference-provider-ops-contract.md`
+- `tasks/phase-37-inference-ops-vllm/37-02-openai-compatible-client-boundary.md`
+- `tasks/phase-37-inference-ops-vllm/37-03-vllm-local-serving-and-benchmark-docs.md`
+- `tasks/phase-37-inference-ops-vllm/37-04-inference-ops-release-sync.md`
 
 Expected Outcome：
 
@@ -240,6 +289,13 @@ Target version：`v0.38.0`
 
 Goal：把 deterministic Agent MVP 推進到可展示 task planning 與 tool permission 的 Agent runtime。
 
+Tickets：
+
+- `tasks/phase-38-agent-runtime-hardening/38-01-agent-runtime-permission-contract.md`
+- `tasks/phase-38-agent-runtime-hardening/38-02-llm-planner-provider-boundary.md`
+- `tasks/phase-38-agent-runtime-hardening/38-03-tool-permission-guards-and-trace.md`
+- `tasks/phase-38-agent-runtime-hardening/38-04-agent-runtime-release-sync.md`
+
 Expected Outcome：
 
 - 支援 LLM planner provider boundary，保留 deterministic fallback。
@@ -252,6 +308,14 @@ Expected Outcome：
 Target version：`v0.39.0`
 
 Goal：補齊部署與研究型加分能力，讓專案能展示 LLMOps / MLOps 邊界，但不承諾 production autoscaling。
+
+Tickets：
+
+- `tasks/phase-39-deployment-observability-finetuning/39-01-deployment-observability-research-contract.md`
+- `tasks/phase-39-deployment-observability-finetuning/39-02-k8s-manifest-baseline.md`
+- `tasks/phase-39-deployment-observability-finetuning/39-03-observability-stack-and-rag-trace-logs.md`
+- `tasks/phase-39-deployment-observability-finetuning/39-04-finetuning-synthetic-data-research-track.md`
+- `tasks/phase-39-deployment-observability-finetuning/39-05-phase-39-release-sync.md`
 
 Expected Outcome：
 
