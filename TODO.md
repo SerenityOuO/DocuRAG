@@ -40,6 +40,7 @@
 - Phase 37 -> `v0.37.0`
 - Phase 38 -> `v0.38.0`
 - Phase 39 -> `v0.39.0`
+- Phase 40 -> `v0.40.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README / README_DEV、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -122,6 +123,7 @@
 54. `tasks/phase-30-parser-ingestion-hardening/30-03-rag-vector-stale-filter-hardening.md` 已完成，讓 default `hybrid_rerank` vector branch 以目前文件 document ids 查詢 Qdrant，避免 stale vectors 消耗 `top_k` 後誤報 `vector_unavailable`；focused hardening ticket，不 bump version。
 55. `tasks/phase-30-parser-ingestion-hardening/30-04-ollama-rag-generation-latency-guardrails.md` 已完成，讓 Ollama RAG generation 預設帶 `think=false` 與 `options.num_predict=512`，並把 guardrail 寫入 citation trace；focused hardening ticket，不 bump version。
 56. `tasks/phase-31-enterprise-roadmap/31-01-phase-31-to-39-roadmap-plan.md` 已完成，新增 Phase 31 到 Phase 39 的 enterprise / production roadmap planning；文件 ticket，不 bump version。
+57. `tasks/phase-40-interview-evidence-hardening/40-01-phase-40-jd-evidence-plan.md` 已完成，新增 Phase 40 JD evidence hardening roadmap；文件 ticket，不 bump version。
 
 ## Phase 30 Parser / Ingestion Hardening
 
@@ -202,6 +204,24 @@ Phase 31-39 guardrails：
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
+
+## Phase 40 Interview Evidence Hardening
+
+- [x] `tasks/phase-40-interview-evidence-hardening/40-01-phase-40-jd-evidence-plan.md`: 新增 Phase 40 `v0.40.0` JD evidence hardening roadmap；文件 ticket，不 bump version。
+
+Phase 40 `v0.40.0` - JD evidence hardening：
+- [ ] `tasks/phase-40-interview-evidence-hardening/40-02-embedding-sft-experiment-evidence.md`
+- [ ] `tasks/phase-40-interview-evidence-hardening/40-03-inference-hardware-benchmark-evidence.md`
+- [ ] `tasks/phase-40-interview-evidence-hardening/40-04-observability-dashboard-evidence.md`
+- [ ] `tasks/phase-40-interview-evidence-hardening/40-05-phase-40-release-sync.md`
+
+Phase 40 guardrails：
+
+- Phase 40 只補面試證據 artifacts，不新增新的 production runtime 主線。
+- `40-02` 可以補 SFT / embedding tuning / synthetic data report 或 notebook skeleton，但不得下載大型模型或執行長時間 training。
+- `40-03` 可以補 inference benchmark report、KV cache / TOPS / NPU 評估方式與 script/template，但不得宣稱沒有實測的硬體結果。
+- `40-04` 可以補 observability dashboard / query examples / demo-safe screenshots，但不得宣稱 production alerting 或 incident workflow 已完成。
+- `40-05` 完成 release sync 時才允許 bump backend / frontend / health / Docker Compose version 到 `v0.40.0`。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 

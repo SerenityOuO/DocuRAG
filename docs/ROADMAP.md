@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release 與 Phase 31-39 enterprise completion roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、Phase 31-39 enterprise completion roadmap 與 Phase 40 interview evidence hardening roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -90,6 +90,7 @@ Expected Outcome：
 - v0.29.0 Built-in RAG Eval Admin Surface 只做後台「測試RAG」內建基準測試與 Agent 執行紀錄摺疊；策略固定 `hybrid_rerank`，summary 只顯示 Hit Rate@K、MRR@K、平均延遲與 Failure / Fallback；不新增 production eval dashboard、自訂 dataset 上傳、LLM-as-judge、OCR eval、DB、worker、正式 RBAC 或 deployment 設定。
 - Phase 30 parser / ingestion hardening 只修正 Ollama VLM response normalization 與 frontend 多檔依序 ingestion ergonomics；不新增 batch API、queue、worker、DB schema、OpenAI SDK、vLLM、production parser dashboard 或 release version bump。
 - Phase 31-39 roadmap planning 只新增未來版本拆分與 guardrails；不新增 runtime、外部依賴、DB schema、worker、deployment 或 version bump。
+- Phase 40 interview evidence planning 只新增 JD evidence hardening tickets；不新增 runtime、外部依賴、training pipeline、benchmark runtime、observability service 或 version bump。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -335,6 +336,46 @@ Out of Scope：
 - 本 roadmap planning ticket 不新增任何 runtime 或 dependency。
 - 不建立 DB schema、Redis / NATS service、worker、K8s manifest、vLLM server 或 fine-tuning notebook。
 - 不將 Phase 31 到 Phase 39 寫入 `README.md` 的 release status；公開入口仍維持目前 MVP 邊界。
+
+## Phase 40 Interview Evidence Hardening
+
+Goal：補強完成 Phase 39 後仍可能被 JD 追問的證據缺口，讓 Embedding / SFT、推論硬體 benchmark 與 observability dashboard 不只停留在架構敘事，而是有可展示、可驗證的 artifacts。
+
+Planning ticket：
+
+- `tasks/phase-40-interview-evidence-hardening/40-01-phase-40-jd-evidence-plan.md`
+
+Status：
+
+- 已完成 Phase 40 planning。後續 evidence tickets 尚未實作，不 bump version、不新增 runtime，也不宣稱 Phase 40 已完成。
+
+### Phase 40 - JD Evidence Hardening
+
+Target version：`v0.40.0`
+
+Goal：將 Phase 31-39 的 enterprise / production roadmap 補成更適合面試追問的證據包，聚焦「可被打開查看」的報告、benchmark 與 dashboard examples。
+
+Tickets：
+
+- `tasks/phase-40-interview-evidence-hardening/40-02-embedding-sft-experiment-evidence.md`
+- `tasks/phase-40-interview-evidence-hardening/40-03-inference-hardware-benchmark-evidence.md`
+- `tasks/phase-40-interview-evidence-hardening/40-04-observability-dashboard-evidence.md`
+- `tasks/phase-40-interview-evidence-hardening/40-05-phase-40-release-sync.md`
+
+Expected Outcome：
+
+- Embedding / SFT / synthetic data research track 有 report 或 notebook skeleton，說明資料格式、實驗方法、evaluation method 與風險。
+- Inference hardware benchmark 有 latency、tokens/sec、VRAM、KV cache estimate、TOPS / NPU 評估方式與 provider fallback / skip reason。
+- Observability evidence 有 Loki / Grafana 或 OpenSearch dashboard / query examples，覆蓋 API log、worker log、RAG trace、latency 與 eval metrics。
+- `v0.40.0` release sync 時，README / README_DEV 明確說明這是 JD evidence hardening，不是 production training、production inference autoscaling 或 production alerting。
+
+Phase 40 Guardrails：
+
+- Phase 40 不新增新的 product feature 主線，只補面試證據 artifacts。
+- `40-02` 不下載大型模型、不執行長時間 training、不把 fine-tuned model 接到 production runtime。
+- `40-03` 不宣稱沒有實測的 TOPS / NPU 數據；可以提供評估方式與 benchmark template。
+- `40-04` 不新增 production alerting、SLO、incident workflow 或 APM vendor integration。
+- `40-05` 完成 release sync 前，不更新 backend / frontend / health / Docker Compose version。
 
 ## v0.2.0 Demo UI Milestone
 
