@@ -208,6 +208,12 @@ Expected Outcome：
 - Qdrant payload 與 DB query 都保留 tenant / project filtering contract。
 - 不新增 SSO、OAuth、MFA、Redis session 或 production audit pipeline。
 
+32-01 Auth RBAC Contract Status:
+- Completed Markdown-only formal Auth / RBAC / tenant boundary contract. The contract defines User, Organization, Project, Role, Membership and project access domains, plus Viewer / Analyst / Admin permission matrix.
+- API guard policy is documented for authenticated reads, ingestion writes, admin / membership endpoints and cross-project denied behavior.
+- Demo auth remains a local validation fallback and must not be described as production RBAC.
+- Release Impact: Version bump required: no. This ticket does not add users / organizations schema, migration files, production login runtime, Redis session, SSO, OAuth, MFA, frontend role surface or backend runtime guards.
+
 ### Phase 33 - Redis + NATS Worker Pipeline
 
 Target version：`v0.33.0`

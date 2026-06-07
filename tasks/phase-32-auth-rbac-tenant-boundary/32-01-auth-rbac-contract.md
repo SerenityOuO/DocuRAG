@@ -34,12 +34,17 @@
 
 ## Acceptance Criteria
 
-- [ ] 文件列出 role permission matrix，並標示 Viewer / Analyst / Admin 的 API 權限差異。
-- [ ] 文件明確定義 organization / project access boundary。
-- [ ] 文件說明 demo auth 與正式 auth 的差異，不把 demo auth 說成 production RBAC。
-- [ ] 明確標示 SSO / OAuth / MFA / Redis session 不在本 ticket scope。
+- [x] 文件列出 role permission matrix，並標示 Viewer / Analyst / Admin 的 API 權限差異。
+- [x] 文件明確定義 organization / project access boundary。
+- [x] 文件說明 demo auth 與正式 auth 的差異，不把 demo auth 說成 production RBAC。
+- [x] 明確標示 SSO / OAuth / MFA / Redis session 不在本 ticket scope。
 
 ## Validation
 
 - `rg -n "Auth|RBAC|Viewer|Analyst|Admin|organization|project access|Phase 32" docs README_DEV.md TODO.md tasks/phase-32-auth-rbac-tenant-boundary`
 - `git diff --check`
+
+## Validation Result
+
+- Passed: `rg -n "Auth|RBAC|Viewer|Analyst|Admin|organization|project access|Phase 32" docs README_DEV.md TODO.md tasks/phase-32-auth-rbac-tenant-boundary`
+- Passed: `git diff --check` (Windows LF/CRLF warnings only).

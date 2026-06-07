@@ -28,6 +28,50 @@ Phase 28 demo auth mode is disabled by default. Set `DOCURAG_AUTH_MODE=demo` to 
 
 This is a demo-safe auth slice, not production JWT refresh rotation, PostgreSQL users table, SSO, OAuth, MFA, tenant isolation, project permission, Redis session or formal RBAC.
 
+## Phase 32 Auth / RBAC Contract
+
+`32-01` defines the formal Auth / RBAC / tenant boundary contract only. It does not change current runtime behavior, add users / organizations schema, create migrations, enable Redis session storage, or replace Phase 28 demo auth. Runtime implementation is split into later Phase 32 tickets.
+
+### Domain Boundary
+
+| Domain | Contract | Notes |
+|---|---|---|
+| User | Human account that can authenticate and receive project access. | Runtime table / migration is deferred to `32-02`. |
+| Organization | Top-level tenant boundary that owns projects and memberships. | All cross-organization access must be denied by backend guards. |
+| Project | Workspace boundary for documents, eval runs, Agent runs and future Qdrant payload filters. | Existing nullable `project_id` metadata from Phase 31 becomes the join point. |
+| Role | Permission tier assigned inside a project. | Supported contract roles are `viewer`, `analyst` and `admin`. |
+| Membership | User-to-organization / project relationship with role and status. | Disabled or removed memberships must not retain access. |
+| Project access | Backend-enforced check before returning or mutating project-scoped resources. | Frontend role surface is advisory only; backend remains authoritative. |
+
+### Role Permission Matrix
+
+| Capability | Viewer | Analyst | Admin |
+|---|---:|---:|---:|
+| Login / read own user context | yes | yes | yes |
+| List accessible projects | yes | yes | yes |
+| Query existing project documents with RAG | yes | yes | yes |
+| Download documents in accessible projects | yes | yes | yes |
+| Upload documents | no | yes | yes |
+| Run OCR / parser / vector indexing | no | yes | yes |
+| Run built-in eval for accessible project data | no | yes | yes |
+| Run deterministic Agent tools on accessible project data | no | yes | yes |
+| Manage project metadata / memberships | no | no | yes |
+| Access another organization or project without membership | no | no | no |
+
+### API Guard Policy
+
+| API group | Guard contract |
+|---|---|
+| Auth endpoints | Public login endpoint; authenticated `me` endpoint returns user, memberships and active project context. |
+| Read endpoints | Require authenticated user and project membership; response must be filtered by project access. |
+| Ingestion write endpoints | Require Analyst or Admin role for the target project. Viewer receives `403 forbidden`. |
+| Admin / membership endpoints | Require Admin role for the target project or organization. |
+| Cross-project access | Must return unauthorized / forbidden without leaking whether the target resource exists. |
+
+Demo auth remains a local validation fallback. It may keep fixed users and stateless tokens for smoke tests, but documentation and UI must not call it production RBAC. Formal Auth / RBAC must not silently depend on Phase 28 demo users.
+
+SSO, OAuth, MFA, password reset, email verification, Redis-backed session storage, refresh token rotation and production audit pipeline are explicitly outside `32-01` scope.
+
 ## Projects
 
 | Method | Endpoint | Description |

@@ -152,7 +152,7 @@ Phase 31 `v0.31.0` - PostgreSQL / schema / repository foundation：
 - [x] `tasks/phase-31-enterprise-roadmap/31-05-phase-31-release-sync.md`: 完成 `v0.31.0` release sync，更新 backend / frontend / Docker Compose / health test / `.env.example` 版本與 README / README_DEV / backend README / frontend README / TODO / ROADMAP；不新增 Phase 32、worker 或 production deployment。
 
 Phase 32 `v0.32.0` - Formal Auth / RBAC / tenant boundary：
-- [ ] `tasks/phase-32-auth-rbac-tenant-boundary/32-01-auth-rbac-contract.md`
+- [x] `tasks/phase-32-auth-rbac-tenant-boundary/32-01-auth-rbac-contract.md`: 完成 Markdown-only formal Auth / RBAC / tenant boundary contract，定義 User / Organization / Project / Role / Membership / project access、Viewer / Analyst / Admin 權限矩陣與 API guard policy；不 bump version。
 - [ ] `tasks/phase-32-auth-rbac-tenant-boundary/32-02-users-orgs-project-membership-schema.md`
 - [ ] `tasks/phase-32-auth-rbac-tenant-boundary/32-03-backend-permission-guards.md`
 - [ ] `tasks/phase-32-auth-rbac-tenant-boundary/32-04-frontend-role-surface-and-release-sync.md`
@@ -233,6 +233,13 @@ Phase 31-39 guardrails：
 - 已完成 `v0.31.0` release sync：backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION` 與 `.env.example` 已同步到 `0.31.0`。
 - README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 ticket 已同步 Phase 31 release 狀態；文件明確保留正式 RBAC、worker pipeline 與 production deployment 尚未完成的邊界。
 - Validation 已通過：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`205 passed`，1 pytest cache warning）；`npm.cmd run build`；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`（health version `0.31.0`，local JSON fallback demo flow 通過，Qdrant unavailable vector indexing fallback 符合 local baseline）；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+32-01 Auth RBAC Contract Status：
+- 已完成。`docs/api.md` 與 `docs/architecture.md` 已定義正式 Auth / RBAC / tenant boundary 的 User、Organization、Project、Role、Membership 與 project access domain contract。
+- Viewer / Analyst / Admin 權限矩陣已固定：Viewer 只能讀取 / query / download 可存取 project；Analyst 可執行 ingestion、OCR、parser、indexing、built-in eval 與 deterministic Agent；Admin 另可管理 project metadata / memberships。
+- API guard policy 已固定 authenticated read、ingestion write、admin / membership endpoint 與 cross-project denied behavior；demo auth 只保留為 local validation fallback，不宣稱 production RBAC。
+- Release Impact：Version bump required: no。本 ticket 不新增 users / organizations schema、migration 檔、production login runtime、Redis session、SSO、OAuth、MFA、frontend role surface 或 backend runtime guard。
+- Validation 已通過：`rg -n "Auth|RBAC|Viewer|Analyst|Admin|organization|project access|Phase 32" docs README_DEV.md TODO.md tasks/phase-32-auth-rbac-tenant-boundary`；`git diff --check`（僅 Windows LF/CRLF 提示）。
 ## Phase 40 Interview Evidence Hardening
 
 - [x] `tasks/phase-40-interview-evidence-hardening/40-01-phase-40-jd-evidence-plan.md`: 新增 Phase 40 `v0.40.0` JD evidence hardening roadmap；文件 ticket，不 bump version。

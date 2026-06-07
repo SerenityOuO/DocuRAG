@@ -361,6 +361,42 @@ Local JSON remains the default demo fallback. `31-04` adds opt-in repository sel
 
 `31-04` adds `LocalJsonDocumentRepository` and `PostgresDocumentRepository` behind the existing `DocumentStorage` API. The PostgreSQL adapter creates only non-destructive `CREATE TABLE IF NOT EXISTS` tables and uses upsert-based metadata writes for documents, chunks, parser fields, eval runs and Agent runs. The optional dependency is isolated in the `postgres` backend extra; local JSON remains the default and PostgreSQL mode is enabled only when explicitly configured.
 
+## Phase 32 Formal Auth / RBAC / Tenant Boundary Contract
+
+`32-01` defines the formal Auth / RBAC / tenant boundary as a Markdown-only contract. Current runtime remains Phase 28 demo auth until later Phase 32 tickets add schema and backend guards.
+
+Domain contract:
+
+- User: authenticated human account; persistence and password / token handling are deferred to runtime tickets.
+- Organization: top-level tenant boundary. A user without organization membership must not see organization projects.
+- Project: workspace boundary for documents, chunks, eval runs, Agent runs and future Qdrant payload filters. Existing nullable `project_id` metadata from Phase 31 is the forward-compatible join point.
+- Role: project-scoped permission tier. Supported roles are `viewer`, `analyst` and `admin`.
+- Membership: user-to-organization / project relationship with role and active / disabled status.
+- Project access: backend-enforced authorization check applied before read or write operations. Frontend role gating is not authoritative.
+
+Role matrix:
+
+| Capability | Viewer | Analyst | Admin |
+|---|---:|---:|---:|
+| Read own user context | yes | yes | yes |
+| List accessible projects | yes | yes | yes |
+| Query and download accessible project documents | yes | yes | yes |
+| Upload documents | no | yes | yes |
+| Run OCR, parser and vector indexing | no | yes | yes |
+| Run built-in eval and deterministic Agent tools | no | yes | yes |
+| Manage project metadata or memberships | no | no | yes |
+| Cross-organization / cross-project access | no | no | no |
+
+API guard policy:
+
+- Read APIs require authenticated project membership and must filter by project access before returning resources.
+- Ingestion write APIs require Analyst or Admin for the target project; Viewer receives `403 forbidden`.
+- Admin / membership APIs require Admin for the target project or organization.
+- Unauthorized / forbidden responses must not leak whether a cross-project resource exists.
+- Demo auth remains a local fallback and validation path only; it must not be described as production RBAC.
+
+Explicitly deferred from `32-01`: users / organizations / memberships schema, migration files, production login runtime, JWT refresh rotation, Redis session, SSO, OAuth, MFA, password reset, email verification, audit pipeline, frontend role surface and backend runtime guards.
+
 ## Deferred Or Explicitly Optional Components
 
 以下能力是長期目標或 optional local runtime，不屬於目前 production-ready MVP：
