@@ -30,8 +30,8 @@ Phase 31 的目標是把目前 local JSON store 中已存在且可驗證的資�
 
 ### Local JSON Fallback And Migration Path
 
-- Local JSON remains the default demo fallback until a later ticket explicitly adds and validates DB-backed repository selection.
-- DB-backed mode must be opt-in at first, for example by a future storage provider env, so existing interview demo data is not cut off in one commit.
+- Local JSON remains the default demo fallback. `31-04` adds validated opt-in DB-backed repository selection with `DOCURAG_REPOSITORY_PROVIDER=postgresql`.
+- DB-backed mode remains opt-in, so existing interview demo data is not cut off in one commit.
 - Migration from local JSON to DB should be a copy/import path before any default switch. The import should be idempotent by stable document id, chunk id and agent run id.
 - Dual-write should not be introduced silently. If needed, it must be scoped to a repository adapter ticket with tests for consistency and failure behavior.
 - Uploaded files remain filesystem artifacts during Phase 31; DB rows reference the stored filename/path and checksum metadata if available.

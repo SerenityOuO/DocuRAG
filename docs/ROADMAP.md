@@ -142,7 +142,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 roadmap planning，並已建立 Phase 31 到 Phase 39 的 future ticket backlog。`31-02` 已完成 PostgreSQL boundary / migration policy，`31-03` 已完成 Markdown-only DB schema contract；其餘後續 tickets 尚未實作。不 bump version、不新增 runtime，也不宣稱 Phase 31 到 Phase 39 已完成。
+- 已完成 roadmap planning，並已建立 Phase 31 到 Phase 39 的 future ticket backlog。`31-02` 已完成 PostgreSQL boundary / migration policy，`31-03` 已完成 Markdown-only DB schema contract，`31-04` 已完成 repository adapter / migration path；`31-05` release sync 尚未實作。不 bump version，也不宣稱 Phase 31 到 Phase 39 已完成。
 
 ### Phase 31 - PostgreSQL / Schema / Repository Foundation
 
@@ -178,6 +178,11 @@ Expected Outcome：
 - Contract 保留 nullable `project_id` 作為 future project / tenant metadata；正式 users / organizations / roles / memberships schema 留給 Phase 32。
 - Release Impact：Version bump required: no。本 ticket 不改 runtime 或 release artifact。
 
+31-04 Repository Adapter and Migration Path Status:
+- Completed `backend/app/repositories/document_metadata.py` with local JSON and PostgreSQL repository adapters behind the existing `DocumentStorage` API. `DOCURAG_REPOSITORY_PROVIDER=local_json|postgresql` selects runtime storage; PostgreSQL mode requires `DOCURAG_DATABASE_URL` and the optional `backend[postgres]` dependency.
+- Added non-destructive `CREATE TABLE IF NOT EXISTS` schema bootstrap plus upsert writes for documents, chunks, parser fields, eval runs and Agent runs. No production DB connection, secret, Auth/RBAC, Redis/NATS, worker or deployment scope was added.
+- Added `scripts/migrate-local-json-to-postgresql.py` for explicit local JSON import; dry-run validation covers local metadata counts without connecting to PostgreSQL.
+- Validation passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` (`205 passed`, 1 pytest cache warning). Release Impact: Version bump required: no; `31-05` remains the Phase 31 release sync.
 ### Phase 32 - Formal Auth / RBAC / Tenant Boundary
 
 Target version：`v0.32.0`

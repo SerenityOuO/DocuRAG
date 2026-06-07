@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     data_dir: Path = Field(default_factory=default_data_dir)
     auth_mode: str = "disabled"
     auth_demo_secret: str = "docurag-demo-auth-secret"
+    repository_provider: str = "local_json"
+    database_url: str | None = None
     ocr_provider: str = "paddleocr"
     ocr_language: str = "ch"
     ocr_version: str = "PP-OCRv4"

@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from app.core.config import get_settings
+from app.repositories.document_metadata import create_document_storage
 from app.schemas.rag import RagQueryRequest, RagQueryResponse
 from app.services.document_storage import DocumentStorage
 from app.services.embedding import create_embedding_provider
@@ -23,8 +24,7 @@ router = APIRouter(prefix="/rag", tags=["rag"])
 
 
 def get_document_storage() -> DocumentStorage:
-    settings = get_settings()
-    return DocumentStorage(settings.data_dir)
+    return create_document_storage(get_settings())
 
 
 def get_rag_provider() -> RagProvider:

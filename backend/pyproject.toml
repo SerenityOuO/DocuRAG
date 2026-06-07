@@ -20,6 +20,9 @@ real-ocr = [
   "paddleocr>=2.10,<2.11; python_version == '3.12'",
   "paddlepaddle-gpu==3.3.0; python_version == '3.12'",
 ]
+postgres = [
+  "psycopg[binary]>=3.2,<4.0",
+]
 
 [build-system]
 requires = ["setuptools>=68"]

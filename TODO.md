@@ -148,7 +148,7 @@
 Phase 31 `v0.31.0` - PostgreSQL / schema / repository foundation：
 - [x] `tasks/phase-31-enterprise-roadmap/31-02-postgresql-boundary-and-migration-policy.md`: 盤點 local JSON store 資料域、對應 future DB domain、固定 migration policy 與 local JSON fallback / migration path；文件 ticket，不 bump version。
 - [x] `tasks/phase-31-enterprise-roadmap/31-03-db-schema-contract.md`: 定義 `documents`、`document_pages`、`document_chunks`、`extracted_fields`、eval tables 與 Agent tables 的欄位、nullable、index / key、`project_id` future metadata 與 local JSON mapping；文件 ticket，不 bump version。
-- [ ] `tasks/phase-31-enterprise-roadmap/31-04-repository-adapter-and-migration-path.md`
+- [x] `tasks/phase-31-enterprise-roadmap/31-04-repository-adapter-and-migration-path.md`: 完成 opt-in local JSON / PostgreSQL repository selection、PostgreSQL metadata adapter、local JSON migration command、optional `backend[postgres]` dependency 與 backend repository tests；不 bump version。
 - [ ] `tasks/phase-31-enterprise-roadmap/31-05-phase-31-release-sync.md`
 
 Phase 32 `v0.32.0` - Formal Auth / RBAC / tenant boundary：
@@ -202,7 +202,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- 除 `31-02` 已完成 PostgreSQL boundary / migration policy、`31-03` 已完成 DB schema contract 外，以上 tickets 目前仍是 future backlog，尚未實作。
+- 除 `31-02` 已完成 PostgreSQL boundary / migration policy、`31-03` 已完成 DB schema contract、`31-04` 已完成 repository adapter / migration path 外，以上 tickets 目前仍是 future backlog，尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
@@ -223,6 +223,11 @@ Phase 31-39 guardrails：
 - Validation 已通過：`rg -n "document_pages|document_chunks|extracted_fields|eval_runs|agent_runs|project_id|Phase 31" docs TODO.md tasks/phase-31-enterprise-roadmap` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 - Release Impact：Version bump required: no。本 ticket 不新增 migration 檔、database schema runtime、repository code、dependency、正式 RBAC、Redis、NATS、worker、K8s 或 deployment 設定。
 
+31-04 Repository Adapter and Migration Path Status:
+- 已完成 runtime repository selection：`DOCURAG_REPOSITORY_PROVIDER=local_json|postgresql`，預設仍是 local JSON，只有 PostgreSQL-backed mode 需要 `DOCURAG_DATABASE_URL`。
+- 已新增 `PostgresDocumentRepository`，只做非破壞性 schema bootstrap 與 documents、chunks、parser fields、eval runs、Agent runs 的 upsert metadata writes；`LocalJsonDocumentRepository` 保留既有 local JSON fallback。
+- 已新增 `scripts/migrate-local-json-to-postgresql.py` 作為明確 local JSON import command，並新增 `backend[postgres]` optional dependency 供 `psycopg[binary]` 使用。
+- Validation passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` (`205 passed`, 1 pytest cache warning). Release Impact: Version bump required: no; `31-05` remains release sync.
 ## Phase 40 Interview Evidence Hardening
 
 - [x] `tasks/phase-40-interview-evidence-hardening/40-01-phase-40-jd-evidence-plan.md`: 新增 Phase 40 `v0.40.0` JD evidence hardening roadmap；文件 ticket，不 bump version。

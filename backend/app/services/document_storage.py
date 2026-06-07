@@ -1,6 +1,5 @@
 from datetime import UTC, datetime
 from io import BytesIO
-import json
 from pathlib import Path
 import re
 from uuid import uuid4
@@ -8,6 +7,7 @@ from uuid import uuid4
 from fastapi import UploadFile
 from pypdf import PdfReader
 
+from app.repositories.document_metadata import DocumentMetadataRepository, LocalJsonDocumentRepository
 from app.schemas.agent import AgentRun
 from app.schemas.documents import (
     DocumentChunk,
@@ -27,11 +27,16 @@ from app.services.ocr import OcrProvider
 
 
 class DocumentStorage:
-    def __init__(self, data_dir: Path) -> None:
+    def __init__(
+        self,
+        data_dir: Path,
+        repository: DocumentMetadataRepository | None = None,
+    ) -> None:
         self.data_dir = data_dir
         self.upload_dir = data_dir / "uploads"
         self.metadata_path = data_dir / "documents.json"
         self.agent_runs_path = data_dir / "agent_runs.json"
+        self.repository = repository or LocalJsonDocumentRepository(data_dir)
 
     def list_documents(self) -> list[DocumentMetadata]:
         documents = self._read_documents()
@@ -312,59 +317,23 @@ class DocumentStorage:
 
     def _ensure_storage(self) -> None:
         self.upload_dir.mkdir(parents=True, exist_ok=True)
-        if not self.metadata_path.exists():
-            self.metadata_path.write_text("[]\n", encoding="utf-8")
 
     def _read_documents(self) -> list[DocumentMetadata]:
         self._ensure_storage()
-
-        raw_documents = json.loads(self.metadata_path.read_text(encoding="utf-8"))
-        return [DocumentMetadata.model_validate(raw_document) for raw_document in raw_documents]
+        return self.repository.list_documents()
 
     def _ensure_agent_run_storage(self) -> None:
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        if not self.agent_runs_path.exists():
-            self.agent_runs_path.write_text("[]\n", encoding="utf-8")
 
     def _read_agent_runs(self) -> list[AgentRun]:
         self._ensure_agent_run_storage()
-
-        raw_agent_runs = json.loads(self.agent_runs_path.read_text(encoding="utf-8"))
-        return [AgentRun.model_validate(raw_agent_run) for raw_agent_run in raw_agent_runs]
+        return self.repository.list_agent_runs()
 
     def _write_agent_runs(self, agent_runs: list[AgentRun]) -> None:
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-        payload = [agent_run.model_dump(mode="json") for agent_run in agent_runs]
-        content = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
-        temp_path = self.agent_runs_path.with_name(f"{self.agent_runs_path.name}.{uuid4().hex}.tmp")
-        temp_path.write_text(content, encoding="utf-8")
-
-        try:
-            temp_path.replace(self.agent_runs_path)
-        except OSError:
-            # Docker Desktop bind mounts on Windows can reject atomic replace.
-            self.agent_runs_path.write_text(content, encoding="utf-8")
-            try:
-                temp_path.unlink(missing_ok=True)
-            except OSError:
-                pass
+        self.repository.write_agent_runs(agent_runs)
 
     def _write_documents(self, documents: list[DocumentMetadata]) -> None:
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-        payload = [document.model_dump(mode="json") for document in documents]
-        content = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
-        temp_path = self.metadata_path.with_name(f"{self.metadata_path.name}.{uuid4().hex}.tmp")
-        temp_path.write_text(content, encoding="utf-8")
-
-        try:
-            temp_path.replace(self.metadata_path)
-        except OSError:
-            # Docker Desktop bind mounts on Windows can reject atomic replace.
-            self.metadata_path.write_text(content, encoding="utf-8")
-            try:
-                temp_path.unlink(missing_ok=True)
-            except OSError:
-                pass
+        self.repository.write_documents(documents)
 
     def _safe_filename(self, filename: str) -> str:
         name = Path(filename.replace("\\", "/")).name

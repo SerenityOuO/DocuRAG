@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.routes.rag import get_rag_provider
 from app.core.config import get_settings
+from app.repositories.document_metadata import create_document_storage
 from app.schemas.agent import AgentRun, AgentRunRequest
 from app.services.agent import AgentService
 from app.services.agent_tools import AgentToolService
@@ -15,8 +16,7 @@ router = APIRouter(prefix="/agent", tags=["agent"])
 
 
 def get_document_storage() -> DocumentStorage:
-    settings = get_settings()
-    return DocumentStorage(settings.data_dir)
+    return create_document_storage(get_settings())
 
 
 DocumentStorageDep = Annotated[DocumentStorage, Depends(get_document_storage)]

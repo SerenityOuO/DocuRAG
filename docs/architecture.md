@@ -355,9 +355,11 @@ Migration policy：
 - Every migration must include a downgrade path; destructive changes must follow expand / migrate / contract sequencing and require local JSON or DB backup validation.
 - Each schema / repository ticket must prove local JSON fallback still works unless that ticket explicitly changes the default.
 
-Local JSON remains the default demo fallback until a later ticket adds DB-backed repository selection and validates the migration path. DB-backed mode should start as opt-in; migration should copy/import existing local JSON data idempotently by stable document id, chunk id and Agent run id. PostgreSQL stores metadata and relational state; Qdrant remains the vector store for embeddings.
+Local JSON remains the default demo fallback. `31-04` adds opt-in repository selection with `DOCURAG_REPOSITORY_PROVIDER=local_json|postgresql` and `DOCURAG_DATABASE_URL`, plus a local JSON to PostgreSQL migration command. The migration imports existing local JSON data idempotently by stable document id, chunk id and Agent run id. PostgreSQL stores metadata and relational state; Qdrant remains the vector store for embeddings.
 
 `31-03` adds a Markdown-only DB schema contract for Phase 31 core tables: `documents`, `document_pages`, `document_chunks`, `extracted_fields`, `processing_jobs`, `eval_datasets`, `eval_items`, `eval_runs`, `eval_run_items`, `agent_runs`, `agent_steps` and `agent_tool_calls`. The contract preserves nullable `project_id` / future tenant metadata for later filtering, but does not add users, organizations, roles, memberships, migrations, repository code or runtime DB selection.
+
+`31-04` adds `LocalJsonDocumentRepository` and `PostgresDocumentRepository` behind the existing `DocumentStorage` API. The PostgreSQL adapter creates only non-destructive `CREATE TABLE IF NOT EXISTS` tables and uses upsert-based metadata writes for documents, chunks, parser fields, eval runs and Agent runs. The optional dependency is isolated in the `postgres` backend extra; local JSON remains the default and PostgreSQL mode is enabled only when explicitly configured.
 
 ## Deferred Or Explicitly Optional Components
 
@@ -366,7 +368,7 @@ Local JSON remains the default demo fallback until a later ticket adds DB-backed
 - Production VLM / parser pipeline、PDF rendering、image preprocessing、多頁 production OCR pipeline。
 - Production indexing worker、自動 queue reindex、DB-backed retrieval management。
 - Production eval dashboard、strategy comparison UI、LLM-as-judge、answer faithfulness scoring、citation quality scoring。
-- PostgreSQL schema runtime、DB-backed repository implementation、multi-user tenancy、production login、RBAC。Phase 31 目前只完成 PostgreSQL boundary / migration policy 文件，不代表 schema 或 repository runtime 已落地。
+- Multi-user tenancy、production login、RBAC、destructive migration、production DB operation。Phase 31 目前已完成 PostgreSQL boundary / schema contract / opt-in repository adapter，不代表 production tenancy、production database operation 或 release sync 已完成。
 - Redis session、cache、rate limit。
 - NATS event bus。
 - Production autonomous Agent、LLM planner、arbitrary tool runtime 或 destructive tool execution。

@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse
 
 from app.core.config import get_settings
 from app.api.routes.auth import require_authenticated_user, require_ingestion_user
+from app.repositories.document_metadata import create_document_storage
 from app.schemas.auth import AuthUser
 from app.schemas.documents import (
     DocumentDetailResponse,
@@ -34,8 +35,7 @@ _selected_ocr_provider_cache_key: tuple[object, ...] | None = None
 
 
 def get_document_storage() -> DocumentStorage:
-    settings = get_settings()
-    return DocumentStorage(settings.data_dir)
+    return create_document_storage(get_settings())
 
 
 def get_mock_ocr_provider() -> MockOcrProvider:
