@@ -178,10 +178,10 @@ Phase 28 Document Source Router contract：
 - Source router 依 `file_type`、`content_type` 與 future detection result 選擇 `image_ocr`、`text_upload`、`pdf_text` 或 `pdf_scanned_pending_ocr`。
 - `image_ocr` 沿用 provider-selected OCR，產生 OCR text / OCR lines / chunks；`ocr_mock` 只保留為手動 fallback 或 validation path，不是 `.txt` 的正式來源。
 - `.txt` 目前已走 `text_upload` direct ingestion，直接讀 UTF-8 原文、做基本空白 normalization 並建立 chunks；OCR status 保持 pending，不標成 OCR completed。
-- PDF 必須分成 text-native PDF 與 scanned PDF：`pdf_text` 代表已用 `pypdf` 抽到文字層並建立 chunks；Phase 34 `34-02` 起，`pdf_scanned_pending_ocr` 可用 `PyMuPDF` render bounded PNG page images 並保存 metadata，但 OCR worker 尚未完成。
+- PDF 必須分成 text-native PDF 與 scanned PDF：`pdf_text` 代表已用 `pypdf` 抽到文字層並建立 chunks；Phase 34 `34-02` 起，`pdf_scanned_pending_ocr` 可用 `PyMuPDF` render bounded PNG page images 並保存 metadata；Phase 34 `34-03` 起，provider-selected OCR 可對 scanned / mixed PDF page images 產生 page-level OCR result 與 `pdf_page_ocr` chunks。
 - Normalized document text contract 至少保留 `document_id`、`source_type`、`text`、`page_number`、`bbox`、`confidence`、`metadata` 與 `created_at`，讓 RAG、Qdrant payload 與 Agent citations 不再永久綁死 OCR chunks。
 - `POST /documents/{document_id}/index/vector` 可索引 `text_upload` 與 `pdf_text` chunks；Qdrant / embedding runtime 不可用時仍回傳清楚 fallback error。
-- PDF runtime 目前包含 `pypdf` text extraction 與 Phase 34 `34-02` demo-safe `PyMuPDF` page image rendering；仍不新增 scanned PDF OCR worker、DB schema、正式 Auth / RBAC、Redis、NATS 或 deployment 設定。
+- PDF runtime 目前包含 `pypdf` text extraction、Phase 34 `34-02` demo-safe `PyMuPDF` page image rendering 與 Phase 34 `34-03` page image OCR status / retry path；仍不新增 production OCR worker execution、DB schema、正式 Auth / RBAC、Redis、NATS 或 deployment 設定。
 
 Phase 29 built-in RAG eval boundary：
 
@@ -330,7 +330,7 @@ Phase 12 manual Vector Indexing：
 - 成功 response 會包含 `indexed_chunk_count`、`point_ids`、`collection_name`、`vector_size`、`embedding_provider` 與 `embedding_model`。
 - Empty chunks 會回傳 `status=skipped`，未完成 OCR 的 document 會回傳 `409`；backend upload / OCR endpoint 本身不啟動 worker，frontend v0.27.0 後台 ingestion 會在 OCR 成功後 best-effort 呼叫此 API。
 - Phase 28 source router contract 將目前圖片 runtime 路由標為 `image_ocr`，而 vector payload 來源仍可保留 `source_type=ocr_image`：OCR lines / chunks 是 Qdrant payload 的文字來源，payload 至少保留 `document_id`、`filename`、`chunk_id`、`source_type`、`content_source`、`page_number`、`created_at` 與 future `project_id` / `tenant_id` metadata 位置。
-- `.txt` 檔已走 `text_upload` direct chunks，不需要假裝經過 OCR；text-native PDF 已走 `pdf_text` extraction；scanned PDF 目前可 render page images 並標為 `pdf_scanned_pending_ocr`，但在 OCR pipeline 完成前不得宣稱已可索引。
+- `.txt` 檔已走 `text_upload` direct chunks，不需要假裝經過 OCR；text-native PDF 已走 `pdf_text` extraction；scanned / mixed PDF 可先 render page images，再透過 provider-selected OCR 產生 `pdf_page_ocr` chunks。這仍是 demo-safe synchronous path，不是 production async OCR worker 或 layout reconstruction。
 - VLM structured fields 不會在本 contract 自動寫入 retrieval chunks；若未來要索引欄位，需要另開 field-indexing policy ticket。
 
 ```powershell
@@ -562,3 +562,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-dev-env.ps1 
 - Phase 33 follow-up: `33-02` Redis Cache Rate Limit Session Slice 已完成；新增 opt-in Redis client、health helper、demo-safe session cache、RAG query cache、rate limit 與 Docker Compose `redis` profile。不 bump version，不新增 NATS、worker、async queue、distributed lock runtime 或 production session rotation。
 - Phase 33 follow-up: `33-03` NATS Worker Skeleton and Task Status 已完成；新增 optional NATS helper、worker skeleton placeholder handlers、task status API 與 `scripts/nats-worker-smoke.ps1`。Validation 已通過：backend full test `227 passed`、NATS worker smoke、ticket `rg` 與 `git diff --check`。不 bump version，不改 OCR / parser / indexing / eval model 行為，不新增 production autoscaling、K8s、dead-letter dashboard 或 full observability stack。
 - v0.33.0: Redis + NATS Worker Pipeline 已完成；新增 `scripts/worker-demo-smoke.ps1`，並同步 backend / frontend / Docker Compose / health test 版本與 README / README_DEV / backend README / frontend README / TODO / ROADMAP。這是 demo-safe worker pipeline milestone，不是 production autoscaling、durable JetStream consumer、dead-letter dashboard 或 full observability stack。
+- Phase 34 follow-up: `34-03` Multipage OCR Status and Retry 已完成；scanned / mixed PDF page images 可透過 provider-selected OCR 保存 page-level text、blocks、attempts、provider 與 failure reason，並產生 `pdf_page_ocr` chunks；mixed PDF 保留既有 `pdf_text` chunks。不 bump version，不新增 layout analysis、table reconstruction、human correction workflow、production GPU scheduling 或 production async worker execution。

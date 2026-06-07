@@ -239,7 +239,7 @@ This endpoint is not production eval history, custom dataset upload, OCR accurac
 | `image_ocr` | image file type or image content type | 走既有 provider-selected OCR，產生 OCR text / OCR lines / chunks。 | `ocr_mock` 只作手動 fallback / validation path，不是正式來源。 |
 | `text_upload` | `.txt` | 直接讀 UTF-8 原文、做基本空白 normalization 並建立 chunks。 | Current runtime；不需要 OCR job，也不標示為 OCR completed。 |
 | `pdf_text` | PDF with extractable text layer | 使用 `pypdf` 抽取 text-native PDF 文字並建立 chunks。 | 保留 `page_number`；`bbox` 可為 `null`，不可假造座標。 |
-| `pdf_scanned_pending_ocr` | PDF without extractable text or future scanned detection | `34-02` 會 render page images，等待後續 OCR pipeline。 | 目前可保存 page image metadata，但不自動送 OCR，也不宣稱已支援 scanned PDF OCR。 |
+| `pdf_scanned_pending_ocr` | PDF without extractable text or future scanned detection | `34-02` 會 render page images；`34-03` 可透過 provider-selected OCR 處理 page images。 | Page OCR 成功後會建立 `pdf_page_ocr` chunks；仍不是 production layout / table reconstruction。 |
 
 ### Normalized Document Text
 
@@ -264,24 +264,24 @@ This endpoint is not production eval history, custom dataset upload, OCR accurac
 }
 ```
 
-Frontend ingestion flow 依 source type 顯示不同狀態：`text_upload` 可直接建立知識庫並接 best-effort parser / vector indexing，`image_ocr` 先 OCR，`pdf_text` 顯示 text-native PDF extraction ready，`pdf_scanned_pending_ocr` 顯示 page images 已待 OCR pipeline。
+Frontend ingestion flow 依 source type 顯示不同狀態：`text_upload` 可直接建立知識庫並接 best-effort parser / vector indexing，`image_ocr` 先 OCR，`pdf_text` 顯示 text-native PDF extraction ready，`pdf_scanned_pending_ocr` / `pdf_mixed_pending_ocr` 可透過 API document detail 看到 page images 的 OCR result 或 failure。
 
 `28-03` 新增的 PDF dependency 僅限 `pypdf` text extraction；仍不新增 PDF rendering、多頁 OCR pipeline、worker、DB schema、正式 auth / RBAC、Redis、NATS 或 deployment 設定。
 
 ## Phase 34 Scanned PDF OCR Contract
 
-`34-01` 只定義 contract，不新增 PDF rendering runtime、OCR code、dependency、migration 或 UI。Phase 34 後續 runtime ticket 必須沿用這裡的 source routing、page image、OCR block、page-level status、retry 與 failure reason contract。
+`34-01` 定義 contract；`34-02` 新增 demo-safe PDF page image rendering；`34-03` 將 provider-selected OCR 接到 scanned / mixed PDF page images，沿用這裡的 source routing、page image、OCR block、page-level status、retry 與 failure reason contract。
 
 ### PDF Source Routing
 
 | PDF class | Detection rule | Contract source | Runtime behavior |
 |---|---|---|---|
 | Text-native PDF | Every required page has extractable text. | `pdf_text` | Current runtime uses `pypdf` extraction and creates page-aware chunks. |
-| Scanned PDF | No useful text layer, pages require rendering. | `pdf_scanned_pending_ocr` | `34-02` renders bounded PNG page images; future `34-03` runs page-level OCR. |
-| Mixed PDF | Some pages have text, some pages require OCR. | `pdf_mixed_pending_ocr` | Text pages produce `pdf_text` chunks; scanned pages render `pdf_mixed_pending_ocr` page images and stay pending for OCR. |
+| Scanned PDF | No useful text layer, pages require rendering. | `pdf_scanned_pending_ocr` | `34-02` renders bounded PNG page images; `34-03` runs provider-selected page-level OCR and creates `pdf_page_ocr` chunks. |
+| Mixed PDF | Some pages have text, some pages require OCR. | `pdf_mixed_pending_ocr` | Text pages produce `pdf_text` chunks; scanned pages render `pdf_mixed_pending_ocr` page images, then OCR appends `pdf_page_ocr` chunks. |
 | Invalid PDF | Parser cannot open, encrypted without key, corrupt, unsupported, or too large. | `pdf_invalid` | No chunks are created; document stores a clear failure reason. |
 
-Current runtime can render scanned / mixed PDF page images, but it must not claim scanned PDF OCR is complete until `34-03` is implemented.
+Current runtime can render scanned / mixed PDF page images and run provider-selected OCR on those page images. It still must not claim production layout analysis, table reconstruction, human correction or async worker durability.
 
 ### Page Image Contract
 
@@ -299,12 +299,18 @@ Current runtime can render scanned / mixed PDF page images, but it must not clai
   "checksum": "64-character-sha256-hex",
   "page_status": "rendered",
   "source_type": "pdf_scanned_pending_ocr",
+  "ocr_text": "",
+  "ocr_blocks": [],
+  "ocr_attempts": 0,
+  "ocr_provider": null,
   "failure_reason": null,
-  "created_at": "2026-06-07T10:00:00Z"
+  "metadata": {},
+  "created_at": "2026-06-07T10:00:00Z",
+  "updated_at": null
 }
 ```
 
-`34-02` writes `rendered` records only. Future `34-03` may use `ocr_queued`, `ocr_running`, `ocr_succeeded`, `ocr_failed` and `ocr_retrying`; text-native pages in a mixed PDF keep `pdf_text` chunks as the source of truth and are not rendered.
+`34-02` writes `rendered` records after page image rendering. `34-03` may update page records to `ocr_running`, `ocr_succeeded` or `ocr_failed`; the schema also reserves `ocr_queued` and `ocr_retrying` for future worker-backed execution. Text-native pages in a mixed PDF keep `pdf_text` chunks as the source of truth and are not rendered.
 
 ### OCR Block Contract
 
@@ -362,10 +368,11 @@ Allowed failure reasons include `pdf_invalid`, `pdf_encrypted`, `pdf_render_fail
 
 - Parser receives compact OCR text plus OCR blocks after required pages finish; mixed PDFs may combine `pdf_text` text pages and OCR blocks from scanned pages.
 - Chunks created from scanned pages must keep `source_type=pdf_page_ocr`, `content_source=pdf_scanned_ocr`, `page_number`, block ids, bbox and confidence where available.
+- Current `34-03` runtime exposes this through `POST /documents/{document_id}/ocr` and persisted document detail: successful scanned pages become `ocr_succeeded`, failed pages become `ocr_failed`, and retry increments `ocr_attempts` without duplicating old `pdf_page_ocr` chunks.
 - Vector indexing must wait for page-level OCR completion or explicitly record partial / skipped pages in metadata.
 - Worker task status from Phase 33 should mirror document and page progress: rendering tasks can publish `document.ocr.requested`; OCR tasks update queued / running / retrying / succeeded / failed without changing OCR model behavior in this contract ticket.
 
-This contract does not implement production OCR runtime, table reconstruction, layout analysis, human correction workflow, OCR accuracy tuning, VLM parser changes, RAG ranking changes, Agent planner changes or eval dashboard changes.
+This contract and runtime slice do not implement production table reconstruction, layout analysis, human correction workflow, OCR accuracy tuning, VLM parser changes, RAG ranking changes, Agent planner changes or eval dashboard changes.
 
 ## Phase 24 Parser Contract Draft
 
@@ -380,7 +387,8 @@ This contract does not implement production OCR runtime, table reconstruction, l
 | `ocr_image` | OCR text / OCR lines from image upload | Current demo path | 圖片或掃描類文件先走 OCR，再用 OCR chunks 寫入 Qdrant。 |
 | `text_upload` | Original text file body | Current runtime | `.txt` 直接建立 chunks，不需要假裝經過 OCR。 |
 | `pdf_text` | Text-native PDF extraction | Current runtime | 只代表 PDF 內已有文字層；不包含 scanned PDF。 |
-| `pdf_scanned_pending_ocr` | Rendered PDF page images pending OCR | Current rendering path, OCR pending | `34-02` 可產生 page images；`34-03` OCR pipeline 完成前，不宣稱可索引 scanned PDF。 |
+| `pdf_scanned_pending_ocr` | Rendered PDF page images pending OCR | Current rendering path | `34-02` 可產生 page images；page image metadata 會記錄後續 OCR status。 |
+| `pdf_page_ocr` | OCR-derived scanned PDF page chunks | Current page OCR path | `34-03` 成功後產生，可保留 `content_source=pdf_scanned_ocr`、page number、bbox / confidence 與 page image metadata；不代表 production layout / table understanding。 |
 
 ### Normalized Text Source
 

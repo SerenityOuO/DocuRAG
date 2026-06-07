@@ -182,8 +182,14 @@ class PdfPageImage(BaseModel):
         "skipped_text_native",
     ] = "rendered"
     source_type: str = Field(default="pdf_scanned_pending_ocr", min_length=1)
+    ocr_text: str = ""
+    ocr_blocks: list[OcrTextLine] = Field(default_factory=list)
+    ocr_attempts: int = Field(default=0, ge=0)
+    ocr_provider: str | None = None
     failure_reason: str | None = None
+    metadata: dict[str, str] = Field(default_factory=dict)
     created_at: datetime
+    updated_at: datetime | None = None
 
 
 class DocumentMetadata(BaseModel):

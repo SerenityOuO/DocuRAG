@@ -144,7 +144,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 Phase 31 `v0.31.0` release sync、Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync、Phase 33 `v0.33.0` Redis + NATS Worker Pipeline release sync、Phase 34 `34-01` scanned PDF OCR contract 與 Phase 34 `34-02` PDF rendering page image pipeline，並已建立 Phase 34 後續到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04`、Phase 33 `33-01` 到 `33-04` 與 Phase 34 `34-01` / `34-02` 均已完成；不宣稱 Phase 34 到 Phase 39 已整體完成。
+- 已完成 Phase 31 `v0.31.0` release sync、Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync、Phase 33 `v0.33.0` Redis + NATS Worker Pipeline release sync、Phase 34 `34-01` scanned PDF OCR contract、Phase 34 `34-02` PDF rendering page image pipeline 與 Phase 34 `34-03` multipage OCR status / retry，並已建立 Phase 34 後續到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04`、Phase 33 `33-01` 到 `33-04` 與 Phase 34 `34-01` 到 `34-03` 均已完成；不宣稱 Phase 34 到 Phase 39 已整體完成。
 
 ### Phase 31 - PostgreSQL / Schema / Repository Foundation
 
@@ -311,8 +311,16 @@ Expected Outcome：
 - Completed demo-safe PDF rendering runtime with `PyMuPDF`, `PdfPageRenderer`, `page_images` document metadata and `pdf_rendering` processing jobs.
 - Scanned PDF now produces bounded PNG page images with path, width, height, dpi, checksum, page number and `pdf_scanned_pending_ocr` metadata; mixed PDF keeps `pdf_text` chunks for text pages and renders scanned pages as `pdf_mixed_pending_ocr`.
 - Text-native PDF still uses the existing `pdf_text` path and does not create page images; invalid / unsupported PDF records a clear failure reason.
-- Release Impact: Version bump required: no. OCR worker execution, retry state, page-level OCR status, production storage, S3, K8s, autoscaling, layout analysis, table reconstruction, deskew tuning and image enhancement deep tuning remain out of scope.
+- Release Impact: Version bump required: no. OCR execution, retry state and page-level OCR status were intentionally left to `34-03`; production storage, S3, K8s, autoscaling, layout analysis, table reconstruction, deskew tuning and image enhancement deep tuning remain out of scope.
 - Validation passed: targeted backend tests `63 passed`; full backend tests `229 passed`; ticket `rg` and `git diff --check`.
+
+34-03 Multipage OCR Status and Retry Status:
+- Completed provider-selected OCR for scanned / mixed PDF page images through `POST /documents/{document_id}/ocr`.
+- Page image metadata now records `ocr_text`, `ocr_blocks`, `ocr_attempts`, `ocr_provider`, page-level status, failure reason and update time; API document detail can show the current page OCR result or failure.
+- Successful OCR creates `pdf_page_ocr` chunks with `content_source=pdf_scanned_ocr`, page number, bbox / confidence where available and page image metadata. Mixed PDF keeps existing `pdf_text` chunks and appends scanned-page OCR chunks.
+- Retry removes stale `pdf_page_ocr` chunks, increments page attempts and avoids duplicate chunks / metadata pollution.
+- Release Impact: Version bump required: no. `v0.34.0` release sync remains scheduled for `34-04`; this ticket does not add production table reconstruction, layout analysis, human correction, GPU scheduling, VLM parser changes, RAG ranking changes or Agent planner changes.
+- Validation passed: targeted backend tests `66 passed`; full backend tests `232 passed`; frontend build; `scripts/scanned-pdf-ocr-smoke.ps1` (`3 passed`); ticket `rg` and `git diff --check`.
 
 ### Phase 35 - RAG Indexing Quality Hardening
 

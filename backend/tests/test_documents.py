@@ -342,6 +342,213 @@ def test_upload_mixed_pdf_keeps_pdf_text_and_renders_scanned_pages(
     assert (tmp_path / "data" / page_image["path"]).is_file()
 
 
+def test_run_selected_ocr_uses_page_images_for_scanned_pdf(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    class StubPageImageOcrProvider:
+        provider_name = "paddleocr"
+        chunk_source = "ocr_paddleocr"
+        job_type = ProcessingJobType.OCR_REAL
+
+        def extract(
+            self,
+            document: DocumentMetadata,
+            file_path: Path | None,
+            extracted_at: datetime,
+        ) -> OcrResult:
+            assert file_path is not None
+            assert document.file_type == "png"
+            return OcrResult(
+                status=OcrStatus.COMPLETED,
+                text="Invoice number: AUR-2026-051",
+                extracted_fields={"provider": "paddleocr"},
+                lines=[
+                    OcrTextLine(
+                        text="Invoice number: AUR-2026-051",
+                        page_number=1,
+                        bbox=BoundingBox(x_min=10, y_min=20, x_max=320, y_max=44),
+                        confidence=0.95,
+                        metadata={"line_index": "1"},
+                    )
+                ],
+                updated_at=extracted_at,
+            )
+
+    app.dependency_overrides[get_selected_ocr_provider] = StubPageImageOcrProvider
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("scanned.pdf", _pdf_bytes([]), "application/pdf")},
+    )
+    document_id = upload_response.json()["document_id"]
+
+    response = client.post(f"/documents/{document_id}/ocr")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "completed"
+    assert body["extracted_fields"]["chunk_source"] == "pdf_page_ocr"
+    assert body["extracted_fields"]["content_source"] == "pdf_scanned_ocr"
+    assert body["lines"][0]["page_number"] == 1
+    assert body["lines"][0]["metadata"]["page_image_id"].endswith("-page-001")
+
+    metadata_path = tmp_path / "data" / "documents.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    document = metadata[0]
+    assert document["status"] == "ready"
+    assert document["processing"]["ocr"] == "completed"
+    assert document["processing"]["indexing"] == "completed"
+    assert [job["job_type"] for job in document["processing_jobs"]] == [
+        "upload",
+        "pdf_text_extraction",
+        "pdf_rendering",
+        "ocr_real",
+        "local_indexing",
+    ]
+    assert document["page_images"][0]["page_status"] == "ocr_succeeded"
+    assert document["page_images"][0]["ocr_provider"] == "paddleocr"
+    assert document["page_images"][0]["ocr_text"] == "Invoice number: AUR-2026-051"
+    assert document["page_images"][0]["ocr_blocks"][0]["page_number"] == 1
+    assert document["page_images"][0]["failure_reason"] is None
+    assert document["chunks"][0]["source"] == "pdf_page_ocr"
+    assert document["chunks"][0]["source_type"] == "pdf_page_ocr"
+    assert document["chunks"][0]["page_number"] == 1
+    assert document["chunks"][0]["metadata"]["content_source"] == "pdf_scanned_ocr"
+    assert document["chunks"][0]["metadata"]["ocr_provider"] == "paddleocr"
+
+    parse_response = client.post(f"/documents/{document_id}/parse")
+
+    assert parse_response.status_code == 200
+    parsed = parse_response.json()
+    assert parsed["status"] == "parsed"
+    assert parsed["fields"]["invoice_number"]["value"] == "AUR-2026-051"
+    assert parsed["fields"]["invoice_number"]["source_page"] == 1
+
+
+def test_run_selected_ocr_merges_mixed_pdf_text_and_page_image_chunks(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    class StubMixedPdfOcrProvider:
+        provider_name = "paddleocr"
+        chunk_source = "ocr_paddleocr"
+        job_type = ProcessingJobType.OCR_REAL
+
+        def extract(
+            self,
+            document: DocumentMetadata,
+            file_path: Path | None,
+            extracted_at: datetime,
+        ) -> OcrResult:
+            assert file_path is not None
+            assert document.file_type == "png"
+            return OcrResult(
+                status=OcrStatus.COMPLETED,
+                text="Scanned page note: signed",
+                extracted_fields={"provider": "paddleocr"},
+                lines=[
+                    OcrTextLine(
+                        text="Scanned page note: signed",
+                        page_number=1,
+                        confidence=0.91,
+                    )
+                ],
+                updated_at=extracted_at,
+            )
+
+    app.dependency_overrides[get_selected_ocr_provider] = StubMixedPdfOcrProvider
+    content = _multipage_pdf_bytes(
+        [
+            ["Invoice number: MIX-2026-001", "Total: USD 120.00"],
+            [],
+        ]
+    )
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("mixed.pdf", content, "application/pdf")},
+    )
+    document_id = upload_response.json()["document_id"]
+
+    response = client.post(f"/documents/{document_id}/ocr")
+
+    assert response.status_code == 200
+    metadata_path = tmp_path / "data" / "documents.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    chunks = metadata[0]["chunks"]
+    assert [chunk["source_type"] for chunk in chunks] == ["pdf_text", "pdf_page_ocr"]
+    assert [chunk["page_number"] for chunk in chunks] == [1, 2]
+    assert chunks[0]["chunk_id"].endswith("-chunk-001")
+    assert chunks[1]["chunk_id"].endswith("-chunk-002")
+    assert chunks[1]["metadata"]["content_source"] == "pdf_scanned_ocr"
+    assert metadata[0]["page_images"][0]["page_status"] == "ocr_succeeded"
+    assert metadata[0]["page_images"][0]["ocr_blocks"][0]["page_number"] == 2
+
+
+def test_run_selected_ocr_retries_page_images_without_duplicate_chunks(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    class RetryPageImageOcrProvider:
+        provider_name = "paddleocr"
+        chunk_source = "ocr_paddleocr"
+        job_type = ProcessingJobType.OCR_REAL
+        calls = 0
+
+        def extract(
+            self,
+            document: DocumentMetadata,
+            file_path: Path | None,
+            extracted_at: datetime,
+        ) -> OcrResult:
+            self.calls += 1
+            if self.calls == 1:
+                return OcrResult(
+                    status=OcrStatus.FAILED,
+                    extracted_fields={
+                        "provider": "paddleocr",
+                        "error_code": "ocr_timeout",
+                        "error": "OCR timed out.",
+                    },
+                    updated_at=extracted_at,
+                )
+
+            return OcrResult(
+                status=OcrStatus.COMPLETED,
+                text="Retry succeeded invoice text",
+                extracted_fields={"provider": "paddleocr"},
+                updated_at=extracted_at,
+            )
+
+    provider = RetryPageImageOcrProvider()
+    app.dependency_overrides[get_selected_ocr_provider] = lambda: provider
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("retry-scanned.pdf", _pdf_bytes([]), "application/pdf")},
+    )
+    document_id = upload_response.json()["document_id"]
+
+    failed_response = client.post(f"/documents/{document_id}/ocr")
+
+    assert failed_response.status_code == 503
+    assert failed_response.json()["detail"]["error_code"] == "pdf_page_ocr_failed"
+    metadata_path = tmp_path / "data" / "documents.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata[0]["page_images"][0]["page_status"] == "ocr_failed"
+    assert metadata[0]["page_images"][0]["ocr_attempts"] == 1
+    assert metadata[0]["page_images"][0]["failure_reason"] == "OCR timed out."
+    assert metadata[0]["chunks"] == []
+
+    retry_response = client.post(f"/documents/{document_id}/ocr")
+
+    assert retry_response.status_code == 200
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata[0]["page_images"][0]["page_status"] == "ocr_succeeded"
+    assert metadata[0]["page_images"][0]["ocr_attempts"] == 2
+    assert metadata[0]["page_images"][0]["failure_reason"] is None
+    assert len(metadata[0]["chunks"]) == 1
+    assert metadata[0]["chunks"][0]["text"] == "Retry succeeded invoice text"
+
+
 def test_upload_invalid_pdf_marks_pdf_extraction_failed(client: TestClient) -> None:
     response = client.post(
         "/documents/upload",

@@ -173,8 +173,8 @@ Phase 33 `v0.33.0` - Redis + NATS worker pipeline：
 
 Phase 34 `v0.34.0` - Production OCR / scanned PDF pipeline：
 - [x] `tasks/phase-34-production-ocr-scanned-pdf/34-01-scanned-pdf-ocr-contract.md`: 完成 scanned PDF OCR contract，定義 PDF source routing、page image、OCR block、page-level status、retry / failure reason 與 parser / indexing worker handoff；不 bump version。
-- [x] `tasks/phase-34-production-ocr-scanned-pdf/34-02-pdf-rendering-page-image-pipeline.md`: 完成 demo-safe PDF rendering page image pipeline，scanned / mixed PDF 可產生 bounded PNG page images 與 metadata；OCR worker 留到 `34-03`，不 bump version。
-- [ ] `tasks/phase-34-production-ocr-scanned-pdf/34-03-multipage-ocr-status-and-retry.md`
+- [x] `tasks/phase-34-production-ocr-scanned-pdf/34-02-pdf-rendering-page-image-pipeline.md`: 完成 demo-safe PDF rendering page image pipeline，scanned / mixed PDF 可產生 bounded PNG page images 與 metadata；逐頁 OCR 執行當時留到 `34-03`，不 bump version。
+- [x] `tasks/phase-34-production-ocr-scanned-pdf/34-03-multipage-ocr-status-and-retry.md`: 完成 scanned / mixed PDF page image provider-selected OCR、page-level status / retry / failure reason、`pdf_page_ocr` chunks 與 scanned PDF OCR smoke；不 bump version。
 - [ ] `tasks/phase-34-production-ocr-scanned-pdf/34-04-scanned-pdf-demo-release-sync.md`
 
 Phase 35 `v0.35.0` - RAG indexing quality hardening：
@@ -210,7 +210,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 `34-01` scanned PDF OCR contract 與 `34-02` PDF rendering page image pipeline 已完成；除 Phase 31、Phase 32、Phase 33、Phase 34 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 `34-01` scanned PDF OCR contract、`34-02` PDF rendering page image pipeline 與 `34-03` multipage OCR status / retry 已完成；除 Phase 31、Phase 32、Phase 33、Phase 34 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
@@ -312,6 +312,13 @@ Phase 31-39 guardrails：
 - Text-native PDF 仍走既有 `pdf_text` chunks，不會產生 page images；mixed PDF 會保留 text pages 的 `pdf_text` chunks，並只為 scanned pages 建立 `pdf_mixed_pending_ocr` page images。
 - Invalid / unsupported PDF 仍有明確 failure reason；PDF rendering dependency missing / render failed 會標示 `pdf_rendering` failed job。本 ticket 不執行 OCR、不新增 production storage、S3、K8s、autoscaling、layout analysis、table reconstruction、deskew tuning 或 image enhancement 深度調參。
 - Validation 已通過：targeted backend tests `63 passed`；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`229 passed`，1 pytest cache warning）；ticket `rg` 與 `git diff --check` 通過。
+- Release Impact：Version bump required: no。`v0.34.0` 版本同步留到 `34-04`。
+
+34-03 Multipage OCR Status and Retry：
+- 已完成。`POST /documents/{document_id}/ocr` 對 scanned / mixed PDF page images 執行 provider-selected OCR，並保存 page-level `ocr_text`、`ocr_blocks`、`ocr_attempts`、`ocr_provider`、`failure_reason` 與 `updated_at`。
+- OCR 成功後會建立 `pdf_page_ocr` chunks，metadata 保留 `content_source=pdf_scanned_ocr`、page number、bbox / confidence 與 page image id；mixed PDF 會保留既有 `pdf_text` chunks，再接上掃描頁 OCR chunks。
+- OCR 失敗會標示 `ocr_failed` 與 failure reason；retry 會增加 page attempts、移除舊 `pdf_page_ocr` chunks，避免重複污染 chunks 或 metadata。
+- Validation 已通過：targeted backend tests `66 passed`；backend full tests `232 passed`；frontend build；`scripts/scanned-pdf-ocr-smoke.ps1`（`3 passed`）；ticket `rg` 與 `git diff --check` 通過。
 - Release Impact：Version bump required: no。`v0.34.0` 版本同步留到 `34-04`。
 ## Phase 40 Interview Evidence Hardening
 

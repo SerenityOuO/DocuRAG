@@ -1,6 +1,6 @@
 # MVP Architecture
 
-本文件描述 DocuRAG AgentOps 目前的受控 MVP 架構。到 v0.33.0 為止，專案已完成 backend / frontend demo、provider-selected OCR、citation trace、retrieval eval runner、built-in RAG eval admin API、vector / rerank / hybrid / `hybrid_rerank` retrieval building blocks、Viewer Chat / Admin Ingestion role split、deterministic Agent tool-use trace、VLM-first parser provider spike、OCR / VLM evidence alignment、aggressive demo defaults、`.txt` direct ingestion、text-native PDF extraction、demo auth mode、後台「測試RAG」surface、opt-in PostgreSQL metadata repository foundation、formal Auth / RBAC / tenant boundary release，以及 Redis + NATS worker demo milestone。Phase 33 `33-01` 固定 Redis / NATS worker pipeline contract；`33-02` 新增 opt-in Redis runtime slice，用於 session cache、RAG query cache 與 rate limit，Redis 未設定或不可用時仍走 fallback；`33-03` 新增 demo-safe NATS helper、worker skeleton 與 task status API；`33-04` 完成 worker demo smoke 與 release sync。這不代表已完成 production NATS event bus、durable async worker、production eval dashboard 或 scanned PDF OCR。
+本文件描述 DocuRAG AgentOps 目前的受控 MVP 架構。到 v0.33.0 為止，專案已完成 backend / frontend demo、provider-selected OCR、citation trace、retrieval eval runner、built-in RAG eval admin API、vector / rerank / hybrid / `hybrid_rerank` retrieval building blocks、Viewer Chat / Admin Ingestion role split、deterministic Agent tool-use trace、VLM-first parser provider spike、OCR / VLM evidence alignment、aggressive demo defaults、`.txt` direct ingestion、text-native PDF extraction、demo auth mode、後台「測試RAG」surface、opt-in PostgreSQL metadata repository foundation、formal Auth / RBAC / tenant boundary release，以及 Redis + NATS worker demo milestone。Phase 33 `33-01` 固定 Redis / NATS worker pipeline contract；`33-02` 新增 opt-in Redis runtime slice，用於 session cache、RAG query cache 與 rate limit，Redis 未設定或不可用時仍走 fallback；`33-03` 新增 demo-safe NATS helper、worker skeleton 與 task status API；`33-04` 完成 worker demo smoke 與 release sync。Phase 34 `34-02` / `34-03` 已補上 demo-safe scanned PDF page image rendering 與 page-level OCR status / retry path。這不代表已完成 production NATS event bus、durable async worker、production eval dashboard、production scanned PDF OCR accuracy tuning 或 layout understanding。
 
 ## MVP Shape
 
@@ -327,13 +327,13 @@ Text-native PDF
     |-- PDF text extraction with pypdf
     |-- normalized chunks: source_type=pdf_text, content_source=pdf_text
 
-Future scanned PDF
-    |-- PDF rendering required
-    |-- OCR pipeline required
-    |-- current state: source_type=pdf_scanned_pending_ocr
+Scanned PDF
+    |-- PDF rendering: 34-02 demo-safe page images
+    |-- Page OCR: 34-03 provider-selected OCR status / retry
+    |-- OCR chunks: source_type=pdf_page_ocr, content_source=pdf_scanned_ocr
 ```
 
-Normalized vector source metadata must include `document_id`, `filename`, `chunk_id`, `source_type`, `content_source`, optional `page_number`, optional `bbox`, optional `confidence`, `created_at` and reserved future `project_id` / `tenant_id` fields. This keeps Qdrant from becoming permanently coupled to OCR-only chunks while avoiding a false claim that scanned PDF runtime is already complete.
+Normalized vector source metadata must include `document_id`, `filename`, `chunk_id`, `source_type`, `content_source`, optional `page_number`, optional `bbox`, optional `confidence`, `created_at` and reserved future `project_id` / `tenant_id` fields. This keeps Qdrant from becoming permanently coupled to image-only OCR chunks while separating demo-safe scanned PDF OCR from production layout / table understanding.
 
 VLM structured fields remain parser output for Admin / Analyst and Agent `get_document_fields`; they are not automatically converted into retrieval chunks. Field indexing requires a separate policy ticket.
 
@@ -368,7 +368,7 @@ Normalized document text contract 至少包含 `document_id`、`source_type`、`
 
 ## Phase 34 Scanned PDF / Production OCR Contract
 
-`34-01` defines the scanned PDF OCR contract. `34-02` adds the demo-safe PDF rendering runtime only: `PyMuPDF` renders scanned PDF pages into bounded PNG page images and stores page metadata. It still does not execute OCR, layout analysis, table reconstruction, human correction workflow, frontend route changes or production OCR tuning.
+`34-01` defines the scanned PDF OCR contract. `34-02` adds the demo-safe PDF rendering runtime: `PyMuPDF` renders scanned PDF pages into bounded PNG page images and stores page metadata. `34-03` connects those page images to provider-selected OCR, records page-level status / retry metadata and produces `pdf_page_ocr` chunks. It still does not implement layout analysis, table reconstruction, human correction workflow, frontend route changes, production worker durability or production OCR tuning.
 
 ```text
 PDF upload
@@ -380,19 +380,21 @@ PDF upload
     |-- scanned PDF
     |       |-- source_type=pdf_scanned_pending_ocr
     |       |-- current 34-02 page image records
-    |       |-- future page-level OCR blocks
+    |       |-- current 34-03 page-level OCR blocks
+    |       |-- OCR chunks source_type=pdf_page_ocr
     |
     |-- mixed PDF
     |       |-- text pages -> pdf_text chunks
     |       |-- scanned pages -> pdf_mixed_pending_ocr page images
-    |       |-- future page-level OCR status
+    |       |-- current page-level OCR status
+    |       |-- append pdf_page_ocr chunks without dropping pdf_text chunks
     |
     |-- invalid PDF
             |-- no chunks
             |-- failure_reason=pdf_invalid / pdf_encrypted / pdf_render_failed
 ```
 
-Page image records are page-scoped and stored on `DocumentMetadata.page_images`. Each record keeps `image_id`, `document_id`, `page_number`, `page_status`, image path, width, height, dpi, checksum, `created_at`, `source_type` and optional `failure_reason`. `34-02` writes `rendered` page images for scanned pages; later OCR lifecycle statuses remain reserved for `34-03`.
+Page image records are page-scoped and stored on `DocumentMetadata.page_images`. Each record keeps `image_id`, `document_id`, `page_number`, `page_status`, image path, width, height, dpi, checksum, OCR text, OCR blocks, OCR attempts, OCR provider, `created_at`, `updated_at`, `source_type`, metadata and optional `failure_reason`. `34-02` writes `rendered` page images for scanned pages; `34-03` updates them to `ocr_running`, `ocr_succeeded` or `ocr_failed` during provider-selected OCR.
 
 OCR blocks must preserve `block_id`, `page_number`, text, bbox, confidence, reading order, provider, language and provider version where available. Missing bbox / confidence stays `null`; the runtime must not invent layout evidence.
 
@@ -405,7 +407,7 @@ Handoff rules:
 - Vector indexing waits for page-level OCR completion or records partial / skipped pages in metadata.
 - Phase 33 worker task status mirrors rendering / OCR progress but does not execute production OCR in this contract ticket.
 
-`34-02` uses `DOCURAG_PDF_RENDER_DPI` and `DOCURAG_PDF_RENDER_MAX_SIDE` to keep local page images bounded. Text-native PDF remains on the `pdf_text` path and does not create page images; invalid / unsupported PDF stores an explicit failure reason. OCR execution, retry state and page-level OCR status remain the boundary for `34-03`.
+`34-02` uses `DOCURAG_PDF_RENDER_DPI` and `DOCURAG_PDF_RENDER_MAX_SIDE` to keep local page images bounded. Text-native PDF remains on the `pdf_text` path and does not create page images; invalid / unsupported PDF stores an explicit failure reason. `34-03` executes page image OCR synchronously through the existing provider-selected OCR endpoint; durable async OCR worker execution remains outside this slice.
 
 ## Phase 28 Demo Auth Boundary
 

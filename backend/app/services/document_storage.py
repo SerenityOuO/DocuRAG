@@ -223,18 +223,42 @@ class DocumentStorage:
                 continue
 
             now = datetime.now(UTC)
-            ocr_result = provider.extract(document, self.get_file_path(document), now)
+            if self._is_pdf_upload(document) and document.page_images:
+                ocr_result = self._run_pdf_page_image_ocr(document, provider, now)
+            else:
+                ocr_result = provider.extract(document, self.get_file_path(document), now)
             document.ocr = ocr_result
             ocr_job_type = provider.job_type
+            chunk_source = ocr_result.extracted_fields.get("chunk_source", provider.chunk_source)
 
             if ocr_result.status == OcrStatus.COMPLETED:
-                document.chunks = self._build_chunks(
+                new_chunks = self._build_chunks(
                     document.document_id,
                     ocr_result.text,
                     now,
-                    source=provider.chunk_source,
+                    source=chunk_source,
                     ocr_lines=ocr_result.lines,
                 )
+                if chunk_source == "pdf_page_ocr":
+                    retained_chunks = [
+                        chunk
+                        for chunk in document.chunks
+                        if chunk.source != "pdf_page_ocr" and chunk.source_type != "pdf_page_ocr"
+                    ]
+                    new_chunks = [
+                        chunk.model_copy(
+                            update={
+                                "chunk_id": (
+                                    f"{document.document_id}-chunk-"
+                                    f"{len(retained_chunks) + chunk_index:03d}"
+                                )
+                            }
+                        )
+                        for chunk_index, chunk in enumerate(new_chunks, start=1)
+                    ]
+                    document.chunks = [*retained_chunks, *new_chunks]
+                else:
+                    document.chunks = new_chunks
                 document.status = DocumentStatus.READY
                 document.processing = ProcessingStatus(
                     upload=ProcessingStepStatus.COMPLETED,
@@ -256,7 +280,14 @@ class DocumentStorage:
                     now,
                 )
             elif ocr_result.status == OcrStatus.FAILED:
-                document.chunks = []
+                if chunk_source == "pdf_page_ocr":
+                    document.chunks = [
+                        chunk
+                        for chunk in document.chunks
+                        if chunk.source != "pdf_page_ocr" and chunk.source_type != "pdf_page_ocr"
+                    ]
+                else:
+                    document.chunks = []
                 document.status = DocumentStatus.FAILED
                 document.processing = ProcessingStatus(
                     upload=ProcessingStepStatus.COMPLETED,
@@ -301,6 +332,194 @@ class DocumentStorage:
             return ocr_result
 
         return None
+
+    def _run_pdf_page_image_ocr(
+        self,
+        document: DocumentMetadata,
+        provider: OcrProvider,
+        timestamp: datetime,
+    ) -> OcrResult:
+        page_lines: list[OcrTextLine] = []
+        page_texts: list[str] = []
+        failures: list[str] = []
+        provider_name = getattr(provider, "provider_name", provider.chunk_source)
+
+        for page_index, page_image in enumerate(document.page_images):
+            page_path = self._get_page_image_path(page_image)
+            attempts = page_image.ocr_attempts + 1
+
+            if page_path is None:
+                failure_reason = f"page_image_missing: {page_image.path}"
+                document.page_images[page_index] = page_image.model_copy(
+                    update={
+                        "page_status": "ocr_failed",
+                        "ocr_attempts": attempts,
+                        "failure_reason": failure_reason,
+                        "updated_at": timestamp,
+                    }
+                )
+                failures.append(f"page {page_image.page_number}: {failure_reason}")
+                continue
+
+            running_page = page_image.model_copy(
+                update={
+                    "page_status": "ocr_running",
+                    "ocr_attempts": attempts,
+                    "failure_reason": None,
+                    "updated_at": timestamp,
+                }
+            )
+            page_document = document.model_copy(
+                update={
+                    "filename": Path(page_image.path).name,
+                    "stored_filename": page_image.path,
+                    "file_type": page_path.suffix.lstrip(".").lower() or "png",
+                    "content_type": "image/png",
+                    "size": page_path.stat().st_size,
+                    "chunks": [],
+                    "page_images": [],
+                }
+            )
+            page_result = provider.extract(page_document, page_path, timestamp)
+
+            if page_result.status != OcrStatus.COMPLETED:
+                failure_reason = page_result.extracted_fields.get("error", "OCR failed")
+                document.page_images[page_index] = running_page.model_copy(
+                    update={
+                        "page_status": "ocr_failed",
+                        "ocr_text": page_result.text,
+                        "ocr_blocks": [],
+                        "ocr_provider": provider_name,
+                        "failure_reason": failure_reason,
+                        "metadata": {
+                            "ocr_provider": provider_name,
+                            "error_code": page_result.extracted_fields.get("error_code", "ocr_failed"),
+                        },
+                        "updated_at": timestamp,
+                    }
+                )
+                failures.append(f"page {page_image.page_number}: {failure_reason}")
+                continue
+
+            normalized_lines = self._normalize_page_ocr_lines(
+                page_result,
+                page_image,
+                provider_name,
+            )
+            page_text = "\n".join(line.text for line in normalized_lines).strip()
+            if not page_text:
+                page_text = page_result.text.strip()
+
+            document.page_images[page_index] = running_page.model_copy(
+                update={
+                    "page_status": "ocr_succeeded",
+                    "ocr_text": page_text,
+                    "ocr_blocks": normalized_lines,
+                    "ocr_provider": provider_name,
+                    "failure_reason": None,
+                    "metadata": {
+                        "ocr_provider": provider_name,
+                        "line_count": str(len(normalized_lines)),
+                        "source_type": running_page.source_type,
+                    },
+                    "updated_at": timestamp,
+                }
+            )
+            page_texts.append(page_text)
+            page_lines.extend(normalized_lines)
+
+        if failures:
+            return OcrResult(
+                status=OcrStatus.FAILED,
+                text="\n".join(page_texts),
+                extracted_fields={
+                    "provider": provider_name,
+                    "chunk_source": "pdf_page_ocr",
+                    "source_type": "pdf_page_ocr",
+                    "content_source": "pdf_scanned_ocr",
+                    "error_code": "pdf_page_ocr_failed",
+                    "error": "; ".join(failures),
+                    "failed_page_count": str(len(failures)),
+                    "page_count": str(len(document.page_images)),
+                },
+                lines=page_lines,
+                updated_at=timestamp,
+            )
+
+        return OcrResult(
+            status=OcrStatus.COMPLETED,
+            text="\n\n".join(page_text for page_text in page_texts if page_text),
+            extracted_fields={
+                "provider": provider_name,
+                "chunk_source": "pdf_page_ocr",
+                "source_type": "pdf_page_ocr",
+                "content_source": "pdf_scanned_ocr",
+                "page_count": str(len(document.page_images)),
+                "line_count": str(len(page_lines)),
+            },
+            lines=page_lines,
+            updated_at=timestamp,
+        )
+
+    def _get_page_image_path(self, page_image: PdfPageImage) -> Path | None:
+        data_root = self.data_dir.resolve()
+        image_path = (data_root / page_image.path).resolve()
+
+        try:
+            image_path.relative_to(data_root)
+        except ValueError:
+            return None
+
+        if not image_path.is_file():
+            return None
+
+        return image_path
+
+    def _normalize_page_ocr_lines(
+        self,
+        page_result: OcrResult,
+        page_image: PdfPageImage,
+        provider_name: str,
+    ) -> list[OcrTextLine]:
+        if page_result.lines:
+            return [
+                line.model_copy(
+                    update={
+                        "page_number": page_image.page_number,
+                        "metadata": {
+                            **line.metadata,
+                            "ocr_provider": provider_name,
+                            "page_image_id": page_image.image_id,
+                            "page_image_path": page_image.path,
+                            "content_source": "pdf_scanned_ocr",
+                        },
+                    }
+                )
+                for line in page_result.lines
+                if line.text.strip()
+            ]
+
+        lines: list[OcrTextLine] = []
+        for line_index, raw_line in enumerate(page_result.text.splitlines(), start=1):
+            text = raw_line.strip()
+            if not text:
+                continue
+
+            lines.append(
+                OcrTextLine(
+                    text=text,
+                    page_number=page_image.page_number,
+                    metadata={
+                        "ocr_provider": provider_name,
+                        "line_index": str(line_index),
+                        "page_image_id": page_image.image_id,
+                        "page_image_path": page_image.path,
+                        "content_source": "pdf_scanned_ocr",
+                    },
+                )
+            )
+
+        return lines
 
     def run_parser(
         self,

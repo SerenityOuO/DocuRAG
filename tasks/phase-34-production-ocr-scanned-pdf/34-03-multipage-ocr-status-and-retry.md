@@ -35,10 +35,10 @@
 
 ## Acceptance Criteria
 
-- [ ] Scanned PDF 每頁都有 OCR status、text、blocks 與 failure reason。
-- [ ] 成功 OCR 的 pages 可產生 page-aware chunks，並可被 RAG / parser 使用。
-- [ ] Retry 行為明確，不會重複污染 chunks 或 metadata。
-- [ ] Frontend / API 能清楚呈現 multi-page OCR progress 或結果。
+- [x] Scanned PDF 每頁都有 OCR status、text、blocks 與 failure reason。
+- [x] 成功 OCR 的 pages 可產生 page-aware chunks，並可被 RAG / parser 使用。
+- [x] Retry 行為明確，不會重複污染 chunks 或 metadata。
+- [x] Frontend / API 能清楚呈現 multi-page OCR progress 或結果。
 
 ## Validation
 
@@ -47,3 +47,12 @@
 - Scanned PDF OCR smoke script。
 - `rg -n "multipage|page-level|OCR blocks|retry|scanned PDF" backend frontend scripts docs TODO.md tasks/phase-34-production-ocr-scanned-pdf`
 - `git diff --check`
+
+## Validation Result
+
+- `backend\.venv\Scripts\python.exe -m pytest tests/test_document_schemas.py tests/test_documents.py -q`：`66 passed`，1 pytest cache warning。
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`：`232 passed`，1 pytest cache warning。
+- `npm.cmd run build`：通過。
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\scanned-pdf-ocr-smoke.ps1`：`3 passed`，46 deselected，1 pytest cache warning。
+- `rg -n "multipage|page-level|OCR blocks|retry|scanned PDF" backend frontend scripts docs TODO.md tasks/phase-34-production-ocr-scanned-pdf`：通過。
+- `git diff --check`：通過。
