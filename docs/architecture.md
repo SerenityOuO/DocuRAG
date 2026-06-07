@@ -403,7 +403,15 @@ API guard policy:
 - `memberships` and `project_memberships`: persist organization membership and project access rows, including active / disabled status.
 - `scripts/migrate-auth-rbac-schema.py` creates the schema with non-destructive `CREATE TABLE IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS` statements and optional demo foundation seed rows.
 
-Still deferred after `32-02`: production login runtime, endpoint permission guards, cross-project filtering enforcement, JWT refresh rotation, Redis session, SSO, OAuth, MFA, password reset, email verification, audit pipeline and frontend role surface.
+Completed in `32-03`: endpoint permission guards and cross-project filtering enforcement. Still deferred after `32-03`: production login runtime, JWT refresh rotation, Redis session, SSO, OAuth, MFA, password reset, email verification, audit pipeline and frontend role surface.
+
+`32-03` backend guard runtime:
+
+- `DOCURAG_AUTH_MODE=formal` enables signed bearer token parsing for current user, organization, active project and accessible project ids.
+- Write APIs for document upload, OCR, parser, vector indexing, built-in eval and Agent run require Analyst or Admin.
+- Read APIs filter document lists, RAG query corpus and Agent search corpus to accessible project ids; document detail, OCR result, fields, download and Agent run lookup deny cross-project access.
+- Cross-project denied responses use generic `403 forbidden` details and do not include target document id or project id.
+- Demo auth remains available through `DOCURAG_AUTH_MODE=demo`; production login runtime, refresh tokens, Redis session, SSO, OAuth, MFA, audit pipeline and frontend role surface remain deferred.
 
 ## Deferred Or Explicitly Optional Components
 

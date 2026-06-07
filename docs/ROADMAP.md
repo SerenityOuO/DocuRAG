@@ -220,6 +220,12 @@ Expected Outcome：
 - Demo seed users include Admin, Analyst, Viewer and disabled Viewer records with hashed passwords; Phase 28 `DOCURAG_AUTH_MODE=demo` remains an explicit local fallback and is not silently replaced.
 - Release Impact: Version bump required: no. Endpoint permission guards, frontend role surface, Redis session, SSO, OAuth, MFA and production login runtime remain deferred to later Phase 32 tickets.
 
+32-03 Backend Permission Guards Status:
+- Completed formal signed bearer token guard for current user, organization, active project and accessible project ids.
+- Backend write APIs now require Analyst or Admin for document upload, OCR, parser, vector indexing, built-in eval and Agent run.
+- Document reads, RAG query corpus, Agent search corpus and Agent run lookup are filtered or denied by project access; cross-project denied responses stay generic.
+- Release Impact: Version bump required: no. Frontend role surface, Redis session, SSO, OAuth, MFA, production login runtime and Phase 32 release sync remain deferred to `32-04`.
+
 ### Phase 33 - Redis + NATS Worker Pipeline
 
 Target version：`v0.33.0`

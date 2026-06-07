@@ -44,7 +44,7 @@ class AgentService:
         self.storage = storage
         self.tool_service = tool_service
 
-    def run(self, request: AgentRunRequest) -> AgentRun:
+    def run(self, request: AgentRunRequest, project_id: str | None = None) -> AgentRun:
         created_at = _utc_now()
         tool_calls: list[AgentToolCall] = []
         plan_steps: list[AgentStep] = []
@@ -102,6 +102,7 @@ class AgentService:
                 "allowed_tools": "get_document_fields,search_documents,summarize_invoice_fields",
                 "tool_count": str(len(tool_calls)),
                 "fallback_count": str(fallback_count),
+                **({"project_id": project_id} if project_id else {}),
             },
             created_at=created_at,
             updated_at=updated_at,

@@ -34,13 +34,19 @@
 
 ## Acceptance Criteria
 
-- [ ] Backend write API 依 role guard 強制拒絕 Viewer。
-- [ ] Project-scoped read/write API 不能跨 project 存取資料。
-- [ ] Demo auth mode 與正式 auth mode 都有明確測試。
-- [ ] Forbidden / unauthorized response 不洩漏跨 tenant 資訊。
+- [x] Backend write API 依 role guard 強制拒絕 Viewer。
+- [x] Project-scoped read/write API 不能跨 project 存取資料。
+- [x] Demo auth mode 與正式 auth mode 都有明確測試。
+- [x] Forbidden / unauthorized response 不洩漏跨 tenant 資訊。
 
 ## Validation
 
 - `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
 - `rg -n "forbidden|permission|project access|Viewer|Analyst|Admin|tenant" backend docs TODO.md tasks/phase-32-auth-rbac-tenant-boundary`
 - `git diff --check`
+
+## Validation Result
+
+- Passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` (`216 passed`, 1 pytest cache warning).
+- Passed: `rg -n "forbidden|permission|project access|Viewer|Analyst|Admin|tenant" backend docs TODO.md tasks/phase-32-auth-rbac-tenant-boundary`.
+- Passed: `git diff --check` (Windows LF/CRLF warnings only).

@@ -6,9 +6,14 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from app.core.config import get_settings
-from app.api.routes.auth import require_authenticated_user, require_ingestion_user
+from app.api.routes.auth import (
+    RequestAuthContext,
+    filter_documents_for_project_access,
+    require_authenticated_user,
+    require_ingestion_user,
+    require_project_access,
+)
 from app.repositories.document_metadata import create_document_storage
-from app.schemas.auth import AuthUser
 from app.schemas.documents import (
     DocumentDetailResponse,
     DocumentListResponse,
@@ -167,36 +172,38 @@ MockOcrProviderDep = Annotated[MockOcrProvider, Depends(get_mock_ocr_provider)]
 SelectedOcrProviderDep = Annotated[OcrProvider, Depends(get_selected_ocr_provider)]
 VectorIndexingServiceDep = Annotated[VectorIndexingService, Depends(get_vector_indexing_service)]
 DocumentParserDep = Annotated[object, Depends(get_document_parser)]
-AuthenticatedUserDep = Annotated[AuthUser | None, Depends(require_authenticated_user)]
-IngestionUserDep = Annotated[AuthUser | None, Depends(require_ingestion_user)]
+AuthenticatedUserDep = Annotated[RequestAuthContext | None, Depends(require_authenticated_user)]
+IngestionUserDep = Annotated[RequestAuthContext | None, Depends(require_ingestion_user)]
 
 
 @router.post("/upload", response_model=DocumentUploadResponse)
 async def upload_document(
     storage: DocumentStorageDep,
-    _auth_user: IngestionUserDep,
+    auth_user: IngestionUserDep,
     file: UploadFile = File(...),
 ) -> DocumentUploadResponse:
-    document = await storage.save_upload(file)
+    project_id = auth_user.active_project_id if auth_user is not None and auth_user.auth_mode == "formal" else None
+    document = await storage.save_upload(file, project_id=project_id)
     return DocumentUploadResponse.model_validate(document.model_dump())
 
 
 @router.get("", response_model=DocumentListResponse)
 async def list_documents(
     storage: DocumentStorageDep,
+    auth_user: AuthenticatedUserDep,
 ) -> DocumentListResponse:
-    return DocumentListResponse(documents=storage.list_documents())
+    return DocumentListResponse(
+        documents=filter_documents_for_project_access(auth_user, storage.list_documents())
+    )
 
 
 @router.get("/{document_id}", response_model=DocumentDetailResponse)
 async def get_document(
     document_id: str,
     storage: DocumentStorageDep,
+    auth_user: AuthenticatedUserDep,
 ) -> DocumentDetailResponse:
-    document = storage.get_document(document_id)
-
-    if document is None:
-        raise HTTPException(status_code=404, detail="Document not found")
+    document = _get_accessible_document(storage, document_id, auth_user)
 
     return DocumentDetailResponse.model_validate(document.model_dump())
 
@@ -205,9 +212,10 @@ async def get_document(
 async def run_mock_ocr(
     document_id: str,
     storage: DocumentStorageDep,
-    _auth_user: IngestionUserDep,
+    auth_user: IngestionUserDep,
     provider: MockOcrProviderDep,
 ) -> OcrResultResponse:
+    _get_accessible_document(storage, document_id, auth_user)
     ocr_result = storage.run_ocr(document_id, provider)
 
     if ocr_result is None:
@@ -220,9 +228,10 @@ async def run_mock_ocr(
 async def run_selected_ocr(
     document_id: str,
     storage: DocumentStorageDep,
-    _auth_user: IngestionUserDep,
+    auth_user: IngestionUserDep,
     provider: SelectedOcrProviderDep,
 ) -> OcrResultResponse:
+    _get_accessible_document(storage, document_id, auth_user)
     ocr_result = storage.run_ocr(document_id, provider)
 
     if ocr_result is None:
@@ -246,11 +255,10 @@ async def run_selected_ocr(
 async def get_ocr_result(
     document_id: str,
     storage: DocumentStorageDep,
+    auth_user: AuthenticatedUserDep,
 ) -> OcrResultResponse:
+    _get_accessible_document(storage, document_id, auth_user)
     ocr_result = storage.get_ocr_result(document_id)
-
-    if ocr_result is None:
-        raise HTTPException(status_code=404, detail="Document not found")
 
     return OcrResultResponse(document_id=document_id, **ocr_result.model_dump())
 
@@ -259,9 +267,10 @@ async def get_ocr_result(
 async def parse_document_fields(
     document_id: str,
     storage: DocumentStorageDep,
-    _auth_user: IngestionUserDep,
+    auth_user: IngestionUserDep,
     parser: DocumentParserDep,
 ) -> ParserResult:
+    _get_accessible_document(storage, document_id, auth_user)
     parser_result = storage.run_parser(document_id, parser)
 
     if parser_result is None:
@@ -277,11 +286,10 @@ async def parse_document_fields(
 async def get_document_fields(
     document_id: str,
     storage: DocumentStorageDep,
+    auth_user: AuthenticatedUserDep,
 ) -> ParserResult:
+    _get_accessible_document(storage, document_id, auth_user)
     parser_result = storage.get_parser_result(document_id)
-
-    if parser_result is None:
-        raise HTTPException(status_code=404, detail="Document not found")
 
     return parser_result
 
@@ -290,13 +298,10 @@ async def get_document_fields(
 async def index_document_vector(
     document_id: str,
     storage: DocumentStorageDep,
-    _auth_user: IngestionUserDep,
+    auth_user: IngestionUserDep,
     service: VectorIndexingServiceDep,
 ) -> VectorIndexingResponse:
-    document = storage.get_document(document_id)
-
-    if document is None:
-        raise HTTPException(status_code=404, detail="Document not found")
+    document = _get_accessible_document(storage, document_id, auth_user)
 
     has_direct_text_chunks = any(
         chunk.source_type in {"text_upload", "pdf_text"}
@@ -323,12 +328,9 @@ async def index_document_vector(
 async def download_document(
     document_id: str,
     storage: DocumentStorageDep,
-    _auth_user: AuthenticatedUserDep,
+    auth_user: AuthenticatedUserDep,
 ) -> FileResponse:
-    document = storage.get_document(document_id)
-
-    if document is None:
-        raise HTTPException(status_code=404, detail="Document not found")
+    document = _get_accessible_document(storage, document_id, auth_user)
 
     file_path = storage.get_file_path(document)
 
@@ -340,3 +342,17 @@ async def download_document(
         media_type=document.content_type,
         filename=document.filename,
     )
+
+
+def _get_accessible_document(
+    storage: DocumentStorage,
+    document_id: str,
+    auth_user: RequestAuthContext | None,
+):
+    document = storage.get_document(document_id)
+
+    if document is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    require_project_access(auth_user, document.project_id)
+    return document

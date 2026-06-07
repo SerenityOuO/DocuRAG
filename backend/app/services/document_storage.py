@@ -98,11 +98,16 @@ class DocumentStorage:
 
         return agent_run
 
-    def list_documents_for_rag(self) -> list[DocumentMetadata]:
+    def list_documents_for_rag(self, project_ids: frozenset[str] | None = None) -> list[DocumentMetadata]:
         documents = self._read_documents()
         documents_changed = False
 
         for index, document in enumerate(documents):
+            if project_ids is not None and (
+                document.project_id is None or document.project_id not in project_ids
+            ):
+                continue
+
             if (
                 not document.chunks
                 and document.ocr.status == OcrStatus.COMPLETED
@@ -135,7 +140,14 @@ class DocumentStorage:
         if documents_changed:
             self._write_documents(documents)
 
-        return documents
+        if project_ids is None:
+            return documents
+
+        return [
+            document
+            for document in documents
+            if document.project_id is not None and document.project_id in project_ids
+        ]
 
     def get_file_path(self, document: DocumentMetadata) -> Path | None:
         upload_root = self.upload_dir.resolve()
@@ -151,7 +163,7 @@ class DocumentStorage:
 
         return file_path
 
-    async def save_upload(self, file: UploadFile) -> DocumentMetadata:
+    async def save_upload(self, file: UploadFile, project_id: str | None = None) -> DocumentMetadata:
         self._ensure_storage()
 
         content = await file.read()
@@ -166,7 +178,7 @@ class DocumentStorage:
         created_at = datetime.now(UTC)
         document = DocumentMetadata(
             document_id=document_id,
-            project_id=None,
+            project_id=project_id,
             filename=filename,
             stored_filename=stored_filename,
             file_type=Path(filename).suffix.lstrip(".").lower() or "unknown",

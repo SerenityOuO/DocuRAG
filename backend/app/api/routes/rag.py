@@ -2,6 +2,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
+from app.api.routes.auth import (
+    RequestAuthContext,
+    require_authenticated_user,
+)
 from app.core.config import get_settings
 from app.repositories.document_metadata import create_document_storage
 from app.schemas.rag import RagQueryRequest, RagQueryResponse
@@ -69,6 +73,7 @@ def get_rag_provider() -> RagProvider:
 
 DocumentStorageDep = Annotated[DocumentStorage, Depends(get_document_storage)]
 RagProviderDep = Annotated[RagProvider, Depends(get_rag_provider)]
+AuthenticatedUserDep = Annotated[RequestAuthContext | None, Depends(require_authenticated_user)]
 
 
 @router.post("/query", response_model=RagQueryResponse)
@@ -76,5 +81,7 @@ async def query_rag(
     request: RagQueryRequest,
     storage: DocumentStorageDep,
     provider: RagProviderDep,
+    auth_user: AuthenticatedUserDep,
 ) -> RagQueryResponse:
-    return provider.query(request.query, request.top_k, storage.list_documents_for_rag())
+    project_ids = auth_user.project_ids if auth_user is not None else None
+    return provider.query(request.query, request.top_k, storage.list_documents_for_rag(project_ids))

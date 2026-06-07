@@ -4,9 +4,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from app.api.routes.auth import require_ingestion_user
+from app.api.routes.auth import RequestAuthContext, require_ingestion_user
 from app.core.config import get_settings
-from app.schemas.auth import AuthUser
 from app.schemas.evaluation import (
     BuiltInRagEvalCaseResult,
     BuiltInRagEvalResponse,
@@ -21,7 +20,7 @@ from app.services.evaluation import (
 
 
 router = APIRouter(prefix="/eval", tags=["eval"])
-IngestionUserDep = Annotated[AuthUser | None, Depends(require_ingestion_user)]
+IngestionUserDep = Annotated[RequestAuthContext | None, Depends(require_ingestion_user)]
 
 
 @router.post("/rag/built-in", response_model=BuiltInRagEvalResponse)

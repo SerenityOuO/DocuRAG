@@ -21,9 +21,11 @@ class AgentToolService:
         self,
         storage: DocumentStorage,
         rag_provider: RagProvider | None = None,
+        project_ids: frozenset[str] | None = None,
     ) -> None:
         self.storage = storage
         self.rag_provider = rag_provider or KeywordRagProvider()
+        self.project_ids = project_ids
 
     def get_document_fields(self, document_id: str) -> AgentToolCall:
         trace_metadata = self._trace_metadata("get_document_fields", "local_metadata")
@@ -96,7 +98,7 @@ class AgentToolService:
         document_id: str | None = None,
     ) -> AgentToolCall:
         trace_metadata = self._trace_metadata("search_documents", "rag_provider")
-        documents = self.storage.list_documents_for_rag()
+        documents = self.storage.list_documents_for_rag(self.project_ids)
 
         if document_id is not None:
             documents = [document for document in documents if document.document_id == document_id]

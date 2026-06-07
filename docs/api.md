@@ -74,6 +74,8 @@ SSO, OAuth, MFA, password reset, email verification, Redis-backed session storag
 
 `32-02` status: the formal schema foundation and explicit migration command exist, including demo seed users and a disabled user record with password-hash persistence. Endpoint permission guards, cross-project filtering enforcement and frontend role surface remain deferred to `32-03` / `32-04`.
 
+`32-03` status: backend permission guards are connected for formal signed bearer tokens when `DOCURAG_AUTH_MODE=formal`. Formal tokens must include `sub`, `display_name`, `role`, `organization_id`, `project_ids` and active `project_id`; `/auth/login` still does not implement production login in formal mode. Document reads, downloads, OCR, parser, vector indexing, RAG query and Agent lookup are filtered or denied by project access. Document upload, OCR, parser, vector indexing, built-in eval and Agent run require Analyst or Admin. Viewer receives a generic `403 forbidden`; cross-project denied responses do not include target document or project identifiers.
+
 ## Projects
 
 | Method | Endpoint | Description |

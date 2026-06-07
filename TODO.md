@@ -154,7 +154,7 @@ Phase 31 `v0.31.0` - PostgreSQL / schema / repository foundation：
 Phase 32 `v0.32.0` - Formal Auth / RBAC / tenant boundary：
 - [x] `tasks/phase-32-auth-rbac-tenant-boundary/32-01-auth-rbac-contract.md`: 完成 Markdown-only formal Auth / RBAC / tenant boundary contract，定義 User / Organization / Project / Role / Membership / project access、Viewer / Analyst / Admin 權限矩陣與 API guard policy；不 bump version。
 - [x] `tasks/phase-32-auth-rbac-tenant-boundary/32-02-users-orgs-project-membership-schema.md`: 完成正式 Auth / RBAC PostgreSQL schema foundation、non-destructive migration command、demo seed users / disabled user password hash persistence 與 backend tests；不 bump version。
-- [ ] `tasks/phase-32-auth-rbac-tenant-boundary/32-03-backend-permission-guards.md`
+- [x] `tasks/phase-32-auth-rbac-tenant-boundary/32-03-backend-permission-guards.md`: 完成 formal signed bearer token guard、project access filter、Analyst / Admin write guard、Viewer forbidden 與 formal / demo backend tests；不 bump version。
 - [ ] `tasks/phase-32-auth-rbac-tenant-boundary/32-04-frontend-role-surface-and-release-sync.md`
 
 Phase 33 `v0.33.0` - Redis + NATS worker pipeline：
@@ -247,6 +247,13 @@ Phase 31-39 guardrails：
 - Demo seed users 已包含 Admin / Analyst / Viewer / disabled Viewer，password 以 deterministic PBKDF2 hash 保存；Phase 28 `DOCURAG_AUTH_MODE=demo` 仍為 explicit local fallback，不被本 schema ticket 靜默替換。
 - Release Impact：Version bump required: no。Endpoint permission guards、frontend role surface、Redis session、SSO、OAuth、MFA 與 production login runtime 仍留到後續 Phase 32 tickets。
 - Validation 已通過：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`210 passed`，1 pytest cache warning）；`rg -n "users|organizations|memberships|roles|project access|DOCURAG_AUTH_MODE" backend docs TODO.md tasks/phase-32-auth-rbac-tenant-boundary`；`git diff --check`（僅 Windows LF/CRLF 提示）。
+
+32-03 Backend Permission Guards Status：
+- 已完成。新增 `DOCURAG_AUTH_MODE=formal` signed bearer token parsing，解析 current user、organization、active project 與 accessible project ids。
+- Document upload、OCR、parse、vector index、built-in eval 與 Agent run 已接 Analyst / Admin write guard；Viewer 會收到 generic `403 forbidden`。
+- Document list / detail / OCR result / fields / download、RAG query corpus、Agent search corpus 與 Agent run lookup 已依 project access filter / deny；cross-project denied response 不包含 target document id 或 project id。
+- Release Impact：Version bump required: no。Frontend role surface、Redis session、SSO、OAuth、MFA、production login runtime 與 Phase 32 release sync 仍留到 `32-04`。
+- Validation 已通過：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`216 passed`，1 pytest cache warning）；`rg -n "forbidden|permission|project access|Viewer|Analyst|Admin|tenant" backend docs TODO.md tasks/phase-32-auth-rbac-tenant-boundary`；`git diff --check`（僅 Windows LF/CRLF 提示）。
 ## Phase 40 Interview Evidence Hardening
 
 - [x] `tasks/phase-40-interview-evidence-hardening/40-01-phase-40-jd-evidence-plan.md`: 新增 Phase 40 `v0.40.0` JD evidence hardening roadmap；文件 ticket，不 bump version。

@@ -308,7 +308,7 @@ Stores detailed allowlisted tool calls. This table is included because `AgentRun
 
 ## Phase 32 Formal Auth / RBAC Schema Runtime
 
-`32-02` adds the first runtime schema slice for formal Auth / RBAC / tenant boundary. The schema is created by `backend/app/repositories/auth_rbac.py` and the explicit migration command `scripts/migrate-auth-rbac-schema.py`. This is a PostgreSQL foundation only; endpoint permission guards remain scheduled for `32-03`, and frontend role surface / release sync remain scheduled for `32-04`.
+`32-02` adds the first runtime schema slice for formal Auth / RBAC / tenant boundary. The schema is created by `backend/app/repositories/auth_rbac.py` and the explicit migration command `scripts/migrate-auth-rbac-schema.py`. `32-03` connects backend permission guards to formal signed bearer tokens and project access filtering. Frontend role surface / release sync remain scheduled for `32-04`.
 
 ### Migration Command
 
