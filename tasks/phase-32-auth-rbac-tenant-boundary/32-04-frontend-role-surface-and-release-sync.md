@@ -38,10 +38,10 @@
 
 ## Acceptance Criteria
 
-- [ ] `/health` 回傳 `0.32.0`。
-- [ ] Frontend role surface 與 backend permission guard 一致。
-- [ ] Viewer 不能從 UI 或 API 執行 ingestion / eval / Agent write 操作。
-- [ ] README 與 README_DEV 清楚說明 Phase 32 不包含 SSO / OAuth / MFA。
+- [x] `/health` 回傳 `0.32.0`。
+- [x] Frontend role surface 與 backend permission guard 一致。
+- [x] Viewer 不能從 UI 或 API 執行 ingestion / eval / Agent write 操作。
+- [x] README 與 README_DEV 清楚說明 Phase 32 不包含 SSO / OAuth / MFA。
 
 ## Validation
 
@@ -51,3 +51,12 @@
 - Browser 檢查 Admin / Analyst / Viewer role surface 與 mobile / desktop 無 horizontal overflow。
 - `rg -n "v0.32.0|Phase 32|Auth|RBAC|Viewer|Analyst|Admin|tenant|project access" README.md README_DEV.md backend/README.md frontend/README.md docs/ROADMAP.md TODO.md backend frontend infra tasks/phase-32-auth-rbac-tenant-boundary`
 - `git diff --check`
+
+## Validation Result
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` passed：`216 passed`，1 pytest cache warning。
+- `npm.cmd run build` passed。
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1` passed：health version `0.32.0`，demo flow 通過，Qdrant unavailable fallback 符合預期。
+- Browser role checks passed：Admin / Analyst / Viewer desktop 與 mobile surface 均符合角色權限，無 horizontal overflow。
+- Viewer API 403 checks passed：Viewer 不能呼叫 ingestion / eval / Agent write API。
+- Ticket `rg` passed；`git diff --check` passed（僅 Windows LF/CRLF 提示）。

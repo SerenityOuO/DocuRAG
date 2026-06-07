@@ -396,12 +396,16 @@ export async function uploadDocument(file: File): Promise<UploadResponse> {
 }
 
 export async function listDocuments(): Promise<DocumentListResponse> {
-  const response = await fetch(`${API_BASE_URL}/documents`);
+  const response = await fetch(`${API_BASE_URL}/documents`, {
+    headers: authHeaders(),
+  });
   return readJson<DocumentListResponse>(response);
 }
 
 export async function getDocument(documentId: string): Promise<DocumentMetadata> {
-  const response = await fetch(`${API_BASE_URL}/documents/${documentId}`);
+  const response = await fetch(`${API_BASE_URL}/documents/${documentId}`, {
+    headers: authHeaders(),
+  });
   return readJson<DocumentMetadata>(response);
 }
 
@@ -424,7 +428,9 @@ export async function runSelectedOcr(documentId: string): Promise<OcrResultRespo
 }
 
 export async function getOcrResult(documentId: string): Promise<OcrResultResponse> {
-  const response = await fetch(`${API_BASE_URL}/documents/${documentId}/ocr`);
+  const response = await fetch(`${API_BASE_URL}/documents/${documentId}/ocr`, {
+    headers: authHeaders(),
+  });
   return readJson<OcrResultResponse>(response);
 }
 
@@ -438,7 +444,9 @@ export async function parseDocumentFields(documentId: string): Promise<ParserRes
 }
 
 export async function getDocumentFields(documentId: string): Promise<ParserResult> {
-  const response = await fetch(`${API_BASE_URL}/documents/${documentId}/fields`);
+  const response = await fetch(`${API_BASE_URL}/documents/${documentId}/fields`, {
+    headers: authHeaders(),
+  });
   return readJson<ParserResult>(response);
 }
 

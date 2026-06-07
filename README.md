@@ -23,6 +23,7 @@ DocuRAG 是技術探索導向的 AI 文件知識庫專案，將文件上傳、OC
 - Ollama 回答延遲 guardrails
 - 內建 RAG 測試
 - Agent tool-use trace
+- Admin / Analyst / Viewer role-gated surface
 
 ## 需求
 
@@ -89,6 +90,7 @@ viewer / demo-viewer-pass
 - OCR / VLM：PaddleOCR、Ollama-compatible VLM
 - RAG：Ollama embedding、Qdrant、FastEmbed reranker、Ollama generation guardrails
 - Storage：本機 JSON metadata / uploaded files，另有 opt-in PostgreSQL metadata repository
+- Auth / RBAC：本機 demo login、formal signed bearer guard、project access filtering
 - Workflow：ticket-first 小步開發
 
 ## API 串接
@@ -126,7 +128,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 
 ## 目前邊界
 
-目前是技術探索用 MVP，不宣稱已完成 production 系統。PostgreSQL metadata repository 仍是 opt-in foundation，不代表 production database operation；尚未包含正式 RBAC、tenant isolation、Redis、NATS、worker、scanned PDF OCR pipeline、K8s hardening、自訂 eval dashboard 或 production autonomous Agent。
+目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.32.0 已完成 formal Auth / RBAC / tenant boundary 的可展示 release：backend 會執行 role guard 與 project access filtering，frontend 會依 Admin / Analyst / Viewer 顯示或鎖定入口。PostgreSQL metadata repository 仍是 opt-in foundation，不代表 production database operation；尚未包含 SSO、OAuth、MFA、production login runtime、Redis、NATS、worker、scanned PDF OCR pipeline、K8s hardening、自訂 eval dashboard 或 production autonomous Agent。
 
 ## 文件入口
 

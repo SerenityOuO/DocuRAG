@@ -93,15 +93,37 @@ const suggestedQuestions = [
   "When is the renewal date?",
 ];
 
-const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.31.0"));
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.32.0"));
 
 const demoAuthRequired = computed(() => authMode.value === "demo" && authUser.value === null);
+const formalAuthRequired = computed(() => authMode.value === "formal" && authUser.value === null);
+const roleGuardEnabled = computed(() => authMode.value === "demo" || authMode.value === "formal");
+const canUseReadSurface = computed(() => !roleGuardEnabled.value || authUser.value !== null);
 const canUseIngestion = computed(() => {
-  if (authMode.value !== "demo") {
+  if (!roleGuardEnabled.value) {
     return true;
   }
 
   return authUser.value?.role === "admin" || authUser.value?.role === "analyst";
+});
+const authSurfaceLabel = computed(() => {
+  if (authMode.value === "formal") {
+    return "Formal Auth";
+  }
+
+  if (authMode.value === "demo") {
+    return "Demo Auth";
+  }
+
+  return "Auth Mode";
+});
+const currentRoleLabel = computed(() => {
+  if (!authUser.value) {
+    return authMode.value;
+  }
+
+  const roleLabel = roleLabels[authUser.value.role] ?? authUser.value.role;
+  return `${authUser.value.display_name} / ${roleLabel}`;
 });
 
 const heroCopy = computed(() =>
@@ -266,6 +288,12 @@ const demoUsers: Array<{ role: AuthRole; label: string; username: string; passwo
     password: "demo-viewer-pass",
   },
 ];
+
+const roleLabels: Record<AuthRole, string> = {
+  admin: "Admin",
+  analyst: "Analyst",
+  viewer: "Viewer",
+};
 
 const invoiceFieldLabels: Array<[InvoiceFieldKey, string]> = [
   ["document_type", "文件類型"],
@@ -497,9 +525,12 @@ function parserStatus(document: DocumentMetadata): string {
 
 function canParseDocument(document: DocumentMetadata): boolean {
   return (
-    document.ocr.status === "completed" ||
-    document.processing.ocr === "completed" ||
-    hasDirectTextChunks(document)
+    canUseIngestion.value &&
+    (
+      document.ocr.status === "completed" ||
+      document.processing.ocr === "completed" ||
+      hasDirectTextChunks(document)
+    )
   );
 }
 
@@ -685,7 +716,12 @@ function selectDemoUser(role: AuthRole): void {
 }
 
 function syncViewModeToRole(): void {
-  if (authMode.value === "demo" && authUser.value?.role === "viewer") {
+  if (roleGuardEnabled.value && authUser.value === null) {
+    viewMode.value = "viewer";
+    return;
+  }
+
+  if (roleGuardEnabled.value && authUser.value?.role === "viewer") {
     viewMode.value = "viewer";
     return;
   }
@@ -703,11 +739,7 @@ async function checkAuth(): Promise<void> {
     const response = await getMe();
     authMode.value = response.auth_mode;
     authUser.value = response.authenticated ? response.user : null;
-    if (authMode.value === "demo" && authUser.value === null) {
-      viewMode.value = "viewer";
-    } else {
-      syncViewModeToRole();
-    }
+    syncViewModeToRole();
     authState.value = "success";
   } catch (error) {
     clearAuthToken();
@@ -773,6 +805,11 @@ async function checkHealth(): Promise<void> {
 async function submitRagQuery(): Promise<void> {
   const query = ragQuery.value.trim();
 
+  if (!canUseReadSurface.value) {
+    ragError.value = "請先完成登入，才能查詢可存取的 project 文件。";
+    return;
+  }
+
   if (!query) {
     ragError.value = "請先輸入問題。";
     return;
@@ -792,6 +829,12 @@ async function submitRagQuery(): Promise<void> {
 }
 
 async function refreshDocuments(): Promise<void> {
+  if (!canUseReadSurface.value) {
+    documents.value = [];
+    documentsState.value = "idle";
+    return;
+  }
+
   documentsState.value = "loading";
   documentsError.value = "";
 
@@ -1014,6 +1057,11 @@ async function submitFieldParse(document: DocumentMetadata): Promise<void> {
 }
 
 async function submitAgentRun(): Promise<void> {
+  if (!canUseIngestion.value) {
+    agentError.value = "Viewer 角色不能執行 Agent write 操作。";
+    return;
+  }
+
   const task = agentTask.value.trim();
   const documentId = agentDocumentId.value.trim();
   const query = agentQuery.value.trim();
@@ -1065,10 +1113,12 @@ async function submitBuiltInRagEval(): Promise<void> {
   }
 }
 
-onMounted(() => {
-  void checkAuth();
+onMounted(async () => {
   void checkHealth();
-  void refreshDocuments();
+  await checkAuth();
+  if (canUseReadSurface.value) {
+    void refreshDocuments();
+  }
 });
 </script>
 
@@ -1089,10 +1139,10 @@ onMounted(() => {
           <span>服務狀態</span>
           <strong>{{ healthLabel }}</strong>
           <small>{{ health?.version ? `Backend ${health.version}` : API_BASE_URL }}</small>
-          <span>Demo Auth</span>
-          <strong>{{ authUser ? `${authUser.display_name} / ${authUser.role}` : authMode }}</strong>
+          <span>{{ authSurfaceLabel }}</span>
+          <strong>{{ currentRoleLabel }}</strong>
           <button
-            v-if="authMode === 'demo' && authUser"
+            v-if="roleGuardEnabled && authUser"
             type="button"
             class="button secondary-button compact-button"
             :disabled="authState === 'loading'"
@@ -1175,6 +1225,22 @@ onMounted(() => {
       </article>
     </section>
 
+    <section v-else-if="formalAuthRequired" class="minimal-grid viewer-grid" aria-label="formal auth required">
+      <article class="panel auth-surface">
+        <div class="panel-heading">
+          <div>
+            <h2>Formal Auth</h2>
+            <p>正式 Auth / RBAC 已啟用；請使用 signed bearer token 後重新載入。</p>
+          </div>
+          <span class="status-pill status-failed">locked</span>
+        </div>
+
+        <p class="muted compact-note">
+          Production login runtime 仍未實作；未登入時不顯示 ingestion、測試RAG 或 Agent write 入口。
+        </p>
+      </article>
+    </section>
+
     <template v-else>
     <section v-if="viewMode === 'viewer'" class="minimal-grid viewer-grid" aria-label="前台文件客服查詢入口">
       <article class="panel chat-surface">
@@ -1208,7 +1274,7 @@ onMounted(() => {
             <input v-model.number="ragTopK" type="number" min="1" max="10" />
           </label>
 
-          <button type="submit" class="button" :disabled="chatState === 'loading'">
+          <button type="submit" class="button" :disabled="chatState === 'loading' || !canUseReadSurface">
             {{ chatState === "loading" ? "查詢中..." : "送出問題" }}
           </button>
         </form>
@@ -1252,7 +1318,7 @@ onMounted(() => {
 
         <label class="file-picker">
           <span>選擇文件</span>
-          <input type="file" multiple @change="handleFileChange" />
+          <input type="file" multiple :disabled="!canUseIngestion" @change="handleFileChange" />
         </label>
 
         <p v-if="selectedFiles.length" class="selected-file">
@@ -1263,7 +1329,7 @@ onMounted(() => {
         <button
           type="button"
           class="button upload-button"
-          :disabled="selectedFiles.length === 0 || uploadState === 'loading'"
+          :disabled="!canUseIngestion || selectedFiles.length === 0 || uploadState === 'loading'"
           @click="submitUpload"
         >
           {{ uploadButtonLabel }}
@@ -1275,7 +1341,7 @@ onMounted(() => {
           v-if="uploadFallbackAvailable"
           type="button"
           class="button secondary-button upload-button"
-          :disabled="uploadState === 'loading'"
+          :disabled="!canUseIngestion || uploadState === 'loading'"
           @click="submitMockFallback"
         >
           使用 mock OCR fallback
@@ -1329,7 +1395,7 @@ onMounted(() => {
                   <button
                     type="button"
                     class="button secondary-button compact-button"
-                    :disabled="!canParseDocument(document) || parseStates[document.document_id] === 'loading'"
+                    :disabled="!canUseIngestion || !canParseDocument(document) || parseStates[document.document_id] === 'loading'"
                     @click="submitFieldParse(document)"
                   >
                     {{
@@ -1402,7 +1468,7 @@ onMounted(() => {
           <button
             type="button"
             class="button"
-            :disabled="ragEvalState === 'loading'"
+            :disabled="!canUseIngestion || ragEvalState === 'loading'"
             @click="submitBuiltInRagEval"
           >
             {{ ragEvalState === "loading" ? "測試中..." : "執行測試" }}
@@ -1533,7 +1599,7 @@ onMounted(() => {
                 <input v-model.number="agentTopK" type="number" min="1" max="10" />
               </label>
 
-              <button type="submit" class="button" :disabled="agentState === 'loading'">
+              <button type="submit" class="button" :disabled="!canUseIngestion || agentState === 'loading'">
                 {{ agentState === "loading" ? "執行中..." : "執行 Agent" }}
               </button>
             </form>

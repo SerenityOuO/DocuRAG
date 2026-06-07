@@ -1,6 +1,6 @@
 # DocuRAG AgentOps Frontend
 
-最小 Vue 3 + Vite demo UI 目前已拆成前台 Viewer Chat 與後台 Admin / Analyst Ingestion 兩個 surface。v0.27.0 起預設先打開後台 Admin / Analyst Ingestion，讓 demo 第一眼呈現上傳、provider-selected OCR、VLM-first parser、Agent trace 與 best-effort Qdrant vector indexing。v0.27.1 起 backend VLM parser 會同時使用原始圖片與 OCR context，欄位結果可在 API / smoke trace 中看到 OCR evidence mapping 或 unmatched 狀態。Phase 28 Document Source Router contract 已明確標記 upload flow 應分成 `image_ocr`、`text_upload`、`pdf_text` 與 `pdf_scanned_pending_ocr`；目前 UI 對 `.txt` 會跳過 OCR 並顯示直接文字匯入，對 text-native PDF 會顯示 `pdf_text` ready，對 scanned / empty PDF 只顯示 `pdf_scanned_pending_ocr`。v0.29.0 起後台新增「測試RAG」，Admin / Analyst 可直接執行固定 `hybrid_rerank` 的 10 張 synthetic 中文發票 built-in benchmark，並只看 Hit Rate@K、MRR@K、平均延遲與 Failure / Fallback；Agent 執行紀錄改成可摺疊。v0.31.0 起 backend 支援 opt-in PostgreSQL metadata repository，但 frontend surface 不新增 DB 管理頁或 production tenant UI。若 backend 以 `DOCURAG_AUTH_MODE=demo` 啟動，UI 會先顯示 demo login screen，Admin / Analyst 可進後台 ingestion，Viewer 只能使用前台查詢且後台入口 disabled。Viewer Chat 可切換使用，只查詢後端已建立的文件知識庫，並顯示 answer、answer source、retrieval source 與 citation summary。OCR detail、raw JSON、retrieval trace table 與完整 eval trace 可由 backend API、smoke scripts 或 CLI 檢查，不屬於 Viewer Chat 主流程；正式知識庫 worker / production DB pipeline 尚未實作。backend 預設使用 `hybrid_rerank` RAG / Agent search、Ollama embedding 與 FastEmbed rerank adapter；Ollama embedding、Qdrant 或 reranker 不可用時，UI 會顯示 fallback 狀態。這仍不是 production VLM parser、autonomous Agent dashboard、production eval dashboard 或正式 RBAC。
+最小 Vue 3 + Vite demo UI 目前已拆成前台 Viewer Chat 與後台 Admin / Analyst Ingestion 兩個 surface。v0.27.0 起預設先打開後台 Admin / Analyst Ingestion，讓 demo 第一眼呈現上傳、provider-selected OCR、VLM-first parser、Agent trace 與 best-effort Qdrant vector indexing。v0.27.1 起 backend VLM parser 會同時使用原始圖片與 OCR context，欄位結果可在 API / smoke trace 中看到 OCR evidence mapping 或 unmatched 狀態。Phase 28 Document Source Router contract 已明確標記 upload flow 應分成 `image_ocr`、`text_upload`、`pdf_text` 與 `pdf_scanned_pending_ocr`；目前 UI 對 `.txt` 會跳過 OCR 並顯示直接文字匯入，對 text-native PDF 會顯示 `pdf_text` ready，對 scanned / empty PDF 只顯示 `pdf_scanned_pending_ocr`。v0.29.0 起後台新增「測試RAG」，Admin / Analyst 可直接執行固定 `hybrid_rerank` 的 10 張 synthetic 中文發票 built-in benchmark，並只看 Hit Rate@K、MRR@K、平均延遲與 Failure / Fallback；Agent 執行紀錄改成可摺疊。v0.31.0 起 backend 支援 opt-in PostgreSQL metadata repository，但 frontend surface 不新增 DB 管理頁或 production tenant UI。v0.32.0 起 frontend role surface 對齊 formal Auth / RBAC guard：Admin / Analyst 可使用 ingestion、built-in eval 與 Agent write surface，Viewer 只能查詢；未登入且 backend 要求 formal auth 時，UI 會顯示 locked panel。若 backend 以 `DOCURAG_AUTH_MODE=demo` 啟動，UI 會先顯示 demo login screen，Admin / Analyst 可進後台 ingestion，Viewer 只能使用前台查詢且後台入口 disabled。Viewer Chat 可切換使用，只查詢後端已建立的文件知識庫，並顯示 answer、answer source、retrieval source 與 citation summary。OCR detail、raw JSON、retrieval trace table 與完整 eval trace 可由 backend API、smoke scripts 或 CLI 檢查，不屬於 Viewer Chat 主流程；正式知識庫 worker / production DB pipeline 尚未實作。backend 預設使用 `hybrid_rerank` RAG / Agent search、Ollama embedding 與 FastEmbed rerank adapter；Ollama embedding、Qdrant 或 reranker 不可用時，UI 會顯示 fallback 狀態。這仍不是 production VLM parser、autonomous Agent dashboard、production eval dashboard、SSO、OAuth、MFA 或 production identity provider。
 
 ## Install
 
@@ -57,7 +57,8 @@ npm.cmd run build
 
 - 前台 Viewer Chat：輸入 query 與 top_k，呼叫 `POST /rag/query`，用來查詢已建立的 demo knowledge base。
 - Demo login screen：當 backend 回報 `auth_mode=demo` 且尚未登入時，提供 Admin / Analyst / Viewer demo role 選擇與登入表單。
-- Role-gated UI：Admin / Analyst 登入後可使用後台 ingestion；Viewer 登入後只顯示查詢入口，後台知識庫管理按鈕 disabled，且不顯示 upload / OCR / parse / index controls。
+- Role-gated UI：Admin / Analyst 登入後可使用後台 ingestion、built-in eval 與 Agent write surface；Viewer 登入後只顯示查詢入口，後台知識庫管理按鈕 disabled，且不顯示 upload / OCR / parse / index、built-in eval 或 Agent write controls。
+- Formal auth locked panel：當 backend 要求 formal auth 但 frontend 沒有 bearer token context 時，UI 只顯示受保護狀態與版本，不提供 ingestion / eval / Agent write 操作。
 - 回答結果：顯示 answer、answer source、retrieval source 與簡化引用來源。
 - 空知識庫狀態：以 Viewer 角度提示需先由後台知識庫管理流程建立資料，不在前台查詢畫面提供文件上傳或 OCR 操作。
 - 後台 Admin / Analyst Ingestion：預設入口，檔案選擇器支援單檔或多檔；多檔時 frontend 會逐檔呼叫既有 `POST /documents/upload`、provider-selected `POST /documents/{document_id}/ocr`、best-effort `POST /documents/{document_id}/parse` 與 `POST /documents/{document_id}/index/vector`，並分檔顯示成功 / 失敗結果；real OCR 失敗時才提供手動 `POST /documents/{document_id}/ocr/mock` fallback。這不是 batch API、queue 或 background worker。
@@ -70,7 +71,7 @@ npm.cmd run build
 - 工程細節：OCR text、extracted fields、document list、metadata JSON、retrieved chunks、trace metadata 與 eval metrics 改由 backend API、`scripts/demo-smoke-test.ps1`、`scripts/retrieval-eval-smoke.ps1` 或 API docs 檢查，不放在 frontend 主畫面；正式知識庫 ingestion / indexing pipeline 尚未實作。
 - backend 預設嘗試 Ollama LLM provider；generation 成功時 answer source 顯示 `ollama/qwen3.5:4b`，Ollama 不可用時顯示 `LLM unavailable fallback`，若以 `DOCURAG_LLM_PROVIDER=` 明確關閉則顯示 `確定性基準回答`。
 - backend 預設使用 `hybrid_rerank`；retrieval source 可能顯示 `hybrid_rerank`、`hybrid_rerank 備援：vector_unavailable`、`hybrid_rerank 備援：reranker_unavailable`、`vector/qdrant` 或舊 keyword baseline override。
-- Viewer 在 demo auth mode 下看不到後台「測試RAG」與 Agent 操作；Admin / Analyst 才能操作。
+- Viewer 在 demo auth mode 下看不到後台「測試RAG」與 Agent 操作；Admin / Analyst 才能操作。Viewer 直接呼叫 ingestion / eval / Agent write API 時也會收到 backend 403。
 
 建議面試前先 seed demo knowledge base，讓前台客服聊天一打開就能問：
 
@@ -102,3 +103,4 @@ payment due date Net 15
 - v0.28.0: Document Sources / Demo Auth Mode 已完成；UI 會依 `text_upload`、`pdf_text`、`pdf_scanned_pending_ocr` 顯示來源狀態，demo auth mode 會先顯示 login screen，Admin / Analyst 可使用 ingestion，Viewer 只能查詢。
 - v0.29.0: Built-in RAG Eval Admin Surface 已完成；後台新增「測試RAG」固定 `hybrid_rerank` metrics，Agent 執行紀錄可摺疊，Viewer 不顯示後台測試與 Agent 操作。
 - v0.31.0: PostgreSQL / Schema / Repository Foundation 已完成；frontend version / fallback label 已同步，DB-backed mode 仍由 backend env opt-in，不新增 production DB 管理 UI、RBAC 或 worker surface。
+- v0.32.0: Formal Auth / RBAC / Tenant Boundary 已完成；frontend version / fallback label 已同步，Admin / Analyst / Viewer role surface 與 backend permission guard 對齊，Viewer 不顯示 ingestion / eval / Agent write controls；不新增 SSO、OAuth、MFA、Redis session、worker、deployment hardening 或 production login runtime。

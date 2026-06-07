@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.29 Built-in RAG Eval Admin Surface backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.32 Formal Auth / RBAC / Tenant Boundary backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -155,7 +155,7 @@ Phase 32 `v0.32.0` - Formal Auth / RBAC / tenant boundary：
 - [x] `tasks/phase-32-auth-rbac-tenant-boundary/32-01-auth-rbac-contract.md`: 完成 Markdown-only formal Auth / RBAC / tenant boundary contract，定義 User / Organization / Project / Role / Membership / project access、Viewer / Analyst / Admin 權限矩陣與 API guard policy；不 bump version。
 - [x] `tasks/phase-32-auth-rbac-tenant-boundary/32-02-users-orgs-project-membership-schema.md`: 完成正式 Auth / RBAC PostgreSQL schema foundation、non-destructive migration command、demo seed users / disabled user password hash persistence 與 backend tests；不 bump version。
 - [x] `tasks/phase-32-auth-rbac-tenant-boundary/32-03-backend-permission-guards.md`: 完成 formal signed bearer token guard、project access filter、Analyst / Admin write guard、Viewer forbidden 與 formal / demo backend tests；不 bump version。
-- [ ] `tasks/phase-32-auth-rbac-tenant-boundary/32-04-frontend-role-surface-and-release-sync.md`
+- [x] `tasks/phase-32-auth-rbac-tenant-boundary/32-04-frontend-role-surface-and-release-sync.md`: 完成 frontend role surface、Viewer UI / API write guard validation、`v0.32.0` backend / frontend / Docker Compose / health test 版本同步與 README / README_DEV / backend README / frontend README / TODO / ROADMAP release sync。
 
 Phase 33 `v0.33.0` - Redis + NATS worker pipeline：
 - [ ] `tasks/phase-33-redis-nats-worker-pipeline/33-01-redis-nats-worker-contract.md`
@@ -202,7 +202,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync；除 Phase 31 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync；除 Phase 31、Phase 32 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
@@ -252,8 +252,14 @@ Phase 31-39 guardrails：
 - 已完成。新增 `DOCURAG_AUTH_MODE=formal` signed bearer token parsing，解析 current user、organization、active project 與 accessible project ids。
 - Document upload、OCR、parse、vector index、built-in eval 與 Agent run 已接 Analyst / Admin write guard；Viewer 會收到 generic `403 forbidden`。
 - Document list / detail / OCR result / fields / download、RAG query corpus、Agent search corpus 與 Agent run lookup 已依 project access filter / deny；cross-project denied response 不包含 target document id 或 project id。
-- Release Impact：Version bump required: no。Frontend role surface、Redis session、SSO、OAuth、MFA、production login runtime 與 Phase 32 release sync 仍留到 `32-04`。
+- Release Impact：Version bump required: no。Frontend role surface 與 Phase 32 release sync 已由 `32-04` 完成；Redis session、SSO、OAuth、MFA 與 production login runtime 仍不在 Phase 32 範圍。
 - Validation 已通過：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`216 passed`，1 pytest cache warning）；`rg -n "forbidden|permission|project access|Viewer|Analyst|Admin|tenant" backend docs TODO.md tasks/phase-32-auth-rbac-tenant-boundary`；`git diff --check`（僅 Windows LF/CRLF 提示）。
+
+32-04 Frontend Role Surface and Release Sync Status：
+- 已完成 `v0.32.0` release sync：backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION` 與 `.env.example` 已同步到 `0.32.0`。
+- Frontend role surface 已對齊 backend guard：Admin / Analyst 可使用 ingestion、built-in eval 與 Agent write surface；Viewer 只能查詢，且 UI 與 API 都不能執行 ingestion / eval / Agent write。
+- README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 ticket 已同步 Phase 32 release 狀態；文件明確保留 SSO、OAuth、MFA、Redis session、worker、deployment hardening 與 production login runtime 尚未完成的邊界。
+- Validation 已通過：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`216 passed`，1 pytest cache warning）；`npm.cmd run build`；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`（health version `0.32.0`）；Browser 檢查 Admin / Analyst / Viewer desktop / mobile role surface 與 horizontal overflow 通過；Viewer API 403 檢查通過；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 ## Phase 40 Interview Evidence Hardening
 
 - [x] `tasks/phase-40-interview-evidence-hardening/40-01-phase-40-jd-evidence-plan.md`: 新增 Phase 40 `v0.40.0` JD evidence hardening roadmap；文件 ticket，不 bump version。
@@ -1120,3 +1126,4 @@ Phase 29 validation：
 - [x] v0.28.0: Document Sources / Demo Auth Mode 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、demo script、TODO、ROADMAP、API 與 architecture 文件已同步到 `v0.28.0`；`.txt` direct ingestion、text-native PDF extraction、scanned PDF pending state、demo login / role guard、demo auth smoke 與 Browser login / role gate validation 已補齊。
 - [x] v0.29.0: Built-in RAG Eval Admin Surface 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、demo script、TODO、ROADMAP、API、architecture 與 PRD 已同步到 `v0.29.0`；後台「測試RAG」內建 `hybrid_rerank` benchmark、10 張 synthetic 中文發票 fixture、built-in eval API、fallback-aware metrics、Agent 執行紀錄摺疊、Viewer role guard、backend tests、frontend build、hybrid rerank smoke、Browser desktop / mobile validation 與 `git diff --check` 已補齊。
 - [x] v0.31.0: PostgreSQL / Schema / Repository Foundation 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 Phase 31 ticket 已同步到 `v0.31.0`；local JSON fallback、opt-in PostgreSQL repository adapter、local JSON migration command、backend tests、frontend build、demo smoke、repository keyword validation 與 `git diff --check` 已補齊。
+- [x] v0.32.0: Formal Auth / RBAC / Tenant Boundary 已完成；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 Phase 32 ticket 已同步到 `v0.32.0`；formal signed bearer guard、project access filtering、Admin / Analyst / Viewer role surface、Viewer forbidden validation、backend tests、frontend build、demo smoke、Browser desktop / mobile validation 與 `git diff --check` 已補齊。

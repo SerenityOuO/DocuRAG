@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、v0.31.0 PostgreSQL / Schema / Repository Foundation release、Phase 32-39 enterprise completion roadmap 與 Phase 40 interview evidence hardening roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、v0.31.0 PostgreSQL / Schema / Repository Foundation release、v0.32.0 Formal Auth / RBAC / Tenant Boundary release、Phase 33-39 enterprise completion roadmap 與 Phase 40 interview evidence hardening roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.31.0 PostgreSQL / Schema / Repository Foundation checklist。
+- TODO 包含 Phase 00 到 v0.32.0 Formal Auth / RBAC / Tenant Boundary checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -89,6 +89,7 @@ Expected Outcome：
 - v0.28.0 Document Sources / Demo Auth Mode 只做 `.txt` direct ingestion、text-native PDF extraction、scanned PDF pending state 與 demo-safe login / role guard；不新增正式 RBAC、tenant isolation、PostgreSQL schema、Redis、NATS、worker、SSO、OAuth、MFA、K8s 或 scanned PDF OCR pipeline。
 - v0.29.0 Built-in RAG Eval Admin Surface 只做後台「測試RAG」內建基準測試與 Agent 執行紀錄摺疊；策略固定 `hybrid_rerank`，summary 只顯示 Hit Rate@K、MRR@K、平均延遲與 Failure / Fallback；不新增 production eval dashboard、自訂 dataset 上傳、LLM-as-judge、OCR eval、DB、worker、正式 RBAC 或 deployment 設定。
 - Phase 30 parser / ingestion hardening 只修正 Ollama VLM response normalization 與 frontend 多檔依序 ingestion ergonomics；不新增 batch API、queue、worker、DB schema、OpenAI SDK、vLLM、production parser dashboard 或 release version bump。
+- v0.32.0 Formal Auth / RBAC / Tenant Boundary 只做 formal schema foundation、signed bearer permission guard、project access filtering、frontend role surface 與 release sync；不新增 SSO、OAuth、MFA、Redis session、audit log pipeline、worker queue、deployment hardening 或 production login runtime。
 - Phase 31-39 roadmap planning 只新增未來版本拆分與 guardrails；不新增 runtime、外部依賴、DB schema、worker、deployment 或 version bump。
 - Phase 40 interview evidence planning 只新增 JD evidence hardening tickets；不新增 runtime、外部依賴、training pipeline、benchmark runtime、observability service 或 version bump。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
@@ -142,7 +143,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 Phase 31 `v0.31.0` release sync，並已建立 Phase 32 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path 與 `31-05` release sync 均已完成；不宣稱 Phase 32 到 Phase 39 已完成。
+- 已完成 Phase 31 `v0.31.0` release sync 與 Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync，並已建立 Phase 33 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync，以及 `32-01` 到 `32-04` 均已完成；不宣稱 Phase 33 到 Phase 39 已完成。
 
 ### Phase 31 - PostgreSQL / Schema / Repository Foundation
 
@@ -224,7 +225,13 @@ Expected Outcome：
 - Completed formal signed bearer token guard for current user, organization, active project and accessible project ids.
 - Backend write APIs now require Analyst or Admin for document upload, OCR, parser, vector indexing, built-in eval and Agent run.
 - Document reads, RAG query corpus, Agent search corpus and Agent run lookup are filtered or denied by project access; cross-project denied responses stay generic.
-- Release Impact: Version bump required: no. Frontend role surface, Redis session, SSO, OAuth, MFA, production login runtime and Phase 32 release sync remain deferred to `32-04`.
+- Release Impact: Version bump required: no. Frontend role surface and Phase 32 release sync are completed by `32-04`; Redis session, SSO, OAuth, MFA and production login runtime remain out of scope.
+
+32-04 Frontend Role Surface and Release Sync Status:
+- Completed `v0.32.0` release sync across backend package / app version, frontend package / lock / fallback version, health test, Docker Compose `DOCURAG_VERSION`, `.env.example`, README, README_DEV, backend README, frontend README, TODO, ROADMAP and the ticket.
+- Frontend role surface now matches backend guard: Admin / Analyst can use ingestion, built-in eval and Agent write surfaces; Viewer stays read-only and cannot use ingestion / eval / Agent write UI or API.
+- Release boundary remains explicit: Phase 32 does not add SSO, OAuth, MFA, Redis session, audit log pipeline, worker queue, deployment hardening or production login runtime.
+- Validation passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` (`216 passed`, 1 pytest cache warning); `npm.cmd run build`; `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1` (health version `0.32.0`); Browser role checks passed for Admin / Analyst / Viewer at desktop and mobile widths with no horizontal overflow; Viewer API 403 checks passed; ticket `rg` and `git diff --check` passed with Windows LF/CRLF warnings only.
 
 ### Phase 33 - Redis + NATS Worker Pipeline
 
