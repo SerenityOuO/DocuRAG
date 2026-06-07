@@ -305,3 +305,33 @@ Stores detailed allowlisted tool calls. This table is included because `AgentRun
 - No migration file, Alembic config, SQLAlchemy model, repository code, DB connection setting or production config change.
 - No Qdrant payload index, Redis, NATS, worker, K8s or deployment schema in this ticket.
 - No destructive migration or default switch away from local JSON fallback.
+
+## Phase 32 Formal Auth / RBAC Schema Runtime
+
+`32-02` adds the first runtime schema slice for formal Auth / RBAC / tenant boundary. The schema is created by `backend/app/repositories/auth_rbac.py` and the explicit migration command `scripts/migrate-auth-rbac-schema.py`. This is a PostgreSQL foundation only; endpoint permission guards remain scheduled for `32-03`, and frontend role surface / release sync remain scheduled for `32-04`.
+
+### Migration Command
+
+```powershell
+python scripts/migrate-auth-rbac-schema.py --dry-run --seed-demo-users
+python scripts/migrate-auth-rbac-schema.py --database-url $env:DOCURAG_DATABASE_URL --seed-demo-users
+```
+
+The migration statements are non-destructive and use `CREATE TABLE IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS`. Demo seed writes use idempotent upsert statements. The command does not connect to a production database unless the operator explicitly provides that URL.
+
+### Phase 32 Auth Tables
+
+| Table | Purpose | Required boundary |
+|---|---|---|
+| `users` | Formal local account record with `username`, optional `email`, `display_name`, `password_hash`, `disabled`, `auth_source` and JSON payload. | Passwords are stored only as hashes; disabled users stay persisted but must not receive active access in later guards. |
+| `organizations` | Top-level tenant boundary. | Organization membership is required before project access can be granted. |
+| `projects` | Project workspace owned by an organization. | Documents, eval runs, Agent runs and future Qdrant payload filters join through `project_id`. |
+| `roles` | Canonical `viewer`, `analyst`, `admin` role definitions with permission payload. | Permission semantics follow `32-01` role matrix. |
+| `memberships` | User-to-organization role relationship. | Disabled status blocks organization-level access in later guards. |
+| `project_memberships` | User-to-project role relationship. | This is the project access source of truth for `32-03` backend guards. |
+
+### Demo Seed Users
+
+`32-02` defines local demo seed rows for `admin`, `analyst`, `viewer` and `disabled-viewer`. Seed password values are converted into deterministic `pbkdf2_sha256$iterations$salt$digest` hashes before persistence. These rows are for local validation of the formal schema foundation only.
+
+Phase 28 demo auth mode is still preserved as an explicit fallback: `DOCURAG_AUTH_MODE=demo` continues to use fixed demo tokens for local validation, and `DOCURAG_AUTH_MODE=disabled` remains the default in `.env.example`. `32-02` does not replace `/auth/login`, does not add production login runtime, and does not complete all endpoint permission guards.

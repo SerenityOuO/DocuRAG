@@ -153,7 +153,7 @@ Phase 31 `v0.31.0` - PostgreSQL / schema / repository foundation：
 
 Phase 32 `v0.32.0` - Formal Auth / RBAC / tenant boundary：
 - [x] `tasks/phase-32-auth-rbac-tenant-boundary/32-01-auth-rbac-contract.md`: 完成 Markdown-only formal Auth / RBAC / tenant boundary contract，定義 User / Organization / Project / Role / Membership / project access、Viewer / Analyst / Admin 權限矩陣與 API guard policy；不 bump version。
-- [ ] `tasks/phase-32-auth-rbac-tenant-boundary/32-02-users-orgs-project-membership-schema.md`
+- [x] `tasks/phase-32-auth-rbac-tenant-boundary/32-02-users-orgs-project-membership-schema.md`: 完成正式 Auth / RBAC PostgreSQL schema foundation、non-destructive migration command、demo seed users / disabled user password hash persistence 與 backend tests；不 bump version。
 - [ ] `tasks/phase-32-auth-rbac-tenant-boundary/32-03-backend-permission-guards.md`
 - [ ] `tasks/phase-32-auth-rbac-tenant-boundary/32-04-frontend-role-surface-and-release-sync.md`
 
@@ -240,6 +240,13 @@ Phase 31-39 guardrails：
 - API guard policy 已固定 authenticated read、ingestion write、admin / membership endpoint 與 cross-project denied behavior；demo auth 只保留為 local validation fallback，不宣稱 production RBAC。
 - Release Impact：Version bump required: no。本 ticket 不新增 users / organizations schema、migration 檔、production login runtime、Redis session、SSO、OAuth、MFA、frontend role surface 或 backend runtime guard。
 - Validation 已通過：`rg -n "Auth|RBAC|Viewer|Analyst|Admin|organization|project access|Phase 32" docs README_DEV.md TODO.md tasks/phase-32-auth-rbac-tenant-boundary`；`git diff --check`（僅 Windows LF/CRLF 提示）。
+
+32-02 Users Orgs Project Membership Schema Status：
+- 已完成。新增 `backend/app/repositories/auth_rbac.py`，以 PostgreSQL schema statements 建立 `users`、`organizations`、`projects`、`roles`、`memberships` 與 `project_memberships`。
+- 新增 `scripts/migrate-auth-rbac-schema.py`，支援 `--dry-run` 與 `--seed-demo-users`；migration 使用 non-destructive `CREATE TABLE IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS` 與 seed upsert。
+- Demo seed users 已包含 Admin / Analyst / Viewer / disabled Viewer，password 以 deterministic PBKDF2 hash 保存；Phase 28 `DOCURAG_AUTH_MODE=demo` 仍為 explicit local fallback，不被本 schema ticket 靜默替換。
+- Release Impact：Version bump required: no。Endpoint permission guards、frontend role surface、Redis session、SSO、OAuth、MFA 與 production login runtime 仍留到後續 Phase 32 tickets。
+- Validation 已通過：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`210 passed`，1 pytest cache warning）；`rg -n "users|organizations|memberships|roles|project access|DOCURAG_AUTH_MODE" backend docs TODO.md tasks/phase-32-auth-rbac-tenant-boundary`；`git diff --check`（僅 Windows LF/CRLF 提示）。
 ## Phase 40 Interview Evidence Hardening
 
 - [x] `tasks/phase-40-interview-evidence-hardening/40-01-phase-40-jd-evidence-plan.md`: 新增 Phase 40 `v0.40.0` JD evidence hardening roadmap；文件 ticket，不 bump version。

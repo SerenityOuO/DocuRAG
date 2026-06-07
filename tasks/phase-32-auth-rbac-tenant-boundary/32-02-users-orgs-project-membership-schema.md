@@ -34,13 +34,19 @@
 
 ## Acceptance Criteria
 
-- [ ] Migration 建立 users / organizations / projects / roles / memberships 相關 schema。
-- [ ] Backend tests 驗證基本 user / organization / project membership persistence。
-- [ ] Demo auth mode 仍可明確啟用，不被靜默替換。
-- [ ] 文件標示本 ticket 尚未完成所有 endpoint permission guard。
+- [x] Migration 建立 users / organizations / projects / roles / memberships 相關 schema。
+- [x] Backend tests 驗證基本 user / organization / project membership persistence。
+- [x] Demo auth mode 仍可明確啟用，不被靜默替換。
+- [x] 文件標示本 ticket 尚未完成所有 endpoint permission guard。
 
 ## Validation
 
 - `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
 - `rg -n "users|organizations|memberships|roles|project access|DOCURAG_AUTH_MODE" backend docs TODO.md tasks/phase-32-auth-rbac-tenant-boundary`
 - `git diff --check`
+
+## Validation Result
+
+- Passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` (`210 passed`, 1 pytest cache warning).
+- Passed: `rg -n "users|organizations|memberships|roles|project access|DOCURAG_AUTH_MODE" backend docs TODO.md tasks/phase-32-auth-rbac-tenant-boundary`.
+- Passed: `git diff --check` (Windows LF/CRLF warnings only).

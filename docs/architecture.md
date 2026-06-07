@@ -363,7 +363,7 @@ Local JSON remains the default demo fallback. `31-04` adds opt-in repository sel
 
 ## Phase 32 Formal Auth / RBAC / Tenant Boundary Contract
 
-`32-01` defines the formal Auth / RBAC / tenant boundary as a Markdown-only contract. Current runtime remains Phase 28 demo auth until later Phase 32 tickets add schema and backend guards.
+`32-01` defines the formal Auth / RBAC / tenant boundary as a Markdown-only contract. `32-02` adds the PostgreSQL schema foundation and explicit migration command for users, organizations, projects, roles and memberships. Current endpoint runtime remains Phase 28 demo auth until later Phase 32 tickets add backend guards and frontend role surface.
 
 Domain contract:
 
@@ -395,7 +395,15 @@ API guard policy:
 - Unauthorized / forbidden responses must not leak whether a cross-project resource exists.
 - Demo auth remains a local fallback and validation path only; it must not be described as production RBAC.
 
-Explicitly deferred from `32-01`: users / organizations / memberships schema, migration files, production login runtime, JWT refresh rotation, Redis session, SSO, OAuth, MFA, password reset, email verification, audit pipeline, frontend role surface and backend runtime guards.
+`32-02` schema foundation:
+
+- `users`: stores username, optional email, display name, password hash, disabled state, auth source and JSON payload.
+- `organizations` and `projects`: define the tenant and project workspace boundary that later guards must enforce.
+- `roles`: persists canonical `viewer`, `analyst` and `admin` permission payloads from the `32-01` matrix.
+- `memberships` and `project_memberships`: persist organization membership and project access rows, including active / disabled status.
+- `scripts/migrate-auth-rbac-schema.py` creates the schema with non-destructive `CREATE TABLE IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS` statements and optional demo foundation seed rows.
+
+Still deferred after `32-02`: production login runtime, endpoint permission guards, cross-project filtering enforcement, JWT refresh rotation, Redis session, SSO, OAuth, MFA, password reset, email verification, audit pipeline and frontend role surface.
 
 ## Deferred Or Explicitly Optional Components
 

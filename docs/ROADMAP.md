@@ -214,6 +214,12 @@ Expected Outcome：
 - Demo auth remains a local validation fallback and must not be described as production RBAC.
 - Release Impact: Version bump required: no. This ticket does not add users / organizations schema, migration files, production login runtime, Redis session, SSO, OAuth, MFA, frontend role surface or backend runtime guards.
 
+32-02 Users Orgs Project Membership Schema Status:
+- Completed formal Auth / RBAC PostgreSQL schema foundation for `users`, `organizations`, `projects`, `roles`, `memberships` and `project_memberships`.
+- Added non-destructive explicit migration command `scripts/migrate-auth-rbac-schema.py` with dry-run support and optional demo foundation seed rows.
+- Demo seed users include Admin, Analyst, Viewer and disabled Viewer records with hashed passwords; Phase 28 `DOCURAG_AUTH_MODE=demo` remains an explicit local fallback and is not silently replaced.
+- Release Impact: Version bump required: no. Endpoint permission guards, frontend role surface, Redis session, SSO, OAuth, MFA and production login runtime remain deferred to later Phase 32 tickets.
+
 ### Phase 33 - Redis + NATS Worker Pipeline
 
 Target version：`v0.33.0`

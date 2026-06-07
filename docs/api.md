@@ -30,13 +30,13 @@ This is a demo-safe auth slice, not production JWT refresh rotation, PostgreSQL 
 
 ## Phase 32 Auth / RBAC Contract
 
-`32-01` defines the formal Auth / RBAC / tenant boundary contract only. It does not change current runtime behavior, add users / organizations schema, create migrations, enable Redis session storage, or replace Phase 28 demo auth. Runtime implementation is split into later Phase 32 tickets.
+`32-01` defines the formal Auth / RBAC / tenant boundary contract. `32-02` adds the PostgreSQL schema foundation for users, organizations, projects, roles and memberships, but it does not change current endpoint guard behavior, enable Redis session storage, or replace Phase 28 demo auth. Runtime permission enforcement is split into later Phase 32 tickets.
 
 ### Domain Boundary
 
 | Domain | Contract | Notes |
 |---|---|---|
-| User | Human account that can authenticate and receive project access. | Runtime table / migration is deferred to `32-02`. |
+| User | Human account that can authenticate and receive project access. | Schema foundation exists after `32-02`; production login runtime is deferred. |
 | Organization | Top-level tenant boundary that owns projects and memberships. | All cross-organization access must be denied by backend guards. |
 | Project | Workspace boundary for documents, eval runs, Agent runs and future Qdrant payload filters. | Existing nullable `project_id` metadata from Phase 31 becomes the join point. |
 | Role | Permission tier assigned inside a project. | Supported contract roles are `viewer`, `analyst` and `admin`. |
@@ -71,6 +71,8 @@ This is a demo-safe auth slice, not production JWT refresh rotation, PostgreSQL 
 Demo auth remains a local validation fallback. It may keep fixed users and stateless tokens for smoke tests, but documentation and UI must not call it production RBAC. Formal Auth / RBAC must not silently depend on Phase 28 demo users.
 
 SSO, OAuth, MFA, password reset, email verification, Redis-backed session storage, refresh token rotation and production audit pipeline are explicitly outside `32-01` scope.
+
+`32-02` status: the formal schema foundation and explicit migration command exist, including demo seed users and a disabled user record with password-hash persistence. Endpoint permission guards, cross-project filtering enforcement and frontend role surface remain deferred to `32-03` / `32-04`.
 
 ## Projects
 
