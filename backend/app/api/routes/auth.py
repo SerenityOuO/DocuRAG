@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 
 from app.core.config import get_settings
 from app.schemas.auth import AuthRole, AuthUser, LoginRequest, LoginResponse, LogoutResponse, MeResponse
+from app.services.redis_runtime import create_redis_runtime
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -236,9 +237,11 @@ async def login(request: LoginRequest) -> LoginResponse:
         display_name=demo_user["display_name"],
         role=demo_user["role"],
     )
+    access_token = create_demo_token(user)
+    create_redis_runtime(get_settings()).cache_session(access_token, user)
     return LoginResponse(
         auth_mode="demo",
-        access_token=create_demo_token(user),
+        access_token=access_token,
         user=user,
     )
 

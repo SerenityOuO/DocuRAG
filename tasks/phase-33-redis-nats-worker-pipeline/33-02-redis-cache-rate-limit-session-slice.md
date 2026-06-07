@@ -30,15 +30,16 @@
 - `.env.example`
 - `infra/docker-compose.yml`
 - `docs/architecture.md`
+- `backend/README.md`
 - `TODO.md`
 - `tasks/phase-33-redis-nats-worker-pipeline/33-02-redis-cache-rate-limit-session-slice.md`
 
 ## Acceptance Criteria
 
-- [ ] Redis client 可透過 env 設定，並有 unavailable fallback。
-- [ ] Rate limit / cache 行為有 backend tests。
-- [ ] Docker Compose 可選啟動 Redis service。
-- [ ] 文件說明 Redis slice 不等於 worker pipeline 完成。
+- [x] Redis client 可透過 env 設定，並有 unavailable fallback。
+- [x] Rate limit / cache 行為有 backend tests。
+- [x] Docker Compose 可選啟動 Redis service。
+- [x] 文件說明 Redis slice 不等於 worker pipeline 完成。
 
 ## Validation
 
@@ -46,3 +47,10 @@
 - Redis smoke script 或手動 health check。
 - `rg -n "Redis|rate limit|query cache|session cache|fallback" backend docs infra TODO.md tasks/phase-33-redis-nats-worker-pipeline`
 - `git diff --check`
+
+## Validation Result
+
+- Passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`221 passed`，1 pytest cache warning）。
+- Passed: manual Redis health fallback check，`DOCURAG_REDIS_URL=redis://127.0.0.1:6390/0` 且未安裝 Redis client 時，`/health` 回 `redis: unavailable`、service `ok`。
+- Passed: `rg -n "Redis|rate limit|query cache|session cache|fallback" backend docs infra TODO.md tasks/phase-33-redis-nats-worker-pipeline`。
+- Passed: `git diff --check`。

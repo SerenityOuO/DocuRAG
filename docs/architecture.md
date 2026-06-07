@@ -1,6 +1,6 @@
 # MVP Architecture
 
-本文件描述 DocuRAG AgentOps 目前的受控 MVP 架構。到 v0.32.0 為止，專案已完成 backend / frontend demo、provider-selected OCR、citation trace、retrieval eval runner、built-in RAG eval admin API、vector / rerank / hybrid / `hybrid_rerank` retrieval building blocks、Viewer Chat / Admin Ingestion role split、deterministic Agent tool-use trace、VLM-first parser provider spike、OCR / VLM evidence alignment、aggressive demo defaults、`.txt` direct ingestion、text-native PDF extraction、demo auth mode、後台「測試RAG」surface、opt-in PostgreSQL metadata repository foundation，以及 formal Auth / RBAC / tenant boundary 的可展示 release。Phase 33 `33-01` 只新增 Redis / NATS worker pipeline contract，定義 cache、event、task status、retry 與 idempotency 邊界；它不是 runtime service、worker code、dependency 或 deployment 設定。這不代表已新增 production VLM parser、Redis / NATS runtime、async worker、production eval dashboard 或 scanned PDF OCR。
+本文件描述 DocuRAG AgentOps 目前的受控 MVP 架構。到 v0.32.0 為止，專案已完成 backend / frontend demo、provider-selected OCR、citation trace、retrieval eval runner、built-in RAG eval admin API、vector / rerank / hybrid / `hybrid_rerank` retrieval building blocks、Viewer Chat / Admin Ingestion role split、deterministic Agent tool-use trace、VLM-first parser provider spike、OCR / VLM evidence alignment、aggressive demo defaults、`.txt` direct ingestion、text-native PDF extraction、demo auth mode、後台「測試RAG」surface、opt-in PostgreSQL metadata repository foundation，以及 formal Auth / RBAC / tenant boundary 的可展示 release。Phase 33 `33-01` 固定 Redis / NATS worker pipeline contract；`33-02` 新增 opt-in Redis runtime slice，用於 session cache、RAG query cache 與 rate limit，Redis 未設定或不可用時仍走 fallback。這不代表已新增 NATS runtime、async worker、production eval dashboard 或 scanned PDF OCR。
 
 ## MVP Shape
 
@@ -31,9 +31,9 @@ FastAPI Backend
     |-- manual vector indexing API
     |-- built-in RAG eval API / retrieval eval runner CLI
     |
-Phase 33 Worker Pipeline Contract (not runtime yet)
+Phase 33 Redis Slice / Worker Pipeline Contract
     |
-    |-- Redis responsibilities / boundaries
+    |-- opt-in Redis session cache / query cache / rate limit
     |-- NATS / JetStream event topics
     |-- task status / retry / idempotency policy
     |
@@ -58,9 +58,11 @@ Phase 28 的 demo auth mode 只把這個 role split 變成可登入展示的本�
 
 Phase 29 的「測試RAG」只把既有 retrieval eval runner 包成後台可操作的 built-in benchmark。它固定 `hybrid_rerank` 與 synthetic 中文發票 dataset，只顯示第一版核心 metrics；fallback cases 以摺疊明細呈現。這不是 strategy comparison UI、production eval dashboard、eval history storage、自訂 dataset builder、OCR eval、VLM parser eval 或 LLM-as-judge。
 
-## Phase 33 Redis / NATS Worker Pipeline Contract Boundary
+## Phase 33 Redis / NATS Worker Pipeline Boundary
 
-`33-01` 只固定 worker pipeline 的文件合約，不啟動 Redis、NATS、JetStream、worker process、Docker service 或 deployment 設定。同步 API 與現有 frontend best-effort orchestration 仍維持現況。
+`33-01` 固定 worker pipeline 的文件合約。`33-02` 只啟用最小 Redis backend slice：當 `DOCURAG_REDIS_URL` 為空時，系統維持既有 fallback-only demo；當 Redis 設定存在時，backend 會 best-effort 使用 Redis 做 demo-safe session cache、RAG query cache 與 rate limit。Redis 不可用時 `/health` 會顯示 `redis=unavailable`，RAG request 仍可繼續，並在 trace metadata 標示 cache / rate-limit fallback 狀態。
+
+`33-02` 不啟動 NATS、JetStream、worker process、async job queue、distributed lock runtime 或 production session rotation。同步 API 與現有 frontend best-effort orchestration 仍維持現況。
 
 Redis responsibilities：
 
@@ -71,6 +73,14 @@ Redis responsibilities：
 | Rate limit | 依 user、organization、IP 或 API group 記錄短期 counter。 | 只做節流輔助，不是 audit log 或 permission source of truth。 |
 | Worker lock | 以 idempotency key 防止同一 document / task 重複處理。 | Lock 必須有 TTL；不得作長期 task status 或資料庫替代品。 |
 | Short-term chat history | 保存短期 conversation context 或 UI draft。 | 不保存 canonical citations、document chunks、Agent run history 或 eval result。 |
+
+`33-02` runtime coverage：
+
+- Demo login 成功後可 best-effort 寫入 token hash session cache；token 本身仍由 existing signed bearer guard 驗證，Redis 不是權限來源。
+- `/rag/query` 會用 project / role / provider / visible document signature 建立 query cache key；cache hit 直接回傳已序列化的 `RagQueryResponse`。
+- `/rag/query` 會用 Redis counter 做每分鐘簡單 rate limit；Redis unavailable 時不封鎖 request，只回到原本 demo 路徑。
+- Redis Python client 收斂在 optional `backend[redis]` extra；Docker image 需以 `DOCURAG_INSTALL_REDIS=true` 建置才會安裝 client。
+- Docker Compose 提供 `redis` profile，可用 `DOCURAG_INSTALL_REDIS=true DOCURAG_REDIS_URL=redis://redis:6379/0 docker compose --profile redis ...` 明確啟用。
 
 NATS / JetStream topics：
 
@@ -497,7 +507,7 @@ Completed in `32-03`: endpoint permission guards and cross-project filtering enf
 - Production indexing worker、自動 queue reindex、DB-backed retrieval management。
 - Production eval dashboard、strategy comparison UI、LLM-as-judge、answer faithfulness scoring、citation quality scoring。
 - Multi-user tenancy、production login、RBAC、destructive migration、production DB operation。Phase 31 目前已完成 PostgreSQL boundary / schema contract / opt-in repository adapter，不代表 production tenancy、production database operation 或 release sync 已完成。
-- Redis session、cache、rate limit。
+- Production Redis session rotation、cross-service cache invalidation 與 worker lock runtime；`33-02` 只完成 opt-in demo-safe session cache、query cache 與 rate limit slice。
 - NATS event bus。
 - Production autonomous Agent、LLM planner、arbitrary tool runtime 或 destructive tool execution。
 - vLLM / OpenAI-compatible serving。

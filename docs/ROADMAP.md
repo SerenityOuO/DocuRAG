@@ -143,7 +143,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 Phase 31 `v0.31.0` release sync 與 Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync，並已建立 Phase 33 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync，以及 `32-01` 到 `32-04` 均已完成；不宣稱 Phase 33 到 Phase 39 已完成。
+- 已完成 Phase 31 `v0.31.0` release sync 與 Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync，並已建立 Phase 33 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04`、Phase 33 `33-01` worker pipeline contract 與 `33-02` Redis cache / rate limit / session slice 均已完成；不宣稱 Phase 33 到 Phase 39 已整體完成。
 
 ### Phase 31 - PostgreSQL / Schema / Repository Foundation
 
@@ -258,6 +258,13 @@ Expected Outcome：
 - NATS / JetStream topics are documented for `document.uploaded`, `document.ocr.requested`, `document.parse.requested`, `document.index.requested` and `rag.eval.requested`, including payload boundaries and no file bytes / secrets in events.
 - Task status lifecycle, retry / failure policy and deterministic idempotency key policy are defined for future worker runtime tickets.
 - Release Impact: Version bump required: no. This ticket does not add Redis / NATS runtime services, worker code, dependency, migration, deployment config, autoscaling or model behavior changes.
+
+33-02 Redis Cache Rate Limit Session Slice Status:
+- Completed opt-in Redis backend slice for session cache, RAG query cache and rate limit. `DOCURAG_REDIS_URL` plus optional `backend[redis]` enables the runtime; missing package, missing URL or unavailable Redis remains fallback-safe.
+- `/health` now reports Redis as `disabled`, `ok` or `unavailable`; `/auth/login` best-effort writes token-hash session cache; `/rag/query` can use scoped query cache keys and per-minute rate limiting without changing retrieval ranking.
+- Docker Compose includes an optional `redis` profile and backend image build arg `DOCURAG_INSTALL_REDIS=true`; the default demo still starts without Redis.
+- Release Impact: Version bump required: no. This ticket does not add NATS, worker runtime, async queue, distributed lock runtime, production session rotation or model behavior changes.
+- Validation passed: backend test script (`221 passed`, 1 pytest cache warning), manual Redis health fallback check, ticket `rg` and `git diff --check`.
 
 ### Phase 34 - Production OCR / Scanned PDF Pipeline
 

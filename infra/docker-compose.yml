@@ -6,6 +6,7 @@ services:
       context: ../backend
       args:
         DOCURAG_INSTALL_REAL_OCR: ${DOCURAG_INSTALL_REAL_OCR:-false}
+        DOCURAG_INSTALL_REDIS: ${DOCURAG_INSTALL_REDIS:-false}
     environment:
       DOCURAG_APP_NAME: DocuRAG AgentOps Backend
       DOCURAG_VERSION: 0.32.0
@@ -21,6 +22,7 @@ services:
       DOCURAG_EMBEDDING_BASE_URL: ${DOCURAG_EMBEDDING_BASE_URL:-http://host.docker.internal:11434}
       DOCURAG_RERANK_PROVIDER: ${DOCURAG_RERANK_PROVIDER:-fastembed}
       DOCURAG_QDRANT_URL: ${DOCURAG_QDRANT_URL:-http://qdrant:6333}
+      DOCURAG_REDIS_URL: ${DOCURAG_REDIS_URL:-}
     volumes:
       - ../data:/app/data
     ports:
@@ -33,6 +35,13 @@ services:
       - "6334:6334"
     volumes:
       - qdrant_storage:/qdrant/storage
+
+  redis:
+    image: redis:7-alpine
+    profiles:
+      - redis
+    ports:
+      - "6379:6379"
 
 volumes:
   qdrant_storage:

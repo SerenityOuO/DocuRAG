@@ -126,6 +126,7 @@
 57. `tasks/phase-40-interview-evidence-hardening/40-01-phase-40-jd-evidence-plan.md` 已完成，新增 Phase 40 JD evidence hardening roadmap；文件 ticket，不 bump version。
 58. `tasks/phase-31-enterprise-roadmap/31-02-postgresql-boundary-and-migration-policy.md` 已完成，固定 Phase 31 PostgreSQL boundary、migration policy 與 local JSON fallback / migration path；文件 ticket，不 bump version。
 59. `tasks/phase-31-enterprise-roadmap/31-03-db-schema-contract.md` 已完成，固定 Phase 31 core tables schema contract 與 local JSON mapping；文件 ticket，不 bump version。
+60. `tasks/phase-33-redis-nats-worker-pipeline/33-02-redis-cache-rate-limit-session-slice.md` 已完成，新增 opt-in Redis session cache、RAG query cache、rate limit、health fallback 與 Docker Compose redis profile；不 bump version。
 
 ## Phase 30 Parser / Ingestion Hardening
 
@@ -159,7 +160,7 @@ Phase 32 `v0.32.0` - Formal Auth / RBAC / tenant boundary：
 
 Phase 33 `v0.33.0` - Redis + NATS worker pipeline：
 - [x] `tasks/phase-33-redis-nats-worker-pipeline/33-01-redis-nats-worker-contract.md`: 完成 Markdown-only Redis / NATS worker pipeline contract，定義 Redis responsibilities / boundaries、NATS / JetStream topics、event payload、task status lifecycle、retry / failure policy 與 idempotency key；不 bump version。
-- [ ] `tasks/phase-33-redis-nats-worker-pipeline/33-02-redis-cache-rate-limit-session-slice.md`
+- [x] `tasks/phase-33-redis-nats-worker-pipeline/33-02-redis-cache-rate-limit-session-slice.md`: 完成 opt-in Redis backend slice，支援 session cache、RAG query cache、rate limit、health fallback 與 Docker Compose redis profile；不 bump version。
 - [ ] `tasks/phase-33-redis-nats-worker-pipeline/33-03-nats-worker-skeleton-and-task-status.md`
 - [ ] `tasks/phase-33-redis-nats-worker-pipeline/33-04-worker-demo-smoke-and-release-sync.md`
 
@@ -202,7 +203,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 `33-01` 已完成 worker pipeline contract；除 Phase 31、Phase 32、Phase 33 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 `33-01` 已完成 worker pipeline contract，`33-02` 已完成 Redis cache / rate limit / session slice；除 Phase 31、Phase 32、Phase 33 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
@@ -267,6 +268,15 @@ Phase 31-39 guardrails：
 - NATS / JetStream topics 已固定為 `document.uploaded`、`document.ocr.requested`、`document.parse.requested`、`document.index.requested` 與 `rag.eval.requested`，並定義 payload 不包含 file bytes、secret 或跨 project data。
 - Task status lifecycle、retry / failure policy 與 deterministic idempotency key 已固定；本 ticket 不新增 runtime service、worker code、dependency、migration、deployment config、autoscaling 或 model behavior changes。
 - Release Impact：Version bump required: no。
+
+33-02 Redis Cache Rate Limit Session Slice Status：
+- 已完成。新增 opt-in Redis runtime helper：`DOCURAG_REDIS_URL` 有設定且安裝 optional `backend[redis]` extra 時，backend 可 best-effort 使用 session cache、RAG query cache 與 rate limit。
+- Redis 未設定、client 未安裝或連線不可用時，`/health` 會回報 `disabled` / `unavailable`，既有 demo API 不會 hard fail；rate limit fallback 會允許請求繼續。
+- `/auth/login` 會 best-effort 以 token hash 寫入 session cache；`/rag/query` 會依 auth context、provider settings 與可見 document signature 建立 query cache key，並在 Redis 可用時套用 per-minute rate limit。
+- Docker Compose 新增 optional `redis` profile，backend image 可用 `DOCURAG_INSTALL_REDIS=true` 安裝 Redis client；預設仍不啟動 Redis、不要求外部服務。
+- 本 ticket 不新增 NATS、worker、async queue、distributed lock runtime、production session rotation、OAuth、MFA、enterprise auth，也不修改 OCR、parser、RAG ranking 或 Agent planner。
+- Validation 已通過：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`221 passed`，1 pytest cache warning）；manual Redis health fallback check 通過（Redis client 未安裝時 `/health` 回 `redis: unavailable` 且 service `ok`）；ticket `rg` 與 `git diff --check` 通過。
+- Release Impact：Version bump required: no；`v0.33.0` 版本同步留到 `33-04`。
 ## Phase 40 Interview Evidence Hardening
 
 - [x] `tasks/phase-40-interview-evidence-hardening/40-01-phase-40-jd-evidence-plan.md`: 新增 Phase 40 `v0.40.0` JD evidence hardening roadmap；文件 ticket，不 bump version。

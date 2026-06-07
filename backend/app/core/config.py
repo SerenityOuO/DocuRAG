@@ -64,6 +64,12 @@ class Settings(BaseSettings):
     rerank_model: str = "BAAI/bge-reranker-base"
     rerank_top_k: int = 5
     rerank_timeout_seconds: float = 30.0
+    redis_url: str | None = None
+    redis_timeout_seconds: float = 1.0
+    redis_session_ttl_seconds: int = 3600
+    redis_query_cache_ttl_seconds: int = 60
+    redis_rate_limit_per_minute: int = 60
+    redis_rate_limit_window_seconds: int = 60
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

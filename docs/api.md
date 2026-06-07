@@ -78,7 +78,9 @@ SSO, OAuth, MFA, password reset, email verification, Redis-backed session storag
 
 ## Phase 33 Redis / NATS Worker Task Contract
 
-`33-01` defines a contract only. It does not add Redis / NATS runtime services, worker code, Docker Compose services, dependencies, migrations or deployment settings.
+`33-01` defines the Redis / NATS worker task contract. `33-02` adds only an opt-in Redis backend slice for session cache, RAG query cache and rate limit. If `DOCURAG_REDIS_URL` is empty, Redis behavior is disabled and existing demo APIs keep working. If Redis is configured but unavailable, requests fall back without hard failing.
+
+`33-02` does not add NATS runtime services, worker code, async queues, migrations, distributed locks or production session rotation.
 
 ### Redis Responsibilities
 
@@ -89,6 +91,18 @@ SSO, OAuth, MFA, password reset, email verification, Redis-backed session storag
 | Rate limit | Per user / organization / IP / API group counters. | Not an audit log or permission check replacement. |
 | Worker lock | Idempotency lock for OCR / parser / index / eval tasks. | TTL required; not long-term task status. |
 | Short-term chat history | Ephemeral chat context for future UI continuity. | Not canonical citations, document chunks, Agent run history or eval result storage. |
+
+### Redis Runtime Slice
+
+| API surface | Redis use | Fallback |
+|---|---|---|
+| `GET /health` | Returns `redis=disabled`, `redis=ok` or `redis=unavailable`. | Service health stays `ok`; unavailable detail is informational. |
+| `POST /auth/login` | Best-effort stores a hashed bearer token session payload with short TTL. | Login still succeeds; signed token remains the source of auth. |
+| `POST /rag/query` | Applies simple Redis counter rate limit and reads / writes short TTL query cache. | Query still runs when Redis is disabled or unavailable; trace metadata records cache / rate-limit status when Redis is configured. |
+
+Redis query cache keys include auth mode, role, organization / project access, provider settings and the visible document / chunk signature. Cache entries must not be shared across projects or roles.
+
+The Redis Python client is optional. Install the backend with `.[dev,redis]`, or build Docker with `DOCURAG_INSTALL_REDIS=true`, before expecting `DOCURAG_REDIS_URL` to connect to a real Redis service. Without that client, `/health` reports `redis=unavailable` and existing APIs keep their fallback path.
 
 ### NATS / JetStream Topics
 
