@@ -178,10 +178,10 @@ Phase 28 Document Source Router contract：
 - Source router 依 `file_type`、`content_type` 與 future detection result 選擇 `image_ocr`、`text_upload`、`pdf_text` 或 `pdf_scanned_pending_ocr`。
 - `image_ocr` 沿用 provider-selected OCR，產生 OCR text / OCR lines / chunks；`ocr_mock` 只保留為手動 fallback 或 validation path，不是 `.txt` 的正式來源。
 - `.txt` 目前已走 `text_upload` direct ingestion，直接讀 UTF-8 原文、做基本空白 normalization 並建立 chunks；OCR status 保持 pending，不標成 OCR completed。
-- PDF 必須分成 text-native PDF 與 scanned PDF：`pdf_text` 代表已用 `pypdf` 抽到文字層並建立 chunks；`pdf_scanned_pending_ocr` 代表需要 PDF rendering / OCR pipeline，未完成前只能顯示 pending / unsupported。
+- PDF 必須分成 text-native PDF 與 scanned PDF：`pdf_text` 代表已用 `pypdf` 抽到文字層並建立 chunks；Phase 34 `34-02` 起，`pdf_scanned_pending_ocr` 可用 `PyMuPDF` render bounded PNG page images 並保存 metadata，但 OCR worker 尚未完成。
 - Normalized document text contract 至少保留 `document_id`、`source_type`、`text`、`page_number`、`bbox`、`confidence`、`metadata` 與 `created_at`，讓 RAG、Qdrant payload 與 Agent citations 不再永久綁死 OCR chunks。
 - `POST /documents/{document_id}/index/vector` 可索引 `text_upload` 與 `pdf_text` chunks；Qdrant / embedding runtime 不可用時仍回傳清楚 fallback error。
-- 本階段新增的 PDF dependency 僅限 `pypdf` text extraction，不新增 PDF rendering、scanned PDF OCR、worker、DB schema、正式 Auth / RBAC、Redis、NATS 或 deployment 設定。
+- PDF runtime 目前包含 `pypdf` text extraction 與 Phase 34 `34-02` demo-safe `PyMuPDF` page image rendering；仍不新增 scanned PDF OCR worker、DB schema、正式 Auth / RBAC、Redis、NATS 或 deployment 設定。
 
 Phase 29 built-in RAG eval boundary：
 
@@ -330,7 +330,7 @@ Phase 12 manual Vector Indexing：
 - 成功 response 會包含 `indexed_chunk_count`、`point_ids`、`collection_name`、`vector_size`、`embedding_provider` 與 `embedding_model`。
 - Empty chunks 會回傳 `status=skipped`，未完成 OCR 的 document 會回傳 `409`；backend upload / OCR endpoint 本身不啟動 worker，frontend v0.27.0 後台 ingestion 會在 OCR 成功後 best-effort 呼叫此 API。
 - Phase 28 source router contract 將目前圖片 runtime 路由標為 `image_ocr`，而 vector payload 來源仍可保留 `source_type=ocr_image`：OCR lines / chunks 是 Qdrant payload 的文字來源，payload 至少保留 `document_id`、`filename`、`chunk_id`、`source_type`、`content_source`、`page_number`、`created_at` 與 future `project_id` / `tenant_id` metadata 位置。
-- `.txt` 檔已走 `text_upload` direct chunks，不需要假裝經過 OCR；text-native PDF 已走 `pdf_text` extraction；scanned PDF 在 PDF rendering / OCR pipeline 完成前只能標為 `pdf_scanned_pending_ocr`，不得宣稱已可索引。
+- `.txt` 檔已走 `text_upload` direct chunks，不需要假裝經過 OCR；text-native PDF 已走 `pdf_text` extraction；scanned PDF 目前可 render page images 並標為 `pdf_scanned_pending_ocr`，但在 OCR pipeline 完成前不得宣稱已可索引。
 - VLM structured fields 不會在本 contract 自動寫入 retrieval chunks；若未來要索引欄位，需要另開 field-indexing policy ticket。
 
 ```powershell

@@ -23,6 +23,7 @@ class ProcessingJobType(StrEnum):
     UPLOAD = "upload"
     TEXT_INGESTION = "text_ingestion"
     PDF_TEXT_EXTRACTION = "pdf_text_extraction"
+    PDF_RENDERING = "pdf_rendering"
     OCR_MOCK = "ocr_mock"
     OCR_REAL = "ocr_real"
     LOCAL_INDEXING = "local_indexing"
@@ -159,6 +160,32 @@ class DocumentChunk(BaseModel):
     metadata: dict[str, str] = Field(default_factory=dict)
 
 
+class PdfPageImage(BaseModel):
+    image_id: str = Field(..., min_length=1)
+    document_id: str = Field(..., min_length=1)
+    page_number: int = Field(..., ge=1)
+    path: str = Field(..., min_length=1)
+    width: int = Field(..., ge=1)
+    height: int = Field(..., ge=1)
+    dpi: int = Field(..., ge=1)
+    checksum: str = Field(..., min_length=64, max_length=64)
+    page_status: Literal[
+        "pending_render",
+        "rendering",
+        "rendered",
+        "render_failed",
+        "ocr_queued",
+        "ocr_running",
+        "ocr_succeeded",
+        "ocr_failed",
+        "ocr_retrying",
+        "skipped_text_native",
+    ] = "rendered"
+    source_type: str = Field(default="pdf_scanned_pending_ocr", min_length=1)
+    failure_reason: str | None = None
+    created_at: datetime
+
+
 class DocumentMetadata(BaseModel):
     document_id: str = Field(..., min_length=1)
     project_id: str | None = None
@@ -173,6 +200,7 @@ class DocumentMetadata(BaseModel):
     ocr: OcrResult = Field(default_factory=OcrResult)
     parser_result: ParserResult | None = None
     chunks: list[DocumentChunk] = Field(default_factory=list)
+    page_images: list[PdfPageImage] = Field(default_factory=list)
     processing_jobs: list[ProcessingJob] = Field(default_factory=list)
     latest_job: ProcessingJob | None = None
 

@@ -10,6 +10,7 @@ from app.schemas.documents import (
     OcrResult,
     OcrStatus,
     OcrTextLine,
+    PdfPageImage,
     ProcessingJob,
     ProcessingJobType,
     ProcessingStepStatus,
@@ -40,6 +41,8 @@ def test_processing_step_status_values() -> None:
 
 def test_processing_job_type_values() -> None:
     assert ProcessingJobType.UPLOAD == "upload"
+    assert ProcessingJobType.PDF_TEXT_EXTRACTION == "pdf_text_extraction"
+    assert ProcessingJobType.PDF_RENDERING == "pdf_rendering"
     assert ProcessingJobType.OCR_MOCK == "ocr_mock"
     assert ProcessingJobType.OCR_REAL == "ocr_real"
     assert ProcessingJobType.LOCAL_INDEXING == "local_indexing"
@@ -143,6 +146,7 @@ def test_legacy_ready_metadata_infers_processing_status() -> None:
     assert document.chunks[0].confidence is None
     assert document.chunks[0].source_type == "ocr_mock"
     assert document.chunks[0].metadata == {}
+    assert document.page_images == []
     assert document.processing_jobs == []
     assert document.latest_job is None
 
@@ -242,6 +246,24 @@ def test_document_chunk_rejects_invalid_trace_metadata() -> None:
 
     with pytest.raises(ValidationError):
         BoundingBox(x_min=100, y_min=0, x_max=10, y_max=40)
+
+
+def test_pdf_page_image_metadata_validates_required_fields() -> None:
+    page_image = PdfPageImage(
+        image_id="doc-001-page-001",
+        document_id="doc-001",
+        page_number=1,
+        path="page-images/doc-001/page-001.png",
+        width=1275,
+        height=1650,
+        dpi=150,
+        checksum="a" * 64,
+        source_type="pdf_scanned_pending_ocr",
+        created_at="2026-05-20T00:00:00Z",
+    )
+
+    assert page_image.page_status == "rendered"
+    assert page_image.source_type == "pdf_scanned_pending_ocr"
 
 
 def test_rag_query_rejects_invalid_top_k() -> None:

@@ -511,6 +511,8 @@ def create_document_storage(settings: Any):
     return DocumentStorage(
         settings.data_dir,
         repository=create_document_repository(settings),
+        pdf_render_dpi=settings.pdf_render_dpi,
+        pdf_render_max_side=settings.pdf_render_max_side,
     )
 
 

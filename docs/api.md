@@ -239,7 +239,7 @@ This endpoint is not production eval history, custom dataset upload, OCR accurac
 | `image_ocr` | image file type or image content type | 走既有 provider-selected OCR，產生 OCR text / OCR lines / chunks。 | `ocr_mock` 只作手動 fallback / validation path，不是正式來源。 |
 | `text_upload` | `.txt` | 直接讀 UTF-8 原文、做基本空白 normalization 並建立 chunks。 | Current runtime；不需要 OCR job，也不標示為 OCR completed。 |
 | `pdf_text` | PDF with extractable text layer | 使用 `pypdf` 抽取 text-native PDF 文字並建立 chunks。 | 保留 `page_number`；`bbox` 可為 `null`，不可假造座標。 |
-| `pdf_scanned_pending_ocr` | PDF without extractable text or future scanned detection | 等待 PDF rendering / OCR pipeline。 | 目前只顯示 pending / unsupported，不自動送 OCR，也不宣稱已支援 scanned PDF OCR。 |
+| `pdf_scanned_pending_ocr` | PDF without extractable text or future scanned detection | `34-02` 會 render page images，等待後續 OCR pipeline。 | 目前可保存 page image metadata，但不自動送 OCR，也不宣稱已支援 scanned PDF OCR。 |
 
 ### Normalized Document Text
 
@@ -264,7 +264,7 @@ This endpoint is not production eval history, custom dataset upload, OCR accurac
 }
 ```
 
-Frontend ingestion flow 依 source type 顯示不同狀態：`text_upload` 可直接建立知識庫並接 best-effort parser / vector indexing，`image_ocr` 先 OCR，`pdf_text` 顯示 text-native PDF extraction ready，`pdf_scanned_pending_ocr` 顯示需要 PDF rendering / OCR pipeline。
+Frontend ingestion flow 依 source type 顯示不同狀態：`text_upload` 可直接建立知識庫並接 best-effort parser / vector indexing，`image_ocr` 先 OCR，`pdf_text` 顯示 text-native PDF extraction ready，`pdf_scanned_pending_ocr` 顯示 page images 已待 OCR pipeline。
 
 `28-03` 新增的 PDF dependency 僅限 `pypdf` text extraction；仍不新增 PDF rendering、多頁 OCR pipeline、worker、DB schema、正式 auth / RBAC、Redis、NATS 或 deployment 設定。
 
@@ -277,38 +277,34 @@ Frontend ingestion flow 依 source type 顯示不同狀態：`text_upload` 可�
 | PDF class | Detection rule | Contract source | Runtime behavior |
 |---|---|---|---|
 | Text-native PDF | Every required page has extractable text. | `pdf_text` | Current runtime uses `pypdf` extraction and creates page-aware chunks. |
-| Scanned PDF | No useful text layer, pages require rendering. | `pdf_scanned_pending_ocr` | Future `34-02` renders page images; future `34-03` runs page-level OCR. |
-| Mixed PDF | Some pages have text, some pages require OCR. | `pdf_mixed_pending_ocr` | Text pages may produce `pdf_text` chunks; scanned pages stay pending until page image + OCR completes. |
+| Scanned PDF | No useful text layer, pages require rendering. | `pdf_scanned_pending_ocr` | `34-02` renders bounded PNG page images; future `34-03` runs page-level OCR. |
+| Mixed PDF | Some pages have text, some pages require OCR. | `pdf_mixed_pending_ocr` | Text pages produce `pdf_text` chunks; scanned pages render `pdf_mixed_pending_ocr` page images and stay pending for OCR. |
 | Invalid PDF | Parser cannot open, encrypted without key, corrupt, unsupported, or too large. | `pdf_invalid` | No chunks are created; document stores a clear failure reason. |
 
-Current runtime may still collapse unsupported scanned / empty PDFs into `pdf_scanned_pending_ocr`; it must not claim scanned PDF OCR is complete until `34-02` and `34-03` are implemented.
+Current runtime can render scanned / mixed PDF page images, but it must not claim scanned PDF OCR is complete until `34-03` is implemented.
 
 ### Page Image Contract
 
-Future page image records must be page-scoped and idempotent:
+`34-02` stores page image records on document metadata:
 
 ```json
 {
+  "image_id": "doc_123-page-001",
   "document_id": "doc_123",
   "page_number": 1,
+  "path": "page-images/doc_123/page-001.png",
+  "width": 1275,
+  "height": 1650,
+  "dpi": 150,
+  "checksum": "64-character-sha256-hex",
   "page_status": "rendered",
-  "page_image": {
-    "image_id": "doc_123_page_001",
-    "path": "data/page-images/doc_123/page-001.png",
-    "width": 1654,
-    "height": 2339,
-    "dpi": 200,
-    "checksum": "sha256:...",
-    "created_at": "2026-06-07T10:00:00Z"
-  },
-  "source": {
-    "pdf_class": "scanned",
-    "source_type": "pdf_scanned_pending_ocr"
-  }
+  "source_type": "pdf_scanned_pending_ocr",
+  "failure_reason": null,
+  "created_at": "2026-06-07T10:00:00Z"
 }
 ```
 
-`page_status` values are `pending_render`, `rendering`, `rendered`, `ocr_queued`, `ocr_running`, `ocr_succeeded`, `ocr_failed`, `ocr_retrying` and `skipped_text_native`. Text-native pages in a mixed PDF use `skipped_text_native` for page image / OCR work and keep `pdf_text` chunks as the source of truth.
+`34-02` writes `rendered` records only. Future `34-03` may use `ocr_queued`, `ocr_running`, `ocr_succeeded`, `ocr_failed` and `ocr_retrying`; text-native pages in a mixed PDF keep `pdf_text` chunks as the source of truth and are not rendered.
 
 ### OCR Block Contract
 
@@ -384,7 +380,7 @@ This contract does not implement production OCR runtime, table reconstruction, l
 | `ocr_image` | OCR text / OCR lines from image upload | Current demo path | 圖片或掃描類文件先走 OCR，再用 OCR chunks 寫入 Qdrant。 |
 | `text_upload` | Original text file body | Current runtime | `.txt` 直接建立 chunks，不需要假裝經過 OCR。 |
 | `pdf_text` | Text-native PDF extraction | Current runtime | 只代表 PDF 內已有文字層；不包含 scanned PDF。 |
-| `pdf_scanned_pending_ocr` | PDF page images pending rendering / OCR | Current unsupported state | 未實作 PDF rendering / OCR pipeline 前，不宣稱可索引 scanned PDF。 |
+| `pdf_scanned_pending_ocr` | Rendered PDF page images pending OCR | Current rendering path, OCR pending | `34-02` 可產生 page images；`34-03` OCR pipeline 完成前，不宣稱可索引 scanned PDF。 |
 
 ### Normalized Text Source
 

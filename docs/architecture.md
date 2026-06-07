@@ -368,7 +368,7 @@ Normalized document text contract 至少包含 `document_id`、`source_type`、`
 
 ## Phase 34 Scanned PDF / Production OCR Contract
 
-`34-01` defines the scanned PDF OCR contract only. It does not add PDF rendering runtime, OCR code, new dependency, migration, frontend route or production OCR tuning.
+`34-01` defines the scanned PDF OCR contract. `34-02` adds the demo-safe PDF rendering runtime only: `PyMuPDF` renders scanned PDF pages into bounded PNG page images and stores page metadata. It still does not execute OCR, layout analysis, table reconstruction, human correction workflow, frontend route changes or production OCR tuning.
 
 ```text
 PDF upload
@@ -379,19 +379,20 @@ PDF upload
     |
     |-- scanned PDF
     |       |-- source_type=pdf_scanned_pending_ocr
-    |       |-- future page image records
+    |       |-- current 34-02 page image records
     |       |-- future page-level OCR blocks
     |
     |-- mixed PDF
     |       |-- text pages -> pdf_text chunks
-    |       |-- scanned pages -> page image + OCR status
+    |       |-- scanned pages -> pdf_mixed_pending_ocr page images
+    |       |-- future page-level OCR status
     |
     |-- invalid PDF
             |-- no chunks
             |-- failure_reason=pdf_invalid / pdf_encrypted / pdf_render_failed
 ```
 
-Page image records must be page-scoped and idempotent. Each record keeps `document_id`, `page_number`, `page_status`, image path, width, height, dpi, checksum, `created_at` and source metadata. Allowed page-level statuses are `pending_render`, `rendering`, `rendered`, `ocr_queued`, `ocr_running`, `ocr_succeeded`, `ocr_failed`, `ocr_retrying` and `skipped_text_native`.
+Page image records are page-scoped and stored on `DocumentMetadata.page_images`. Each record keeps `image_id`, `document_id`, `page_number`, `page_status`, image path, width, height, dpi, checksum, `created_at`, `source_type` and optional `failure_reason`. `34-02` writes `rendered` page images for scanned pages; later OCR lifecycle statuses remain reserved for `34-03`.
 
 OCR blocks must preserve `block_id`, `page_number`, text, bbox, confidence, reading order, provider, language and provider version where available. Missing bbox / confidence stays `null`; the runtime must not invent layout evidence.
 
@@ -404,7 +405,7 @@ Handoff rules:
 - Vector indexing waits for page-level OCR completion or records partial / skipped pages in metadata.
 - Phase 33 worker task status mirrors rendering / OCR progress but does not execute production OCR in this contract ticket.
 
-This contract is the boundary for `34-02` and `34-03`; it is not production OCR runtime, layout analysis, table reconstruction, human correction workflow, VLM parser change, RAG ranking change, Agent planner change or eval dashboard change.
+`34-02` uses `DOCURAG_PDF_RENDER_DPI` and `DOCURAG_PDF_RENDER_MAX_SIDE` to keep local page images bounded. Text-native PDF remains on the `pdf_text` path and does not create page images; invalid / unsupported PDF stores an explicit failure reason. OCR execution, retry state and page-level OCR status remain the boundary for `34-03`.
 
 ## Phase 28 Demo Auth Boundary
 

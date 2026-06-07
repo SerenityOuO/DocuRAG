@@ -35,10 +35,10 @@
 
 ## Acceptance Criteria
 
-- [ ] Scanned PDF 可產生 page images 與 page metadata。
-- [ ] Text-native PDF 仍走既有 `pdf_text` path，不被錯誤送入 scanned pipeline。
-- [ ] Invalid / unsupported PDF 有明確 failure reason。
-- [ ] Validation 覆蓋 page rendering success 與 failure path。
+- [x] Scanned PDF 可產生 page images 與 page metadata。
+- [x] Text-native PDF 仍走既有 `pdf_text` path，不被錯誤送入 scanned pipeline。
+- [x] Invalid / unsupported PDF 有明確 failure reason。
+- [x] Validation 覆蓋 page rendering success 與 failure path。
 
 ## Validation
 
@@ -46,3 +46,10 @@
 - PDF rendering smoke script 或 targeted tests。
 - `rg -n "PDF rendering|page image|scanned|pdf_text|failure reason" backend scripts docs TODO.md tasks/phase-34-production-ocr-scanned-pdf`
 - `git diff --check`
+
+## Validation Result
+
+- Targeted tests passed: `backend/.venv/Scripts/python.exe -m pytest tests/test_document_schemas.py tests/test_documents.py -q`（`63 passed`，1 pytest cache warning）。
+- Full backend validation passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`229 passed`，1 pytest cache warning）。
+- Passed: `rg -n "PDF rendering|page image|scanned|pdf_text|failure reason" backend scripts docs TODO.md tasks/phase-34-production-ocr-scanned-pdf`。
+- Passed: `git diff --check`。

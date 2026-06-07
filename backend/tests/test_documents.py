@@ -46,47 +46,68 @@ def client(tmp_path: Path) -> TestClient:
 
 
 def _pdf_bytes(text_lines: list[str]) -> bytes:
-    text_commands = ["BT", "/F1 12 Tf", "72 720 Td"]
-    for line_index, line in enumerate(text_lines):
-        if line_index > 0:
-            text_commands.append("0 -16 Td")
+    return _multipage_pdf_bytes([text_lines])
 
-        safe_line = line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-        text_commands.append(f"({safe_line}) Tj")
 
-    text_commands.append("ET")
-    content_stream = "\n".join(text_commands) if text_lines else ""
-    objects = [
-        "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
-        "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
-        (
-            "3 0 obj\n"
-            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
-            "/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\n"
-            "endobj\n"
-        ),
-        "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
-        (
-            "5 0 obj\n"
-            f"<< /Length {len(content_stream.encode('latin-1'))} >>\n"
-            "stream\n"
-            f"{content_stream}\n"
-            "endstream\n"
-            "endobj\n"
-        ),
-    ]
+def _multipage_pdf_bytes(pages: list[list[str]]) -> bytes:
+    objects: list[tuple[int, str]] = []
+    page_object_ids: list[int] = []
+
+    def add_object(object_id: int, body: str) -> None:
+        objects.append((object_id, f"{object_id} 0 obj\n{body}\nendobj\n"))
+
+    add_object(1, "<< /Type /Catalog /Pages 2 0 R >>")
+    add_object(3, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+
+    for page_index, text_lines in enumerate(pages):
+        page_object_id = 4 + page_index * 2
+        content_object_id = page_object_id + 1
+        page_object_ids.append(page_object_id)
+
+        text_commands = ["BT", "/F1 12 Tf", "72 720 Td"]
+        for line_index, line in enumerate(text_lines):
+            if line_index > 0:
+                text_commands.append("0 -16 Td")
+
+            safe_line = line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+            text_commands.append(f"({safe_line}) Tj")
+
+        text_commands.append("ET")
+        content_stream = "\n".join(text_commands) if text_lines else ""
+        add_object(
+            page_object_id,
+            (
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+                f"/Resources << /Font << /F1 3 0 R >> >> /Contents {content_object_id} 0 R >>"
+            ),
+        )
+        add_object(
+            content_object_id,
+            (
+                f"<< /Length {len(content_stream.encode('latin-1'))} >>\n"
+                "stream\n"
+                f"{content_stream}\n"
+                "endstream"
+            ),
+        )
+
+    kids = " ".join(f"{object_id} 0 R" for object_id in page_object_ids)
+    add_object(2, f"<< /Type /Pages /Kids [{kids}] /Count {len(page_object_ids)} >>")
 
     content = "%PDF-1.4\n"
-    offsets = [0]
-    for obj in objects:
-        offsets.append(len(content.encode("latin-1")))
-        content += obj
+    offsets: dict[int, int] = {}
+    for object_id, pdf_object in sorted(objects):
+        offsets[object_id] = len(content.encode("latin-1"))
+        content += pdf_object
 
+    max_object_id = max(offsets)
     xref_offset = len(content.encode("latin-1"))
-    content += "xref\n0 6\n"
+    content += f"xref\n0 {max_object_id + 1}\n"
     content += "0000000000 65535 f \n"
-    content += "".join(f"{offset:010d} 00000 n \n" for offset in offsets[1:])
-    content += "trailer\n<< /Size 6 /Root 1 0 R >>\n"
+    for object_id in range(1, max_object_id + 1):
+        content += f"{offsets[object_id]:010d} 00000 n \n"
+
+    content += f"trailer\n<< /Size {max_object_id + 1} /Root 1 0 R >>\n"
     content += f"startxref\n{xref_offset}\n%%EOF\n"
 
     return content.encode("latin-1")
@@ -229,13 +250,18 @@ def test_upload_text_native_pdf_extracts_pdf_text_chunks(
         "page_number": "1",
     }
     assert "AUR-2026-051" in body["chunks"][0]["text"]
+    assert body["page_images"] == []
 
     metadata_path = tmp_path / "data" / "documents.json"
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     assert metadata[0]["chunks"][0]["source_type"] == "pdf_text"
+    assert metadata[0]["page_images"] == []
 
 
-def test_upload_empty_pdf_marks_scanned_pending_ocr(client: TestClient) -> None:
+def test_upload_empty_pdf_renders_page_image_for_scanned_pending_ocr(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
     response = client.post(
         "/documents/upload",
         files={"file": ("scanned.pdf", _pdf_bytes([]), "application/pdf")},
@@ -250,9 +276,70 @@ def test_upload_empty_pdf_marks_scanned_pending_ocr(client: TestClient) -> None:
     assert body["processing"]["ready"] is False
     assert body["chunks"] == []
     assert "pdf_scanned_pending_ocr" in body["processing"]["failed_reason"]
-    assert "PDF rendering / OCR pipeline" in body["processing"]["failed_reason"]
-    assert body["latest_job"]["job_type"] == "pdf_text_extraction"
-    assert body["latest_job"]["status"] == "failed"
+    assert "rendered 1 page image" in body["processing"]["failed_reason"]
+    assert "OCR worker is required" in body["processing"]["failed_reason"]
+    assert [job["job_type"] for job in body["processing_jobs"]] == [
+        "upload",
+        "pdf_text_extraction",
+        "pdf_rendering",
+    ]
+    assert body["latest_job"]["job_type"] == "pdf_rendering"
+    assert body["latest_job"]["status"] == "completed"
+
+    page_image = body["page_images"][0]
+    assert page_image["page_number"] == 1
+    assert page_image["page_status"] == "rendered"
+    assert page_image["source_type"] == "pdf_scanned_pending_ocr"
+    assert page_image["width"] <= 1800
+    assert page_image["height"] <= 1800
+    assert page_image["dpi"] >= 1
+    assert len(page_image["checksum"]) == 64
+
+    page_image_path = tmp_path / "data" / page_image["path"]
+    assert page_image_path.is_file()
+    assert page_image_path.read_bytes().startswith(b"\x89PNG")
+
+    metadata_path = tmp_path / "data" / "documents.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata[0]["page_images"][0]["source_type"] == "pdf_scanned_pending_ocr"
+
+
+def test_upload_mixed_pdf_keeps_pdf_text_and_renders_scanned_pages(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    content = _multipage_pdf_bytes(
+        [
+            ["Invoice number: MIX-2026-001", "Total: USD 120.00"],
+            [],
+        ]
+    )
+
+    response = client.post(
+        "/documents/upload",
+        files={"file": ("mixed.pdf", content, "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "uploaded"
+    assert body["processing"]["ocr"] == "pending"
+    assert body["processing"]["indexing"] == "pending"
+    assert body["processing"]["ready"] is False
+    assert "pdf_mixed_pending_ocr" in body["processing"]["failed_reason"]
+    assert body["chunks"][0]["source_type"] == "pdf_text"
+    assert body["chunks"][0]["page_number"] == 1
+    assert "MIX-2026-001" in body["chunks"][0]["text"]
+    assert [job["job_type"] for job in body["processing_jobs"]] == [
+        "upload",
+        "pdf_text_extraction",
+        "pdf_rendering",
+    ]
+
+    page_image = body["page_images"][0]
+    assert page_image["page_number"] == 2
+    assert page_image["source_type"] == "pdf_mixed_pending_ocr"
+    assert (tmp_path / "data" / page_image["path"]).is_file()
 
 
 def test_upload_invalid_pdf_marks_pdf_extraction_failed(client: TestClient) -> None:
@@ -267,6 +354,7 @@ def test_upload_invalid_pdf_marks_pdf_extraction_failed(client: TestClient) -> N
     assert body["processing"]["indexing"] == "failed"
     assert body["processing"]["ready"] is False
     assert body["chunks"] == []
+    assert body["page_images"] == []
     assert body["processing"]["failed_reason"].startswith("pdf_text_extraction_failed:")
     assert body["latest_job"]["job_type"] == "pdf_text_extraction"
     assert body["latest_job"]["status"] == "failed"

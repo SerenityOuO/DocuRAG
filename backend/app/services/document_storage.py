@@ -18,12 +18,14 @@ from app.schemas.documents import (
     OcrTextLine,
     ParserResult,
     ParserStatus,
+    PdfPageImage,
     ProcessingJob,
     ProcessingJobType,
     ProcessingStatus,
     ProcessingStepStatus,
 )
 from app.services.ocr import OcrProvider
+from app.services.pdf_rendering import PdfPageRenderer, PdfRenderingError
 
 
 class DocumentStorage:
@@ -31,12 +33,20 @@ class DocumentStorage:
         self,
         data_dir: Path,
         repository: DocumentMetadataRepository | None = None,
+        pdf_renderer: PdfPageRenderer | None = None,
+        pdf_render_dpi: int = 150,
+        pdf_render_max_side: int = 1800,
     ) -> None:
         self.data_dir = data_dir
         self.upload_dir = data_dir / "uploads"
         self.metadata_path = data_dir / "documents.json"
         self.agent_runs_path = data_dir / "agent_runs.json"
         self.repository = repository or LocalJsonDocumentRepository(data_dir)
+        self.pdf_renderer = pdf_renderer or PdfPageRenderer(
+            data_dir,
+            dpi=pdf_render_dpi,
+            max_side=pdf_render_max_side,
+        )
 
     def list_documents(self) -> list[DocumentMetadata]:
         documents = self._read_documents()
@@ -533,7 +543,7 @@ class DocumentStorage:
 
     def _ingest_pdf_upload(self, document: DocumentMetadata, content: bytes, timestamp: datetime) -> None:
         try:
-            pages = self._extract_pdf_text_pages(content)
+            page_count, pages = self._extract_pdf_text_pages(content)
         except Exception as exc:
             message = f"pdf_text_extraction_failed: {exc}"
             document.status = DocumentStatus.FAILED
@@ -554,10 +564,56 @@ class DocumentStorage:
             )
             return
 
+        if page_count < 1:
+            message = "pdf_invalid: PDF has no pages."
+            document.status = DocumentStatus.FAILED
+            document.chunks = []
+            document.processing = ProcessingStatus(
+                upload=ProcessingStepStatus.COMPLETED,
+                ocr=ProcessingStepStatus.PENDING,
+                indexing=ProcessingStepStatus.FAILED,
+                ready=False,
+                failed_reason=message,
+                updated_at=timestamp,
+            )
+            self._record_job(
+                document,
+                ProcessingJobType.PDF_TEXT_EXTRACTION,
+                ProcessingStepStatus.FAILED,
+                timestamp,
+                error_message=message,
+            )
+            return
+
+        text_page_numbers = {page_number for page_number, _ in pages}
+        scanned_page_numbers = [
+            page_number
+            for page_number in range(1, page_count + 1)
+            if page_number not in text_page_numbers
+        ]
+
+        if scanned_page_numbers:
+            source_type = "pdf_scanned_pending_ocr" if not pages else "pdf_mixed_pending_ocr"
+            self._record_job(
+                document,
+                ProcessingJobType.PDF_TEXT_EXTRACTION,
+                ProcessingStepStatus.COMPLETED,
+                timestamp,
+            )
+            rendered = self._render_pdf_page_images(
+                document,
+                content,
+                scanned_page_numbers,
+                source_type,
+                timestamp,
+            )
+            if not rendered:
+                return
+
         if not pages:
             message = (
                 "pdf_scanned_pending_ocr: PDF text layer is empty; "
-                "PDF rendering / OCR pipeline is required."
+                f"rendered {len(document.page_images)} page image(s); OCR worker is required."
             )
             document.status = DocumentStatus.UPLOADED
             document.chunks = []
@@ -569,12 +625,22 @@ class DocumentStorage:
                 failed_reason=message,
                 updated_at=timestamp,
             )
-            self._record_job(
-                document,
-                ProcessingJobType.PDF_TEXT_EXTRACTION,
-                ProcessingStepStatus.FAILED,
-                timestamp,
-                error_message=message,
+            return
+
+        if scanned_page_numbers:
+            document.chunks = self._build_pdf_text_chunks(document.document_id, pages, timestamp)
+            message = (
+                "pdf_mixed_pending_ocr: PDF has text-native and scanned pages; "
+                f"rendered {len(document.page_images)} scanned page image(s); OCR worker is required."
+            )
+            document.status = DocumentStatus.UPLOADED
+            document.processing = ProcessingStatus(
+                upload=ProcessingStepStatus.COMPLETED,
+                ocr=ProcessingStepStatus.PENDING,
+                indexing=ProcessingStepStatus.PENDING,
+                ready=False,
+                failed_reason=message,
+                updated_at=timestamp,
             )
             return
 
@@ -600,7 +666,68 @@ class DocumentStorage:
             timestamp,
         )
 
-    def _extract_pdf_text_pages(self, content: bytes) -> list[tuple[int, str]]:
+    def _render_pdf_page_images(
+        self,
+        document: DocumentMetadata,
+        content: bytes,
+        page_numbers: list[int],
+        source_type: str,
+        timestamp: datetime,
+    ) -> bool:
+        try:
+            rendered_pages = self.pdf_renderer.render_pages(
+                content,
+                document.document_id,
+                page_numbers,
+                timestamp,
+            )
+        except PdfRenderingError as exc:
+            message = str(exc)
+            document.status = DocumentStatus.FAILED
+            document.chunks = []
+            document.page_images = []
+            document.processing = ProcessingStatus(
+                upload=ProcessingStepStatus.COMPLETED,
+                ocr=ProcessingStepStatus.PENDING,
+                indexing=ProcessingStepStatus.FAILED,
+                ready=False,
+                failed_reason=message,
+                updated_at=timestamp,
+            )
+            self._record_job(
+                document,
+                ProcessingJobType.PDF_RENDERING,
+                ProcessingStepStatus.FAILED,
+                timestamp,
+                error_message=message,
+            )
+            return False
+
+        document.page_images = [
+            PdfPageImage(
+                image_id=page.image_id,
+                document_id=document.document_id,
+                page_number=page.page_number,
+                path=page.path,
+                width=page.width,
+                height=page.height,
+                dpi=page.dpi,
+                checksum=page.checksum,
+                page_status="rendered",
+                source_type=source_type,
+                created_at=page.created_at,
+            )
+            for page in rendered_pages
+        ]
+        self._record_job(
+            document,
+            ProcessingJobType.PDF_RENDERING,
+            ProcessingStepStatus.COMPLETED,
+            timestamp,
+        )
+        return True
+
+    def _extract_pdf_text_pages(self, content: bytes) -> tuple[int, list[tuple[int, str]]]:
         reader = PdfReader(BytesIO(content))
         pages: list[tuple[int, str]] = []
 
@@ -610,7 +737,7 @@ class DocumentStorage:
             if normalized_text:
                 pages.append((page_index, normalized_text))
 
-        return pages
+        return len(reader.pages), pages
 
     def _build_pdf_text_chunks(
         self,
