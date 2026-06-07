@@ -8,13 +8,22 @@
 
 - 一張 ticket 應小到 Codex 一次可以完成，完成後應可單獨 commit。
 - 若任務超出 ticket 的 `Scope`，先停止並回報，不要順手擴張。
-- 嚴格遵守 `Out of Scope`，尤其不要提前實作 OCR、RAG、Qdrant、Redis、NATS、vLLM、登入、權限或資料庫 schema。
+- 嚴格遵守 `Out of Scope`；若 OCR、RAG、Qdrant、Redis、NATS、vLLM、登入、權限、資料庫 schema、migration、repository runtime、deployment 或 observability 已在當前有效 ticket 的 `Scope` 明確排定，且沒有違反 `Out of Scope`，即可依 ticket 執行；若未在當前 ticket 排定，不得提前實作。
 - 開始任何 ticket 前，必須先閱讀 `goal.md`，確認目前專案目標、當前階段與下一步優先順序，再用它判斷要執行哪張 ticket；若 `goal.md` 不存在，先停止並回報，不要自行猜測下一步。
 - 實作前先檢查 `goal.md`、`README.md`、`README_DEV.md`、`TODO.md`、`docs/PRD.md`、`docs/architecture.md`、`docs/ROADMAP.md` 與當前 ticket；其中 `README.md` 用來確認對外展示敘事，`README_DEV.md` 用來確認開發紀錄、release log 與本地驗證脈絡。
 - 每次完成後更新 `TODO.md` 中對應 checklist，執行 ticket 指定的 validation，並再次檢查 `goal.md`，確認本次修改沒有偏離目標、沒有超出 ticket scope，也沒有提前實作未排定功能。
-- 文件 ticket 只改 Markdown；程式 ticket 才能新增或修改程式碼。
+- Markdown-only / planning / policy / contract / boundary ticket 只能改 Markdown；不得新增 runtime code、migration file、dependency、schema file、config 或測試程式。程式 ticket 才能依 ticket scope 新增或修改程式碼、測試、config、migration 或 dependency。
 - 優先最小改動、貼合既有風格，不為未來擴充提前抽象化。
-- 當使用者已在當前對話明確確認某個 Phase 的 ticket 草案、文件更新清單或規劃寫入後，Codex 可直接寫入該次已確認的 Markdown / ticket / TODO / ROADMAP 變更，後續同類文件寫入不需要重複詢問；但仍必須遵守 ticket-first、Scope / Out of Scope、validation、git 流程與安全限制，不得因此自動新增外部依賴、資料庫 schema、認證權限、部署設定或程式碼實作。
+- 當使用者已在當前對話明確確認某個 Phase 的 ticket 草案、文件更新清單或規劃寫入後，Codex 可直接寫入該次已確認的 Markdown / ticket / TODO / ROADMAP 變更，後續同類文件寫入不需要重複詢問；但仍必須遵守 ticket-first、Scope / Out of Scope、validation、git 流程與安全限制，不得因此自動新增未排定的外部依賴、資料庫 schema、認證權限、部署設定或程式碼實作。
+
+### 已排定 ticket 的授權執行規則
+
+- 若某項工作已明確寫在 `tasks/` 底下的有效 ticket 中，且該 ticket 具備 `Goal`、`Scope`、`Out of Scope`、`Files likely to change`、`Acceptance Criteria` 與 `Validation`，則該 ticket 的 `Scope` 內工作視為使用者已授權執行。
+- 如果有效 ticket 明確要求實作 database schema、migration、repository adapter、runtime selection、dependency、Auth / RBAC、Redis / NATS、worker、deployment config 或 observability，Codex 不應只因為這些關鍵字就停止；只要工作在 ticket `Scope` 內且不違反 `Out of Scope`，即可繼續實作、測試、更新文件、commit 並 push。
+- 如果上述內容是 Codex 自己額外延伸、為未來擴充預先加入，或無法從當前 ticket `Scope` 推導出來，必須停止回報，不得自行擴張。
+- Markdown-only / planning / policy / contract / boundary ticket 即使提到 schema、migration、repository、Auth / RBAC、Redis / NATS、worker、deployment 或 observability，也只能更新 Markdown；不得新增 runtime code、migration file、dependency、schema file、config 或測試程式。
+- Implementation ticket 若在 `Scope` 與 `Files likely to change` 明確列出 backend、frontend、tests、config、migration、dependency、repository runtime 或 deployment config，Codex 可依 ticket 執行，不需要再次詢問。
+- 程式 ticket 仍必須一次只做一張、嚴格遵守 `Scope` / `Out of Scope`、優先最小改動、不重構無關檔案、不提前做下一張 ticket、執行 ticket 指定 validation、更新 TODO / docs / release 記錄、只 stage 本張 ticket 相關檔案、使用繁體中文 commit message，並 push 到目前分支 upstream。
 
 README 分工規範：
 
@@ -566,6 +575,8 @@ text
 
 ### 立即執行（無需確認）
 
+以下項目只有在符合 ticket-first、有效 ticket `Scope` 或使用者本回合明確指定任務時才可直接執行；不得用本章節跳過 `goal.md`、ticket、`Scope` / `Out of Scope` 或 validation。
+
 - **代碼操作**：Bug 修覆、重構、性能改進
 - **文件編輯**：現有文件的修改與更新
 - **文檔**：README、規範文檔的更新（僅在要求時創建新文檔）
@@ -573,15 +584,23 @@ text
 - **測試**：單元測試與集成測試的實現（遵循 TDD 周期）
 - **設置**：配置值更改、應用格式化
 
-### 必須確認
+### 必須停止並回報
 
-- **創建新文件**：說明必要性並確認
-- **刪除文件**：重要文件的刪除
-- **結構變更**：架構、文件夾結構的大規模變更
-- **外部集成**：新 API、外部庫的引入
-- **安全**：認證與授權功能的實現
-- **數據庫**：schema 變更、遷移
-- **生產環境**：部署設置、環境變量變更
+下列情況才需要停止回報；不要只因為 ticket 提到 database schema、migration、external dependency、Auth / RBAC、deployment、Redis / NATS、worker 或 observability 就停止。若這些內容是有效 ticket `Scope` 明確要求，且不違反 `Out of Scope`，可以依 ticket 執行。若這些內容是 Codex 自己額外延伸出來的，必須停止。
+
+- `goal.md` 不存在。
+- 找不到對應 ticket，或 roadmap / TODO 有需求但沒有 `tasks/` ticket。
+- ticket 缺少 `Scope`、`Out of Scope`、`Acceptance Criteria` 或 `Validation`，導致無法判斷邊界。
+- 要做的內容超出目前 ticket `Scope`。
+- 要做的內容違反目前 ticket `Out of Scope`。
+- 需要 production secret、API key、外部帳號或付費服務憑證。
+- 需要連線或修改真實 production database。
+- migration 會刪除資料、drop table、破壞既有資料，且 ticket 沒有明確 rollback / downgrade / data safety 規範。
+- 需要 force push。
+- 需要刪除重要檔案，且 ticket 沒有明確要求。
+- 會破壞既有 API 相容性，且 ticket 沒有明確列入 `Acceptance Criteria`。
+- `git status` 中有無法判斷是否為本次任務造成的 dirty changes。
+- 系統、工具或安全審核要求再次確認。
 
 ### Git 自動上傳規範
 
@@ -591,7 +610,7 @@ text
 - 若目前分支沒有 upstream，Codex 應優先使用 `git push -u origin <current-branch>`；若目前分支是 `main`，則使用 `git push origin main`。
 - 不得自動 stage 或 commit 與本次任務無關的既有 dirty changes、未追蹤檔或用戶手動修改；若無法明確區分，先回報並請用戶確認。
 - 若任務包含版本 tag 或 release，只有在 ticket 或用戶明確指定 tag 名稱時才可 push tag；禁止自行推測 tag。
-- 嚴禁 `git push --force` 或任何 force push，除非用戶在當前回合以完整命令明確要求，且系統/工具審核允許。
+- 嚴禁 `git push --force` 或任何 force push；若任務看似需要 force push，必須停止回報並等待使用者與系統 / 工具安全審核明確處理，不得自行執行。
 - 若系統、工具或安全審核仍要求再次取得 approval 或拒絕 push，必須以系統、工具或安全審核結果為準；approval 通過後同一任務內可直接完成相同 push，不需要重複詢問；若審核拒絕，停止並回報，不得用其他命令、工具或流程繞過。
 
 ---
