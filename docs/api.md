@@ -268,6 +268,109 @@ Frontend ingestion flow 依 source type 顯示不同狀態：`text_upload` 可�
 
 `28-03` 新增的 PDF dependency 僅限 `pypdf` text extraction；仍不新增 PDF rendering、多頁 OCR pipeline、worker、DB schema、正式 auth / RBAC、Redis、NATS 或 deployment 設定。
 
+## Phase 34 Scanned PDF OCR Contract
+
+`34-01` 只定義 contract，不新增 PDF rendering runtime、OCR code、dependency、migration 或 UI。Phase 34 後續 runtime ticket 必須沿用這裡的 source routing、page image、OCR block、page-level status、retry 與 failure reason contract。
+
+### PDF Source Routing
+
+| PDF class | Detection rule | Contract source | Runtime behavior |
+|---|---|---|---|
+| Text-native PDF | Every required page has extractable text. | `pdf_text` | Current runtime uses `pypdf` extraction and creates page-aware chunks. |
+| Scanned PDF | No useful text layer, pages require rendering. | `pdf_scanned_pending_ocr` | Future `34-02` renders page images; future `34-03` runs page-level OCR. |
+| Mixed PDF | Some pages have text, some pages require OCR. | `pdf_mixed_pending_ocr` | Text pages may produce `pdf_text` chunks; scanned pages stay pending until page image + OCR completes. |
+| Invalid PDF | Parser cannot open, encrypted without key, corrupt, unsupported, or too large. | `pdf_invalid` | No chunks are created; document stores a clear failure reason. |
+
+Current runtime may still collapse unsupported scanned / empty PDFs into `pdf_scanned_pending_ocr`; it must not claim scanned PDF OCR is complete until `34-02` and `34-03` are implemented.
+
+### Page Image Contract
+
+Future page image records must be page-scoped and idempotent:
+
+```json
+{
+  "document_id": "doc_123",
+  "page_number": 1,
+  "page_status": "rendered",
+  "page_image": {
+    "image_id": "doc_123_page_001",
+    "path": "data/page-images/doc_123/page-001.png",
+    "width": 1654,
+    "height": 2339,
+    "dpi": 200,
+    "checksum": "sha256:...",
+    "created_at": "2026-06-07T10:00:00Z"
+  },
+  "source": {
+    "pdf_class": "scanned",
+    "source_type": "pdf_scanned_pending_ocr"
+  }
+}
+```
+
+`page_status` values are `pending_render`, `rendering`, `rendered`, `ocr_queued`, `ocr_running`, `ocr_succeeded`, `ocr_failed`, `ocr_retrying` and `skipped_text_native`. Text-native pages in a mixed PDF use `skipped_text_native` for page image / OCR work and keep `pdf_text` chunks as the source of truth.
+
+### OCR Block Contract
+
+Each OCR page result must preserve block-level evidence:
+
+```json
+{
+  "document_id": "doc_123",
+  "page_number": 1,
+  "status": "ocr_succeeded",
+  "blocks": [
+    {
+      "block_id": "doc_123_p001_b001",
+      "text": "Payment terms: Net 15",
+      "bbox": {
+        "x_min": 120,
+        "y_min": 240,
+        "x_max": 720,
+        "y_max": 282
+      },
+      "confidence": 0.96,
+      "reading_order": 1,
+      "provider": "paddleocr",
+      "language": "ch"
+    }
+  ],
+  "metadata": {
+    "attempt": 1,
+    "provider_version": "PP-OCRv4",
+    "duration_ms": 860
+  }
+}
+```
+
+OCR blocks are the evidence source for future scanned PDF chunks, parser context and citations. If `bbox` or `confidence` is unavailable, the value must be `null`; the runtime must not invent coordinates or scores.
+
+### Retry and Failure Reason
+
+Retry state is page-level:
+
+```json
+{
+  "page_number": 2,
+  "page_status": "ocr_retrying",
+  "attempt": 2,
+  "max_attempts": 3,
+  "last_failure_reason": "ocr_timeout",
+  "next_retry_at": "2026-06-07T10:05:00Z"
+}
+```
+
+Allowed failure reasons include `pdf_invalid`, `pdf_encrypted`, `pdf_render_failed`, `page_image_too_large`, `ocr_provider_unavailable`, `ocr_timeout`, `ocr_invalid_output`, `page_empty`, `worker_unavailable` and `unknown_error`. Document-level status is `ready` only when all required pages are either `ocr_succeeded` or intentionally `skipped_text_native`.
+
+### Handoff to Parser, Chunks, Indexing and Worker Status
+
+- Parser receives compact OCR text plus OCR blocks after required pages finish; mixed PDFs may combine `pdf_text` text pages and OCR blocks from scanned pages.
+- Chunks created from scanned pages must keep `source_type=pdf_page_ocr`, `content_source=pdf_scanned_ocr`, `page_number`, block ids, bbox and confidence where available.
+- Vector indexing must wait for page-level OCR completion or explicitly record partial / skipped pages in metadata.
+- Worker task status from Phase 33 should mirror document and page progress: rendering tasks can publish `document.ocr.requested`; OCR tasks update queued / running / retrying / succeeded / failed without changing OCR model behavior in this contract ticket.
+
+This contract does not implement production OCR runtime, table reconstruction, layout analysis, human correction workflow, OCR accuracy tuning, VLM parser changes, RAG ranking changes, Agent planner changes or eval dashboard changes.
+
 ## Phase 24 Parser Contract Draft
 
 ## Phase 27 Vector Source Contract

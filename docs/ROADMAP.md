@@ -144,7 +144,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 Phase 31 `v0.31.0` release sync、Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync 與 Phase 33 `v0.33.0` Redis + NATS Worker Pipeline release sync，並已建立 Phase 34 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04` 與 Phase 33 `33-01` 到 `33-04` 均已完成；不宣稱 Phase 34 到 Phase 39 已整體完成。
+- 已完成 Phase 31 `v0.31.0` release sync、Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync、Phase 33 `v0.33.0` Redis + NATS Worker Pipeline release sync 與 Phase 34 `34-01` scanned PDF OCR contract，並已建立 Phase 34 後續到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04`、Phase 33 `33-01` 到 `33-04` 與 Phase 34 `34-01` 均已完成；不宣稱 Phase 34 到 Phase 39 已整體完成。
 
 ### Phase 31 - PostgreSQL / Schema / Repository Foundation
 
@@ -299,6 +299,13 @@ Expected Outcome：
 - 多頁 OCR 支援 page-level status、retry、failure reason 與 OCR blocks。
 - image preprocessing / deskew / size guardrails 只做 demo-safe baseline，不做完整表格重建。
 - OCR 完成後可接 parser / indexing worker pipeline。
+
+34-01 Scanned PDF OCR Contract Status:
+- Completed Markdown-only scanned PDF OCR contract. PDF source routing now distinguishes text-native PDF, scanned PDF, mixed PDF and invalid PDF.
+- Page image records, OCR blocks, page-level status, retry state and failure reasons are defined for future `34-02` and `34-03` runtime tickets.
+- Parser, chunks, vector indexing and Phase 33 worker task status handoff are documented, including `pdf_page_ocr` / `pdf_scanned_ocr` future chunk source metadata.
+- Release Impact: Version bump required: no. This ticket does not add PDF rendering runtime, OCR code, layout analysis, table reconstruction, human correction workflow, production accuracy tuning, VLM parser changes, RAG ranking changes, Agent planner changes or eval dashboard changes.
+- Validation passed: ticket `rg` and `git diff --check`.
 
 ### Phase 35 - RAG Indexing Quality Hardening
 

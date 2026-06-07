@@ -34,12 +34,17 @@
 
 ## Acceptance Criteria
 
-- [ ] 文件明確定義 scanned PDF 與 text-native PDF 的分流規則。
-- [ ] Page-level OCR status、retry、failure reason 與 OCR blocks contract 完整。
-- [ ] 文件說明 OCR results 如何接 parser / indexing worker，但不提前實作。
-- [ ] 明確標示本 ticket 不等於 production OCR runtime。
+- [x] 文件明確定義 scanned PDF 與 text-native PDF 的分流規則。
+- [x] Page-level OCR status、retry、failure reason 與 OCR blocks contract 完整。
+- [x] 文件說明 OCR results 如何接 parser / indexing worker，但不提前實作。
+- [x] 明確標示本 ticket 不等於 production OCR runtime。
 
 ## Validation
 
 - `rg -n "scanned PDF|pdf_text|page image|OCR block|page-level|Phase 34" docs README_DEV.md TODO.md tasks/phase-34-production-ocr-scanned-pdf`
 - `git diff --check`
+
+## Validation Result
+
+- Passed: `rg -n "scanned PDF|pdf_text|page image|OCR block|page-level|Phase 34" docs README_DEV.md TODO.md tasks/phase-34-production-ocr-scanned-pdf`。
+- Passed: `git diff --check`（僅 Windows LF/CRLF 提示）。
