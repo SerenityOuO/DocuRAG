@@ -25,6 +25,7 @@ DocuRAG 是技術探索導向的 AI 文件知識庫專案，將文件上傳、OC
 - Agent tool-use trace
 - Admin / Analyst / Viewer role-gated surface
 - Redis + NATS worker demo smoke
+- Scanned PDF OCR baseline smoke
 
 ## 需求
 
@@ -128,6 +129,12 @@ Worker demo smoke：
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\worker-demo-smoke.ps1
 ```
 
+Scanned PDF demo smoke：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\scanned-pdf-ocr-smoke.ps1
+```
+
 Retrieval eval：
 
 ```powershell
@@ -138,7 +145,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 
 ## 目前邊界
 
-目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.33.0 已完成 Redis + NATS worker demo milestone：Redis cache / rate limit 與 NATS worker skeleton 都是 opt-in、fallback-safe、本機可驗證的展示切片，`/tasks` 可查看 task status。這不代表 production autoscaling、durable JetStream consumer、production async OCR / parser / indexing / eval pipeline、K8s hardening、自訂 eval dashboard 或 production autonomous Agent 已完成。
+目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.34.0 已完成 scanned PDF OCR baseline：scanned / mixed PDF 可產生 page images，透過 provider-selected OCR 建立 page-aware chunks，並可接 parser / RAG handoff smoke。這不代表完整 layout understanding、table reconstruction、human correction workflow、production OCR accuracy tuning、production async OCR worker、K8s hardening、自訂 eval dashboard 或 production autonomous Agent 已完成。
 
 ## 文件入口
 

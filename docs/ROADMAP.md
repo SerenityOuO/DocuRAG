@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、v0.31.0 PostgreSQL / Schema / Repository Foundation release、v0.32.0 Formal Auth / RBAC / Tenant Boundary release、v0.33.0 Redis + NATS Worker Pipeline release、Phase 34-39 enterprise completion roadmap、Phase 40 interview evidence hardening roadmap，以及 Phase 41-45 JD completion / portfolio roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、v0.31.0 PostgreSQL / Schema / Repository Foundation release、v0.32.0 Formal Auth / RBAC / Tenant Boundary release、v0.33.0 Redis + NATS Worker Pipeline release、v0.34.0 Production OCR / Scanned PDF Pipeline release、Phase 35-39 enterprise completion roadmap、Phase 40 interview evidence hardening roadmap，以及 Phase 41-45 JD completion / portfolio roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.33.0 Redis + NATS Worker Pipeline checklist。
+- TODO 包含 Phase 00 到 v0.34.0 Production OCR / Scanned PDF Pipeline checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -91,6 +91,7 @@ Expected Outcome：
 - Phase 30 parser / ingestion hardening 只修正 Ollama VLM response normalization 與 frontend 多檔依序 ingestion ergonomics；不新增 batch API、queue、worker、DB schema、OpenAI SDK、vLLM、production parser dashboard 或 release version bump。
 - v0.32.0 Formal Auth / RBAC / Tenant Boundary 只做 formal schema foundation、signed bearer permission guard、project access filtering、frontend role surface 與 release sync；不新增 SSO、OAuth、MFA、Redis session、audit log pipeline、worker queue、deployment hardening 或 production login runtime。
 - v0.33.0 Redis + NATS Worker Pipeline 只做 opt-in Redis cache / rate-limit slice、NATS worker skeleton、task status API、worker demo smoke 與 release sync；不新增 production autoscaling、K8s、distributed tracing、full observability stack、vLLM、OpenAI API 或 fine-tuning pipeline。
+- v0.34.0 Production OCR / Scanned PDF Pipeline 只做 scanned / mixed PDF page image rendering、provider-selected page OCR chunks、parser / RAG handoff smoke 與 release sync；不新增完整 layout understanding、table reconstruction、human correction workflow、production OCR benchmark、production GPU scheduling 或 autoscaling。
 - Phase 31-39 roadmap planning 只新增未來版本拆分與 guardrails；不新增 runtime、外部依賴、DB schema、worker、deployment 或 version bump。
 - Phase 40 interview evidence planning 只新增 JD evidence hardening tickets；不新增 runtime、外部依賴、training pipeline、benchmark runtime、observability service 或 version bump。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
@@ -144,7 +145,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 Phase 31 `v0.31.0` release sync、Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync、Phase 33 `v0.33.0` Redis + NATS Worker Pipeline release sync、Phase 34 `34-01` scanned PDF OCR contract、Phase 34 `34-02` PDF rendering page image pipeline 與 Phase 34 `34-03` multipage OCR status / retry，並已建立 Phase 34 後續到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04`、Phase 33 `33-01` 到 `33-04` 與 Phase 34 `34-01` 到 `34-03` 均已完成；不宣稱 Phase 34 到 Phase 39 已整體完成。
+- 已完成 Phase 31 `v0.31.0` release sync、Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync、Phase 33 `v0.33.0` Redis + NATS Worker Pipeline release sync 與 Phase 34 `v0.34.0` Production OCR / Scanned PDF Pipeline release sync，並已建立 Phase 35 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04`、Phase 33 `33-01` 到 `33-04` 與 Phase 34 `34-01` 到 `34-04` 均已完成；不宣稱 Phase 35 到 Phase 39 已整體完成。
 
 ### Phase 31 - PostgreSQL / Schema / Repository Foundation
 
@@ -321,6 +322,12 @@ Expected Outcome：
 - Retry removes stale `pdf_page_ocr` chunks, increments page attempts and avoids duplicate chunks / metadata pollution.
 - Release Impact: Version bump required: no. `v0.34.0` release sync remains scheduled for `34-04`; this ticket does not add production table reconstruction, layout analysis, human correction, GPU scheduling, VLM parser changes, RAG ranking changes or Agent planner changes.
 - Validation passed: targeted backend tests `66 passed`; full backend tests `232 passed`; frontend build; `scripts/scanned-pdf-ocr-smoke.ps1` (`3 passed`); ticket `rg` and `git diff --check`.
+
+34-04 Scanned PDF Demo and Phase 34 Release Sync Status:
+- Completed `v0.34.0` release sync across backend package / app version, frontend package / lock / fallback version, health test, Docker Compose `DOCURAG_VERSION`, `.env.example`, README, README_DEV, backend README, frontend README, TODO, ROADMAP and the ticket.
+- Added scanned PDF demo smoke coverage for PDF rendering, page image OCR chunks, parser handoff and RAG handoff.
+- Release boundary remains explicit: this is a scanned PDF OCR baseline, not full layout understanding, table reconstruction, human correction workflow, production OCR benchmark, production GPU scheduling or autoscaling.
+- Validation passed: focused backend tests `67 passed`; backend full tests `233 passed`; frontend build; `scripts/scanned-pdf-ocr-smoke.ps1` (`4 passed`); Browser PDF upload / OCR status surface checks at desktop `1440px` and mobile `390px` with no horizontal overflow; ticket `rg` and `git diff --check`.
 
 ### Phase 35 - RAG Indexing Quality Hardening
 

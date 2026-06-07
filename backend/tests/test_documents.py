@@ -16,6 +16,7 @@ from app.api.routes.documents import (
     get_vector_indexing_service,
     preload_selected_ocr_provider,
 )
+from app.api.routes.rag import get_document_storage as get_rag_document_storage, get_rag_provider
 from app.core.config import get_settings
 from app.main import app
 from app.schemas.documents import BoundingBox, DocumentMetadata, OcrResult, OcrStatus, OcrTextLine, ProcessingJobType
@@ -23,6 +24,7 @@ from app.services.document_storage import DocumentStorage
 from app.services.document_parser import DeterministicInvoiceParser
 from app.services import ocr as ocr_module
 from app.services.ocr import MockOcrProvider, PaddleOcrProvider
+from app.services.rag import KeywordRagProvider
 from app.services.vector_indexing import VectorIndexingResult
 
 
@@ -37,6 +39,7 @@ def reset_selected_ocr_provider_cache() -> None:
 def client(tmp_path: Path) -> TestClient:
     storage = DocumentStorage(tmp_path / "data")
     app.dependency_overrides[get_document_storage] = lambda: storage
+    app.dependency_overrides[get_rag_document_storage] = lambda: storage
 
     client = TestClient(app)
 
@@ -482,6 +485,79 @@ def test_run_selected_ocr_merges_mixed_pdf_text_and_page_image_chunks(
     assert chunks[1]["metadata"]["content_source"] == "pdf_scanned_ocr"
     assert metadata[0]["page_images"][0]["page_status"] == "ocr_succeeded"
     assert metadata[0]["page_images"][0]["ocr_blocks"][0]["page_number"] == 2
+
+
+def test_scanned_pdf_demo_smoke_parser_and_rag_handoff(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    class DemoPageImageOcrProvider:
+        provider_name = "paddleocr"
+        chunk_source = "ocr_paddleocr"
+        job_type = ProcessingJobType.OCR_REAL
+
+        def extract(
+            self,
+            document: DocumentMetadata,
+            file_path: Path | None,
+            extracted_at: datetime,
+        ) -> OcrResult:
+            assert file_path is not None
+            assert document.file_type == "png"
+            return OcrResult(
+                status=OcrStatus.COMPLETED,
+                text="Invoice number: AUR-2026-051\nPayment terms: Net 15",
+                extracted_fields={"provider": "paddleocr"},
+                lines=[
+                    OcrTextLine(
+                        text="Invoice number: AUR-2026-051",
+                        page_number=1,
+                        confidence=0.95,
+                    ),
+                    OcrTextLine(
+                        text="Payment terms: Net 15",
+                        page_number=1,
+                        confidence=0.94,
+                    ),
+                ],
+                updated_at=extracted_at,
+            )
+
+    app.dependency_overrides[get_selected_ocr_provider] = DemoPageImageOcrProvider
+    app.dependency_overrides[get_rag_provider] = lambda: KeywordRagProvider()
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("demo-scanned.pdf", _pdf_bytes([]), "application/pdf")},
+    )
+    document_id = upload_response.json()["document_id"]
+
+    ocr_response = client.post(f"/documents/{document_id}/ocr")
+    parse_response = client.post(f"/documents/{document_id}/parse")
+    rag_response = client.post(
+        "/rag/query",
+        json={"query": "payment terms", "top_k": 3},
+    )
+
+    assert ocr_response.status_code == 200
+    assert parse_response.status_code == 200
+    assert rag_response.status_code == 200
+
+    metadata_path = tmp_path / "data" / "documents.json"
+    document = json.loads(metadata_path.read_text(encoding="utf-8"))[0]
+    assert document["page_images"][0]["page_status"] == "ocr_succeeded"
+    assert document["chunks"][0]["source_type"] == "pdf_page_ocr"
+    assert document["chunks"][0]["page_number"] == 1
+    assert document["chunks"][0]["metadata"]["content_source"] == "pdf_scanned_ocr"
+
+    parsed = parse_response.json()
+    assert parsed["fields"]["invoice_number"]["value"] == "AUR-2026-051"
+    assert parsed["fields"]["invoice_number"]["source_page"] == 1
+
+    rag_body = rag_response.json()
+    assert rag_body["citations"][0]["document_id"] == document_id
+    assert rag_body["citations"][0]["source_type"] == "pdf_page_ocr"
+    assert rag_body["citations"][0]["page_number"] == 1
+    assert "Payment terms: Net 15" in rag_body["retrieved_chunks"][0]["text"]
 
 
 def test_run_selected_ocr_retries_page_images_without_duplicate_chunks(

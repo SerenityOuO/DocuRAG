@@ -121,7 +121,7 @@ client = TestClient(app)
 health = client.get("/health")
 assert_condition(health.status_code == 200, "Health endpoint failed.")
 health_body = health.json()
-assert_condition(health_body["version"] == "0.33.0", f"Expected health version 0.33.0, got {health_body['version']}.")
+assert_condition(health_body["version"] == "0.34.0", f"Expected health version 0.34.0, got {health_body['version']}.")
 assert_condition(health_body["status"] == "ok", "Health status was not ok.")
 
 tasks = client.get("/tasks")

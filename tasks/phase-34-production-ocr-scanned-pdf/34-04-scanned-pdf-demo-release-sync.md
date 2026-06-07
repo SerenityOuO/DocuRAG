@@ -39,10 +39,10 @@
 
 ## Acceptance Criteria
 
-- [ ] `/health` 回傳 `0.34.0`。
-- [ ] Scanned PDF demo smoke 通過，並產生 page-aware OCR chunks。
-- [ ] README / README_DEV 清楚說明支援 scanned PDF OCR baseline，但不宣稱完整 layout understanding。
-- [ ] ROADMAP / TODO 記錄 Phase 34 validation 結果。
+- [x] `/health` 回傳 `0.34.0`。
+- [x] Scanned PDF demo smoke 通過，並產生 page-aware OCR chunks。
+- [x] README / README_DEV 清楚說明支援 scanned PDF OCR baseline，但不宣稱完整 layout understanding。
+- [x] ROADMAP / TODO 記錄 Phase 34 validation 結果。
 
 ## Validation
 
@@ -52,3 +52,12 @@
 - Browser 檢查 PDF upload / OCR status surface，桌面與手機寬度無 horizontal overflow。
 - `rg -n "v0.34.0|Phase 34|scanned PDF|PDF rendering|page image|multi-page OCR" README.md README_DEV.md backend/README.md frontend/README.md docs/ROADMAP.md TODO.md backend frontend scripts tasks/phase-34-production-ocr-scanned-pdf`
 - `git diff --check`
+
+## Validation Result
+
+- Focused backend tests: `.venv\Scripts\python.exe -m pytest tests/test_document_schemas.py tests/test_documents.py -q` passed (`67 passed`, 1 pytest cache warning).
+- Backend full validation: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` passed (`233 passed`, 1 pytest cache warning).
+- Frontend build: `npm.cmd run build` passed.
+- Scanned PDF demo smoke: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\scanned-pdf-ocr-smoke.ps1` passed (`4 passed`, 1 pytest cache warning).
+- Browser check: headless Chrome verified PDF upload / OCR status surface at desktop `1440px` and mobile `390px`; both had no horizontal overflow.
+- Final ticket `rg` and `git diff --check` passed with Windows LF/CRLF warnings only.
