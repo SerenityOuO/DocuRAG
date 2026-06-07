@@ -9,6 +9,9 @@
 - 建立 `docs/` 或 `fine-tuning/` 下的 research report / notebook skeleton。
 - 設計 invoice / contract / report 的 synthetic data generation format。
 - 補充 SFT schema extraction、embedding tuning、reranker tuning 的資料格式、實驗步驟與 evaluation method。
+- Report 至少包含 dataset card、SFT JSONL 範例、embedding positive / negative pairs、reranker pairwise samples、before / after eval table 與 risk notes。
+- Synthetic data examples 至少覆蓋 invoice / contract / report 其中兩類；每類至少保留 2 筆 demo-safe sample。
+- Before / after eval table 可以是 tiny experiment 或待跑 template，但欄位必須包含 Hit Rate@K、MRR@K、Recall@K、parser field accuracy、sample count 與 skip reason。
 - 若實作小型實驗，必須使用可控小資料與明確 skip path，不下載大型模型或新增重型 dependency。
 - 將結果連回 RAG eval 指標，例如 Hit Rate、MRR、Recall 或 parser field accuracy。
 
@@ -39,10 +42,13 @@
 - [ ] 有一份可閱讀的 Embedding / SFT / synthetic data experiment report 或 notebook skeleton。
 - [ ] Report 清楚說明資料格式、實驗流程、evaluation method 與風險。
 - [ ] 至少包含 invoice / contract / report 其中兩類 synthetic data examples。
+- [ ] Report 包含 SFT JSONL、embedding positive / negative pair 與 reranker training pair 範例。
+- [ ] Before / after eval table 包含 Hit Rate@K、MRR@K、Recall@K、parser field accuracy、sample count 與 skip reason。
+- [ ] 文件說明如何避免 synthetic data overfit、label leakage 與 production document privacy 風險。
 - [ ] 文件明確標示 research-only，不接 production runtime。
 - [ ] Validation 不需要下載大型模型或執行長時間 training。
 
 ## Validation
 
-- `rg -n "SFT|synthetic data|embedding tuning|reranker tuning|research-only|field accuracy|Hit Rate|MRR" docs fine-tuning sample-data README_DEV.md TODO.md tasks/phase-40-interview-evidence-hardening`
+- `rg -n "SFT|synthetic data|embedding tuning|reranker tuning|positive|negative|JSONL|research-only|field accuracy|Hit Rate|MRR|Recall|skip reason|overfit|privacy" docs fine-tuning sample-data README_DEV.md TODO.md tasks/phase-40-interview-evidence-hardening`
 - `git diff --check`

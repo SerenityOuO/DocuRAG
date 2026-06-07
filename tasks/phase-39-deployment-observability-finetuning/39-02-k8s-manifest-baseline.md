@@ -10,6 +10,9 @@
 - 新增 ConfigMap / Secret template，不提交真實 secret。
 - 加入 readiness / liveness probe 與 resource request examples。
 - 補文件說明如何 dry-run / validate manifests。
+- Manifest 至少包含 backend API、frontend、worker skeleton、Qdrant、Redis、NATS 的 Deployment / Service 或清楚註明 deferred reason。
+- 補充 rollout / rollback 基本說明，包含 image tag、config checksum、readiness gate 與 failed rollout 排查方式。
+- 可選提供 HPA example，但必須標示為 optional scaling template，不宣稱已壓測大規模流量。
 
 ## Out of Scope
 
@@ -36,10 +39,12 @@
 - [ ] K8s manifests 包含 API / frontend / worker / supporting services 的 baseline。
 - [ ] ConfigMap / Secret template 不包含真實 secret。
 - [ ] Readiness / liveness probes 與 resource requests 有文件說明。
+- [ ] Backend / frontend / worker manifests 有 image tag、env config、readinessProbe、livenessProbe、resources requests / limits。
+- [ ] 文件說明 local validation、dry-run、rollout / rollback 與 optional HPA boundary。
 - [ ] Validation 至少包含 manifest lint / dry-run 指令或替代檢查。
 
 ## Validation
 
 - K8s manifest dry-run / lint command。
-- `rg -n "apiVersion|kind: Deployment|ConfigMap|Secret|readinessProbe|livenessProbe|resources" infra docs README_DEV.md TODO.md tasks/phase-39-deployment-observability-finetuning`
+- `rg -n "apiVersion|kind: Deployment|ConfigMap|Secret|readinessProbe|livenessProbe|resources|requests|limits|rollout|rollback|HPA|HorizontalPodAutoscaler" infra docs README_DEV.md TODO.md tasks/phase-39-deployment-observability-finetuning`
 - `git diff --check`

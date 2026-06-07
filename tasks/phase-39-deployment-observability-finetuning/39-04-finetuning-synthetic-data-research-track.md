@@ -9,6 +9,9 @@
 - 建立 synthetic data generation plan，支援 invoice / contract / report schema extraction use cases。
 - 新增 SFT / embedding tuning / reranker tuning 的 notebook skeleton 或 docs。
 - 定義資料格式、evaluation method、風險與不納入 production 的 guardrails。
+- Research artifacts 必須包含 dataset card、SFT JSONL sample、embedding positive / negative pairs、reranker pairwise sample、evaluation table 與 risk notes。
+- Evaluation table 至少保留 Hit Rate@K、MRR@K、Recall@K、parser field accuracy、sample count、data source 與 skip reason。
+- 補充 synthetic data privacy / leakage / overfit 風險與 mitigation。
 - 更新 README_DEV / ROADMAP / TODO。
 
 ## Out of Scope
@@ -36,10 +39,13 @@
 
 - [ ] Synthetic data plan 覆蓋 invoice / contract / report examples。
 - [ ] Notebook / docs skeleton 說明 SFT、embedding tuning 與 reranker tuning 的資料格式。
+- [ ] Artifact 包含 dataset card、SFT JSONL、embedding positive / negative pairs 與 reranker pairwise samples。
+- [ ] Evaluation table 包含 Hit Rate@K、MRR@K、Recall@K、parser field accuracy、sample count 與 skip reason。
+- [ ] 文件說明 synthetic data privacy、label leakage、overfit 與 mitigation。
 - [ ] 文件明確標示 research-only，不接 production runtime。
 - [ ] Validation 不需要下載大型模型或執行 training。
 
 ## Validation
 
-- `rg -n "SFT|synthetic data|embedding tuning|reranker tuning|research-only|fine-tuning" docs fine-tuning sample-data README_DEV.md TODO.md tasks/phase-39-deployment-observability-finetuning`
+- `rg -n "SFT|synthetic data|embedding tuning|reranker tuning|positive|negative|JSONL|research-only|fine-tuning|field accuracy|Hit Rate|MRR|Recall|privacy|leakage|overfit" docs fine-tuning sample-data README_DEV.md TODO.md tasks/phase-39-deployment-observability-finetuning`
 - `git diff --check`
