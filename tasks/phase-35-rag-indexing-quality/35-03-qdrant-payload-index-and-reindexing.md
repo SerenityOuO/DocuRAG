@@ -35,10 +35,10 @@
 
 ## Acceptance Criteria
 
-- [ ] Qdrant payload index / filter 可限制 tenant / project / document scope。
-- [ ] Reindex document / project 可重新寫入 chunks vectors。
-- [ ] Stale vector cleanup 有明確 API 或 script，並可被 validation 驗證。
-- [ ] Runtime unavailable 時保留 fallback / skip 訊息，不破壞 baseline demo。
+- [x] Qdrant payload index / filter 可限制 tenant / project / document scope。
+- [x] Reindex document / project 可重新寫入 chunks vectors。
+- [x] Stale vector cleanup 有明確 API 或 script，並可被 validation 驗證。
+- [x] Runtime unavailable 時保留 fallback / skip 訊息，不破壞 baseline demo。
 
 ## Validation
 
@@ -46,3 +46,17 @@
 - Qdrant reindex / cleanup smoke script。
 - `rg -n "Qdrant|payload index|reindex|stale vector|tenant|project_id|document_id" backend scripts docs TODO.md tasks/phase-35-rag-indexing-quality`
 - `git diff --check`
+
+## Completion Notes
+
+- `QdrantVectorStore` now creates payload indexes for tenant / project / document / source fields and builds filter payloads for tenant, project, document and source scope.
+- `VectorIndexingService` now writes `tenant_id`, `project_id`, `content_source` and `chunk_type` into payload metadata, and can run stale point cleanup after successful upsert.
+- `POST /documents/{document_id}/index/vector` accepts `cleanup_stale`; `POST /documents/index/vector/reindex` runs project-scope reindex over visible documents.
+- `scripts/qdrant-reindex-cleanup-smoke.ps1` validates payload index, reindex and cleanup coverage without requiring a live Qdrant runtime.
+
+## Validation Result
+
+- Focused backend tests: `98 passed` (`tests/test_vector_store.py`, `tests/test_vector_indexing.py`, `tests/test_documents.py`, `tests/test_rag.py`).
+- Qdrant reindex / cleanup smoke: `4 passed`.
+- Backend full test: `240 passed`.
+- Ticket `rg` and `git diff --check` passed with Windows LF/CRLF warnings only.

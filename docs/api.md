@@ -421,7 +421,7 @@ Qdrant payload 至少保留 `document_id`、`filename`、`chunk_id`、`source_ty
 
 ## Phase 35 Indexing Quality API Contract
 
-`35-01` 先定義 API contract。`35-02` 已在既有 `POST /documents/{document_id}/index/vector` 上加入可選 `chunking_strategy` request body，支援 `fixed_size` 與 `semantic`，但仍不新增 Qdrant payload index code、worker job、reindex API、stale cleanup API、eval dashboard 或 permission guard。
+`35-01` 先定義 API contract。`35-02` 已在既有 `POST /documents/{document_id}/index/vector` 上加入可選 `chunking_strategy` request body，支援 `fixed_size` 與 `semantic`。`35-03` 已補上 Qdrant payload index 建立、tenant / project / document / source filter、document stale vector cleanup，以及 project-scope reindex API；仍不新增 worker job、eval dashboard、rerank algorithm、embedding model selection、LLM generation 或新的 permission guard。
 
 ### Chunking Request Boundary
 
@@ -429,15 +429,16 @@ Current `35-02` vector indexing requests may accept:
 
 ```json
 {
-  "chunking_strategy": "semantic"
+  "chunking_strategy": "semantic",
+  "cleanup_stale": true
 }
 ```
 
-No request body defaults to `fixed_size`, preserving the existing demo flow. `fixed_size` is the deterministic baseline and splits stored source chunks into bounded char windows when needed. `semantic` uses paragraph / section boundaries already present in stored chunk text, then falls back to fixed windows with `chunking_fallback_reason=semantic_boundaries_unavailable` when boundaries are unclear. `35-02` does not implement `parent_child` runtime and does not use LLM-based semantic segmentation.
+No request body defaults to `fixed_size` and `cleanup_stale=false`, preserving the existing demo flow. `fixed_size` is the deterministic baseline and splits stored source chunks into bounded char windows when needed. `semantic` uses paragraph / section boundaries already present in stored chunk text, then falls back to fixed windows with `chunking_fallback_reason=semantic_boundaries_unavailable` when boundaries are unclear. `35-02` does not implement `parent_child` runtime and does not use LLM-based semantic segmentation.
 
-`VectorIndexingResponse` now exposes `chunking_strategy` and `chunking_version`. Indexed chunk payload metadata includes `chunking_strategy`, `chunking_version`, `chunk_index`, `char_count`, `token_count`, `source_type`, `source_chunk_id`, `chunk_part_index` and `page_number` when available.
+`VectorIndexingResponse` now exposes `chunking_strategy`, `chunking_version`, `payload_index_status`, `payload_index_fields` and `stale_cleanup_status`. Indexed chunk payload metadata includes `chunking_strategy`, `chunking_version`, `chunk_index`, `char_count`, `token_count`, `source_type`, `source_chunk_id`, `chunk_part_index`, `project_id`, `tenant_id`, `content_source`, `chunk_type` and `page_number` when available.
 
-Future vector indexing requests may add `force_reindex`, `cleanup_stale`, `reason` or `parent_child`, but those belong to later Phase 35 tickets.
+Future vector indexing requests may add `force_reindex`, `reason` or `parent_child`, but those remain outside `35-03`.
 
 ### Qdrant Payload Contract
 
@@ -469,9 +470,9 @@ Retrieval requests must apply tenant / project filters before narrowing to docum
 
 ### Reindex and Stale Vector Cleanup
 
-Future reindex APIs may expose document-level and project-level operations, for example `POST /documents/{document_id}/reindex` and `POST /projects/{project_id}/reindex`. A request must carry strategy, version, reason and cleanup intent. A response should expose `index_run_id`, target scope, status, created / replaced / stale / failed counts and fallback or failure reasons.
+`35-03` keeps document-level reindex on the existing `POST /documents/{document_id}/index/vector` endpoint by using `cleanup_stale=true`. It also adds `POST /documents/index/vector/reindex` for project-scope reindex. The project request accepts optional `project_id`, `chunking_strategy` and `cleanup_stale`; formal auth defaults to the active project when `project_id` is omitted. The response exposes target project, status, document count and completed / skipped / failed counts plus per-document `VectorIndexingResponse` results.
 
-Stale vector cleanup must identify older vectors by tenant, project, document, document revision, strategy, version and previous `index_run_id`. Cleanup should mark or exclude stale vectors before deletion when the store supports it, and it must not delete document metadata, OCR output, parser fields or source chunks.
+Stale vector cleanup identifies older Qdrant points by tenant / project / document scope and deletes only points for the same document that are not part of the latest successful point id set. Cleanup must not delete document metadata, OCR output, parser fields or source chunks.
 
 VLM structured fields 不在本 ticket 自動寫入 retrieval chunks；若後續要把欄位索引進 Qdrant，必須另開 ticket 定義 field-indexing policy、dedupe key 與 citation semantics。
 

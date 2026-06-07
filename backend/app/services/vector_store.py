@@ -41,6 +41,16 @@ class QdrantVectorStoreError(RuntimeError):
 
 
 class QdrantVectorStore:
+    PAYLOAD_INDEX_SCHEMAS = {
+        "tenant_id": "keyword",
+        "project_id": "keyword",
+        "document_id": "keyword",
+        "source_type": "keyword",
+        "content_source": "keyword",
+        "chunk_type": "keyword",
+        "page_number": "integer",
+    }
+
     def __init__(
         self,
         base_url: str,
@@ -126,11 +136,77 @@ class QdrantVectorStore:
         }
         self._request_json("PUT", f"/collections/{self.collection_name}/points?wait=true", payload)
 
+    def ensure_payload_indexes(self, fields: list[str] | None = None) -> list[str]:
+        index_fields = fields or list(self.PAYLOAD_INDEX_SCHEMAS)
+        ensured_fields: list[str] = []
+
+        for field_name in index_fields:
+            field_schema = self.PAYLOAD_INDEX_SCHEMAS.get(field_name, "keyword")
+            try:
+                self._request_json(
+                    "PUT",
+                    f"/collections/{self.collection_name}/index?wait=true",
+                    {
+                        "field_name": field_name,
+                        "field_schema": field_schema,
+                    },
+                )
+            except QdrantVectorStoreError as exc:
+                message = str(exc).lower()
+                if "http 409" not in message and "already exists" not in message:
+                    raise
+
+            ensured_fields.append(field_name)
+
+        return ensured_fields
+
+    def delete_points_by_filter(self, filter_payload: dict[str, Any]) -> None:
+        if not filter_payload:
+            raise ValueError("filter_payload must not be empty")
+
+        self._request_json(
+            "POST",
+            f"/collections/{self.collection_name}/points/delete?wait=true",
+            {"filter": filter_payload},
+        )
+
+    def cleanup_stale_points(
+        self,
+        document_id: str,
+        active_point_ids: list[str],
+        project_id: str | None = None,
+        tenant_id: str | None = None,
+    ) -> None:
+        if not document_id:
+            raise ValueError("document_id must not be empty")
+        if not active_point_ids:
+            return
+
+        conditions = [self._match_filter("document_id", [document_id])]
+        if project_id:
+            conditions.append(self._match_filter("project_id", [project_id]))
+        if tenant_id:
+            conditions.append(self._match_filter("tenant_id", [tenant_id]))
+
+        self.delete_points_by_filter(
+            {
+                "must": conditions,
+                "must_not": [
+                    {
+                        "has_id": active_point_ids,
+                    }
+                ],
+            }
+        )
+
     def search(
         self,
         vector: list[float],
         limit: int,
         document_ids: list[str] | None = None,
+        project_ids: list[str] | None = None,
+        tenant_id: str | None = None,
+        source_types: list[str] | None = None,
     ) -> list[QdrantSearchResult]:
         if not vector:
             raise ValueError("vector must not be empty")
@@ -142,16 +218,17 @@ class QdrantVectorStore:
             "limit": limit,
             "with_payload": True,
         }
+        filter_conditions = []
         if document_ids:
-            payload["filter"] = {
-                "should": [
-                    {
-                        "key": "document_id",
-                        "match": {"value": document_id},
-                    }
-                    for document_id in document_ids
-                ]
-            }
+            filter_conditions.append(self._match_filter("document_id", document_ids))
+        if project_ids:
+            filter_conditions.append(self._match_filter("project_id", project_ids))
+        if tenant_id:
+            filter_conditions.append(self._match_filter("tenant_id", [tenant_id]))
+        if source_types:
+            filter_conditions.append(self._match_filter("source_type", source_types))
+        if filter_conditions:
+            payload["filter"] = {"must": filter_conditions}
 
         data = self._request_json(
             "POST",
@@ -182,6 +259,16 @@ class QdrantVectorStore:
             )
 
         return parsed_results
+
+    def _match_filter(self, key: str, values: list[str]) -> dict[str, Any]:
+        clean_values = [str(value) for value in values if str(value)]
+        if not clean_values:
+            raise ValueError(f"{key} filter values must not be empty")
+
+        if len(clean_values) == 1:
+            return {"key": key, "match": {"value": clean_values[0]}}
+
+        return {"key": key, "match": {"any": clean_values}}
 
     def _request_json(self, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         body = None

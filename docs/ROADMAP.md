@@ -362,6 +362,14 @@ Expected Outcome：
 - Release Impact：Version bump required: no。版本同步留到 `35-04`；本 ticket 不新增 eval dashboard、strategy tuning、OCR、parser 或 Agent planner 行為。
 - Validation：focused backend tests `60 passed`；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`234 passed`，1 pytest cache warning）；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
+35-03 Qdrant Payload Index and Reindexing Status：
+
+- 已完成 Qdrant payload index 建立與 filter runtime：`tenant_id`、`project_id`、`document_id`、`source_type`、`content_source`、`chunk_type` 與 `page_number` 可被建立索引並用於檢索 filter。
+- `POST /documents/{document_id}/index/vector` 可用 `cleanup_stale=true` 重跑單文件索引並清掉同文件舊 point；`POST /documents/index/vector/reindex` 可同步重跑可存取 project 範圍內的文件。
+- Runtime unavailable 仍回傳既有 skipped / failed result，不破壞 baseline demo；本 ticket 不新增 Redis / NATS worker、production eval dashboard、rerank algorithm、embedding model selection 或 LLM generation 行為。
+- Release Impact：Version bump required: no。版本同步留到 `35-04`。
+- Validation：focused backend tests `98 passed`；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\qdrant-reindex-cleanup-smoke.ps1`（`4 passed`，1 pytest cache warning）；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`240 passed`，1 pytest cache warning）；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
 ### Phase 36 - Eval Dashboard / Rerank Analysis
 
 Target version：`v0.36.0`

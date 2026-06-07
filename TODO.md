@@ -180,7 +180,7 @@ Phase 34 `v0.34.0` - Production OCR / scanned PDF pipeline：
 Phase 35 `v0.35.0` - RAG indexing quality hardening：
 - [x] `tasks/phase-35-rag-indexing-quality/35-01-indexing-quality-contract.md`: 完成 Phase 35 indexing quality contract，定義 chunking strategies、Qdrant payload / filter、reindex 與 stale vector cleanup；不 bump version。
 - [x] `tasks/phase-35-rag-indexing-quality/35-02-chunking-strategy-runtime.md`: 完成 vector indexing `fixed_size` / `semantic` chunking strategy runtime、request body 與 metadata；不 bump version。
-- [ ] `tasks/phase-35-rag-indexing-quality/35-03-qdrant-payload-index-and-reindexing.md`
+- [x] `tasks/phase-35-rag-indexing-quality/35-03-qdrant-payload-index-and-reindexing.md`: 完成 Qdrant payload index / filter runtime、document stale cleanup 與 project reindex API；不 bump version。
 - [ ] `tasks/phase-35-rag-indexing-quality/35-04-indexing-quality-demo-release-sync.md`
 
 Phase 36 `v0.36.0` - Eval dashboard / rerank analysis：
@@ -210,7 +210,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync；Phase 35 已完成 `35-01` contract ticket 與 `35-02` chunking strategy runtime。除 Phase 31、Phase 32、Phase 33、Phase 34 已完成票、Phase 35 `35-01` / `35-02` 與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync；Phase 35 已完成 `35-01` contract ticket、`35-02` chunking strategy runtime 與 `35-03` Qdrant payload index / reindex runtime。除 Phase 31、Phase 32、Phase 33、Phase 34 已完成票、Phase 35 `35-01` / `35-02` / `35-03` 與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
@@ -338,6 +338,13 @@ Phase 31-39 guardrails：
 - Vector indexing 會依 strategy 產生 indexing chunks，並在 payload metadata 保存 strategy name、`char_count`、`token_count`、`source_type`、`source_chunk_id`、`chunk_part_index` 與可用的 `page_number`。`semantic` 只使用既有段落 / section 邊界，邊界不足時 fallback 到 fixed windows。
 - Backend tests 已覆蓋 `fixed_size` 與 `semantic` output 差異、metadata 與 API request flow；本 ticket 不新增 LLM segmentation、eval dashboard、OCR、parser 或 Agent planner 行為。
 - Validation 已通過：focused backend tests `60 passed`；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`234 passed`，1 pytest cache warning）；`rg -n "chunking strategy|fixed|semantic|parent_child|chunk metadata" backend docs TODO.md tasks/phase-35-rag-indexing-quality`；`git diff --check`（僅 Windows LF/CRLF 提示）。
+- Release Impact：Version bump required: no。版本同步留到 `35-04`。
+
+35-03 Qdrant Payload Index and Reindexing：
+- 已完成。`QdrantVectorStore` 會建立 payload indexes，並支援 tenant / project / document / source filters；vector payload 會保存 `tenant_id`、`project_id`、`content_source` 與 `chunk_type`。
+- `POST /documents/{document_id}/index/vector` 可用 `cleanup_stale=true` 在成功 upsert 新 points 後刪除同文件舊 points；`POST /documents/index/vector/reindex` 可同步重跑可存取 project 範圍內的文件。
+- Backend tests 與 smoke script 已覆蓋 payload index request、filter shape、project reindex、document stale cleanup 與 runtime unavailable 的既有 skipped / failed response；本 ticket 不新增 Redis / NATS worker、production eval dashboard、rerank algorithm、embedding model selection 或 LLM generation。
+- Validation 已通過：focused backend tests `98 passed`；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\qdrant-reindex-cleanup-smoke.ps1`（`4 passed`，1 pytest cache warning）；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`240 passed`，1 pytest cache warning）；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 - Release Impact：Version bump required: no。版本同步留到 `35-04`。
 ## Phase 40 Interview Evidence Hardening
 

@@ -303,10 +303,16 @@ class VectorRagProvider:
         top_k: int,
         documents: list[DocumentMetadata],
     ) -> list[RetrievedChunk]:
-        indexed_document_ids = {
-            document.document_id
+        indexed_documents = [
+            document
             for document in documents
             if document.chunks
+        ]
+        indexed_document_ids = {document.document_id for document in indexed_documents}
+        indexed_project_ids = {
+            str(document.project_id)
+            for document in indexed_documents
+            if document.project_id
         }
         if not indexed_document_ids:
             return []
@@ -324,6 +330,7 @@ class VectorRagProvider:
             query_embedding.embedding,
             top_k,
             sorted(indexed_document_ids),
+            project_ids=sorted(indexed_project_ids) if indexed_project_ids and all(document.project_id for document in indexed_documents) else None,
         )
         retrieved_chunks = []
         for result in search_results:

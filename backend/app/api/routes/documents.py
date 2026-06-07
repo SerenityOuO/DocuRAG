@@ -23,6 +23,8 @@ from app.schemas.documents import (
     VectorIndexingRequest,
     ParserResult,
     ParserStatus,
+    VectorProjectReindexRequest,
+    VectorProjectReindexResponse,
     VectorIndexingResponse,
 )
 from app.services.document_parser import DeterministicInvoiceParser, VlmInvoiceParser, create_vlm_provider
@@ -198,6 +200,59 @@ async def list_documents(
     )
 
 
+@router.post("/index/vector/reindex", response_model=VectorProjectReindexResponse)
+async def reindex_project_vector(
+    storage: DocumentStorageDep,
+    auth_user: IngestionUserDep,
+    service: VectorIndexingServiceDep,
+    request: VectorProjectReindexRequest | None = None,
+) -> VectorProjectReindexResponse:
+    reindex_request = request or VectorProjectReindexRequest()
+    target_project_id = reindex_request.project_id
+    if target_project_id is None and auth_user is not None and auth_user.auth_mode == "formal":
+        target_project_id = auth_user.active_project_id
+
+    if target_project_id is not None:
+        require_project_access(auth_user, target_project_id)
+
+    documents = filter_documents_for_project_access(auth_user, storage.list_documents())
+    if target_project_id is not None:
+        documents = [document for document in documents if document.project_id == target_project_id]
+
+    results = [
+        VectorIndexingResponse(
+            **asdict(
+                service.index_document(
+                    document,
+                    chunking_strategy=reindex_request.chunking_strategy,
+                    cleanup_stale=reindex_request.cleanup_stale,
+                    tenant_id=auth_user.organization_id if auth_user is not None else None,
+                )
+            )
+        )
+        for document in documents
+    ]
+    completed_count = sum(1 for result in results if result.status == "completed")
+    skipped_count = sum(1 for result in results if result.status == "skipped")
+    failed_count = sum(1 for result in results if result.status == "failed")
+    if failed_count:
+        status = "failed"
+    elif completed_count:
+        status = "completed"
+    else:
+        status = "skipped"
+
+    return VectorProjectReindexResponse(
+        project_id=target_project_id,
+        status=status,
+        document_count=len(documents),
+        completed_count=completed_count,
+        skipped_count=skipped_count,
+        failed_count=failed_count,
+        results=results,
+    )
+
+
 @router.get("/{document_id}", response_model=DocumentDetailResponse)
 async def get_document(
     document_id: str,
@@ -325,6 +380,8 @@ async def index_document_vector(
             service.index_document(
                 document,
                 chunking_strategy=indexing_request.chunking_strategy,
+                cleanup_stale=indexing_request.cleanup_stale,
+                tenant_id=auth_user.organization_id if auth_user is not None else None,
             )
         )
     )

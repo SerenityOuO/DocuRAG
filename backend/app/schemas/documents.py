@@ -277,6 +277,7 @@ class OcrResultResponse(OcrResult):
 
 class VectorIndexingRequest(BaseModel):
     chunking_strategy: ChunkingStrategy = "fixed_size"
+    cleanup_stale: bool = False
 
 
 class VectorIndexingResponse(BaseModel):
@@ -291,5 +292,24 @@ class VectorIndexingResponse(BaseModel):
     vector_size: int | None = Field(default=None, ge=1)
     embedding_provider: str | None = None
     embedding_model: str | None = None
+    payload_index_status: Literal["completed", "skipped", "failed"] = "skipped"
+    payload_index_fields: list[str] = Field(default_factory=list)
+    stale_cleanup_status: Literal["disabled", "completed", "skipped", "failed"] = "disabled"
     reason: str | None = None
     error: str | None = None
+
+
+class VectorProjectReindexRequest(BaseModel):
+    project_id: str | None = None
+    chunking_strategy: ChunkingStrategy = "fixed_size"
+    cleanup_stale: bool = True
+
+
+class VectorProjectReindexResponse(BaseModel):
+    project_id: str | None = None
+    status: Literal["completed", "skipped", "failed"]
+    document_count: int = Field(default=0, ge=0)
+    completed_count: int = Field(default=0, ge=0)
+    skipped_count: int = Field(default=0, ge=0)
+    failed_count: int = Field(default=0, ge=0)
+    results: list[VectorIndexingResponse] = Field(default_factory=list)

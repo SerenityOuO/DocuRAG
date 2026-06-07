@@ -218,6 +218,48 @@ def test_qdrant_upsert_points_sends_points_payload() -> None:
     }
 
 
+def test_qdrant_ensures_payload_indexes_for_filters() -> None:
+    requests: list[dict[str, Any]] = []
+
+    def transport(request: urllib.request.Request, timeout: float) -> FakeResponse:
+        requests.append(
+            {
+                "url": request.full_url,
+                "method": request.get_method(),
+                "body": json.loads(request.data.decode("utf-8")),
+            }
+        )
+        return FakeResponse({"result": {"operation_id": 1}, "status": "ok"})
+
+    store = QdrantVectorStore(
+        base_url="http://127.0.0.1:6333",
+        collection_name="docurag_chunks_v1",
+        vector_size=1024,
+        transport=transport,
+    )
+
+    ensured_fields = store.ensure_payload_indexes(["tenant_id", "project_id", "page_number"])
+
+    assert ensured_fields == ["tenant_id", "project_id", "page_number"]
+    assert requests == [
+        {
+            "url": "http://127.0.0.1:6333/collections/docurag_chunks_v1/index?wait=true",
+            "method": "PUT",
+            "body": {"field_name": "tenant_id", "field_schema": "keyword"},
+        },
+        {
+            "url": "http://127.0.0.1:6333/collections/docurag_chunks_v1/index?wait=true",
+            "method": "PUT",
+            "body": {"field_name": "project_id", "field_schema": "keyword"},
+        },
+        {
+            "url": "http://127.0.0.1:6333/collections/docurag_chunks_v1/index?wait=true",
+            "method": "PUT",
+            "body": {"field_name": "page_number", "field_schema": "integer"},
+        },
+    ]
+
+
 def test_qdrant_search_sends_vector_query_and_parses_results() -> None:
     captured: dict[str, Any] = {}
 
@@ -283,10 +325,84 @@ def test_qdrant_search_can_filter_to_document_ids() -> None:
         "limit": 3,
         "with_payload": True,
         "filter": {
-            "should": [
-                {"key": "document_id", "match": {"value": "doc-001"}},
-                {"key": "document_id", "match": {"value": "doc-002"}},
+            "must": [
+                {"key": "document_id", "match": {"any": ["doc-001", "doc-002"]}},
             ]
+        },
+    }
+
+
+def test_qdrant_search_can_filter_to_tenant_project_document_and_source() -> None:
+    captured: dict[str, Any] = {}
+
+    def transport(request: urllib.request.Request, timeout: float) -> FakeResponse:
+        captured["body"] = json.loads(request.data.decode("utf-8"))
+        return FakeResponse({"result": []})
+
+    store = QdrantVectorStore(
+        base_url="http://127.0.0.1:6333",
+        collection_name="docurag_chunks_v1",
+        vector_size=1024,
+        transport=transport,
+    )
+
+    results = store.search(
+        [0.1, 0.2],
+        3,
+        document_ids=["doc-001"],
+        project_ids=["project-a"],
+        tenant_id="org-a",
+        source_types=["pdf_text", "pdf_page_ocr"],
+    )
+
+    assert results == []
+    assert captured["body"]["filter"] == {
+        "must": [
+            {"key": "document_id", "match": {"value": "doc-001"}},
+            {"key": "project_id", "match": {"value": "project-a"}},
+            {"key": "tenant_id", "match": {"value": "org-a"}},
+            {"key": "source_type", "match": {"any": ["pdf_text", "pdf_page_ocr"]}},
+        ]
+    }
+
+
+def test_qdrant_cleanup_stale_points_deletes_non_active_document_points() -> None:
+    captured: dict[str, Any] = {}
+
+    def transport(request: urllib.request.Request, timeout: float) -> FakeResponse:
+        captured["url"] = request.full_url
+        captured["method"] = request.get_method()
+        captured["body"] = json.loads(request.data.decode("utf-8"))
+        return FakeResponse({"result": {"operation_id": 1}, "status": "ok"})
+
+    store = QdrantVectorStore(
+        base_url="http://127.0.0.1:6333",
+        collection_name="docurag_chunks_v1",
+        vector_size=1024,
+        transport=transport,
+    )
+
+    store.cleanup_stale_points(
+        "doc-001",
+        ["active-point-001", "active-point-002"],
+        project_id="project-a",
+        tenant_id="org-a",
+    )
+
+    assert captured == {
+        "url": "http://127.0.0.1:6333/collections/docurag_chunks_v1/points/delete?wait=true",
+        "method": "POST",
+        "body": {
+            "filter": {
+                "must": [
+                    {"key": "document_id", "match": {"value": "doc-001"}},
+                    {"key": "project_id", "match": {"value": "project-a"}},
+                    {"key": "tenant_id", "match": {"value": "org-a"}},
+                ],
+                "must_not": [
+                    {"has_id": ["active-point-001", "active-point-002"]},
+                ],
+            }
         },
     }
 

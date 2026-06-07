@@ -560,10 +560,12 @@ def test_vector_rag_provider_uses_embedding_and_qdrant_results() -> None:
             vector: list[float],
             limit: int,
             document_ids: list[str] | None = None,
+            project_ids: list[str] | None = None,
         ) -> list[QdrantSearchResult]:
             assert vector == [float(len("payment due date Net 15")), 1.0]
             assert limit == 3
             assert document_ids == ["doc-001"]
+            assert project_ids is None
             return [
                 QdrantSearchResult(
                     point_id="point-001",
@@ -628,6 +630,110 @@ def test_vector_rag_provider_uses_embedding_and_qdrant_results() -> None:
     assert response.citations[0].trace_metadata["vector_score"] == "0.880000"
 
 
+def test_vector_rag_provider_passes_project_filter_for_project_scoped_documents() -> None:
+    class StubEmbeddingProvider:
+        name = "ollama"
+        model = "qwen3-embedding:0.6b"
+
+        def embed(self, text: str) -> EmbeddingResult:
+            return EmbeddingResult(embedding=[1.0, 2.0], model=self.model)
+
+    class StubVectorStore:
+        collection_name = "docurag_chunks_v1"
+        vector_size = 1024
+
+        def __init__(self, payload: dict[str, object]) -> None:
+            self.payload = payload
+            self.document_ids: list[str] | None = None
+            self.project_ids: list[str] | None = None
+
+        def get_collection(self) -> QdrantCollectionStatus:
+            return QdrantCollectionStatus(
+                collection_name=self.collection_name,
+                exists=True,
+                vector_size=1024,
+                distance="Cosine",
+            )
+
+        def search(
+            self,
+            vector: list[float],
+            limit: int,
+            document_ids: list[str] | None = None,
+            project_ids: list[str] | None = None,
+        ) -> list[QdrantSearchResult]:
+            self.document_ids = document_ids
+            self.project_ids = project_ids
+            return [
+                QdrantSearchResult(
+                    point_id="point-001",
+                    score=0.91,
+                    payload=self.payload,
+                )
+            ]
+
+    documents = [
+        DocumentMetadata(
+            document_id="doc-a",
+            project_id="project-a",
+            filename="invoice-a.txt",
+            stored_filename="doc-a-invoice-a.txt",
+            file_type="txt",
+            content_type="text/plain",
+            size=100,
+            status=DocumentStatus.READY,
+            created_at="2026-05-20T00:00:00Z",
+            chunks=[
+                DocumentChunk(
+                    chunk_id="chunk-a",
+                    document_id="doc-a",
+                    text="Project scoped vector evidence A.",
+                    source="ocr_mock",
+                    created_at="2026-05-20T00:00:00Z",
+                    source_type="ocr_mock",
+                )
+            ],
+        ),
+        DocumentMetadata(
+            document_id="doc-b",
+            project_id="project-a",
+            filename="invoice-b.txt",
+            stored_filename="doc-b-invoice-b.txt",
+            file_type="txt",
+            content_type="text/plain",
+            size=100,
+            status=DocumentStatus.READY,
+            created_at="2026-05-20T00:00:00Z",
+            chunks=[
+                DocumentChunk(
+                    chunk_id="chunk-b",
+                    document_id="doc-b",
+                    text="Project scoped vector evidence B.",
+                    source="ocr_mock",
+                    created_at="2026-05-20T00:00:00Z",
+                    source_type="ocr_mock",
+                )
+            ],
+        ),
+    ]
+    payload = {
+        **documents[0].chunks[0].model_dump(mode="json"),
+        "filename": documents[0].filename,
+    }
+    vector_store = StubVectorStore(payload)
+    provider = VectorRagProvider(
+        keyword_provider=KeywordRagProvider(),
+        embedding_provider=StubEmbeddingProvider(),
+        vector_store=vector_store,
+    )
+
+    response = provider.query("project scoped evidence", 3, documents)
+
+    assert vector_store.document_ids == ["doc-a", "doc-b"]
+    assert vector_store.project_ids == ["project-a"]
+    assert response.retrieved_chunks[0].document_id == "doc-a"
+
+
 def test_hybrid_rerank_uses_document_scoped_vector_search_for_stale_collections() -> None:
     class StubEmbeddingProvider:
         name = "ollama"
@@ -657,8 +763,10 @@ def test_hybrid_rerank_uses_document_scoped_vector_search_for_stale_collections(
             vector: list[float],
             limit: int,
             document_ids: list[str] | None = None,
+            project_ids: list[str] | None = None,
         ) -> list[QdrantSearchResult]:
             self.document_ids = document_ids
+            assert project_ids is None
             assert limit == 2
             return [
                 QdrantSearchResult(
@@ -753,7 +861,13 @@ def test_vector_rag_provider_falls_back_to_keyword_when_embedding_fails() -> Non
         def upsert_points(self, points: list[QdrantPoint]) -> None:
             pass
 
-        def search(self, vector: list[float], limit: int) -> list[QdrantSearchResult]:
+        def search(
+            self,
+            vector: list[float],
+            limit: int,
+            document_ids: list[str] | None = None,
+            project_ids: list[str] | None = None,
+        ) -> list[QdrantSearchResult]:
             return []
 
     document = DocumentMetadata(
@@ -810,7 +924,13 @@ def test_vector_rag_provider_falls_back_to_keyword_when_qdrant_fails() -> None:
         def upsert_points(self, points: list[QdrantPoint]) -> None:
             pass
 
-        def search(self, vector: list[float], limit: int) -> list[QdrantSearchResult]:
+        def search(
+            self,
+            vector: list[float],
+            limit: int,
+            document_ids: list[str] | None = None,
+            project_ids: list[str] | None = None,
+        ) -> list[QdrantSearchResult]:
             return []
 
     document = DocumentMetadata(
@@ -865,7 +985,13 @@ def test_vector_rag_provider_falls_back_to_keyword_when_collection_missing() -> 
         def upsert_points(self, points: list[QdrantPoint]) -> None:
             raise AssertionError("Vector fallback should not upsert when collection is missing.")
 
-        def search(self, vector: list[float], limit: int) -> list[QdrantSearchResult]:
+        def search(
+            self,
+            vector: list[float],
+            limit: int,
+            document_ids: list[str] | None = None,
+            project_ids: list[str] | None = None,
+        ) -> list[QdrantSearchResult]:
             raise AssertionError("Vector fallback should not search when collection is missing.")
 
     document = DocumentMetadata(

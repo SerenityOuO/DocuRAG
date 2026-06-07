@@ -10,6 +10,8 @@ from app.services.vector_store import QdrantPoint, QdrantVectorStore, QdrantVect
 
 
 VectorIndexingStatus = Literal["completed", "skipped", "failed"]
+PayloadIndexStatus = Literal["completed", "skipped", "failed"]
+StaleCleanupStatus = Literal["disabled", "completed", "skipped", "failed"]
 CHUNKING_VERSION = "v1"
 FIXED_SIZE_MAX_CHARS = 360
 
@@ -27,6 +29,9 @@ class VectorIndexingResult:
     vector_size: int | None = None
     embedding_provider: str | None = None
     embedding_model: str | None = None
+    payload_index_status: PayloadIndexStatus = "skipped"
+    payload_index_fields: list[str] = field(default_factory=list)
+    stale_cleanup_status: StaleCleanupStatus = "disabled"
     reason: str | None = None
     error: str | None = None
 
@@ -44,6 +49,8 @@ class VectorIndexingService:
         self,
         document: DocumentMetadata,
         chunking_strategy: ChunkingStrategy = "fixed_size",
+        cleanup_stale: bool = False,
+        tenant_id: str | None = None,
     ) -> VectorIndexingResult:
         source_chunks = [chunk for chunk in document.chunks if chunk.text.strip()]
         skipped_chunk_count = len(document.chunks) - len(source_chunks)
@@ -54,18 +61,36 @@ class VectorIndexingService:
                 document.document_id,
                 chunking_strategy=chunking_strategy,
                 skipped_chunk_count=len(document.chunks),
+                cleanup_stale=cleanup_stale,
                 reason="Document has no chunks to index.",
             )
 
+        payload_index_status: PayloadIndexStatus = "skipped"
+        payload_index_fields: list[str] = []
+        stale_cleanup_status: StaleCleanupStatus = "disabled" if not cleanup_stale else "skipped"
         try:
             self._check_collection()
-            points = [self._point_from_chunk(document, chunk) for chunk in chunks]
+            payload_index_fields = self.vector_store.ensure_payload_indexes()
+            payload_index_status = "completed"
+            points = [self._point_from_chunk(document, chunk, tenant_id=tenant_id) for chunk in chunks]
             self.vector_store.upsert_points(points)
+            if cleanup_stale:
+                stale_cleanup_status = "failed"
+                self.vector_store.cleanup_stale_points(
+                    document.document_id,
+                    [point.point_id for point in points],
+                    project_id=document.project_id,
+                    tenant_id=self._tenant_id_from_chunks(chunks, tenant_id),
+                )
+                stale_cleanup_status = "completed"
         except (EmbeddingProviderError, QdrantVectorStoreError, TimeoutError, ValueError) as exc:
             return self._failed_result(
                 document.document_id,
                 chunking_strategy=chunking_strategy,
                 skipped_chunk_count=skipped_chunk_count,
+                payload_index_status=payload_index_status if payload_index_status == "completed" else "failed",
+                payload_index_fields=payload_index_fields,
+                stale_cleanup_status=stale_cleanup_status,
                 error=str(exc),
             )
 
@@ -81,6 +106,9 @@ class VectorIndexingService:
             vector_size=self.vector_store.vector_size,
             embedding_provider=self.embedding_provider.name,
             embedding_model=str(getattr(self.embedding_provider, "model", "unknown")),
+            payload_index_status=payload_index_status,
+            payload_index_fields=payload_index_fields,
+            stale_cleanup_status=stale_cleanup_status,
         )
 
     def point_id_for_chunk(self, document_id: str, chunk_id: str) -> str:
@@ -244,7 +272,12 @@ class VectorIndexingService:
                 f"Qdrant collection '{self.vector_store.collection_name}' vector size is {collection.vector_size}; expected {self.vector_store.vector_size}."
             )
 
-    def _point_from_chunk(self, document: DocumentMetadata, chunk: DocumentChunk) -> QdrantPoint:
+    def _point_from_chunk(
+        self,
+        document: DocumentMetadata,
+        chunk: DocumentChunk,
+        tenant_id: str | None = None,
+    ) -> QdrantPoint:
         embedding = self.embedding_provider.embed(chunk.text)
         if embedding.dimension != self.vector_store.vector_size:
             raise ValueError(
@@ -254,7 +287,7 @@ class VectorIndexingService:
         return QdrantPoint(
             point_id=self.point_id_for_chunk(document.document_id, chunk.chunk_id),
             vector=embedding.embedding,
-            payload=self._payload_from_chunk(document, chunk, embedding.model),
+            payload=self._payload_from_chunk(document, chunk, embedding.model, tenant_id=tenant_id),
         )
 
     def _payload_from_chunk(
@@ -262,15 +295,23 @@ class VectorIndexingService:
         document: DocumentMetadata,
         chunk: DocumentChunk,
         embedding_model: str,
+        tenant_id: str | None = None,
     ) -> dict[str, object]:
         payload = chunk.model_dump(mode="json")
         chunk_metadata = {
             str(key): str(value)
             for key, value in payload.get("metadata", {}).items()
         }
+        resolved_tenant_id = self._tenant_id_from_chunk(chunk, tenant_id)
+        content_source = chunk_metadata.get("content_source") or chunk.source_type
+        chunk_type = chunk_metadata.get("chunk_type") or "child"
         ocr_provider = chunk_metadata.get("ocr_provider") or chunk_metadata.get("provider") or chunk.source_type
         metadata = {
             **chunk_metadata,
+            "project_id": document.project_id or "",
+            "tenant_id": resolved_tenant_id or "",
+            "content_source": content_source,
+            "chunk_type": chunk_type,
             "ocr_provider": str(ocr_provider),
             "indexing_provider": "vector",
             "vector_store": "qdrant",
@@ -282,9 +323,38 @@ class VectorIndexingService:
         return {
             **payload,
             "filename": document.filename,
+            "project_id": document.project_id,
+            "tenant_id": resolved_tenant_id,
+            "content_source": content_source,
+            "chunk_type": chunk_type,
             "metadata": metadata,
             "ocr_provider": str(ocr_provider),
         }
+
+    def _tenant_id_from_chunks(
+        self,
+        chunks: list[DocumentChunk],
+        tenant_id: str | None = None,
+    ) -> str | None:
+        if tenant_id:
+            return tenant_id
+
+        for chunk in chunks:
+            resolved_tenant_id = self._tenant_id_from_chunk(chunk)
+            if resolved_tenant_id:
+                return resolved_tenant_id
+
+        return None
+
+    def _tenant_id_from_chunk(
+        self,
+        chunk: DocumentChunk,
+        tenant_id: str | None = None,
+    ) -> str | None:
+        if tenant_id:
+            return tenant_id
+
+        return chunk.metadata.get("tenant_id") or chunk.metadata.get("organization_id")
 
     def _skipped_result(
         self,
@@ -292,6 +362,7 @@ class VectorIndexingService:
         chunking_strategy: ChunkingStrategy,
         skipped_chunk_count: int,
         reason: str,
+        cleanup_stale: bool = False,
     ) -> VectorIndexingResult:
         return VectorIndexingResult(
             document_id=document_id,
@@ -303,6 +374,8 @@ class VectorIndexingService:
             vector_size=self.vector_store.vector_size,
             embedding_provider=self.embedding_provider.name,
             embedding_model=str(getattr(self.embedding_provider, "model", "unknown")),
+            payload_index_status="skipped",
+            stale_cleanup_status="skipped" if cleanup_stale else "disabled",
             reason=reason,
         )
 
@@ -312,6 +385,9 @@ class VectorIndexingService:
         chunking_strategy: ChunkingStrategy,
         skipped_chunk_count: int,
         error: str,
+        payload_index_status: PayloadIndexStatus = "failed",
+        payload_index_fields: list[str] | None = None,
+        stale_cleanup_status: StaleCleanupStatus = "disabled",
     ) -> VectorIndexingResult:
         return VectorIndexingResult(
             document_id=document_id,
@@ -323,5 +399,8 @@ class VectorIndexingService:
             vector_size=self.vector_store.vector_size,
             embedding_provider=self.embedding_provider.name,
             embedding_model=str(getattr(self.embedding_provider, "model", "unknown")),
+            payload_index_status=payload_index_status,
+            payload_index_fields=payload_index_fields or [],
+            stale_cleanup_status=stale_cleanup_status,
             error=error,
         )

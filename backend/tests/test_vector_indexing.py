@@ -35,6 +35,8 @@ class StubVectorStore:
         self.exists = exists
         self.fail_on_upsert = fail_on_upsert
         self.collection_checked = False
+        self.payload_indexes: list[str] = []
+        self.stale_cleanup_calls: list[dict[str, object]] = []
         self.points: list[QdrantPoint] = []
 
     def get_collection(self) -> QdrantCollectionStatus:
@@ -52,10 +54,39 @@ class StubVectorStore:
 
         self.points = points
 
+    def ensure_payload_indexes(self) -> list[str]:
+        self.payload_indexes = [
+            "tenant_id",
+            "project_id",
+            "document_id",
+            "source_type",
+            "content_source",
+            "chunk_type",
+            "page_number",
+        ]
+        return self.payload_indexes
+
+    def cleanup_stale_points(
+        self,
+        document_id: str,
+        active_point_ids: list[str],
+        project_id: str | None = None,
+        tenant_id: str | None = None,
+    ) -> None:
+        self.stale_cleanup_calls.append(
+            {
+                "document_id": document_id,
+                "active_point_ids": active_point_ids,
+                "project_id": project_id,
+                "tenant_id": tenant_id,
+            }
+        )
+
 
 def make_document(chunks: list[DocumentChunk] | None = None) -> DocumentMetadata:
     return DocumentMetadata(
         document_id="doc-001",
+        project_id="project-a",
         filename="invoice-a.txt",
         stored_filename="doc-001-invoice-a.txt",
         file_type="txt",
@@ -102,7 +133,19 @@ def test_vector_indexing_service_upserts_chunk_payload() -> None:
     assert result.vector_size == 3
     assert result.embedding_provider == "ollama"
     assert result.embedding_model == "qwen3-embedding:0.6b"
+    assert result.payload_index_status == "completed"
+    assert result.payload_index_fields == [
+        "tenant_id",
+        "project_id",
+        "document_id",
+        "source_type",
+        "content_source",
+        "chunk_type",
+        "page_number",
+    ]
+    assert result.stale_cleanup_status == "disabled"
     assert vector_store.collection_checked is True
+    assert vector_store.payload_indexes == result.payload_index_fields
     assert embedding_provider.inputs == ["Payment terms are Net 15."]
 
     point = vector_store.points[0]
@@ -110,11 +153,15 @@ def test_vector_indexing_service_upserts_chunk_payload() -> None:
     assert result.point_ids == [point.point_id]
     assert point.vector == [25.0, 25.0, 25.0]
     assert point.payload["document_id"] == "doc-001"
+    assert point.payload["project_id"] == "project-a"
+    assert point.payload["tenant_id"] is None
     assert point.payload["filename"] == "invoice-a.txt"
     assert point.payload["chunk_id"] == "chunk-001"
     assert point.payload["text"] == "Payment terms are Net 15."
     assert point.payload["source"] == "ocr_paddleocr"
     assert point.payload["source_type"] == "ocr_paddleocr"
+    assert point.payload["content_source"] == "ocr_paddleocr"
+    assert point.payload["chunk_type"] == "child"
     assert point.payload["page_number"] == 2
     assert point.payload["bbox"] == {
         "x_min": 10.0,
@@ -138,6 +185,10 @@ def test_vector_indexing_service_upserts_chunk_payload() -> None:
         "source_chunk_id": "chunk-001",
         "chunk_part_index": "1",
         "page_number": "2",
+        "project_id": "project-a",
+        "tenant_id": "",
+        "content_source": "ocr_paddleocr",
+        "chunk_type": "child",
         "ocr_provider": "ocr_paddleocr",
         "indexing_provider": "vector",
         "vector_store": "qdrant",
@@ -169,8 +220,12 @@ def test_vector_indexing_service_preserves_text_upload_payload_metadata() -> Non
 
     assert result.status == "completed"
     point = vector_store.points[0]
+    assert point.payload["project_id"] == "project-a"
+    assert point.payload["tenant_id"] is None
     assert point.payload["source"] == "text_upload"
     assert point.payload["source_type"] == "text_upload"
+    assert point.payload["content_source"] == "text_upload"
+    assert point.payload["chunk_type"] == "child"
     assert point.payload["ocr_provider"] == "text_upload"
     assert point.payload["metadata"] == {
         "origin": "uploaded_text",
@@ -184,6 +239,9 @@ def test_vector_indexing_service_preserves_text_upload_payload_metadata() -> Non
         "source_type": "text_upload",
         "source_chunk_id": "chunk-001",
         "chunk_part_index": "1",
+        "project_id": "project-a",
+        "tenant_id": "",
+        "chunk_type": "child",
         "ocr_provider": "text_upload",
         "indexing_provider": "vector",
         "vector_store": "qdrant",
@@ -217,8 +275,12 @@ def test_vector_indexing_service_preserves_pdf_text_payload_metadata() -> None:
 
     assert result.status == "completed"
     point = vector_store.points[0]
+    assert point.payload["project_id"] == "project-a"
+    assert point.payload["tenant_id"] is None
     assert point.payload["source"] == "pdf_text"
     assert point.payload["source_type"] == "pdf_text"
+    assert point.payload["content_source"] == "pdf_text"
+    assert point.payload["chunk_type"] == "child"
     assert point.payload["page_number"] == 1
     assert point.payload["bbox"] is None
     assert point.payload["confidence"] is None
@@ -236,6 +298,9 @@ def test_vector_indexing_service_preserves_pdf_text_payload_metadata() -> None:
         "source_type": "pdf_text",
         "source_chunk_id": "chunk-001",
         "chunk_part_index": "1",
+        "project_id": "project-a",
+        "tenant_id": "",
+        "chunk_type": "child",
         "ocr_provider": "pdf_text",
         "indexing_provider": "vector",
         "vector_store": "qdrant",
@@ -243,6 +308,34 @@ def test_vector_indexing_service_preserves_pdf_text_payload_metadata() -> None:
         "embedding_provider": "ollama",
         "embedding_model": "qwen3-embedding:0.6b",
     }
+
+
+def test_vector_indexing_service_can_cleanup_stale_points_with_tenant_scope() -> None:
+    embedding_provider = StubEmbeddingProvider(vector_size=3)
+    vector_store = StubVectorStore(vector_size=3)
+    service = VectorIndexingService(embedding_provider, vector_store)
+    document = make_document([make_chunk()])
+
+    result = service.index_document(
+        document,
+        cleanup_stale=True,
+        tenant_id="org-a",
+    )
+
+    assert result.status == "completed"
+    assert result.payload_index_status == "completed"
+    assert result.stale_cleanup_status == "completed"
+    assert len(vector_store.points) == 1
+    assert vector_store.points[0].payload["tenant_id"] == "org-a"
+    assert vector_store.points[0].payload["metadata"]["tenant_id"] == "org-a"
+    assert vector_store.stale_cleanup_calls == [
+        {
+            "document_id": "doc-001",
+            "active_point_ids": result.point_ids,
+            "project_id": "project-a",
+            "tenant_id": "org-a",
+        }
+    ]
 
 
 def test_vector_indexing_service_supports_semantic_chunking_strategy() -> None:

@@ -1003,14 +1003,20 @@ def test_vector_indexing_endpoint_returns_indexing_result(client: TestClient) ->
         def __init__(self) -> None:
             self.document: DocumentMetadata | None = None
             self.chunking_strategy: str | None = None
+            self.cleanup_stale: bool | None = None
+            self.tenant_id: str | None = None
 
         def index_document(
             self,
             document: DocumentMetadata,
             chunking_strategy: ChunkingStrategy = "fixed_size",
+            cleanup_stale: bool = False,
+            tenant_id: str | None = None,
         ) -> VectorIndexingResult:
             self.document = document
             self.chunking_strategy = chunking_strategy
+            self.cleanup_stale = cleanup_stale
+            self.tenant_id = tenant_id
             return VectorIndexingResult(
                 document_id=document.document_id,
                 status="completed",
@@ -1021,6 +1027,9 @@ def test_vector_indexing_endpoint_returns_indexing_result(client: TestClient) ->
                 vector_size=1024,
                 embedding_provider="ollama",
                 embedding_model="qwen3-embedding:0.6b",
+                payload_index_status="completed",
+                payload_index_fields=["tenant_id", "project_id", "document_id"],
+                stale_cleanup_status="completed" if cleanup_stale else "disabled",
             )
 
     service = StubVectorIndexingService()
@@ -1039,13 +1048,15 @@ def test_vector_indexing_endpoint_returns_indexing_result(client: TestClient) ->
 
     response = client.post(
         f"/documents/{document_id}/index/vector",
-        json={"chunking_strategy": "semantic"},
+        json={"chunking_strategy": "semantic", "cleanup_stale": True},
     )
 
     assert response.status_code == 200
     assert service.document is not None
     assert service.document.document_id == document_id
     assert service.chunking_strategy == "semantic"
+    assert service.cleanup_stale is True
+    assert service.tenant_id is None
     assert service.document.chunks[0].chunk_id == f"{document_id}-chunk-001"
     assert service.document.chunks[0].source_type == "text_upload"
     assert response.json() == {
@@ -1060,6 +1071,9 @@ def test_vector_indexing_endpoint_returns_indexing_result(client: TestClient) ->
         "vector_size": 1024,
         "embedding_provider": "ollama",
         "embedding_model": "qwen3-embedding:0.6b",
+        "payload_index_status": "completed",
+        "payload_index_fields": ["tenant_id", "project_id", "document_id"],
+        "stale_cleanup_status": "completed",
         "reason": None,
         "error": None,
     }
@@ -1074,6 +1088,8 @@ def test_vector_indexing_endpoint_accepts_pdf_text_chunks(client: TestClient) ->
             self,
             document: DocumentMetadata,
             chunking_strategy: ChunkingStrategy = "fixed_size",
+            cleanup_stale: bool = False,
+            tenant_id: str | None = None,
         ) -> VectorIndexingResult:
             self.document = document
             return VectorIndexingResult(
@@ -1145,6 +1161,8 @@ def test_vector_indexing_endpoint_returns_skipped_for_empty_chunks(
             self,
             document: DocumentMetadata,
             chunking_strategy: ChunkingStrategy = "fixed_size",
+            cleanup_stale: bool = False,
+            tenant_id: str | None = None,
         ) -> VectorIndexingResult:
             assert document.chunks == []
             return VectorIndexingResult(
@@ -1185,6 +1203,8 @@ def test_vector_indexing_endpoint_returns_503_when_provider_disabled(client: Tes
             self,
             document: DocumentMetadata,
             chunking_strategy: ChunkingStrategy = "fixed_size",
+            cleanup_stale: bool = False,
+            tenant_id: str | None = None,
         ) -> VectorIndexingResult:
             return VectorIndexingResult(
                 document_id=document.document_id,
@@ -1218,6 +1238,8 @@ def test_vector_indexing_endpoint_returns_503_when_qdrant_fails(client: TestClie
             self,
             document: DocumentMetadata,
             chunking_strategy: ChunkingStrategy = "fixed_size",
+            cleanup_stale: bool = False,
+            tenant_id: str | None = None,
         ) -> VectorIndexingResult:
             return VectorIndexingResult(
                 document_id=document.document_id,
@@ -1243,6 +1265,80 @@ def test_vector_indexing_endpoint_returns_503_when_qdrant_fails(client: TestClie
     assert response.status_code == 503
     assert response.json()["detail"]["status"] == "failed"
     assert response.json()["detail"]["error"] == "Cannot connect to Qdrant"
+
+
+def test_project_vector_reindex_indexes_visible_documents(client: TestClient) -> None:
+    class StubVectorIndexingService:
+        def __init__(self) -> None:
+            self.calls: list[dict[str, object]] = []
+
+        def index_document(
+            self,
+            document: DocumentMetadata,
+            chunking_strategy: ChunkingStrategy = "fixed_size",
+            cleanup_stale: bool = False,
+            tenant_id: str | None = None,
+        ) -> VectorIndexingResult:
+            self.calls.append(
+                {
+                    "document_id": document.document_id,
+                    "chunking_strategy": chunking_strategy,
+                    "cleanup_stale": cleanup_stale,
+                    "tenant_id": tenant_id,
+                }
+            )
+            return VectorIndexingResult(
+                document_id=document.document_id,
+                status="completed",
+                chunking_strategy=chunking_strategy,
+                indexed_chunk_count=len(document.chunks),
+                point_ids=[f"{document.document_id}-point-001"],
+                collection_name="docurag_chunks_v1",
+                vector_size=1024,
+                embedding_provider="ollama",
+                embedding_model="qwen3-embedding:0.6b",
+                payload_index_status="completed",
+                payload_index_fields=["tenant_id", "project_id", "document_id"],
+                stale_cleanup_status="completed" if cleanup_stale else "disabled",
+            )
+
+    service = StubVectorIndexingService()
+    app.dependency_overrides[get_vector_indexing_service] = lambda: service
+    first_upload = client.post(
+        "/documents/upload",
+        files={"file": ("invoice-a.txt", b"Invoice A\nPayment terms: Net 15", "text/plain")},
+    )
+    second_upload = client.post(
+        "/documents/upload",
+        files={"file": ("invoice-b.txt", b"Invoice B\nPayment terms: Net 30", "text/plain")},
+    )
+    first_document_id = first_upload.json()["document_id"]
+    second_document_id = second_upload.json()["document_id"]
+
+    response = client.post(
+        "/documents/index/vector/reindex",
+        json={"chunking_strategy": "semantic", "cleanup_stale": True},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "completed"
+    assert body["project_id"] is None
+    assert body["document_count"] == 2
+    assert body["completed_count"] == 2
+    assert body["skipped_count"] == 0
+    assert body["failed_count"] == 0
+    assert [result["document_id"] for result in body["results"]] == [
+        second_document_id,
+        first_document_id,
+    ]
+    assert [call["document_id"] for call in service.calls] == [
+        second_document_id,
+        first_document_id,
+    ]
+    assert all(call["chunking_strategy"] == "semantic" for call in service.calls)
+    assert all(call["cleanup_stale"] is True for call in service.calls)
+    assert all(call["tenant_id"] is None for call in service.calls)
 
 
 def test_selected_ocr_default_provider_is_paddleocr() -> None:

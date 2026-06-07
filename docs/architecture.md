@@ -341,6 +341,8 @@ VLM structured fields remain parser output for Admin / Analyst and Agent `get_do
 
 `35-01` is a Markdown-only contract ticket. It defines how Phase 35 should treat chunking strategy, Qdrant payload metadata, filter boundaries, reindex operations and stale vector cleanup. It does not add runtime chunking code, Qdrant index creation, worker execution, eval dashboard logic, OCR changes, parser changes, Agent planner changes or Auth / RBAC behavior changes.
 
+`35-03` implements the first runtime slice for the Qdrant side of this contract. Vector indexing now ensures payload indexes for tenant, project, document and source filters, writes `tenant_id`, `project_id`, `content_source` and `chunk_type` into Qdrant payloads, and can delete stale points for the same document after a successful replacement upsert. Project-level reindex is exposed through the backend API and remains synchronous / demo-safe; it does not introduce a Redis / NATS worker, eval dashboard, rerank algorithm, embedding model selection or LLM generation change.
+
 ### Chunking Strategies
 
 | Strategy | Contract | Good fit | Required trace metadata |
