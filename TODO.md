@@ -181,7 +181,7 @@ Phase 35 `v0.35.0` - RAG indexing quality hardening：
 - [x] `tasks/phase-35-rag-indexing-quality/35-01-indexing-quality-contract.md`: 完成 Phase 35 indexing quality contract，定義 chunking strategies、Qdrant payload / filter、reindex 與 stale vector cleanup；不 bump version。
 - [x] `tasks/phase-35-rag-indexing-quality/35-02-chunking-strategy-runtime.md`: 完成 vector indexing `fixed_size` / `semantic` chunking strategy runtime、request body 與 metadata；不 bump version。
 - [x] `tasks/phase-35-rag-indexing-quality/35-03-qdrant-payload-index-and-reindexing.md`: 完成 Qdrant payload index / filter runtime、document stale cleanup 與 project reindex API；不 bump version。
-- [ ] `tasks/phase-35-rag-indexing-quality/35-04-indexing-quality-demo-release-sync.md`
+- [x] `tasks/phase-35-rag-indexing-quality/35-04-indexing-quality-demo-release-sync.md`: 完成 `v0.35.0` release sync，補上 indexing quality smoke、版本同步與文件同步。
 
 Phase 36 `v0.36.0` - Eval dashboard / rerank analysis：
 - [ ] `tasks/phase-36-eval-dashboard-rerank-analysis/36-01-eval-dashboard-contract.md`
@@ -210,7 +210,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync；Phase 35 已完成 `35-01` contract ticket、`35-02` chunking strategy runtime 與 `35-03` Qdrant payload index / reindex runtime。除 Phase 31、Phase 32、Phase 33、Phase 34 已完成票、Phase 35 `35-01` / `35-02` / `35-03` 與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync。除 Phase 31、Phase 32、Phase 33、Phase 34、Phase 35 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
@@ -346,6 +346,12 @@ Phase 31-39 guardrails：
 - Backend tests 與 smoke script 已覆蓋 payload index request、filter shape、project reindex、document stale cleanup 與 runtime unavailable 的既有 skipped / failed response；本 ticket 不新增 Redis / NATS worker、production eval dashboard、rerank algorithm、embedding model selection 或 LLM generation。
 - Validation 已通過：focused backend tests `98 passed`；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\qdrant-reindex-cleanup-smoke.ps1`（`4 passed`，1 pytest cache warning）；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`240 passed`，1 pytest cache warning）；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 - Release Impact：Version bump required: no。版本同步留到 `35-04`。
+
+35-04 Indexing Quality Demo and Phase 35 Release Sync：
+- 已完成。backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 ticket 已同步到 `0.35.0`。
+- 新增 `scripts/indexing-quality-smoke.ps1`，覆蓋 `fixed_size` / `semantic` chunking、Qdrant payload filter、project reindex 與 stale vector cleanup path。
+- Validation 已通過：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`240 passed`，1 pytest cache warning）、`npm.cmd run build`、`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\indexing-quality-smoke.ps1`（`7 passed`，1 pytest cache warning）、ticket `rg` 與 `git diff --check`。
+- Release Impact：Version bump required: yes。Phase 35 已完成 `v0.35.0` RAG indexing quality release；仍不包含 production eval dashboard、LLM-as-judge、rerank tuning 或 production indexing worker。
 ## Phase 40 Interview Evidence Hardening
 
 - [x] `tasks/phase-40-interview-evidence-hardening/40-01-phase-40-jd-evidence-plan.md`: 新增 Phase 40 `v0.40.0` JD evidence hardening roadmap；文件 ticket，不 bump version。

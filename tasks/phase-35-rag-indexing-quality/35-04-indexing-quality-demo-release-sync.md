@@ -39,10 +39,10 @@
 
 ## Acceptance Criteria
 
-- [ ] `/health` 回傳 `0.35.0`。
-- [ ] Demo smoke 可驗證 chunking strategy 與 reindex / cleanup path。
-- [ ] README / README_DEV 清楚說明 Phase 35 是 indexing quality，不是 eval dashboard。
-- [ ] TODO / ROADMAP 記錄 Phase 35 final validation。
+- [x] `/health` 回傳 `0.35.0`。
+- [x] Demo smoke 可驗證 chunking strategy 與 reindex / cleanup path。
+- [x] README / README_DEV 清楚說明 Phase 35 是 indexing quality，不是 eval dashboard。
+- [x] TODO / ROADMAP 記錄 Phase 35 final validation。
 
 ## Validation
 
@@ -51,3 +51,10 @@
 - Indexing quality smoke script。
 - `rg -n "v0.35.0|Phase 35|chunking|Qdrant payload|reindex|stale vector|indexing quality" README.md README_DEV.md backend/README.md frontend/README.md docs/ROADMAP.md TODO.md backend frontend scripts tasks/phase-35-rag-indexing-quality`
 - `git diff --check`
+
+## Completion Notes
+
+- Backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、TODO 與 ROADMAP 已同步到 `0.35.0` / `v0.35.0`。
+- 新增 `scripts/indexing-quality-smoke.ps1`，以重點 pytest 覆蓋 chunking strategy、Qdrant payload filter、project reindex 與 stale cleanup path。
+- Phase 35 release boundary 已明確保留：這是 indexing quality hardening，不是 production eval dashboard、LLM-as-judge、rerank tuning 或 production indexing worker。
+- Validation 已執行：backend test script（`240 passed`，1 pytest cache warning）、frontend build、indexing quality smoke（`7 passed`，1 pytest cache warning）、ticket `rg` 與 `git diff --check`。

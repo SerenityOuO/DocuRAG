@@ -26,6 +26,7 @@ DocuRAG 是技術探索導向的 AI 文件知識庫專案，將文件上傳、OC
 - Admin / Analyst / Viewer role-gated surface
 - Redis + NATS worker demo smoke
 - Scanned PDF OCR baseline smoke
+- RAG indexing quality smoke
 
 ## 需求
 
@@ -145,7 +146,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 
 ## 目前邊界
 
-目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.34.0 已完成 scanned PDF OCR baseline：scanned / mixed PDF 可產生 page images，透過 provider-selected OCR 建立 page-aware chunks，並可接 parser / RAG handoff smoke。這不代表完整 layout understanding、table reconstruction、human correction workflow、production OCR accuracy tuning、production async OCR worker、K8s hardening、自訂 eval dashboard 或 production autonomous Agent 已完成。
+目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.35.0 已完成 RAG indexing quality release：vector indexing 可選 `fixed_size` / `semantic` chunking strategy，Qdrant payload 支援 tenant / project / document / source filters，並可用 reindex / stale vector cleanup smoke 驗證。這不代表 production eval dashboard、LLM-as-judge、rerank tuning、production indexing worker、完整 layout understanding、table reconstruction、human correction workflow、production OCR accuracy tuning、production async OCR worker、K8s hardening 或 production autonomous Agent 已完成。
 
 ## 文件入口
 

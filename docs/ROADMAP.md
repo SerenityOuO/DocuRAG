@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、v0.31.0 PostgreSQL / Schema / Repository Foundation release、v0.32.0 Formal Auth / RBAC / Tenant Boundary release、v0.33.0 Redis + NATS Worker Pipeline release、v0.34.0 Production OCR / Scanned PDF Pipeline release、Phase 35-39 enterprise completion roadmap、Phase 40 interview evidence hardening roadmap，以及 Phase 41-45 JD completion / portfolio roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、v0.31.0 PostgreSQL / Schema / Repository Foundation release、v0.32.0 Formal Auth / RBAC / Tenant Boundary release、v0.33.0 Redis + NATS Worker Pipeline release、v0.34.0 Production OCR / Scanned PDF Pipeline release、v0.35.0 RAG Indexing Quality Hardening release、Phase 36-39 enterprise completion roadmap、Phase 40 interview evidence hardening roadmap，以及 Phase 41-45 JD completion / portfolio roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.34.0 Production OCR / Scanned PDF Pipeline checklist。
+- TODO 包含 Phase 00 到 v0.35.0 RAG Indexing Quality Hardening checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -145,7 +145,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 Phase 31 `v0.31.0` release sync、Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync、Phase 33 `v0.33.0` Redis + NATS Worker Pipeline release sync 與 Phase 34 `v0.34.0` Production OCR / Scanned PDF Pipeline release sync，並已建立 Phase 35 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04`、Phase 33 `33-01` 到 `33-04` 與 Phase 34 `34-01` 到 `34-04` 均已完成；不宣稱 Phase 35 到 Phase 39 已整體完成。
+- 已完成 Phase 31 `v0.31.0` release sync、Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync、Phase 33 `v0.33.0` Redis + NATS Worker Pipeline release sync、Phase 34 `v0.34.0` Production OCR / Scanned PDF Pipeline release sync 與 Phase 35 `v0.35.0` RAG Indexing Quality Hardening release sync，並已建立 Phase 36 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04`、Phase 33 `33-01` 到 `33-04`、Phase 34 `34-01` 到 `34-04` 與 Phase 35 `35-01` 到 `35-04` 均已完成；不宣稱 Phase 36 到 Phase 39 已整體完成。
 
 ### Phase 31 - PostgreSQL / Schema / Repository Foundation
 
@@ -369,6 +369,13 @@ Expected Outcome：
 - Runtime unavailable 仍回傳既有 skipped / failed result，不破壞 baseline demo；本 ticket 不新增 Redis / NATS worker、production eval dashboard、rerank algorithm、embedding model selection 或 LLM generation 行為。
 - Release Impact：Version bump required: no。版本同步留到 `35-04`。
 - Validation：focused backend tests `98 passed`；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\qdrant-reindex-cleanup-smoke.ps1`（`4 passed`，1 pytest cache warning）；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`240 passed`，1 pytest cache warning）；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+35-04 Indexing Quality Demo and Phase 35 Release Sync Status：
+
+- Completed `v0.35.0` release sync across backend package / app version, frontend package / lock / fallback version, health test, Docker Compose `DOCURAG_VERSION`, `.env.example`, README, README_DEV, backend README, frontend README, TODO, ROADMAP and the ticket.
+- Added indexing quality smoke coverage for chunking strategy, Qdrant payload filter, project reindex and stale vector cleanup path.
+- Release boundary remains explicit: this is RAG indexing quality hardening, not a production eval dashboard, LLM-as-judge, rerank tuning or production indexing worker.
+- Validation passed: backend full tests `240 passed` with 1 pytest cache warning; frontend build; `scripts/indexing-quality-smoke.ps1` (`7 passed`, 1 pytest cache warning); ticket `rg` and `git diff --check`.
 
 ### Phase 36 - Eval Dashboard / Rerank Analysis
 
