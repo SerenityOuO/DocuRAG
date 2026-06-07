@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、v0.31.0 PostgreSQL / Schema / Repository Foundation release、v0.32.0 Formal Auth / RBAC / Tenant Boundary release、v0.33.0 Redis + NATS Worker Pipeline release、Phase 34-39 enterprise completion roadmap 與 Phase 40 interview evidence hardening roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、v0.31.0 PostgreSQL / Schema / Repository Foundation release、v0.32.0 Formal Auth / RBAC / Tenant Boundary release、v0.33.0 Redis + NATS Worker Pipeline release、Phase 34-39 enterprise completion roadmap、Phase 40 interview evidence hardening roadmap，以及 Phase 41-45 JD completion / portfolio roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -466,6 +466,127 @@ Phase 40 Guardrails：
 - `40-03` 不宣稱沒有實測的 TOPS / NPU 數據；可以提供評估方式與 benchmark template。
 - `40-04` 不新增 production alerting、SLO、incident workflow 或 APM vendor integration。
 - `40-05` 完成 release sync 前，不更新 backend / frontend / health / Docker Compose version。
+
+## Phase 41-45 JD Completion / Portfolio Roadmap
+
+Goal：在 Phase 40 的面試證據包之後，補上更像 production AI 系統會被追問的五個收尾能力：RAG 品質回歸、推論 gateway / capacity planning、AgentOps 治理、文件理解 QA，以及最終 portfolio pack。這些 phase 不取代 Phase 35-40，而是把 JD 對「能長期維護、能量化、能治理、能說清楚取捨」的要求補完整。
+
+Planning source：
+
+- 使用者在目前對話中確認擴充 Phase 41 到 Phase 45。
+
+### Phase 41 - RAG Quality Regression / DatasetOps
+
+Target version：`v0.41.0`
+
+Goal：把 RAG 評估從單次 benchmark 升級成可長期追蹤的 quality regression / DatasetOps。
+
+Tickets：
+
+- `tasks/phase-41-rag-quality-regression-datasetops/41-01-rag-quality-regression-contract.md`
+- `tasks/phase-41-rag-quality-regression-datasetops/41-02-golden-dataset-versioning.md`
+- `tasks/phase-41-rag-quality-regression-datasetops/41-03-retrieval-regression-ci-report.md`
+- `tasks/phase-41-rag-quality-regression-datasetops/41-04-chunking-indexing-ablation-report.md`
+- `tasks/phase-41-rag-quality-regression-datasetops/41-05-phase-41-release-sync.md`
+
+Expected Outcome：
+
+- Golden dataset 支援 case version、source document version、expected evidence 與 case tags。
+- Regression report 可比較 baseline vs current 的 Hit Rate@K、MRR@K、Recall@K、latency 與 fallback summary。
+- Chunking / indexing ablation report 能說明 fixed-size、semantic、parent-child 或 payload index / reindex policy 對檢索品質的影響。
+- 不新增 LLM-as-judge、production eval dashboard 或 long-term metric storage。
+
+### Phase 42 - Inference Gateway / Capacity Planning
+
+Target version：`v0.42.0`
+
+Goal：把 Ollama / vLLM / OpenAI-compatible endpoint 整理成可說清楚 routing、fallback、timeout 與容量規劃的 inference ops layer。
+
+Tickets：
+
+- `tasks/phase-42-inference-gateway-capacity-planning/42-01-inference-gateway-contract.md`
+- `tasks/phase-42-inference-gateway-capacity-planning/42-02-provider-routing-and-fallback.md`
+- `tasks/phase-42-inference-gateway-capacity-planning/42-03-streaming-timeout-guardrails.md`
+- `tasks/phase-42-inference-gateway-capacity-planning/42-04-capacity-planning-report.md`
+- `tasks/phase-42-inference-gateway-capacity-planning/42-05-phase-42-release-sync.md`
+
+Expected Outcome：
+
+- Provider routing / fallback metadata 能記錄 selected provider、provider unavailable、timeout、skip reason 與 fallback target。
+- Timeout / token limit / streaming boundary 有清楚 guardrails，避免 slow model path 拖垮 demo。
+- Capacity planning report 包含 latency、tokens/sec、VRAM、KV cache estimate、TOPS / NPU 評估方式與 provider skip reason。
+- 不新增 production autoscaling、多 GPU serving、paid API key、production secret 或 SLA。
+
+### Phase 43 - AgentOps Governance / Secure Tool Runtime
+
+Target version：`v0.43.0`
+
+Goal：把 Agent tool-use 從 demo trace 推進到可控、可審計、可回放的 AgentOps governance。
+
+Tickets：
+
+- `tasks/phase-43-agentops-governance-secure-runtime/43-01-agent-governance-contract.md`
+- `tasks/phase-43-agentops-governance-secure-runtime/43-02-tool-permission-policy-runtime.md`
+- `tasks/phase-43-agentops-governance-secure-runtime/43-03-human-approval-risk-tier.md`
+- `tasks/phase-43-agentops-governance-secure-runtime/43-04-agent-run-replay-and-eval.md`
+- `tasks/phase-43-agentops-governance-secure-runtime/43-05-phase-43-release-sync.md`
+
+Expected Outcome：
+
+- Tool tiers 固定為 read-only、write、admin、destructive，並依 role / project access / risk tier 檢查。
+- 高風險 tool call 會標示 approval_required，不會靜默執行。
+- Agent replay / eval artifact 可檢查 tool correctness、permission compliance、evidence coverage 與 fallback reason。
+- 不允許任意 SQL、shell、filesystem command 或 destructive tool runtime。
+
+### Phase 44 - Document Intelligence QA / Human Review Loop
+
+Target version：`v0.44.0`
+
+Goal：補強 OCR / VLM 欄位抽取可信度，讓文件理解結果可檢查、可修正、可量化。
+
+Tickets：
+
+- `tasks/phase-44-document-intelligence-qa-human-review/44-01-document-intelligence-qa-contract.md`
+- `tasks/phase-44-document-intelligence-qa-human-review/44-02-field-confidence-and-evidence-view.md`
+- `tasks/phase-44-document-intelligence-qa-human-review/44-03-human-correction-and-golden-labels.md`
+- `tasks/phase-44-document-intelligence-qa-human-review/44-04-parser-field-accuracy-eval.md`
+- `tasks/phase-44-document-intelligence-qa-human-review/44-05-phase-44-release-sync.md`
+
+Expected Outcome：
+
+- Admin / Analyst 可看到欄位 confidence、source_text、source_page、source_bbox、parser_source 與 fallback reason。
+- Human correction / golden labels 可保存 corrected value、reviewer、reason、version 與 timestamp。
+- Parser field accuracy eval 可量化 field accuracy、missing field、wrong value 與 evidence mismatch。
+- 不新增 full annotation platform、model training、layout analysis 或 production OCR accuracy tuning。
+
+### Phase 45 - Production Readiness / Interview Portfolio Pack
+
+Target version：`v0.45.0`
+
+Goal：把所有成果整理成可面試展示、可被追問、可快速驗證的 final portfolio pack。
+
+Tickets：
+
+- `tasks/phase-45-production-readiness-portfolio-pack/45-01-jd-evidence-matrix.md`
+- `tasks/phase-45-production-readiness-portfolio-pack/45-02-system-design-walkthrough.md`
+- `tasks/phase-45-production-readiness-portfolio-pack/45-03-demo-scenario-pack.md`
+- `tasks/phase-45-production-readiness-portfolio-pack/45-04-risk-boundary-and-tradeoff-report.md`
+- `tasks/phase-45-production-readiness-portfolio-pack/45-05-phase-45-final-release-sync.md`
+
+Expected Outcome：
+
+- JD evidence matrix 對照 AI Core、System Architecture、Inference & Ops 的專案證據、demo path、validation command 與 honesty boundary。
+- System design walkthrough 能在 10 分鐘內說清楚資料流、權限、worker、RAG eval、inference、observability 與 tradeoffs。
+- Demo scenario pack 至少包含 RAG quality、Document Intelligence QA、AgentOps governance 三條主線。
+- Risk / tradeoff report 誠實整理 completed、demo-safe、research-only 與 future backlog。
+- 不新增新的 production runtime，不宣稱 JD 100% 完成或 production guarantee。
+
+Phase 41-45 Validation Direction：
+
+- 每個 phase 仍採 ticket-first；先 contract / artifact，再 runtime slice 或 report，最後 release sync。
+- 任何 release sync ticket 才能 bump backend / frontend / health / Docker Compose version。
+- Runtime ticket 若涉及 backend / frontend，必須跑 backend tests、frontend build 或對應 smoke；純文件 ticket 用 `rg` 與 `git diff --check`。
+- Public `README.md` 保持精簡展示入口；完整 JD evidence、risk report 與 demo pack 優先放 `README_DEV.md` / `docs/`。
 
 ## v0.2.0 Demo UI Milestone
 

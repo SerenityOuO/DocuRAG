@@ -1,6 +1,6 @@
 # TODO
 
-本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.32 Formal Auth / RBAC / Tenant Boundary backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
+本 checklist 追蹤 DocuRAG AgentOps 目前的 Phase 00 到 v0.45 final portfolio pack backlog。每張 ticket 完成後應可單獨 commit，並更新對應項目。
 
 ## Release Version Map
 
@@ -41,6 +41,11 @@
 - Phase 38 -> `v0.38.0`
 - Phase 39 -> `v0.39.0`
 - Phase 40 -> `v0.40.0`
+- Phase 41 -> `v0.41.0`
+- Phase 42 -> `v0.42.0`
+- Phase 43 -> `v0.43.0`
+- Phase 44 -> `v0.44.0`
+- Phase 45 -> `v0.45.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README / README_DEV、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -325,6 +330,53 @@ Phase 40 guardrails：
 - `40-03` 可以補 inference benchmark report、KV cache / TOPS / NPU 評估方式與 script/template，但不得宣稱沒有實測的硬體結果。
 - `40-04` 可以補 observability dashboard / query examples / demo-safe screenshots，但不得宣稱 production alerting 或 incident workflow 已完成。
 - `40-05` 完成 release sync 時才允許 bump backend / frontend / health / Docker Compose version 到 `v0.40.0`。
+
+## Phase 41-45 JD Completion Roadmap
+
+Phase 41 `v0.41.0` - RAG quality regression / DatasetOps：
+- [ ] `tasks/phase-41-rag-quality-regression-datasetops/41-01-rag-quality-regression-contract.md`
+- [ ] `tasks/phase-41-rag-quality-regression-datasetops/41-02-golden-dataset-versioning.md`
+- [ ] `tasks/phase-41-rag-quality-regression-datasetops/41-03-retrieval-regression-ci-report.md`
+- [ ] `tasks/phase-41-rag-quality-regression-datasetops/41-04-chunking-indexing-ablation-report.md`
+- [ ] `tasks/phase-41-rag-quality-regression-datasetops/41-05-phase-41-release-sync.md`
+
+Phase 42 `v0.42.0` - Inference gateway / capacity planning：
+- [ ] `tasks/phase-42-inference-gateway-capacity-planning/42-01-inference-gateway-contract.md`
+- [ ] `tasks/phase-42-inference-gateway-capacity-planning/42-02-provider-routing-and-fallback.md`
+- [ ] `tasks/phase-42-inference-gateway-capacity-planning/42-03-streaming-timeout-guardrails.md`
+- [ ] `tasks/phase-42-inference-gateway-capacity-planning/42-04-capacity-planning-report.md`
+- [ ] `tasks/phase-42-inference-gateway-capacity-planning/42-05-phase-42-release-sync.md`
+
+Phase 43 `v0.43.0` - AgentOps governance / secure tool runtime：
+- [ ] `tasks/phase-43-agentops-governance-secure-runtime/43-01-agent-governance-contract.md`
+- [ ] `tasks/phase-43-agentops-governance-secure-runtime/43-02-tool-permission-policy-runtime.md`
+- [ ] `tasks/phase-43-agentops-governance-secure-runtime/43-03-human-approval-risk-tier.md`
+- [ ] `tasks/phase-43-agentops-governance-secure-runtime/43-04-agent-run-replay-and-eval.md`
+- [ ] `tasks/phase-43-agentops-governance-secure-runtime/43-05-phase-43-release-sync.md`
+
+Phase 44 `v0.44.0` - Document Intelligence QA / human review loop：
+- [ ] `tasks/phase-44-document-intelligence-qa-human-review/44-01-document-intelligence-qa-contract.md`
+- [ ] `tasks/phase-44-document-intelligence-qa-human-review/44-02-field-confidence-and-evidence-view.md`
+- [ ] `tasks/phase-44-document-intelligence-qa-human-review/44-03-human-correction-and-golden-labels.md`
+- [ ] `tasks/phase-44-document-intelligence-qa-human-review/44-04-parser-field-accuracy-eval.md`
+- [ ] `tasks/phase-44-document-intelligence-qa-human-review/44-05-phase-44-release-sync.md`
+
+Phase 45 `v0.45.0` - Production readiness / interview portfolio pack：
+- [ ] `tasks/phase-45-production-readiness-portfolio-pack/45-01-jd-evidence-matrix.md`
+- [ ] `tasks/phase-45-production-readiness-portfolio-pack/45-02-system-design-walkthrough.md`
+- [ ] `tasks/phase-45-production-readiness-portfolio-pack/45-03-demo-scenario-pack.md`
+- [ ] `tasks/phase-45-production-readiness-portfolio-pack/45-04-risk-boundary-and-tradeoff-report.md`
+- [ ] `tasks/phase-45-production-readiness-portfolio-pack/45-05-phase-45-final-release-sync.md`
+
+Phase 41-45 guardrails：
+
+- Phase 41-45 用來補強 JD 面試追問證據，不取代 Phase 35-40 的既有 backlog；仍必須一張 ticket 一張 ticket 執行。
+- Phase 41 聚焦 RAG quality regression、golden dataset、CI-style report 與 chunking / indexing ablation，不新增 LLM-as-judge 或 production eval dashboard。
+- Phase 42 聚焦 inference gateway、provider fallback、timeout guardrails 與 capacity planning，不要求 production autoscaling、多 GPU serving、paid API key 或外部 secret。
+- Phase 43 聚焦 Agent tool permission、approval state、audit / replay evidence，不允許任意 SQL、shell、filesystem command 或 destructive tool。
+- Phase 44 聚焦 OCR / VLM 欄位可信度、人工作業修正與 parser field accuracy eval，不新增 full annotation platform 或 model training。
+- Phase 45 聚焦 JD evidence matrix、system design walkthrough、demo scenario pack 與 risk / tradeoff report，不新增新的 production runtime。
+- 每個 Phase 完成 release sync ticket 前，不更新 backend / frontend / health / Docker Compose version。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
