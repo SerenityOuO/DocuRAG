@@ -142,7 +142,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 roadmap planning，並已建立 Phase 31 到 Phase 39 的 future ticket backlog。除 `31-02` 已完成 PostgreSQL boundary / migration policy 外，其餘後續 tickets 尚未實作；不 bump version、不新增 runtime，也不宣稱 Phase 31 到 Phase 39 已完成。
+- 已完成 roadmap planning，並已建立 Phase 31 到 Phase 39 的 future ticket backlog。`31-02` 已完成 PostgreSQL boundary / migration policy，`31-03` 已完成 Markdown-only DB schema contract；其餘後續 tickets 尚未實作。不 bump version、不新增 runtime，也不宣稱 Phase 31 到 Phase 39 已完成。
 
 ### Phase 31 - PostgreSQL / Schema / Repository Foundation
 
@@ -170,6 +170,13 @@ Expected Outcome：
 - Current local JSON store 已盤點為 documents、OCR results、chunks、parser fields、processing jobs、eval datasets / eval runs 與 deterministic Agent runs，並對應到 future DB domain。
 - Migration policy 已固定 Alembic 作為後續 runtime migration 工具方向、readable slug 命名、explicit execution、rollback / downgrade、validation 與 release sync 原則。
 - Release Impact：Version bump required: no。本 ticket 不新增 PostgreSQL schema、migration 檔、repository runtime、正式 RBAC、Redis、NATS、worker、K8s 或 deployment 設定。
+
+31-03 DB Schema Contract Status：
+
+- 已完成。此 ticket 只更新 Markdown，固定 Phase 31 core tables contract，不建立 migration 檔、SQLAlchemy model、repository code、DB connection setting 或 production config。
+- `docs/db-schema.md` 已定義 `documents`、`document_pages`、`document_chunks`、`extracted_fields`、`processing_jobs`、`eval_datasets`、`eval_items`、`eval_runs`、`eval_run_items`、`agent_runs`、`agent_steps` 與 `agent_tool_calls` 的欄位、nullable、index / key 與 local JSON mapping。
+- Contract 保留 nullable `project_id` 作為 future project / tenant metadata；正式 users / organizations / roles / memberships schema 留給 Phase 32。
+- Release Impact：Version bump required: no。本 ticket 不改 runtime 或 release artifact。
 
 ### Phase 32 - Formal Auth / RBAC / Tenant Boundary
 

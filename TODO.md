@@ -125,6 +125,7 @@
 56. `tasks/phase-31-enterprise-roadmap/31-01-phase-31-to-39-roadmap-plan.md` 已完成，新增 Phase 31 到 Phase 39 的 enterprise / production roadmap planning；文件 ticket，不 bump version。
 57. `tasks/phase-40-interview-evidence-hardening/40-01-phase-40-jd-evidence-plan.md` 已完成，新增 Phase 40 JD evidence hardening roadmap；文件 ticket，不 bump version。
 58. `tasks/phase-31-enterprise-roadmap/31-02-postgresql-boundary-and-migration-policy.md` 已完成，固定 Phase 31 PostgreSQL boundary、migration policy 與 local JSON fallback / migration path；文件 ticket，不 bump version。
+59. `tasks/phase-31-enterprise-roadmap/31-03-db-schema-contract.md` 已完成，固定 Phase 31 core tables schema contract 與 local JSON mapping；文件 ticket，不 bump version。
 
 ## Phase 30 Parser / Ingestion Hardening
 
@@ -146,7 +147,7 @@
 
 Phase 31 `v0.31.0` - PostgreSQL / schema / repository foundation：
 - [x] `tasks/phase-31-enterprise-roadmap/31-02-postgresql-boundary-and-migration-policy.md`: 盤點 local JSON store 資料域、對應 future DB domain、固定 migration policy 與 local JSON fallback / migration path；文件 ticket，不 bump version。
-- [ ] `tasks/phase-31-enterprise-roadmap/31-03-db-schema-contract.md`
+- [x] `tasks/phase-31-enterprise-roadmap/31-03-db-schema-contract.md`: 定義 `documents`、`document_pages`、`document_chunks`、`extracted_fields`、eval tables 與 Agent tables 的欄位、nullable、index / key、`project_id` future metadata 與 local JSON mapping；文件 ticket，不 bump version。
 - [ ] `tasks/phase-31-enterprise-roadmap/31-04-repository-adapter-and-migration-path.md`
 - [ ] `tasks/phase-31-enterprise-roadmap/31-05-phase-31-release-sync.md`
 
@@ -201,7 +202,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- 除 `31-02` 已完成 PostgreSQL boundary / migration policy 外，以上 tickets 目前仍是 future backlog，尚未實作。
+- 除 `31-02` 已完成 PostgreSQL boundary / migration policy、`31-03` 已完成 DB schema contract 外，以上 tickets 目前仍是 future backlog，尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
@@ -213,6 +214,14 @@ Phase 31-39 guardrails：
 - Local JSON fallback / migration path 已明確保留；DB-backed mode 後續應先 opt-in 並用 idempotent import 遷移，不在本 ticket 切斷既有 demo。
 - Validation 已通過：`rg -n "PostgreSQL|migration|local JSON|fallback|Phase 31" docs README_DEV.md TODO.md tasks/phase-31-enterprise-roadmap` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 - Release Impact：Version bump required: no。本 ticket 不新增 PostgreSQL schema、migration 檔、repository runtime、正式 RBAC、Redis、NATS、worker、K8s 或 deployment 設定。
+
+31-03 DB Schema Contract Status：
+
+- 已完成。`docs/db-schema.md` 已定義 Phase 31 core tables 的欄位、required / nullable、index / key、FK direction 與 local JSON mapping。
+- Contract 包含 `documents`、`document_pages`、`document_chunks`、`extracted_fields`、`processing_jobs`、`eval_datasets`、`eval_items`、`eval_runs`、`eval_run_items`、`agent_runs`、`agent_steps` 與 `agent_tool_calls`。
+- Nullable `project_id` 已保留為 future project / tenant metadata；正式 users / organizations / roles / memberships schema 明確留到 Phase 32。
+- Validation 已通過：`rg -n "document_pages|document_chunks|extracted_fields|eval_runs|agent_runs|project_id|Phase 31" docs TODO.md tasks/phase-31-enterprise-roadmap` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+- Release Impact：Version bump required: no。本 ticket 不新增 migration 檔、database schema runtime、repository code、dependency、正式 RBAC、Redis、NATS、worker、K8s 或 deployment 設定。
 
 ## Phase 40 Interview Evidence Hardening
 

@@ -34,12 +34,17 @@
 
 ## Acceptance Criteria
 
-- [ ] `docs/db-schema.md` 有 Phase 31 core tables 的欄位、index 與關聯說明。
-- [ ] schema contract 保留 `project_id` / future tenant metadata 欄位，但不實作正式 RBAC。
-- [ ] local JSON metadata 與 DB schema 的 mapping 清楚可追。
-- [ ] 文件明確標示 schema contract 尚未等於 migration runtime。
+- [x] `docs/db-schema.md` 有 Phase 31 core tables 的欄位、index 與關聯說明。
+- [x] schema contract 保留 `project_id` / future tenant metadata 欄位，但不實作正式 RBAC。
+- [x] local JSON metadata 與 DB schema 的 mapping 清楚可追。
+- [x] 文件明確標示 schema contract 尚未等於 migration runtime。
 
 ## Validation
 
 - `rg -n "document_pages|document_chunks|extracted_fields|eval_runs|agent_runs|project_id|Phase 31" docs TODO.md tasks/phase-31-enterprise-roadmap`
 - `git diff --check`
+
+## Validation Result
+
+- Passed: `rg -n "document_pages|document_chunks|extracted_fields|eval_runs|agent_runs|project_id|Phase 31" docs TODO.md tasks/phase-31-enterprise-roadmap`
+- Passed: `git diff --check`（僅 Windows LF/CRLF 提示）

@@ -357,6 +357,8 @@ Migration policy：
 
 Local JSON remains the default demo fallback until a later ticket adds DB-backed repository selection and validates the migration path. DB-backed mode should start as opt-in; migration should copy/import existing local JSON data idempotently by stable document id, chunk id and Agent run id. PostgreSQL stores metadata and relational state; Qdrant remains the vector store for embeddings.
 
+`31-03` adds a Markdown-only DB schema contract for Phase 31 core tables: `documents`, `document_pages`, `document_chunks`, `extracted_fields`, `processing_jobs`, `eval_datasets`, `eval_items`, `eval_runs`, `eval_run_items`, `agent_runs`, `agent_steps` and `agent_tool_calls`. The contract preserves nullable `project_id` / future tenant metadata for later filtering, but does not add users, organizations, roles, memberships, migrations, repository code or runtime DB selection.
+
 ## Deferred Or Explicitly Optional Components
 
 以下能力是長期目標或 optional local runtime，不屬於目前 production-ready MVP：
