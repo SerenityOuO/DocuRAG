@@ -142,7 +142,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 roadmap planning，並已建立 Phase 31 到 Phase 39 的 future ticket backlog。這些後續 tickets 尚未實作，不 bump version、不新增 runtime，也不宣稱 Phase 31 到 Phase 39 已完成。
+- 已完成 roadmap planning，並已建立 Phase 31 到 Phase 39 的 future ticket backlog。除 `31-02` 已完成 PostgreSQL boundary / migration policy 外，其餘後續 tickets 尚未實作；不 bump version、不新增 runtime，也不宣稱 Phase 31 到 Phase 39 已完成。
 
 ### Phase 31 - PostgreSQL / Schema / Repository Foundation
 
@@ -163,6 +163,13 @@ Expected Outcome：
 - 定義 documents、document_pages、document_chunks、extracted_fields、eval_runs、agent_runs 等資料表。
 - 保留 local JSON demo fallback 或 migration path，避免一次切斷既有 demo。
 - 不新增正式 RBAC、Redis、NATS、worker 或 K8s。
+
+31-02 PostgreSQL Boundary and Migration Policy Status：
+
+- 已完成。此 ticket 只更新文件，固定 Phase 31 PostgreSQL boundary、migration policy 與 local JSON fallback / migration path。
+- Current local JSON store 已盤點為 documents、OCR results、chunks、parser fields、processing jobs、eval datasets / eval runs 與 deterministic Agent runs，並對應到 future DB domain。
+- Migration policy 已固定 Alembic 作為後續 runtime migration 工具方向、readable slug 命名、explicit execution、rollback / downgrade、validation 與 release sync 原則。
+- Release Impact：Version bump required: no。本 ticket 不新增 PostgreSQL schema、migration 檔、repository runtime、正式 RBAC、Redis、NATS、worker、K8s 或 deployment 設定。
 
 ### Phase 32 - Formal Auth / RBAC / Tenant Boundary
 

@@ -334,6 +334,29 @@ Local JSON store and optional local model services
 
 Phase 23 只整理 Viewer Chat 與 Admin / Analyst Ingestion 的入口邊界；Phase 28 只新增 demo login 與最小 role gates。若需要真正登入、RBAC、project permission、worker queue 或 database-backed ingestion，必須拆到後續 phase。
 
+## Phase 31 PostgreSQL Boundary
+
+`31-02` 只定義 PostgreSQL boundary、migration policy 與 local JSON fallback / migration path，不新增 schema、migration 檔、repository runtime 或 API 行為。到 v0.29.0 follow-up hardening 為止，demo runtime 仍由 local JSON store、uploaded files、optional Qdrant 與 optional local model services 支撐。
+
+Phase 31 DB domain mapping：
+
+| Current source | Current runtime data | Future DB domain |
+|---|---|---|
+| `data/documents.json` | document metadata、OCR results、chunks、parser result、processing jobs | `documents`、`document_pages`、`document_chunks`、`extracted_fields`、`processing_jobs` |
+| `data/agent_runs.json` | deterministic Agent runs、plan steps、tool calls、citations | `agent_runs`、`agent_steps`、`agent_tool_calls` |
+| `sample-data/eval/*.json` / request-time eval output | eval datasets、built-in benchmark fixtures、RAG eval summaries | `eval_datasets`、`eval_items`、`eval_runs`、`eval_run_items` |
+| `data/uploads/` | uploaded file artifacts | DB rows should reference file path / checksum metadata; files are not stored as DB bytes in this boundary. |
+
+Migration policy：
+
+- Future runtime migrations should use Alembic after the backend DB stack is introduced by a scoped implementation ticket.
+- Migration names should use readable slugs such as `phase31_create_documents_tables` and reference the ticket id / target version in release notes.
+- Migration execution requires explicit DB configuration, for example `DATABASE_URL` plus `python -m alembic upgrade head`, only after the dependency and config ticket exists.
+- Every migration must include a downgrade path; destructive changes must follow expand / migrate / contract sequencing and require local JSON or DB backup validation.
+- Each schema / repository ticket must prove local JSON fallback still works unless that ticket explicitly changes the default.
+
+Local JSON remains the default demo fallback until a later ticket adds DB-backed repository selection and validates the migration path. DB-backed mode should start as opt-in; migration should copy/import existing local JSON data idempotently by stable document id, chunk id and Agent run id. PostgreSQL stores metadata and relational state; Qdrant remains the vector store for embeddings.
+
 ## Deferred Or Explicitly Optional Components
 
 以下能力是長期目標或 optional local runtime，不屬於目前 production-ready MVP：
@@ -341,7 +364,7 @@ Phase 23 只整理 Viewer Chat 與 Admin / Analyst Ingestion 的入口邊界；P
 - Production VLM / parser pipeline、PDF rendering、image preprocessing、多頁 production OCR pipeline。
 - Production indexing worker、自動 queue reindex、DB-backed retrieval management。
 - Production eval dashboard、strategy comparison UI、LLM-as-judge、answer faithfulness scoring、citation quality scoring。
-- PostgreSQL schema、multi-user tenancy、production login、RBAC。
+- PostgreSQL schema runtime、DB-backed repository implementation、multi-user tenancy、production login、RBAC。Phase 31 目前只完成 PostgreSQL boundary / migration policy 文件，不代表 schema 或 repository runtime 已落地。
 - Redis session、cache、rate limit。
 - NATS event bus。
 - Production autonomous Agent、LLM planner、arbitrary tool runtime 或 destructive tool execution。

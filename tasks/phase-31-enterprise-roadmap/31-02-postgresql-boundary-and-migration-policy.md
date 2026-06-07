@@ -34,12 +34,17 @@
 
 ## Acceptance Criteria
 
-- [ ] 文件明確列出目前 local JSON store 的資料類型與對應 DB domain。
-- [ ] migration policy 包含命名規則、執行方式、rollback / downgrade 原則與 validation 方法。
-- [ ] 文件說明 local JSON fallback / migration path，不讓 Phase 31 一次切斷現有 demo。
-- [ ] 明確標示本 ticket 不新增 schema、repository runtime 或正式 RBAC。
+- [x] 文件明確列出目前 local JSON store 的資料類型與對應 DB domain。
+- [x] migration policy 包含命名規則、執行方式、rollback / downgrade 原則與 validation 方法。
+- [x] 文件說明 local JSON fallback / migration path，不讓 Phase 31 一次切斷現有 demo。
+- [x] 明確標示本 ticket 不新增 schema、repository runtime 或正式 RBAC。
 
 ## Validation
 
 - `rg -n "PostgreSQL|migration|local JSON|fallback|Phase 31" docs README_DEV.md TODO.md tasks/phase-31-enterprise-roadmap`
 - `git diff --check`
+
+## Validation Result
+
+- Passed: `rg -n "PostgreSQL|migration|local JSON|fallback|Phase 31" docs README_DEV.md TODO.md tasks/phase-31-enterprise-roadmap`
+- Passed: `git diff --check`（僅 Windows LF/CRLF 提示）
