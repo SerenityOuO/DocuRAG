@@ -419,6 +419,60 @@ This contract and runtime slice do not implement production table reconstruction
 
 Qdrant payload 至少保留 `document_id`、`filename`、`chunk_id`、`source_type`、`content_source`、`page_number`、`created_at` 與 future `project_id` / `tenant_id` 欄位位置。`bbox` 與 `confidence` 對 `text_upload` / `pdf_text` 可為 `null`；對 `ocr_image` 則應沿用 OCR line trace。
 
+## Phase 35 Indexing Quality API Contract
+
+`35-01` 只定義 API contract，不新增 endpoint runtime、chunking implementation、Qdrant payload index code、worker job 或 permission guard。後續 implementation ticket 若擴充 indexing API，必須沿用以下邊界。
+
+### Chunking Request Boundary
+
+Future vector indexing requests may accept:
+
+```json
+{
+  "chunking_strategy": "fixed_size",
+  "chunking_version": "v1",
+  "force_reindex": false,
+  "cleanup_stale": true,
+  "reason": "manual_reindex"
+}
+```
+
+Allowed `chunking_strategy` values are `fixed_size`, `semantic` and `parent_child`. `fixed_size` is the deterministic baseline. `semantic` may use document structure but must fall back to fixed windows when boundaries are unclear. `parent_child` stores parent context and child retrieval chunks; citations must still identify the child chunk returned by retrieval.
+
+### Qdrant Payload Contract
+
+Qdrant payload metadata must support filtering by tenant, project, document, source, page and chunk type:
+
+```json
+{
+  "tenant_id": "tenant_demo",
+  "project_id": "project_demo",
+  "document_id": "doc_123",
+  "filename": "invoice.pdf",
+  "source_type": "pdf_page_ocr",
+  "content_source": "pdf_scanned_ocr",
+  "page_number": 1,
+  "chunk_id": "doc_123:pdf_page_ocr:1:0001",
+  "chunk_type": "child",
+  "chunking_strategy": "parent_child",
+  "chunking_version": "v1",
+  "parent_chunk_id": "doc_123:parent:1",
+  "index_run_id": "idx_20260607_001",
+  "document_revision": "rev_3",
+  "created_at": "2026-06-07T00:00:00Z",
+  "indexed_at": "2026-06-07T00:00:00Z",
+  "stale_at": null
+}
+```
+
+Retrieval requests must apply tenant / project filters before narrowing to document, source, page or chunk type filters. API permission remains controlled by Auth / RBAC guards; Qdrant payload filters are the retrieval boundary that prevents cross-tenant, cross-project or cross-document leakage after a user is authorized.
+
+### Reindex and Stale Vector Cleanup
+
+Future reindex APIs may expose document-level and project-level operations, for example `POST /documents/{document_id}/reindex` and `POST /projects/{project_id}/reindex`. A request must carry strategy, version, reason and cleanup intent. A response should expose `index_run_id`, target scope, status, created / replaced / stale / failed counts and fallback or failure reasons.
+
+Stale vector cleanup must identify older vectors by tenant, project, document, document revision, strategy, version and previous `index_run_id`. Cleanup should mark or exclude stale vectors before deletion when the store supports it, and it must not delete document metadata, OCR output, parser fields or source chunks.
+
 VLM structured fields 不在本 ticket 自動寫入 retrieval chunks；若後續要把欄位索引進 Qdrant，必須另開 ticket 定義 field-indexing policy、dedupe key 與 citation semantics。
 
 Phase 24 的 parser contract 先支援 invoice MVP。`24-01` 固定文件與 API 草案，`24-02` 新增 deterministic parser service，`24-03` 新增 parse / fields API 與 local JSON persistence。此 contract 是 VLM-compatible，不代表目前已接真正 VLM、LLM parser、DB、worker 或 production parser pipeline。

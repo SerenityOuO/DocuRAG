@@ -349,6 +349,12 @@ Expected Outcome：
 - 支援 reindex document / reindex project、stale vector cleanup 與 indexing audit metadata。
 - 不新增 production eval dashboard 或 LLM-as-judge。
 
+35-01 Indexing Quality Contract Status：
+
+- 已完成 Phase 35 indexing quality contract 文件：`docs/architecture.md` 定義 `fixed_size`、`semantic`、`parent_child` chunking 策略、Qdrant payload / filter boundary、reindex 與 stale vector cleanup；`docs/api.md` 定義未來 API request / payload / audit contract。
+- Release Impact：Version bump required: no。這是 contract ticket，不新增 runtime chunker、Qdrant index code、worker job、eval dashboard、OCR、parser、Agent planner 或 Auth / RBAC 行為。
+- Validation：`rg -n "chunking|semantic|parent-child|Qdrant payload|reindex|stale vector|Phase 35" docs README_DEV.md TODO.md tasks/phase-35-rag-indexing-quality` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
 ### Phase 36 - Eval Dashboard / Rerank Analysis
 
 Target version：`v0.36.0`

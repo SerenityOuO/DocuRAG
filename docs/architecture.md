@@ -337,6 +337,39 @@ Normalized vector source metadata must include `document_id`, `filename`, `chunk
 
 VLM structured fields remain parser output for Admin / Analyst and Agent `get_document_fields`; they are not automatically converted into retrieval chunks. Field indexing requires a separate policy ticket.
 
+## Phase 35 Indexing Quality Contract
+
+`35-01` is a Markdown-only contract ticket. It defines how Phase 35 should treat chunking strategy, Qdrant payload metadata, filter boundaries, reindex operations and stale vector cleanup. It does not add runtime chunking code, Qdrant index creation, worker execution, eval dashboard logic, OCR changes, parser changes, Agent planner changes or Auth / RBAC behavior changes.
+
+### Chunking Strategies
+
+| Strategy | Contract | Good fit | Required trace metadata |
+|---|---|---|---|
+| `fixed_size` | Split normalized text into deterministic windows with bounded overlap. The same input, size and overlap must produce stable `chunk_id` values. | Baseline regression, OCR text, mixed sources with weak document structure, smoke tests. | `chunking_strategy`, `chunking_version`, `chunk_index`, text range, optional token range and overlap size. |
+| `semantic` | Split by visible document boundaries such as headings, paragraphs, list blocks, page sections or table-like text blocks, then fall back to `fixed_size` when boundaries are unclear. | Text-native PDFs, reports, contracts and uploaded text where section boundaries improve citation quality. | `chunking_strategy`, `chunking_version`, section title when available, page range and fallback reason when fixed windows are used. |
+| `parent_child` | Keep a parent record for larger section / page context and child chunks for retrieval. Retrieval cites child chunks, while answer generation may include the parent context. | Long contracts, policy documents, manuals and cases where small retrieval units need surrounding context. | `chunk_type` (`parent` / `child`), `parent_chunk_id`, child order, parent title or page range and citation child id. |
+
+No strategy may drop the existing source taxonomy from Phase 27 and Phase 28. A chunk created from `ocr_image`, `text_upload`, `pdf_text` or `pdf_page_ocr` must keep its source metadata so citations can still point back to the original document source.
+
+### Qdrant Payload and Filter Boundary
+
+Phase 35 vectors must reserve a Qdrant payload shape that can be filtered by tenant, project, document, source, page and chunk type. Required payload keys are:
+
+- Identity and tenancy: `tenant_id`, `project_id`, `document_id`, `filename`.
+- Source trace: `source_type`, `content_source`, `page_number`, optional `bbox`, optional `confidence`.
+- Chunk trace: `chunk_id`, `chunk_type`, `chunking_strategy`, `chunking_version`, optional `parent_chunk_id`.
+- Index audit: `index_run_id`, `document_revision`, `created_at`, `indexed_at`, optional `stale_at`.
+
+Tenant and project filters are retrieval boundaries, not the source of permission truth. Formal Auth / RBAC remains an API-layer guard; Qdrant queries must still include tenant / project / document filters whenever that context is available, so a future production store does not rely on client-side filtering after retrieval.
+
+### Reindex and Stale Vector Cleanup
+
+`reindex_document` is the document-level operation: it reprocesses one document with an explicit strategy, version and reason, writes a new `index_run_id`, and records created / skipped / failed chunk counts. `reindex_project` is the project-level operation: it schedules or runs the same contract across all visible documents in a project, preserving tenant and project filters.
+
+Stale vector cleanup must be non-destructive to source documents. A new index run should identify previous points by `document_id`, `document_revision`, `chunking_strategy`, `chunking_version` and `index_run_id`, mark replaced points with `stale_at` when supported, then delete or exclude stale vectors only after the replacement run succeeds. Cleanup must never delete document metadata, OCR output, parser fields or source chunks.
+
+Indexing audit metadata must include `index_run_id`, target scope (`document` or `project`), `tenant_id`, `project_id`, optional `document_id`, requested strategy, requested version, requester identifier when available, reason, status, started / finished timestamps, created / replaced / stale / failed counts and fallback or failure reasons.
+
 ## Phase 28 Document Source Router Boundary
 
 `28-01` 把 upload 後的處理路徑從「全部先塞進 OCR」改成明確 source router contract。這張票只定義邊界，不改 runtime。

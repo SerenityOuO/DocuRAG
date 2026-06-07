@@ -34,12 +34,17 @@
 
 ## Acceptance Criteria
 
-- [ ] 文件明確定義 three chunking strategies 與適用情境。
-- [ ] Qdrant payload metadata 與 filter contract 包含 tenant / project / document boundary。
-- [ ] Reindex 與 stale vector cleanup contract 清楚。
-- [ ] 明確標示本 ticket 不實作 runtime。
+- [x] 文件明確定義 three chunking strategies 與適用情境。
+- [x] Qdrant payload metadata 與 filter contract 包含 tenant / project / document boundary。
+- [x] Reindex 與 stale vector cleanup contract 清楚。
+- [x] 明確標示本 ticket 不實作 runtime。
 
 ## Validation
 
 - `rg -n "chunking|semantic|parent-child|Qdrant payload|reindex|stale vector|Phase 35" docs README_DEV.md TODO.md tasks/phase-35-rag-indexing-quality`
 - `git diff --check`
+
+## Validation Result
+
+- Passed: `rg -n "chunking|semantic|parent-child|Qdrant payload|reindex|stale vector|Phase 35" docs README_DEV.md TODO.md tasks/phase-35-rag-indexing-quality`
+- Passed: `git diff --check`（僅 Windows LF/CRLF 提示）
