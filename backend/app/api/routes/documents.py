@@ -20,6 +20,7 @@ from app.schemas.documents import (
     DocumentUploadResponse,
     OcrStatus,
     OcrResultResponse,
+    VectorIndexingRequest,
     ParserResult,
     ParserStatus,
     VectorIndexingResponse,
@@ -300,6 +301,7 @@ async def index_document_vector(
     storage: DocumentStorageDep,
     auth_user: IngestionUserDep,
     service: VectorIndexingServiceDep,
+    request: VectorIndexingRequest | None = None,
 ) -> VectorIndexingResponse:
     document = _get_accessible_document(storage, document_id, auth_user)
 
@@ -317,7 +319,15 @@ async def index_document_vector(
             },
         )
 
-    result = VectorIndexingResponse(**asdict(service.index_document(document)))
+    indexing_request = request or VectorIndexingRequest()
+    result = VectorIndexingResponse(
+        **asdict(
+            service.index_document(
+                document,
+                chunking_strategy=indexing_request.chunking_strategy,
+            )
+        )
+    )
     if result.status == "failed":
         raise HTTPException(status_code=503, detail=result.model_dump())
 

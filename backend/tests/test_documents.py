@@ -19,7 +19,15 @@ from app.api.routes.documents import (
 from app.api.routes.rag import get_document_storage as get_rag_document_storage, get_rag_provider
 from app.core.config import get_settings
 from app.main import app
-from app.schemas.documents import BoundingBox, DocumentMetadata, OcrResult, OcrStatus, OcrTextLine, ProcessingJobType
+from app.schemas.documents import (
+    BoundingBox,
+    ChunkingStrategy,
+    DocumentMetadata,
+    OcrResult,
+    OcrStatus,
+    OcrTextLine,
+    ProcessingJobType,
+)
 from app.services.document_storage import DocumentStorage
 from app.services.document_parser import DeterministicInvoiceParser
 from app.services import ocr as ocr_module
@@ -994,12 +1002,19 @@ def test_vector_indexing_endpoint_returns_indexing_result(client: TestClient) ->
     class StubVectorIndexingService:
         def __init__(self) -> None:
             self.document: DocumentMetadata | None = None
+            self.chunking_strategy: str | None = None
 
-        def index_document(self, document: DocumentMetadata) -> VectorIndexingResult:
+        def index_document(
+            self,
+            document: DocumentMetadata,
+            chunking_strategy: ChunkingStrategy = "fixed_size",
+        ) -> VectorIndexingResult:
             self.document = document
+            self.chunking_strategy = chunking_strategy
             return VectorIndexingResult(
                 document_id=document.document_id,
                 status="completed",
+                chunking_strategy=chunking_strategy,
                 indexed_chunk_count=1,
                 point_ids=["point-001"],
                 collection_name="docurag_chunks_v1",
@@ -1022,16 +1037,22 @@ def test_vector_indexing_endpoint_returns_indexing_result(client: TestClient) ->
     )
     document_id = upload_response.json()["document_id"]
 
-    response = client.post(f"/documents/{document_id}/index/vector")
+    response = client.post(
+        f"/documents/{document_id}/index/vector",
+        json={"chunking_strategy": "semantic"},
+    )
 
     assert response.status_code == 200
     assert service.document is not None
     assert service.document.document_id == document_id
+    assert service.chunking_strategy == "semantic"
     assert service.document.chunks[0].chunk_id == f"{document_id}-chunk-001"
     assert service.document.chunks[0].source_type == "text_upload"
     assert response.json() == {
         "document_id": document_id,
         "status": "completed",
+        "chunking_strategy": "semantic",
+        "chunking_version": "v1",
         "indexed_chunk_count": 1,
         "skipped_chunk_count": 0,
         "point_ids": ["point-001"],
@@ -1049,11 +1070,16 @@ def test_vector_indexing_endpoint_accepts_pdf_text_chunks(client: TestClient) ->
         def __init__(self) -> None:
             self.document: DocumentMetadata | None = None
 
-        def index_document(self, document: DocumentMetadata) -> VectorIndexingResult:
+        def index_document(
+            self,
+            document: DocumentMetadata,
+            chunking_strategy: ChunkingStrategy = "fixed_size",
+        ) -> VectorIndexingResult:
             self.document = document
             return VectorIndexingResult(
                 document_id=document.document_id,
                 status="completed",
+                chunking_strategy=chunking_strategy,
                 indexed_chunk_count=1,
                 point_ids=["point-pdf-001"],
                 collection_name="docurag_chunks_v1",
@@ -1115,11 +1141,16 @@ def test_vector_indexing_endpoint_returns_skipped_for_empty_chunks(
     tmp_path: Path,
 ) -> None:
     class StubVectorIndexingService:
-        def index_document(self, document: DocumentMetadata) -> VectorIndexingResult:
+        def index_document(
+            self,
+            document: DocumentMetadata,
+            chunking_strategy: ChunkingStrategy = "fixed_size",
+        ) -> VectorIndexingResult:
             assert document.chunks == []
             return VectorIndexingResult(
                 document_id=document.document_id,
                 status="skipped",
+                chunking_strategy=chunking_strategy,
                 skipped_chunk_count=0,
                 collection_name="docurag_chunks_v1",
                 vector_size=1024,
@@ -1150,10 +1181,15 @@ def test_vector_indexing_endpoint_returns_skipped_for_empty_chunks(
 
 def test_vector_indexing_endpoint_returns_503_when_provider_disabled(client: TestClient) -> None:
     class DisabledVectorIndexingService:
-        def index_document(self, document: DocumentMetadata) -> VectorIndexingResult:
+        def index_document(
+            self,
+            document: DocumentMetadata,
+            chunking_strategy: ChunkingStrategy = "fixed_size",
+        ) -> VectorIndexingResult:
             return VectorIndexingResult(
                 document_id=document.document_id,
                 status="failed",
+                chunking_strategy=chunking_strategy,
                 collection_name="docurag_chunks_v1",
                 vector_size=1024,
                 embedding_provider="disabled",
@@ -1178,10 +1214,15 @@ def test_vector_indexing_endpoint_returns_503_when_provider_disabled(client: Tes
 
 def test_vector_indexing_endpoint_returns_503_when_qdrant_fails(client: TestClient) -> None:
     class FailingVectorIndexingService:
-        def index_document(self, document: DocumentMetadata) -> VectorIndexingResult:
+        def index_document(
+            self,
+            document: DocumentMetadata,
+            chunking_strategy: ChunkingStrategy = "fixed_size",
+        ) -> VectorIndexingResult:
             return VectorIndexingResult(
                 document_id=document.document_id,
                 status="failed",
+                chunking_strategy=chunking_strategy,
                 collection_name="docurag_chunks_v1",
                 vector_size=1024,
                 embedding_provider="ollama",

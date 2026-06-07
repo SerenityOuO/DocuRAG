@@ -46,6 +46,7 @@ class ParserStatus(StrEnum):
 
 ParserSource = Literal["deterministic_invoice", "llm_invoice", "vlm_invoice"]
 FieldValue = str | int | float | bool
+ChunkingStrategy = Literal["fixed_size", "semantic"]
 
 
 class ProcessingStatus(BaseModel):
@@ -274,9 +275,15 @@ class OcrResultResponse(OcrResult):
     document_id: str = Field(..., min_length=1)
 
 
+class VectorIndexingRequest(BaseModel):
+    chunking_strategy: ChunkingStrategy = "fixed_size"
+
+
 class VectorIndexingResponse(BaseModel):
     document_id: str = Field(..., min_length=1)
     status: Literal["completed", "skipped", "failed"]
+    chunking_strategy: ChunkingStrategy = "fixed_size"
+    chunking_version: str = "v1"
     indexed_chunk_count: int = Field(default=0, ge=0)
     skipped_chunk_count: int = Field(default=0, ge=0)
     point_ids: list[str] = Field(default_factory=list)

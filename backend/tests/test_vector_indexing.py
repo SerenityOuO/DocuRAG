@@ -129,6 +129,15 @@ def test_vector_indexing_service_upserts_chunk_payload() -> None:
         "origin": "ocr_line",
         "provider": "ocr_paddleocr",
         "line_index": "1",
+        "chunking_strategy": "fixed_size",
+        "chunking_version": "v1",
+        "chunk_index": "1",
+        "char_count": "25",
+        "token_count": "5",
+        "source_type": "ocr_paddleocr",
+        "source_chunk_id": "chunk-001",
+        "chunk_part_index": "1",
+        "page_number": "2",
         "ocr_provider": "ocr_paddleocr",
         "indexing_provider": "vector",
         "vector_store": "qdrant",
@@ -167,6 +176,14 @@ def test_vector_indexing_service_preserves_text_upload_payload_metadata() -> Non
         "origin": "uploaded_text",
         "content_source": "text_upload",
         "source_router": "text_upload",
+        "chunking_strategy": "fixed_size",
+        "chunking_version": "v1",
+        "chunk_index": "1",
+        "char_count": "25",
+        "token_count": "5",
+        "source_type": "text_upload",
+        "source_chunk_id": "chunk-001",
+        "chunk_part_index": "1",
         "ocr_provider": "text_upload",
         "indexing_provider": "vector",
         "vector_store": "qdrant",
@@ -211,6 +228,14 @@ def test_vector_indexing_service_preserves_pdf_text_payload_metadata() -> None:
         "content_source": "pdf_text",
         "source_router": "pdf_text",
         "page_number": "1",
+        "chunking_strategy": "fixed_size",
+        "chunking_version": "v1",
+        "chunk_index": "1",
+        "char_count": "25",
+        "token_count": "5",
+        "source_type": "pdf_text",
+        "source_chunk_id": "chunk-001",
+        "chunk_part_index": "1",
         "ocr_provider": "pdf_text",
         "indexing_provider": "vector",
         "vector_store": "qdrant",
@@ -218,6 +243,46 @@ def test_vector_indexing_service_preserves_pdf_text_payload_metadata() -> None:
         "embedding_provider": "ollama",
         "embedding_model": "qwen3-embedding:0.6b",
     }
+
+
+def test_vector_indexing_service_supports_semantic_chunking_strategy() -> None:
+    semantic_text = "Overview\nAlpha line.\n\nPayment\nPayment terms are Net 15."
+    document = make_document([make_chunk(text=semantic_text)])
+
+    fixed_embedding_provider = StubEmbeddingProvider(vector_size=3)
+    fixed_vector_store = StubVectorStore(vector_size=3)
+    fixed_service = VectorIndexingService(fixed_embedding_provider, fixed_vector_store)
+    fixed_result = fixed_service.index_document(document, chunking_strategy="fixed_size")
+
+    semantic_embedding_provider = StubEmbeddingProvider(vector_size=3)
+    semantic_vector_store = StubVectorStore(vector_size=3)
+    semantic_service = VectorIndexingService(semantic_embedding_provider, semantic_vector_store)
+    semantic_result = semantic_service.index_document(document, chunking_strategy="semantic")
+
+    assert fixed_result.status == "completed"
+    assert fixed_result.chunking_strategy == "fixed_size"
+    assert fixed_result.indexed_chunk_count == 1
+    assert fixed_embedding_provider.inputs == [
+        "Overview\nAlpha line.\nPayment\nPayment terms are Net 15."
+    ]
+
+    assert semantic_result.status == "completed"
+    assert semantic_result.chunking_strategy == "semantic"
+    assert semantic_result.indexed_chunk_count == 2
+    assert semantic_embedding_provider.inputs == [
+        "Overview\nAlpha line.",
+        "Payment\nPayment terms are Net 15.",
+    ]
+    assert [point.payload["chunk_id"] for point in semantic_vector_store.points] == [
+        "chunk-001:semantic:001",
+        "chunk-001:semantic:002",
+    ]
+    assert semantic_vector_store.points[0].payload["metadata"]["chunking_strategy"] == "semantic"
+    assert semantic_vector_store.points[0].payload["metadata"]["semantic_segment_index"] == "1"
+    assert semantic_vector_store.points[0].payload["metadata"]["source_type"] == "ocr_paddleocr"
+    assert semantic_vector_store.points[0].payload["metadata"]["page_number"] == "2"
+    assert semantic_vector_store.points[0].payload["metadata"]["char_count"] == "20"
+    assert semantic_vector_store.points[0].payload["metadata"]["token_count"] == "3"
 
 
 def test_vector_indexing_service_uses_stable_point_ids() -> None:

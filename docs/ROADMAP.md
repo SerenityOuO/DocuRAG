@@ -355,6 +355,13 @@ Expected Outcome：
 - Release Impact：Version bump required: no。這是 contract ticket，不新增 runtime chunker、Qdrant index code、worker job、eval dashboard、OCR、parser、Agent planner 或 Auth / RBAC 行為。
 - Validation：`rg -n "chunking|semantic|parent-child|Qdrant payload|reindex|stale vector|Phase 35" docs README_DEV.md TODO.md tasks/phase-35-rag-indexing-quality` 通過；`git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 
+35-02 Chunking Strategy Runtime Status：
+
+- 已完成 `POST /documents/{document_id}/index/vector` 的 optional `chunking_strategy` request body，支援 `fixed_size` 與 `semantic`。不傳 body 仍預設 `fixed_size`，保留既有 demo fallback。
+- Vector indexing 會保存 `chunking_strategy`、`chunking_version`、`chunk_index`、`char_count`、`token_count`、`source_type`、`source_chunk_id`、`chunk_part_index` 與可用的 `page_number` metadata；`semantic` 只用既有段落 / section 邊界，沒有新增 LLM segmentation。
+- Release Impact：Version bump required: no。版本同步留到 `35-04`；本 ticket 不新增 eval dashboard、strategy tuning、OCR、parser 或 Agent planner 行為。
+- Validation：focused backend tests `60 passed`；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`234 passed`，1 pytest cache warning）；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
 ### Phase 36 - Eval Dashboard / Rerank Analysis
 
 Target version：`v0.36.0`

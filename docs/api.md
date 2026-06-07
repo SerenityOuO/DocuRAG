@@ -421,23 +421,23 @@ Qdrant payload 至少保留 `document_id`、`filename`、`chunk_id`、`source_ty
 
 ## Phase 35 Indexing Quality API Contract
 
-`35-01` 只定義 API contract，不新增 endpoint runtime、chunking implementation、Qdrant payload index code、worker job 或 permission guard。後續 implementation ticket 若擴充 indexing API，必須沿用以下邊界。
+`35-01` 先定義 API contract。`35-02` 已在既有 `POST /documents/{document_id}/index/vector` 上加入可選 `chunking_strategy` request body，支援 `fixed_size` 與 `semantic`，但仍不新增 Qdrant payload index code、worker job、reindex API、stale cleanup API、eval dashboard 或 permission guard。
 
 ### Chunking Request Boundary
 
-Future vector indexing requests may accept:
+Current `35-02` vector indexing requests may accept:
 
 ```json
 {
-  "chunking_strategy": "fixed_size",
-  "chunking_version": "v1",
-  "force_reindex": false,
-  "cleanup_stale": true,
-  "reason": "manual_reindex"
+  "chunking_strategy": "semantic"
 }
 ```
 
-Allowed `chunking_strategy` values are `fixed_size`, `semantic` and `parent_child`. `fixed_size` is the deterministic baseline. `semantic` may use document structure but must fall back to fixed windows when boundaries are unclear. `parent_child` stores parent context and child retrieval chunks; citations must still identify the child chunk returned by retrieval.
+No request body defaults to `fixed_size`, preserving the existing demo flow. `fixed_size` is the deterministic baseline and splits stored source chunks into bounded char windows when needed. `semantic` uses paragraph / section boundaries already present in stored chunk text, then falls back to fixed windows with `chunking_fallback_reason=semantic_boundaries_unavailable` when boundaries are unclear. `35-02` does not implement `parent_child` runtime and does not use LLM-based semantic segmentation.
+
+`VectorIndexingResponse` now exposes `chunking_strategy` and `chunking_version`. Indexed chunk payload metadata includes `chunking_strategy`, `chunking_version`, `chunk_index`, `char_count`, `token_count`, `source_type`, `source_chunk_id`, `chunk_part_index` and `page_number` when available.
+
+Future vector indexing requests may add `force_reindex`, `cleanup_stale`, `reason` or `parent_child`, but those belong to later Phase 35 tickets.
 
 ### Qdrant Payload Contract
 

@@ -179,7 +179,7 @@ Phase 34 `v0.34.0` - Production OCR / scanned PDF pipeline：
 
 Phase 35 `v0.35.0` - RAG indexing quality hardening：
 - [x] `tasks/phase-35-rag-indexing-quality/35-01-indexing-quality-contract.md`: 完成 Phase 35 indexing quality contract，定義 chunking strategies、Qdrant payload / filter、reindex 與 stale vector cleanup；不 bump version。
-- [ ] `tasks/phase-35-rag-indexing-quality/35-02-chunking-strategy-runtime.md`
+- [x] `tasks/phase-35-rag-indexing-quality/35-02-chunking-strategy-runtime.md`: 完成 vector indexing `fixed_size` / `semantic` chunking strategy runtime、request body 與 metadata；不 bump version。
 - [ ] `tasks/phase-35-rag-indexing-quality/35-03-qdrant-payload-index-and-reindexing.md`
 - [ ] `tasks/phase-35-rag-indexing-quality/35-04-indexing-quality-demo-release-sync.md`
 
@@ -210,7 +210,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync；Phase 35 已完成 `35-01` contract ticket。除 Phase 31、Phase 32、Phase 33、Phase 34 已完成票、Phase 35 `35-01` 與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync；Phase 35 已完成 `35-01` contract ticket 與 `35-02` chunking strategy runtime。除 Phase 31、Phase 32、Phase 33、Phase 34 已完成票、Phase 35 `35-01` / `35-02` 與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
@@ -332,6 +332,13 @@ Phase 31-39 guardrails：
 - `docs/api.md` 已補上未來 indexing request、Qdrant payload、reindex response 與 cleanup contract；本 ticket 不新增 runtime chunking、Qdrant index code、worker、eval dashboard、OCR、parser、Agent planner 或 Auth / RBAC 行為。
 - Validation 已通過：`rg -n "chunking|semantic|parent-child|Qdrant payload|reindex|stale vector|Phase 35" docs README_DEV.md TODO.md tasks/phase-35-rag-indexing-quality`；`git diff --check`（僅 Windows LF/CRLF 提示）。
 - Release Impact：Version bump required: no。這是 Phase 35 contract ticket，不改 runtime。
+
+35-02 Chunking Strategy Runtime：
+- 已完成。`POST /documents/{document_id}/index/vector` 可用 request body 選擇 `chunking_strategy=fixed_size|semantic`；不傳 body 仍使用 `fixed_size`，避免現有 demo hard fail。
+- Vector indexing 會依 strategy 產生 indexing chunks，並在 payload metadata 保存 strategy name、`char_count`、`token_count`、`source_type`、`source_chunk_id`、`chunk_part_index` 與可用的 `page_number`。`semantic` 只使用既有段落 / section 邊界，邊界不足時 fallback 到 fixed windows。
+- Backend tests 已覆蓋 `fixed_size` 與 `semantic` output 差異、metadata 與 API request flow；本 ticket 不新增 LLM segmentation、eval dashboard、OCR、parser 或 Agent planner 行為。
+- Validation 已通過：focused backend tests `60 passed`；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`234 passed`，1 pytest cache warning）；`rg -n "chunking strategy|fixed|semantic|parent_child|chunk metadata" backend docs TODO.md tasks/phase-35-rag-indexing-quality`；`git diff --check`（僅 Windows LF/CRLF 提示）。
+- Release Impact：Version bump required: no。版本同步留到 `35-04`。
 ## Phase 40 Interview Evidence Hardening
 
 - [x] `tasks/phase-40-interview-evidence-hardening/40-01-phase-40-jd-evidence-plan.md`: 新增 Phase 40 `v0.40.0` JD evidence hardening roadmap；文件 ticket，不 bump version。

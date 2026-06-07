@@ -33,13 +33,20 @@
 
 ## Acceptance Criteria
 
-- [ ] Indexing flow 可選擇 chunking strategy。
-- [ ] Chunk metadata 保存 strategy name、token / char count、source type 與 page number。
-- [ ] Backend tests 覆蓋至少兩種 strategy 的 output 差異。
-- [ ] Existing demo smoke 不因新 strategy hard fail。
+- [x] Indexing flow 可選擇 chunking strategy。
+- [x] Chunk metadata 保存 strategy name、token / char count、source type 與 page number。
+- [x] Backend tests 覆蓋至少兩種 strategy 的 output 差異。
+- [x] Existing demo smoke 不因新 strategy hard fail。
 
 ## Validation
 
 - `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
 - `rg -n "chunking strategy|fixed|semantic|parent_child|chunk metadata" backend docs TODO.md tasks/phase-35-rag-indexing-quality`
 - `git diff --check`
+
+## Validation Result
+
+- Passed: focused backend tests `60 passed` (`tests/test_vector_indexing.py tests/test_documents.py`)
+- Passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` (`234 passed`, 1 pytest cache warning)
+- Passed: `rg -n "chunking strategy|fixed|semantic|parent_child|chunk metadata" backend docs TODO.md tasks/phase-35-rag-indexing-quality`
+- Passed: `git diff --check`（僅 Windows LF/CRLF 提示）
