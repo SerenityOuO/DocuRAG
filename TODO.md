@@ -128,6 +128,7 @@
 59. `tasks/phase-31-enterprise-roadmap/31-03-db-schema-contract.md` 已完成，固定 Phase 31 core tables schema contract 與 local JSON mapping；文件 ticket，不 bump version。
 60. `tasks/phase-33-redis-nats-worker-pipeline/33-02-redis-cache-rate-limit-session-slice.md` 已完成，新增 opt-in Redis session cache、RAG query cache、rate limit、health fallback 與 Docker Compose redis profile；不 bump version。
 61. `tasks/phase-33-redis-nats-worker-pipeline/33-03-nats-worker-skeleton-and-task-status.md` 已完成，新增 optional NATS helper、worker skeleton placeholder handlers、task status store / API 與 NATS worker smoke script；不 bump version。
+62. `tasks/phase-33-redis-nats-worker-pipeline/33-04-worker-demo-smoke-and-release-sync.md` 已完成，新增 worker demo smoke script，並同步 `v0.33.0` backend / frontend / Docker Compose / health test / README / README_DEV / backend README / frontend README / TODO / ROADMAP。
 
 ## Phase 30 Parser / Ingestion Hardening
 
@@ -163,7 +164,7 @@ Phase 33 `v0.33.0` - Redis + NATS worker pipeline：
 - [x] `tasks/phase-33-redis-nats-worker-pipeline/33-01-redis-nats-worker-contract.md`: 完成 Markdown-only Redis / NATS worker pipeline contract，定義 Redis responsibilities / boundaries、NATS / JetStream topics、event payload、task status lifecycle、retry / failure policy 與 idempotency key；不 bump version。
 - [x] `tasks/phase-33-redis-nats-worker-pipeline/33-02-redis-cache-rate-limit-session-slice.md`: 完成 opt-in Redis backend slice，支援 session cache、RAG query cache、rate limit、health fallback 與 Docker Compose redis profile；不 bump version。
 - [x] `tasks/phase-33-redis-nats-worker-pipeline/33-03-nats-worker-skeleton-and-task-status.md`: 完成 optional NATS publish / subscribe helper、worker skeleton placeholder handlers、local JSON task status store、`/tasks` API 與 smoke script；不 bump version。
-- [ ] `tasks/phase-33-redis-nats-worker-pipeline/33-04-worker-demo-smoke-and-release-sync.md`
+- [x] `tasks/phase-33-redis-nats-worker-pipeline/33-04-worker-demo-smoke-and-release-sync.md`: 完成 worker demo smoke 與 `v0.33.0` release sync。
 
 Phase 34 `v0.34.0` - Production OCR / scanned PDF pipeline：
 - [ ] `tasks/phase-34-production-ocr-scanned-pdf/34-01-scanned-pdf-ocr-contract.md`
@@ -204,7 +205,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 `33-01` 已完成 worker pipeline contract，`33-02` 已完成 Redis cache / rate limit / session slice，`33-03` 已完成 NATS worker skeleton / task status；除 Phase 31、Phase 32、Phase 33 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync；除 Phase 31、Phase 32、Phase 33 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
@@ -287,6 +288,12 @@ Phase 31-39 guardrails：
 - 本 ticket 不新增 production autoscaling、K8s、dead-letter dashboard、full observability stack、vLLM、OpenAI API、fine-tuning 或 Agent planner 變更。
 - Validation 已通過：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`227 passed`，1 pytest cache warning）；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\nats-worker-smoke.ps1`；ticket `rg` 與 `git diff --check` 通過。
 - Release Impact：Version bump required: no；`v0.33.0` 版本同步留到 `33-04`。
+
+33-04 Worker Demo Smoke and Phase 33 Release Sync：
+- 已完成。新增 `scripts/worker-demo-smoke.ps1`，以 fake Redis client 驗證 session cache、query cache 與 rate limit path，並用 `DOCURAG_NATS_URL=memory://` 驗證 NATS worker skeleton publish / consume 與 `/tasks` task status API。
+- backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 ticket 已同步到 `v0.33.0`。
+- 這是 demo-safe async architecture milestone，不新增 production autoscaling、K8s、distributed tracing、full observability stack、vLLM、OpenAI API、fine-tuning pipeline，也不修改 OCR / parser / RAG / Agent model behavior。
+- Validation 已通過：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`227 passed`，1 pytest cache warning）；`npm.cmd run build`；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\worker-demo-smoke.ps1`（health version `0.33.0`，Redis fake-client path `ok`，NATS memory worker 與 task status `succeeded`）；ticket `rg` 與 `git diff --check` 通過。
 ## Phase 40 Interview Evidence Hardening
 
 - [x] `tasks/phase-40-interview-evidence-hardening/40-01-phase-40-jd-evidence-plan.md`: 新增 Phase 40 `v0.40.0` JD evidence hardening roadmap；文件 ticket，不 bump version。

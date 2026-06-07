@@ -24,6 +24,7 @@ DocuRAG 是技術探索導向的 AI 文件知識庫專案，將文件上傳、OC
 - 內建 RAG 測試
 - Agent tool-use trace
 - Admin / Analyst / Viewer role-gated surface
+- Redis + NATS worker demo smoke
 
 ## 需求
 
@@ -32,6 +33,7 @@ DocuRAG 是技術探索導向的 AI 文件知識庫專案，將文件上傳、OC
 - 本機可選 Ollama
 - 本機可選 Qdrant
 - 本機可選 PaddleOCR GPU
+- 本機可選 Redis / NATS
 
 ## 快速啟動
 
@@ -91,6 +93,7 @@ viewer / demo-viewer-pass
 - RAG：Ollama embedding、Qdrant、FastEmbed reranker、Ollama generation guardrails
 - Storage：本機 JSON metadata / uploaded files，另有 opt-in PostgreSQL metadata repository
 - Auth / RBAC：本機 demo login、formal signed bearer guard、project access filtering
+- Worker demo：opt-in Redis cache / rate-limit slice、NATS worker skeleton、task status API
 - Workflow：ticket-first 小步開發
 
 ## API 串接
@@ -103,6 +106,7 @@ viewer / demo-viewer-pass
 - `POST /rag/query`：送出知識庫問題。
 - `POST /eval/rag/built-in`：執行內建 RAG 測試。
 - `POST /agent/run`：執行 read-only Agent task。
+- `GET /tasks`：查看 demo worker task status。
 
 ## 開發與驗證
 
@@ -118,6 +122,12 @@ Smoke test：
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1
 ```
 
+Worker demo smoke：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\worker-demo-smoke.ps1
+```
+
 Retrieval eval：
 
 ```powershell
@@ -128,7 +138,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 
 ## 目前邊界
 
-目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.32.0 已完成 formal Auth / RBAC / tenant boundary 的可展示 release：backend 會執行 role guard 與 project access filtering，frontend 會依 Admin / Analyst / Viewer 顯示或鎖定入口。PostgreSQL metadata repository 仍是 opt-in foundation，不代表 production database operation；尚未包含 SSO、OAuth、MFA、production login runtime、Redis、NATS、worker、scanned PDF OCR pipeline、K8s hardening、自訂 eval dashboard 或 production autonomous Agent。
+目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.33.0 已完成 Redis + NATS worker demo milestone：Redis cache / rate limit 與 NATS worker skeleton 都是 opt-in、fallback-safe、本機可驗證的展示切片，`/tasks` 可查看 task status。這不代表 production autoscaling、durable JetStream consumer、production async OCR / parser / indexing / eval pipeline、K8s hardening、自訂 eval dashboard 或 production autonomous Agent 已完成。
 
 ## 文件入口
 

@@ -39,10 +39,10 @@
 
 ## Acceptance Criteria
 
-- [ ] `/health` 回傳 `0.33.0`。
-- [ ] Worker smoke 可驗證 Redis / NATS / task status path。
-- [ ] README 說明 Redis + NATS 是 demo-safe worker pipeline，不是 production autoscaling。
-- [ ] TODO 與 ROADMAP 記錄 Phase 33 完成狀態與 validation。
+- [x] `/health` 回傳 `0.33.0`。
+- [x] Worker smoke 可驗證 Redis / NATS / task status path。
+- [x] README 說明 Redis + NATS 是 demo-safe worker pipeline，不是 production autoscaling。
+- [x] TODO 與 ROADMAP 記錄 Phase 33 完成狀態與 validation。
 
 ## Validation
 
@@ -51,3 +51,11 @@
 - Worker demo smoke script。
 - `rg -n "v0.33.0|Phase 33|Redis|NATS|worker|task status|JetStream" README.md README_DEV.md backend/README.md frontend/README.md docs/ROADMAP.md TODO.md backend frontend infra scripts tasks/phase-33-redis-nats-worker-pipeline`
 - `git diff --check`
+
+## Validation Result
+
+- Passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`227 passed`，1 pytest cache warning）。
+- Passed: `npm.cmd run build`。
+- Passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\worker-demo-smoke.ps1`（health version `0.33.0`，Redis fake-client path `ok`，NATS memory worker 與 task status `succeeded`）。
+- Passed: `rg -n "v0.33.0|Phase 33|Redis|NATS|worker|task status|JetStream" README.md README_DEV.md backend/README.md frontend/README.md docs/ROADMAP.md TODO.md backend frontend infra scripts tasks/phase-33-redis-nats-worker-pipeline`。
+- Passed: `git diff --check`（僅 Windows LF/CRLF 提示）。
