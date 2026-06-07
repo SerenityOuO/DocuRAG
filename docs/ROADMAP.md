@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release 與 v0.29.0 Built-in RAG Eval Admin Surface release。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release 與 Phase 31-39 enterprise completion roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -89,6 +89,7 @@ Expected Outcome：
 - v0.28.0 Document Sources / Demo Auth Mode 只做 `.txt` direct ingestion、text-native PDF extraction、scanned PDF pending state 與 demo-safe login / role guard；不新增正式 RBAC、tenant isolation、PostgreSQL schema、Redis、NATS、worker、SSO、OAuth、MFA、K8s 或 scanned PDF OCR pipeline。
 - v0.29.0 Built-in RAG Eval Admin Surface 只做後台「測試RAG」內建基準測試與 Agent 執行紀錄摺疊；策略固定 `hybrid_rerank`，summary 只顯示 Hit Rate@K、MRR@K、平均延遲與 Failure / Fallback；不新增 production eval dashboard、自訂 dataset 上傳、LLM-as-judge、OCR eval、DB、worker、正式 RBAC 或 deployment 設定。
 - Phase 30 parser / ingestion hardening 只修正 Ollama VLM response normalization 與 frontend 多檔依序 ingestion ergonomics；不新增 batch API、queue、worker、DB schema、OpenAI SDK、vLLM、production parser dashboard 或 release version bump。
+- Phase 31-39 roadmap planning 只新增未來版本拆分與 guardrails；不新增 runtime、外部依賴、DB schema、worker、deployment 或 version bump。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -129,6 +130,147 @@ Status：
 - Frontend 後台 file input 支援多檔選擇；多檔時逐檔執行既有 upload / source router / OCR / parser / vector indexing flow，並分檔呈現成功與失敗。
 - Release Impact：Version bump required: no。這是 `v0.29.0` 後的 focused hardening，不更新 backend / frontend / Docker version。
 - Out of Scope：不新增 batch upload API、async queue、worker、Redis、NATS、DB schema、OpenAI SDK、vLLM、production parser dashboard、PDF rendering 或 Agent planner / RAG ranking 變更。
+
+## Phase 31-39 Enterprise Completion Roadmap
+
+Goal：把目前尚未完成的 enterprise / production 能力拆成可逐步 release 的後續 Phase。這段 roadmap 只規劃方向，真正實作仍必須逐張 ticket 執行。
+
+Ticket：
+
+- `tasks/phase-31-enterprise-roadmap/31-01-phase-31-to-39-roadmap-plan.md`
+
+Status：
+
+- 已完成 roadmap planning。此 ticket 不 bump version、不新增 runtime，也不宣稱 Phase 31 到 Phase 39 已完成。
+
+### Phase 31 - PostgreSQL / Schema / Repository Foundation
+
+Target version：`v0.31.0`
+
+Goal：將目前 local JSON store 的核心資料轉成 DB-backed contract，讓文件、chunks、OCR results、parser fields、eval runs 與 Agent runs 有可遷移、可測試的資料模型。
+
+Expected Outcome：
+
+- 建立 PostgreSQL service boundary、migration policy 與 repository interface。
+- 定義 documents、document_pages、document_chunks、extracted_fields、eval_runs、agent_runs 等資料表。
+- 保留 local JSON demo fallback 或 migration path，避免一次切斷既有 demo。
+- 不新增正式 RBAC、Redis、NATS、worker 或 K8s。
+
+### Phase 32 - Formal Auth / RBAC / Tenant Boundary
+
+Target version：`v0.32.0`
+
+Goal：把 Phase 28 demo auth 升級為正式 multi-user / project permission 邊界。
+
+Expected Outcome：
+
+- 建立 users、organizations、projects、roles 與 memberships schema。
+- API 層檢查 organization / project access；Viewer / Analyst / Admin 權限由 backend 強制執行。
+- Qdrant payload 與 DB query 都保留 tenant / project filtering contract。
+- 不新增 SSO、OAuth、MFA、Redis session 或 production audit pipeline。
+
+### Phase 33 - Redis + NATS Worker Pipeline
+
+Target version：`v0.33.0`
+
+Goal：加入可展示的高併發與非同步任務架構，讓 ingestion 不再只依賴同步 API path。
+
+Expected Outcome：
+
+- Redis 支援 session cache、query cache、rate limit 與 worker lock 的最小切片。
+- NATS / JetStream 定義 `document.uploaded`、`document.ocr.requested`、`document.parse.requested`、`document.index.requested`、`rag.eval.requested` topics。
+- OCR、parser、indexing、eval jobs 可由 worker skeleton 消費並回寫 task status。
+- 不改 OCR / parser / RAG model 行為，不新增 production autoscaling。
+
+### Phase 34 - Production OCR / Scanned PDF Pipeline
+
+Target version：`v0.34.0`
+
+Goal：補上目前明確延後的 scanned PDF 與多頁 OCR pipeline。
+
+Expected Outcome：
+
+- PDF rendering 產生 page images，區分 text-native PDF 與 scanned PDF。
+- 多頁 OCR 支援 page-level status、retry、failure reason 與 OCR blocks。
+- image preprocessing / deskew / size guardrails 只做 demo-safe baseline，不做完整表格重建。
+- OCR 完成後可接 parser / indexing worker pipeline。
+
+### Phase 35 - RAG Indexing Quality Hardening
+
+Target version：`v0.35.0`
+
+Goal：把目前的 hybrid / rerank demo default 補強成可管理的 indexing quality layer。
+
+Expected Outcome：
+
+- 支援 fixed-size、semantic、parent-child chunking 的 contract 與至少一條可驗證 runtime path。
+- Qdrant payload index 與 tenant / project / document metadata filter 明確化。
+- 支援 reindex document / reindex project、stale vector cleanup 與 indexing audit metadata。
+- 不新增 production eval dashboard 或 LLM-as-judge。
+
+### Phase 36 - Eval Dashboard / Rerank Analysis
+
+Target version：`v0.36.0`
+
+Goal：把目前 built-in benchmark 升級為可比較策略與追蹤失敗案例的 RAG quality surface。
+
+Expected Outcome：
+
+- 支援自訂 eval dataset / eval item 管理。
+- UI 比較 keyword、vector、hybrid、vector_rerank、hybrid_rerank 的 Hit Rate@K、MRR@K、Recall@K、latency。
+- 顯示 rerank 前後排名、failure cases、fallback cases 與 trace metadata coverage。
+- 不新增 answer faithfulness、LLM-as-judge 或 citation quality scoring，除非另開 ticket。
+
+### Phase 37 - Inference Ops / vLLM Serving
+
+Target version：`v0.37.0`
+
+Goal：補上推論維運展示，讓 Ollama demo path 可以擴充到 OpenAI-compatible / vLLM serving。
+
+Expected Outcome：
+
+- 新增 OpenAI-compatible provider boundary，保留 Ollama fallback。
+- 新增 vLLM local / Docker deployment guide 與 smoke script。
+- 記錄 prompt tokens、completion tokens、generation latency、GPU memory / KV cache estimate。
+- 不把 vLLM 設為唯一 runtime，不新增多 GPU production serving。
+
+### Phase 38 - Agent Runtime Hardening
+
+Target version：`v0.38.0`
+
+Goal：把 deterministic Agent MVP 推進到可展示 task planning 與 tool permission 的 Agent runtime。
+
+Expected Outcome：
+
+- 支援 LLM planner provider boundary，保留 deterministic fallback。
+- Tool 分成 read-only、write、admin、destructive tiers；每個 tier 都有 permission guard。
+- Agent trace 顯示 planning、tool selection、observation、reflection / fallback 與 final answer。
+- 不允許任意 SQL、shell、filesystem command 或無權限 destructive tool。
+
+### Phase 39 - Deployment / Observability / Fine-tuning Track
+
+Target version：`v0.39.0`
+
+Goal：補齊部署與研究型加分能力，讓專案能展示 LLMOps / MLOps 邊界，但不承諾 production autoscaling。
+
+Expected Outcome：
+
+- 提供 basic K8s manifests、ConfigMap / Secret template、health probes 與 resource request examples。
+- 補上 Loki / Grafana 或 OpenSearch observability path，集中 API log、worker log、RAG trace 與 eval metrics。
+- 建立 SFT / synthetic data / embedding tuning 的實驗文件或 notebook skeleton，明確標示不是 production training pipeline。
+- 不新增 enterprise SSO、multi-cluster deployment 或完整 autoscaling。
+
+Phase 31-39 Validation Direction：
+
+- 每個 Phase 必須先有 contract ticket，再接 runtime ticket，最後 release sync ticket。
+- 每個 runtime Phase 至少要包含 backend tests、frontend build（若有 UI 變更）、smoke script、ticket `rg` 與 `git diff --check`。
+- 只有完成實際 release sync ticket 時，才更新 backend version、frontend package version、frontend fallback version、health test、Docker Compose `DOCURAG_VERSION` 與 public README。
+
+Out of Scope：
+
+- 本 roadmap planning ticket 不新增任何 runtime 或 dependency。
+- 不建立 DB schema、Redis / NATS service、worker、K8s manifest、vLLM server 或 fine-tuning notebook。
+- 不將 Phase 31 到 Phase 39 寫入 `README.md` 的 release status；公開入口仍維持目前 MVP 邊界。
 
 ## v0.2.0 Demo UI Milestone
 

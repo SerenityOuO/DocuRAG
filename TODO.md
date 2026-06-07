@@ -31,6 +31,15 @@
 - Phase 28 -> `v0.28.0`
 - Phase 29 -> `v0.29.0`
 - Phase 30 hardening -> no version bump unless a later release sync ticket is created
+- Phase 31 -> `v0.31.0`
+- Phase 32 -> `v0.32.0`
+- Phase 33 -> `v0.33.0`
+- Phase 34 -> `v0.34.0`
+- Phase 35 -> `v0.35.0`
+- Phase 36 -> `v0.36.0`
+- Phase 37 -> `v0.37.0`
+- Phase 38 -> `v0.38.0`
+- Phase 39 -> `v0.39.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README / README_DEV、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -112,6 +121,7 @@
 53. `tasks/phase-30-parser-ingestion-hardening/30-01-vlm-response-and-multi-upload-hardening.md` 已完成，強化 Ollama VLM response parsing 與後台多檔依序 ingestion；focused hardening ticket，不 bump version。
 54. `tasks/phase-30-parser-ingestion-hardening/30-03-rag-vector-stale-filter-hardening.md` 已完成，讓 default `hybrid_rerank` vector branch 以目前文件 document ids 查詢 Qdrant，避免 stale vectors 消耗 `top_k` 後誤報 `vector_unavailable`；focused hardening ticket，不 bump version。
 55. `tasks/phase-30-parser-ingestion-hardening/30-04-ollama-rag-generation-latency-guardrails.md` 已完成，讓 Ollama RAG generation 預設帶 `think=false` 與 `options.num_predict=512`，並把 guardrail 寫入 citation trace；focused hardening ticket，不 bump version。
+56. `tasks/phase-31-enterprise-roadmap/31-01-phase-31-to-39-roadmap-plan.md` 已完成，新增 Phase 31 到 Phase 39 的 enterprise / production roadmap planning；文件 ticket，不 bump version。
 
 ## Phase 30 Parser / Ingestion Hardening
 
@@ -124,6 +134,29 @@
 - [x] `tasks/phase-30-parser-ingestion-hardening/30-04-ollama-rag-generation-latency-guardrails.md`: Ollama `/api/generate` 預設送出 `think=false` 與 `options.num_predict=512`，可由 `DOCURAG_LLM_THINK` / `DOCURAG_LLM_NUM_PREDICT` 覆寫，citation trace 會標示 `llm_think` 與 `llm_num_predict`。
 - Release Impact: Version bump required: no。此 ticket 是 v0.29.0 後的 focused hardening，不更新 backend / frontend / Docker version。
 - [x] 30-04 validation：`python -m pytest backend/tests/test_llm.py backend/tests/test_rag.py -q` 通過，`33 passed`（僅 pytest cache 權限警告）；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` 通過，`199 passed`（僅 pytest cache 權限警告）；兩張 ticket 的 `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+## Phase 31-39 Enterprise Completion Roadmap
+
+- [x] `tasks/phase-31-enterprise-roadmap/31-01-phase-31-to-39-roadmap-plan.md`: 新增後續完成路線，將目前未完成的 DB、正式權限、Redis、NATS、worker、PDF OCR pipeline、RAG quality dashboard、vLLM、Agent runtime、K8s 與 fine-tuning 拆成 Phase 31 到 Phase 39；文件 ticket，不 bump version。
+
+後續建議優先順序：
+
+1. [ ] Phase 31 `v0.31.0` - PostgreSQL / schema / repository foundation：把 documents、chunks、fields、eval runs、agent runs 從 local JSON 遷移到 DB-backed contract；不做正式 RBAC、Redis、NATS 或 worker。
+2. [ ] Phase 32 `v0.32.0` - Formal Auth / RBAC / tenant boundary：建立正式 users、organizations、projects、roles、project access 與 API guard；不做 SSO / OAuth / MFA。
+3. [ ] Phase 33 `v0.33.0` - Redis + NATS worker pipeline：加入 Redis session / cache / rate limit 與 NATS JetStream worker skeleton，拆分 OCR / parser / indexing / eval jobs；不改 AI model 行為。
+4. [ ] Phase 34 `v0.34.0` - Production OCR / scanned PDF pipeline：補 PDF rendering、多頁 OCR、image preprocessing、OCR retry / failure handling 與 UI task status；不新增表格重建或 production VLM dashboard。
+5. [ ] Phase 35 `v0.35.0` - RAG indexing quality hardening：補 chunking strategy、Qdrant payload index、tenant / project metadata filter、reindex project 與 stale vector cleanup；不做 eval dashboard。
+6. [ ] Phase 36 `v0.36.0` - Eval dashboard / rerank analysis：補 strategy comparison UI、自訂 eval dataset、failure analysis、Hit Rate / MRR / Recall 趨勢與 rerank 前後比較；不做 LLM-as-judge。
+7. [ ] Phase 37 `v0.37.0` - Inference Ops / vLLM serving：加入 OpenAI-compatible provider boundary、vLLM deployment path、latency / token / GPU / KV cache metrics 與 benchmark docs；不把 vLLM 設為唯一 runtime。
+8. [ ] Phase 38 `v0.38.0` - Agent runtime hardening：從 deterministic planner 擴充到 LLM planner、tool permission、read-only / side-effect tool 分層、task planning trace 與 safe fallback；不允許任意 destructive tool。
+9. [ ] Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：補 K8s manifests、Loki / Grafana 或 OpenSearch observability、SFT / synthetic data / embedding tuning 實驗文件；不承諾 production autoscaling。
+
+Phase 31-39 guardrails：
+
+- 這些項目目前全部是 future roadmap，尚未實作。
+- 每個 Phase 仍必須拆成 3 到 5 張小 ticket，先做 contract / migration / validation，再做 runtime。
+- 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
+- Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
