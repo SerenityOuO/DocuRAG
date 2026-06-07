@@ -405,6 +405,13 @@ Expected Outcome：
 - Release Impact：Version bump required: no。這是 Markdown-only contract ticket，不新增 dashboard runtime、frontend UI、dataset persistence、LLM-as-judge、answer faithfulness、citation quality scoring、OCR eval、ranking algorithm 或 rerank provider。
 - Validation：通過 ticket `rg` 與 `git diff --check`。
 
+36-02 Eval Dataset Management Status：
+
+- 已完成 eval dataset / eval item management runtime：backend 提供 dataset / item CRUD API，Local JSON 與 PostgreSQL metadata repository path 都能保存資料。
+- Frontend 後台新增 compact Eval Dataset surface，Admin / Analyst 可管理 dataset 與 item；Viewer write path 由既有 ingestion guard 回傳 `403 forbidden`。
+- Release Impact：Version bump required: no。這是 Phase 36 runtime slice，版本同步留到 `36-04`；不新增 strategy comparison dashboard、LLM-as-judge、answer faithfulness、OCR eval、citation quality scoring 或 retrieval / rerank runtime behavior。
+- Validation：focused backend tests `15 passed`；backend full test `245 passed`；frontend build；Admin API CRUD；Viewer blocked API；Edge headless desktop / mobile DOM surface check；ticket `rg` 與 `git diff --check`。in-app Browser 控制工具因 Node REPL sandbox 錯誤不可用，已改用 Edge headless DOM 檢查。
+
 ### Phase 37 - Inference Ops / vLLM Serving
 
 Target version：`v0.37.0`

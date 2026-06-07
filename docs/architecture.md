@@ -494,7 +494,7 @@ Boundary rules：
 
 ## Phase 36 Eval Dashboard / Rerank Analysis Contract
 
-`36-01` only defines the target contract for a broader RAG quality surface. It upgrades the Phase 29 built-in benchmark language into a future dashboard shape, but does not add runtime code, frontend routes, dataset persistence, DB-backed eval history, worker execution, new ranking algorithms or LLM-as-judge.
+`36-01` only defines the target contract for a broader RAG quality surface. It upgrades the Phase 29 built-in benchmark language into a future dashboard shape. `36-02` adds the first runtime slice: Admin / Analyst can manage eval datasets and eval items through synchronous backend APIs and a compact frontend surface. It still does not add strategy comparison runs, DB-backed eval history, worker execution, new ranking algorithms or LLM-as-judge.
 
 Future architecture:
 
@@ -528,6 +528,7 @@ Rerank analysis
 
 Boundary rules:
 
+- Eval dataset / item management is metadata CRUD only; it does not trigger retrieval, rerank, LLM generation, OCR eval or worker execution.
 - A dashboard card or table may compare retrieval strategies, but the contract does not tune ranking behavior.
 - `failure_count` means expected evidence was not found or the strategy could not produce evaluable output.
 - `fallback_count` means the strategy returned a result with fallback metadata, such as vector unavailable or reranker unavailable.

@@ -24,6 +24,14 @@ from app.schemas.documents import (
     ProcessingStatus,
     ProcessingStepStatus,
 )
+from app.schemas.evaluation import (
+    EvalDataset,
+    EvalDatasetCreateRequest,
+    EvalDatasetUpdateRequest,
+    EvalItem,
+    EvalItemCreateRequest,
+    EvalItemUpdateRequest,
+)
 from app.services.ocr import OcrProvider
 from app.services.pdf_rendering import PdfPageRenderer, PdfRenderingError
 
@@ -107,6 +115,152 @@ class DocumentStorage:
         self._write_agent_runs(agent_runs)
 
         return agent_run
+
+    def list_eval_datasets(self, project_ids: frozenset[str] | None = None) -> list[EvalDataset]:
+        datasets = [
+            dataset
+            for dataset in self.repository.list_eval_datasets()
+            if self._project_visible(dataset.project_id, project_ids)
+        ]
+        items = [
+            item
+            for item in self.repository.list_eval_items()
+            if self._project_visible(item.project_id, project_ids)
+        ]
+        item_counts: dict[str, int] = {}
+        for item in items:
+            item_counts[item.dataset_id] = item_counts.get(item.dataset_id, 0) + 1
+
+        return sorted(
+            [
+                dataset.model_copy(update={"item_count": item_counts.get(dataset.dataset_id, 0)})
+                for dataset in datasets
+            ],
+            key=lambda dataset: dataset.updated_at,
+            reverse=True,
+        )
+
+    def get_eval_dataset(self, dataset_id: str) -> EvalDataset | None:
+        for dataset in self.repository.list_eval_datasets():
+            if dataset.dataset_id == dataset_id:
+                item_count = len(self.repository.list_eval_items(dataset_id))
+                return dataset.model_copy(update={"item_count": item_count})
+
+        return None
+
+    def create_eval_dataset(
+        self,
+        request: EvalDatasetCreateRequest,
+        project_id: str | None = None,
+    ) -> EvalDataset:
+        now = datetime.now(UTC)
+        dataset = EvalDataset(
+            dataset_id=f"eval-dataset-{uuid4().hex[:12]}",
+            project_id=project_id,
+            name=self._required_text(request.name, "Eval dataset name"),
+            description=self._optional_text(request.description),
+            created_at=now,
+            updated_at=now,
+        )
+        self.repository.save_eval_dataset(dataset)
+        return dataset
+
+    def update_eval_dataset(
+        self,
+        dataset_id: str,
+        request: EvalDatasetUpdateRequest,
+    ) -> EvalDataset | None:
+        dataset = self.get_eval_dataset(dataset_id)
+        if dataset is None:
+            return None
+
+        updates: dict[str, object] = {"updated_at": datetime.now(UTC)}
+        if "name" in request.model_fields_set and request.name is not None:
+            updates["name"] = self._required_text(request.name, "Eval dataset name")
+        if "description" in request.model_fields_set:
+            updates["description"] = self._optional_text(request.description)
+
+        updated_dataset = dataset.model_copy(update=updates)
+        self.repository.save_eval_dataset(updated_dataset)
+        return self.get_eval_dataset(dataset_id)
+
+    def delete_eval_dataset(self, dataset_id: str) -> bool:
+        if self.get_eval_dataset(dataset_id) is None:
+            return False
+
+        self.repository.delete_eval_dataset(dataset_id)
+        return True
+
+    def list_eval_items(self, dataset_id: str) -> list[EvalItem]:
+        return sorted(
+            self.repository.list_eval_items(dataset_id),
+            key=lambda item: item.updated_at,
+            reverse=True,
+        )
+
+    def get_eval_item(self, dataset_id: str, item_id: str) -> EvalItem | None:
+        for item in self.repository.list_eval_items(dataset_id):
+            if item.item_id == item_id:
+                return item
+
+        return None
+
+    def create_eval_item(
+        self,
+        dataset: EvalDataset,
+        request: EvalItemCreateRequest,
+    ) -> EvalItem:
+        now = datetime.now(UTC)
+        item = EvalItem(
+            item_id=f"eval-item-{uuid4().hex[:12]}",
+            dataset_id=dataset.dataset_id,
+            project_id=dataset.project_id,
+            query=self._required_text(request.query, "Eval item query"),
+            expected_terms=self._clean_required_list(request.expected_terms, "expected_terms"),
+            expected_document_ids=self._clean_optional_list(request.expected_document_ids),
+            expected_chunk_ids=self._clean_optional_list(request.expected_chunk_ids),
+            tags=self._clean_optional_list(request.tags),
+            notes=self._optional_text(request.notes),
+            created_at=now,
+            updated_at=now,
+        )
+        self.repository.save_eval_item(item)
+        return item
+
+    def update_eval_item(
+        self,
+        dataset_id: str,
+        item_id: str,
+        request: EvalItemUpdateRequest,
+    ) -> EvalItem | None:
+        item = self.get_eval_item(dataset_id, item_id)
+        if item is None:
+            return None
+
+        updates: dict[str, object] = {"updated_at": datetime.now(UTC)}
+        if "query" in request.model_fields_set and request.query is not None:
+            updates["query"] = self._required_text(request.query, "Eval item query")
+        if "expected_terms" in request.model_fields_set and request.expected_terms is not None:
+            updates["expected_terms"] = self._clean_required_list(request.expected_terms, "expected_terms")
+        if "expected_document_ids" in request.model_fields_set and request.expected_document_ids is not None:
+            updates["expected_document_ids"] = self._clean_optional_list(request.expected_document_ids)
+        if "expected_chunk_ids" in request.model_fields_set and request.expected_chunk_ids is not None:
+            updates["expected_chunk_ids"] = self._clean_optional_list(request.expected_chunk_ids)
+        if "tags" in request.model_fields_set and request.tags is not None:
+            updates["tags"] = self._clean_optional_list(request.tags)
+        if "notes" in request.model_fields_set:
+            updates["notes"] = self._optional_text(request.notes)
+
+        updated_item = item.model_copy(update=updates)
+        self.repository.save_eval_item(updated_item)
+        return updated_item
+
+    def delete_eval_item(self, dataset_id: str, item_id: str) -> bool:
+        if self.get_eval_item(dataset_id, item_id) is None:
+            return False
+
+        self.repository.delete_eval_item(dataset_id, item_id)
+        return True
 
     def list_documents_for_rag(self, project_ids: frozenset[str] | None = None) -> list[DocumentMetadata]:
         documents = self._read_documents()
@@ -575,6 +729,44 @@ class DocumentStorage:
 
     def _write_documents(self, documents: list[DocumentMetadata]) -> None:
         self.repository.write_documents(documents)
+
+    def _project_visible(self, project_id: str | None, project_ids: frozenset[str] | None) -> bool:
+        if project_ids is None:
+            return True
+
+        return project_id is not None and project_id in project_ids
+
+    def _required_text(self, value: str, label: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError(f"{label} cannot be blank.")
+
+        return text
+
+    def _optional_text(self, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        text = value.strip()
+        return text or None
+
+    def _clean_required_list(self, values: list[str], label: str) -> list[str]:
+        cleaned = self._clean_optional_list(values)
+        if not cleaned:
+            raise ValueError(f"{label} requires at least one value.")
+
+        return cleaned
+
+    def _clean_optional_list(self, values: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for value in values:
+            text = value.strip()
+            if text and text not in seen:
+                cleaned.append(text)
+                seen.add(text)
+
+        return cleaned
 
     def _safe_filename(self, filename: str) -> str:
         name = Path(filename.replace("\\", "/")).name

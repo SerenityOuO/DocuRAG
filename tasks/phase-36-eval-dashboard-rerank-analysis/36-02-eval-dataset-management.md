@@ -34,10 +34,10 @@
 
 ## Acceptance Criteria
 
-- [ ] Admin / Analyst 可管理 eval datasets 與 eval items。
-- [ ] Viewer 不可建立或修改 eval dataset。
-- [ ] Backend tests 覆蓋 dataset / item CRUD 與 permission boundary。
-- [ ] Frontend build 通過且 UI 無 horizontal overflow。
+- [x] Admin / Analyst 可管理 eval datasets 與 eval items。
+- [x] Viewer 不可建立或修改 eval dataset。
+- [x] Backend tests 覆蓋 dataset / item CRUD 與 permission boundary。
+- [x] Frontend build 通過且 UI 無 horizontal overflow。
 
 ## Validation
 
@@ -46,3 +46,12 @@
 - Browser 檢查 eval dataset surface。
 - `rg -n "eval dataset|eval item|Hit Rate|MRR|Viewer|Admin|Analyst" backend frontend docs TODO.md tasks/phase-36-eval-dashboard-rerank-analysis`
 - `git diff --check`
+
+## Completion Notes
+
+- Backend 新增 `/eval/datasets` 與 `/eval/datasets/{dataset_id}/items` CRUD API，沿用 ingestion guard；Admin / Analyst 可管理，Viewer 在 demo / formal auth write path 會收到 `403 forbidden`。
+- Local JSON 與 PostgreSQL metadata repository path 已支援 eval dataset / eval item persistence；dataset delete 會同步刪除其 items。
+- Frontend 後台新增 Eval Dataset surface，可建立/更新/刪除 dataset，並管理 query、expected terms、document IDs、chunk IDs、tags 與 notes。
+- Validation 已通過：focused backend tests `15 passed`；backend full test `245 passed`；frontend build；Admin API CRUD；Viewer blocked API；Edge headless desktop / mobile DOM surface check；ticket `rg`；`git diff --check`。
+- in-app Browser 控制工具因 Node REPL sandbox `spawn setup refresh` 錯誤不可用，本次改用 Edge headless DOM 檢查 eval dataset surface；Edge screenshot flag 未產檔。
+- Release Impact：Version bump required: no。版本同步留到 `36-04`；本 ticket 不新增 strategy comparison dashboard、LLM-as-judge、answer faithfulness、OCR eval、citation quality scoring 或 retrieval / rerank runtime behavior。

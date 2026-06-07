@@ -185,7 +185,7 @@ Phase 35 `v0.35.0` - RAG indexing quality hardening：
 
 Phase 36 `v0.36.0` - Eval dashboard / rerank analysis：
 - [x] `tasks/phase-36-eval-dashboard-rerank-analysis/36-01-eval-dashboard-contract.md`: 完成 eval dashboard / rerank analysis contract；不 bump version。
-- [ ] `tasks/phase-36-eval-dashboard-rerank-analysis/36-02-eval-dataset-management.md`
+- [x] `tasks/phase-36-eval-dashboard-rerank-analysis/36-02-eval-dataset-management.md`: 完成 eval dataset / eval item CRUD API、repository persistence、frontend management surface 與 permission boundary；不 bump version。
 - [ ] `tasks/phase-36-eval-dashboard-rerank-analysis/36-03-strategy-comparison-and-rerank-analysis.md`
 - [ ] `tasks/phase-36-eval-dashboard-rerank-analysis/36-04-eval-dashboard-release-sync.md`
 
@@ -195,6 +195,14 @@ Phase 36 `v0.36.0` - Eval dashboard / rerank analysis：
 - Metrics contract 包含 Hit Rate@K、MRR@K、Recall@K、Precision@K、average latency、failure count 與 fallback count；rerank analysis contract 包含 pre / post rerank rank、score、final score source、rerank status 與 trace metadata coverage。
 - Validation 通過：ticket `rg` 與 `git diff --check`。
 - Release Impact：Version bump required: no。這是 Markdown-only contract ticket，不新增 dashboard runtime、frontend UI、eval dataset persistence、LLM-as-judge、answer faithfulness、citation quality scoring、OCR eval、ranking algorithm 或 rerank provider。
+
+36-02 Eval Dataset Management：
+- 已完成。Backend 新增 `/eval/datasets` 與 `/eval/datasets/{dataset_id}/items` 管理 API，支援 dataset create / list / detail / update / delete，以及 item create / list / detail / update / delete。
+- Local JSON 與 PostgreSQL metadata repository path 已保存 eval datasets / eval items；dataset delete 會同步移除其 items。
+- Frontend 後台新增 Eval Dataset surface，可建立/更新/刪除 dataset，並管理 query、expected terms、document IDs、chunk IDs、tags 與 notes。
+- Permission boundary：Admin / Analyst 可管理 eval datasets / items；Viewer 在 demo / formal auth write path 會收到 `403 forbidden`。
+- Validation 通過：focused backend tests `15 passed`；backend full test `245 passed`；frontend build；Admin API CRUD；Viewer blocked API；Edge headless desktop / mobile DOM surface check；ticket `rg` 與 `git diff --check`。in-app Browser 控制工具因 Node REPL sandbox `spawn setup refresh` 錯誤不可用，改用 Edge headless DOM 檢查。
+- Release Impact：Version bump required: no。版本同步留到 `36-04`；本 ticket 不新增 strategy comparison dashboard、LLM-as-judge、answer faithfulness、OCR eval、citation quality scoring 或 retrieval / rerank runtime behavior。
 
 Phase 37 `v0.37.0` - Inference Ops / vLLM serving：
 - [ ] `tasks/phase-37-inference-ops-vllm/37-01-inference-provider-ops-contract.md`

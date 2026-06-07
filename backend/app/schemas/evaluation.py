@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+EvalDatasetSchemaVersion = Literal["eval_dataset_v1"]
 
 
 class BuiltInRagEvalSummary(BaseModel):
@@ -36,3 +40,75 @@ class BuiltInRagEvalResponse(BaseModel):
     environment: dict[str, object]
     failed_cases: list[BuiltInRagEvalCaseResult]
     fallback_cases: list[BuiltInRagEvalCaseResult]
+
+
+class EvalDataset(BaseModel):
+    dataset_id: str = Field(..., min_length=1)
+    project_id: str | None = Field(default=None, min_length=1)
+    name: str = Field(..., min_length=1)
+    description: str | None = None
+    schema_version: EvalDatasetSchemaVersion = "eval_dataset_v1"
+    item_count: int = Field(default=0, ge=0)
+    created_at: datetime
+    updated_at: datetime
+
+
+class EvalItem(BaseModel):
+    item_id: str = Field(..., min_length=1)
+    dataset_id: str = Field(..., min_length=1)
+    project_id: str | None = Field(default=None, min_length=1)
+    query: str = Field(..., min_length=1)
+    expected_terms: list[str] = Field(..., min_length=1)
+    expected_document_ids: list[str] = Field(default_factory=list)
+    expected_chunk_ids: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    notes: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class EvalDatasetCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=500)
+
+
+class EvalDatasetUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=500)
+
+
+class EvalItemCreateRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=500)
+    expected_terms: list[str] = Field(..., min_length=1, max_length=20)
+    expected_document_ids: list[str] = Field(default_factory=list, max_length=20)
+    expected_chunk_ids: list[str] = Field(default_factory=list, max_length=20)
+    tags: list[str] = Field(default_factory=list, max_length=12)
+    notes: str | None = Field(default=None, max_length=500)
+
+
+class EvalItemUpdateRequest(BaseModel):
+    query: str | None = Field(default=None, min_length=1, max_length=500)
+    expected_terms: list[str] | None = Field(default=None, min_length=1, max_length=20)
+    expected_document_ids: list[str] | None = Field(default=None, max_length=20)
+    expected_chunk_ids: list[str] | None = Field(default=None, max_length=20)
+    tags: list[str] | None = Field(default=None, max_length=12)
+    notes: str | None = Field(default=None, max_length=500)
+
+
+class EvalDatasetListResponse(BaseModel):
+    datasets: list[EvalDataset]
+
+
+class EvalDatasetDetailResponse(BaseModel):
+    dataset: EvalDataset
+    items: list[EvalItem] = Field(default_factory=list)
+
+
+class EvalItemListResponse(BaseModel):
+    items: list[EvalItem]
+
+
+class EvalDeleteResponse(BaseModel):
+    status: Literal["deleted"] = "deleted"
+    dataset_id: str
+    item_id: str | None = None

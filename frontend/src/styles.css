@@ -655,8 +655,121 @@ td {
 }
 
 .eval-surface,
+.eval-dataset-surface,
 .agent-surface {
   grid-column: 1 / -1;
+}
+
+.eval-dataset-form,
+.eval-item-form {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  margin-bottom: 14px;
+}
+
+.eval-item-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.eval-dataset-form label,
+.eval-item-form label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.eval-dataset-form span,
+.eval-item-form span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.eval-dataset-form input,
+.eval-item-form input,
+.eval-item-form textarea {
+  background: #ffffff;
+  border: 1px solid #c4d0df;
+  border-radius: 8px;
+  color: #172033;
+  min-height: 42px;
+  min-width: 0;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.eval-item-form textarea {
+  resize: vertical;
+}
+
+.eval-item-query {
+  grid-row: span 2;
+}
+
+.eval-form-actions {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.eval-management-grid {
+  align-items: start;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(240px, 0.42fr) minmax(0, 0.58fr);
+}
+
+.eval-dataset-list-panel,
+.eval-item-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.eval-dataset-list,
+.eval-item-list {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.eval-dataset-list li,
+.eval-item-list li {
+  background: #f8fafc;
+  border: 1px solid #e5edf4;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.eval-dataset-list li.selected {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 2px rgb(15 118 110 / 12%);
+}
+
+.eval-dataset-list small,
+.eval-item-list small {
+  color: #64748b;
+  overflow-wrap: anywhere;
+}
+
+.eval-item-list strong {
+  color: #172033;
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.eval-dataset-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .eval-toolbar {
@@ -1150,6 +1263,15 @@ td {
   box-shadow: 0 8px 20px rgb(29 78 216 / 18%);
 }
 
+.danger-button {
+  background: #b42318;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: #991b1b;
+  box-shadow: 0 8px 20px rgb(180 35 24 / 18%);
+}
+
 .button-row {
   display: flex;
   flex-wrap: wrap;
@@ -1553,10 +1675,17 @@ pre {
   .minimal-chat-form,
   .auth-form,
   .role-picker,
+  .eval-dataset-form,
+  .eval-item-form,
+  .eval-management-grid,
   .eval-metric-grid,
   .agent-form,
   .agent-tool-details {
     grid-template-columns: 1fr;
+  }
+
+  .eval-item-query {
+    grid-row: auto;
   }
 
   .agent-task-field {

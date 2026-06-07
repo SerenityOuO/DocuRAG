@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from app.schemas.agent import AgentRun
 from app.schemas.documents import DocumentMetadata
+from app.schemas.evaluation import EvalDataset, EvalItem
 
 
 class DocumentMetadataRepository(Protocol):
@@ -26,6 +27,24 @@ class DocumentMetadataRepository(Protocol):
     def write_agent_runs(self, agent_runs: list[AgentRun]) -> None:
         ...
 
+    def list_eval_datasets(self) -> list[EvalDataset]:
+        ...
+
+    def save_eval_dataset(self, dataset: EvalDataset) -> None:
+        ...
+
+    def delete_eval_dataset(self, dataset_id: str) -> None:
+        ...
+
+    def list_eval_items(self, dataset_id: str | None = None) -> list[EvalItem]:
+        ...
+
+    def save_eval_item(self, item: EvalItem) -> None:
+        ...
+
+    def delete_eval_item(self, dataset_id: str, item_id: str) -> None:
+        ...
+
 
 class LocalJsonDocumentRepository:
     name = "local_json"
@@ -34,6 +53,8 @@ class LocalJsonDocumentRepository:
         self.data_dir = data_dir
         self.metadata_path = data_dir / "documents.json"
         self.agent_runs_path = data_dir / "agent_runs.json"
+        self.eval_datasets_path = data_dir / "eval_datasets.json"
+        self.eval_items_path = data_dir / "eval_items.json"
 
     def list_documents(self) -> list[DocumentMetadata]:
         self._ensure_documents_storage()
@@ -57,6 +78,83 @@ class LocalJsonDocumentRepository:
             [agent_run.model_dump(mode="json") for agent_run in agent_runs],
         )
 
+    def list_eval_datasets(self) -> list[EvalDataset]:
+        raw_datasets = self._read_json_list(self.eval_datasets_path)
+        return [EvalDataset.model_validate(raw_dataset) for raw_dataset in raw_datasets]
+
+    def save_eval_dataset(self, dataset: EvalDataset) -> None:
+        datasets = self.list_eval_datasets()
+        for index, saved_dataset in enumerate(datasets):
+            if saved_dataset.dataset_id == dataset.dataset_id:
+                datasets[index] = dataset
+                self._write_json(
+                    self.eval_datasets_path,
+                    [saved.model_dump(mode="json") for saved in datasets],
+                )
+                return
+
+        datasets.append(dataset)
+        self._write_json(
+            self.eval_datasets_path,
+            [saved.model_dump(mode="json") for saved in datasets],
+        )
+
+    def delete_eval_dataset(self, dataset_id: str) -> None:
+        datasets = [
+            dataset
+            for dataset in self.list_eval_datasets()
+            if dataset.dataset_id != dataset_id
+        ]
+        items = [
+            item
+            for item in self.list_eval_items()
+            if item.dataset_id != dataset_id
+        ]
+        self._write_json(
+            self.eval_datasets_path,
+            [dataset.model_dump(mode="json") for dataset in datasets],
+        )
+        self._write_json(
+            self.eval_items_path,
+            [item.model_dump(mode="json") for item in items],
+        )
+
+    def list_eval_items(self, dataset_id: str | None = None) -> list[EvalItem]:
+        raw_items = self._read_json_list(self.eval_items_path)
+        items = [EvalItem.model_validate(raw_item) for raw_item in raw_items]
+        if dataset_id is None:
+            return items
+
+        return [item for item in items if item.dataset_id == dataset_id]
+
+    def save_eval_item(self, item: EvalItem) -> None:
+        items = self.list_eval_items()
+        for index, saved_item in enumerate(items):
+            if saved_item.item_id == item.item_id and saved_item.dataset_id == item.dataset_id:
+                items[index] = item
+                self._write_json(
+                    self.eval_items_path,
+                    [saved.model_dump(mode="json") for saved in items],
+                )
+                return
+
+        items.append(item)
+        self._write_json(
+            self.eval_items_path,
+            [saved.model_dump(mode="json") for saved in items],
+        )
+
+    def delete_eval_item(self, dataset_id: str, item_id: str) -> None:
+        items = [
+            item
+            for item in self.list_eval_items()
+            if item.dataset_id != dataset_id or item.item_id != item_id
+        ]
+        self._write_json(
+            self.eval_items_path,
+            [item.model_dump(mode="json") for item in items],
+        )
+
     def _ensure_documents_storage(self) -> None:
         self.data_dir.mkdir(parents=True, exist_ok=True)
         if not self.metadata_path.exists():
@@ -66,6 +164,17 @@ class LocalJsonDocumentRepository:
         self.data_dir.mkdir(parents=True, exist_ok=True)
         if not self.agent_runs_path.exists():
             self.agent_runs_path.write_text("[]\n", encoding="utf-8")
+
+    def _read_json_list(self, path: Path) -> list[dict[str, Any]]:
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            path.write_text("[]\n", encoding="utf-8")
+
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, list):
+            raise ValueError(f"Expected list payload in {path.name}.")
+
+        return [dict(item) for item in payload if isinstance(item, dict)]
 
     def _write_json(self, path: Path, payload: list[dict[str, Any]]) -> None:
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -400,6 +509,99 @@ class PostgresDocumentRepository:
             ).fetchall()
 
         return [dict(_row_payload(row)) for row in rows]
+
+    def list_eval_datasets(self) -> list[EvalDataset]:
+        self.ensure_schema()
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT payload
+                FROM eval_datasets
+                ORDER BY name ASC, dataset_id ASC
+                """
+            ).fetchall()
+
+        return [EvalDataset.model_validate(_row_payload(row)) for row in rows]
+
+    def save_eval_dataset(self, dataset: EvalDataset) -> None:
+        self.ensure_schema()
+        payload = dataset.model_dump(mode="json")
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO eval_datasets (dataset_id, project_id, name, payload)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (dataset_id) DO UPDATE SET
+                    project_id = EXCLUDED.project_id,
+                    name = EXCLUDED.name,
+                    payload = EXCLUDED.payload
+                """,
+                (
+                    dataset.dataset_id,
+                    dataset.project_id,
+                    dataset.name,
+                    _json_payload(payload),
+                ),
+            )
+
+    def delete_eval_dataset(self, dataset_id: str) -> None:
+        self.ensure_schema()
+        with self._connect() as connection:
+            connection.execute("DELETE FROM eval_items WHERE dataset_id = %s", (dataset_id,))
+            connection.execute("DELETE FROM eval_datasets WHERE dataset_id = %s", (dataset_id,))
+
+    def list_eval_items(self, dataset_id: str | None = None) -> list[EvalItem]:
+        self.ensure_schema()
+        with self._connect() as connection:
+            if dataset_id is None:
+                rows = connection.execute(
+                    """
+                    SELECT payload
+                    FROM eval_items
+                    ORDER BY item_id ASC
+                    """
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    """
+                    SELECT payload
+                    FROM eval_items
+                    WHERE dataset_id = %s
+                    ORDER BY item_id ASC
+                    """,
+                    (dataset_id,),
+                ).fetchall()
+
+        return [EvalItem.model_validate(_row_payload(row)) for row in rows]
+
+    def save_eval_item(self, item: EvalItem) -> None:
+        self.ensure_schema()
+        payload = item.model_dump(mode="json")
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO eval_items (item_id, dataset_id, project_id, payload)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (item_id) DO UPDATE SET
+                    dataset_id = EXCLUDED.dataset_id,
+                    project_id = EXCLUDED.project_id,
+                    payload = EXCLUDED.payload
+                """,
+                (
+                    item.item_id,
+                    item.dataset_id,
+                    item.project_id,
+                    _json_payload(payload),
+                ),
+            )
+
+    def delete_eval_item(self, dataset_id: str, item_id: str) -> None:
+        self.ensure_schema()
+        with self._connect() as connection:
+            connection.execute(
+                "DELETE FROM eval_items WHERE dataset_id = %s AND item_id = %s",
+                (dataset_id, item_id),
+            )
 
     def _upsert_document_children(self, connection: Any, document: DocumentMetadata) -> None:
         for chunk in document.chunks:

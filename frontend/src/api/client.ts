@@ -225,6 +225,58 @@ export type BuiltInRagEvalResponse = {
   fallback_cases: BuiltInRagEvalCaseResult[];
 };
 
+export type EvalDataset = {
+  dataset_id: string;
+  project_id: string | null;
+  name: string;
+  description: string | null;
+  schema_version: "eval_dataset_v1";
+  item_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EvalItem = {
+  item_id: string;
+  dataset_id: string;
+  project_id: string | null;
+  query: string;
+  expected_terms: string[];
+  expected_document_ids: string[];
+  expected_chunk_ids: string[];
+  tags: string[];
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EvalDatasetListResponse = {
+  datasets: EvalDataset[];
+};
+
+export type EvalDatasetDetailResponse = {
+  dataset: EvalDataset;
+  items: EvalItem[];
+};
+
+export type EvalItemListResponse = {
+  items: EvalItem[];
+};
+
+export type EvalDatasetPayload = {
+  name: string;
+  description?: string | null;
+};
+
+export type EvalItemPayload = {
+  query: string;
+  expected_terms: string[];
+  expected_document_ids?: string[];
+  expected_chunk_ids?: string[];
+  tags?: string[];
+  notes?: string | null;
+};
+
 export type AgentToolStatus = "completed" | "failed";
 
 export type AgentRunStatus = "pending" | "running" | "completed" | "failed";
@@ -479,6 +531,88 @@ export async function runBuiltInRagEval(): Promise<BuiltInRagEvalResponse> {
   });
 
   return readJson<BuiltInRagEvalResponse>(response);
+}
+
+export async function listEvalDatasets(): Promise<EvalDatasetListResponse> {
+  const response = await fetch(`${API_BASE_URL}/eval/datasets`, {
+    headers: authHeaders(),
+  });
+
+  return readJson<EvalDatasetListResponse>(response);
+}
+
+export async function createEvalDataset(payload: EvalDatasetPayload): Promise<EvalDataset> {
+  const response = await fetch(`${API_BASE_URL}/eval/datasets`, {
+    method: "POST",
+    headers: jsonHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  return readJson<EvalDataset>(response);
+}
+
+export async function updateEvalDataset(datasetId: string, payload: EvalDatasetPayload): Promise<EvalDataset> {
+  const response = await fetch(`${API_BASE_URL}/eval/datasets/${datasetId}`, {
+    method: "PATCH",
+    headers: jsonHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  return readJson<EvalDataset>(response);
+}
+
+export async function deleteEvalDataset(datasetId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/eval/datasets/${datasetId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+
+  await readJson<unknown>(response);
+}
+
+export async function getEvalDataset(datasetId: string): Promise<EvalDatasetDetailResponse> {
+  const response = await fetch(`${API_BASE_URL}/eval/datasets/${datasetId}`, {
+    headers: authHeaders(),
+  });
+
+  return readJson<EvalDatasetDetailResponse>(response);
+}
+
+export async function listEvalItems(datasetId: string): Promise<EvalItemListResponse> {
+  const response = await fetch(`${API_BASE_URL}/eval/datasets/${datasetId}/items`, {
+    headers: authHeaders(),
+  });
+
+  return readJson<EvalItemListResponse>(response);
+}
+
+export async function createEvalItem(datasetId: string, payload: EvalItemPayload): Promise<EvalItem> {
+  const response = await fetch(`${API_BASE_URL}/eval/datasets/${datasetId}/items`, {
+    method: "POST",
+    headers: jsonHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  return readJson<EvalItem>(response);
+}
+
+export async function updateEvalItem(datasetId: string, itemId: string, payload: EvalItemPayload): Promise<EvalItem> {
+  const response = await fetch(`${API_BASE_URL}/eval/datasets/${datasetId}/items/${itemId}`, {
+    method: "PATCH",
+    headers: jsonHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  return readJson<EvalItem>(response);
+}
+
+export async function deleteEvalItem(datasetId: string, itemId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/eval/datasets/${datasetId}/items/${itemId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+
+  await readJson<unknown>(response);
 }
 
 export async function runAgent(request: AgentRunRequest): Promise<AgentRun> {

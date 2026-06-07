@@ -4,8 +4,14 @@ import { computed, onMounted, ref } from "vue";
 import {
   API_BASE_URL,
   clearAuthToken,
+  createEvalDataset,
+  createEvalItem,
+  deleteEvalDataset,
+  deleteEvalItem,
   getHealth,
   getMe,
+  listEvalDatasets,
+  listEvalItems,
   indexDocumentVector,
   listDocuments,
   login as loginDemo,
@@ -16,6 +22,8 @@ import {
   runBuiltInRagEval,
   runMockOcr,
   runSelectedOcr,
+  updateEvalDataset,
+  updateEvalItem,
   uploadDocument,
   type AgentRun,
   type AuthRole,
@@ -24,6 +32,8 @@ import {
   type BuiltInRagEvalResponse,
   type DocumentMetadata,
   type DocumentFields,
+  type EvalDataset,
+  type EvalItem,
   type ExtractedField,
   type HealthResponse,
   type ParserResult,
@@ -84,6 +94,24 @@ const agentError = ref("");
 const ragEvalState = ref<RequestState>("idle");
 const ragEvalResult = ref<BuiltInRagEvalResponse | null>(null);
 const ragEvalError = ref("");
+const evalDatasetState = ref<RequestState>("idle");
+const evalItemState = ref<RequestState>("idle");
+const evalDatasets = ref<EvalDataset[]>([]);
+const evalItems = ref<EvalItem[]>([]);
+const selectedEvalDatasetId = ref("");
+const editingEvalItemId = ref("");
+const evalDatasetName = ref("Invoice retrieval quality");
+const evalDatasetDescription = ref("Demo-safe RAG evaluation dataset");
+const evalDatasetError = ref("");
+const evalDatasetMessage = ref("");
+const evalItemQuery = ref("付款期限是什麼？");
+const evalItemExpectedTerms = ref("Net 15, payment terms");
+const evalItemExpectedDocumentIds = ref("");
+const evalItemExpectedChunkIds = ref("");
+const evalItemTags = ref("invoice");
+const evalItemNotes = ref("");
+const evalItemError = ref("");
+const evalItemMessage = ref("");
 const loginUsername = ref("admin");
 const loginPassword = ref("demo-admin-pass");
 
@@ -267,6 +295,25 @@ const ragEvalStatusLabel = computed(() => {
 
   return "尚未執行";
 });
+const selectedEvalDataset = computed(
+  () => evalDatasets.value.find((dataset) => dataset.dataset_id === selectedEvalDatasetId.value) ?? null,
+);
+const evalDatasetStatusLabel = computed(() => {
+  if (evalDatasetState.value === "loading") {
+    return "同步中";
+  }
+
+  if (selectedEvalDataset.value) {
+    return `${selectedEvalDataset.value.item_count} items`;
+  }
+
+  if (evalDatasets.value.length > 0) {
+    return `${evalDatasets.value.length} datasets`;
+  }
+
+  return "尚未建立";
+});
+const evalItemFormModeLabel = computed(() => (editingEvalItemId.value ? "更新 item" : "新增 item"));
 
 const demoUsers: Array<{ role: AuthRole; label: string; username: string; password: string }> = [
   {
@@ -397,6 +444,9 @@ function openAdminSurface(): void {
   viewMode.value = "admin";
   if (documentsState.value === "idle") {
     void refreshDocuments();
+  }
+  if (evalDatasetState.value === "idle") {
+    void refreshEvalDatasets();
   }
 }
 
@@ -567,6 +617,247 @@ function ragEvalCaseRank(caseResult: BuiltInRagEvalCaseResult): string {
   }
 
   return `Rank ${caseResult.first_relevant_rank}`;
+}
+
+function splitInputList(value: string): string[] {
+  return value
+    .split(/[,\n]/)
+    .map((item) => item.trim())
+    .filter((item, index, items) => item.length > 0 && items.indexOf(item) === index);
+}
+
+function evalDatasetUpdatedLabel(dataset: EvalDataset): string {
+  return new Date(dataset.updated_at).toLocaleString(undefined, {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function resetEvalDatasetForm(): void {
+  selectedEvalDatasetId.value = "";
+  evalItems.value = [];
+  evalDatasetName.value = "Invoice retrieval quality";
+  evalDatasetDescription.value = "Demo-safe RAG evaluation dataset";
+  evalDatasetError.value = "";
+  evalDatasetMessage.value = "";
+  resetEvalItemForm();
+}
+
+function fillEvalDatasetForm(dataset: EvalDataset): void {
+  selectedEvalDatasetId.value = dataset.dataset_id;
+  evalDatasetName.value = dataset.name;
+  evalDatasetDescription.value = dataset.description ?? "";
+  evalDatasetError.value = "";
+  evalDatasetMessage.value = "";
+  resetEvalItemForm();
+}
+
+function resetEvalItemForm(): void {
+  editingEvalItemId.value = "";
+  evalItemQuery.value = "付款期限是什麼？";
+  evalItemExpectedTerms.value = "Net 15, payment terms";
+  evalItemExpectedDocumentIds.value = "";
+  evalItemExpectedChunkIds.value = "";
+  evalItemTags.value = "invoice";
+  evalItemNotes.value = "";
+  evalItemError.value = "";
+  evalItemMessage.value = "";
+}
+
+function fillEvalItemForm(item: EvalItem): void {
+  editingEvalItemId.value = item.item_id;
+  evalItemQuery.value = item.query;
+  evalItemExpectedTerms.value = item.expected_terms.join(", ");
+  evalItemExpectedDocumentIds.value = item.expected_document_ids.join(", ");
+  evalItemExpectedChunkIds.value = item.expected_chunk_ids.join(", ");
+  evalItemTags.value = item.tags.join(", ");
+  evalItemNotes.value = item.notes ?? "";
+  evalItemError.value = "";
+  evalItemMessage.value = "";
+}
+
+function clearEvalDatasetState(): void {
+  evalDatasets.value = [];
+  evalItems.value = [];
+  selectedEvalDatasetId.value = "";
+  editingEvalItemId.value = "";
+  evalDatasetState.value = "idle";
+  evalItemState.value = "idle";
+  evalDatasetError.value = "";
+  evalDatasetMessage.value = "";
+  evalItemError.value = "";
+  evalItemMessage.value = "";
+}
+
+async function refreshEvalDatasets(preferredDatasetId = selectedEvalDatasetId.value): Promise<void> {
+  if (!canUseIngestion.value) {
+    clearEvalDatasetState();
+    return;
+  }
+
+  evalDatasetState.value = "loading";
+  evalDatasetError.value = "";
+
+  try {
+    const response = await listEvalDatasets();
+    evalDatasets.value = response.datasets;
+    const nextDataset =
+      response.datasets.find((dataset) => dataset.dataset_id === preferredDatasetId) ?? response.datasets[0] ?? null;
+
+    if (nextDataset) {
+      fillEvalDatasetForm(nextDataset);
+      const itemsResponse = await listEvalItems(nextDataset.dataset_id);
+      evalItems.value = itemsResponse.items;
+    } else {
+      resetEvalDatasetForm();
+    }
+
+    evalDatasetState.value = "success";
+  } catch (error) {
+    clearEvalDatasetState();
+    evalDatasetError.value = error instanceof Error ? error.message : "Eval dataset 讀取失敗";
+    evalDatasetState.value = "error";
+  }
+}
+
+async function selectEvalDataset(dataset: EvalDataset): Promise<void> {
+  fillEvalDatasetForm(dataset);
+  evalItemState.value = "loading";
+  evalItemError.value = "";
+
+  try {
+    const response = await listEvalItems(dataset.dataset_id);
+    evalItems.value = response.items;
+    evalItemState.value = "success";
+  } catch (error) {
+    evalItems.value = [];
+    evalItemError.value = error instanceof Error ? error.message : "Eval item 讀取失敗";
+    evalItemState.value = "error";
+  }
+}
+
+async function submitEvalDataset(): Promise<void> {
+  if (!canUseIngestion.value) {
+    evalDatasetError.value = "Viewer 角色不能管理 eval dataset。";
+    return;
+  }
+
+  const name = evalDatasetName.value.trim();
+  if (!name) {
+    evalDatasetError.value = "請先輸入 dataset 名稱。";
+    return;
+  }
+
+  evalDatasetState.value = "loading";
+  evalDatasetError.value = "";
+  evalDatasetMessage.value = "";
+
+  try {
+    const payload = {
+      name,
+      description: evalDatasetDescription.value.trim() || null,
+    };
+    const wasEditing = Boolean(selectedEvalDatasetId.value);
+    const dataset = selectedEvalDatasetId.value
+      ? await updateEvalDataset(selectedEvalDatasetId.value, payload)
+      : await createEvalDataset(payload);
+    await refreshEvalDatasets(dataset.dataset_id);
+    evalDatasetMessage.value = wasEditing ? "Eval dataset 已更新。" : "Eval dataset 已建立。";
+  } catch (error) {
+    evalDatasetError.value = error instanceof Error ? error.message : "Eval dataset 儲存失敗";
+    evalDatasetState.value = "error";
+  }
+}
+
+async function removeSelectedEvalDataset(): Promise<void> {
+  if (!canUseIngestion.value || !selectedEvalDataset.value) {
+    return;
+  }
+
+  evalDatasetState.value = "loading";
+  evalDatasetError.value = "";
+  evalDatasetMessage.value = "";
+
+  try {
+    await deleteEvalDataset(selectedEvalDataset.value.dataset_id);
+    await refreshEvalDatasets("");
+    evalDatasetMessage.value = "Eval dataset 已刪除。";
+  } catch (error) {
+    evalDatasetError.value = error instanceof Error ? error.message : "Eval dataset 刪除失敗";
+    evalDatasetState.value = "error";
+  }
+}
+
+async function submitEvalItem(): Promise<void> {
+  if (!canUseIngestion.value) {
+    evalItemError.value = "Viewer 角色不能管理 eval item。";
+    return;
+  }
+
+  if (!selectedEvalDataset.value) {
+    evalItemError.value = "請先選擇 eval dataset。";
+    return;
+  }
+
+  const query = evalItemQuery.value.trim();
+  const expectedTerms = splitInputList(evalItemExpectedTerms.value);
+  if (!query || expectedTerms.length === 0) {
+    evalItemError.value = "請輸入 query 與至少一個 expected term。";
+    return;
+  }
+
+  evalItemState.value = "loading";
+  evalItemError.value = "";
+  evalItemMessage.value = "";
+
+  const payload = {
+    query,
+    expected_terms: expectedTerms,
+    expected_document_ids: splitInputList(evalItemExpectedDocumentIds.value),
+    expected_chunk_ids: splitInputList(evalItemExpectedChunkIds.value),
+    tags: splitInputList(evalItemTags.value),
+    notes: evalItemNotes.value.trim() || null,
+  };
+
+  try {
+    const wasEditing = Boolean(editingEvalItemId.value);
+    if (editingEvalItemId.value) {
+      await updateEvalItem(selectedEvalDataset.value.dataset_id, editingEvalItemId.value, payload);
+    } else {
+      await createEvalItem(selectedEvalDataset.value.dataset_id, payload);
+    }
+
+    resetEvalItemForm();
+    await refreshEvalDatasets(selectedEvalDataset.value.dataset_id);
+    evalItemMessage.value = wasEditing ? "Eval item 已更新。" : "Eval item 已新增。";
+    evalItemState.value = "success";
+  } catch (error) {
+    evalItemError.value = error instanceof Error ? error.message : "Eval item 儲存失敗";
+    evalItemState.value = "error";
+  }
+}
+
+async function removeEvalItem(item: EvalItem): Promise<void> {
+  if (!canUseIngestion.value || !selectedEvalDataset.value) {
+    return;
+  }
+
+  evalItemState.value = "loading";
+  evalItemError.value = "";
+  evalItemMessage.value = "";
+
+  try {
+    await deleteEvalItem(selectedEvalDataset.value.dataset_id, item.item_id);
+    resetEvalItemForm();
+    await refreshEvalDatasets(selectedEvalDataset.value.dataset_id);
+    evalItemMessage.value = "Eval item 已刪除。";
+    evalItemState.value = "success";
+  } catch (error) {
+    evalItemError.value = error instanceof Error ? error.message : "Eval item 刪除失敗";
+    evalItemState.value = "error";
+  }
 }
 
 function parserFieldDisplay(result: ParserResult, fieldName: InvoiceFieldKey): string {
@@ -762,6 +1053,7 @@ async function submitLogin(): Promise<void> {
     syncViewModeToRole();
     authState.value = "success";
     await refreshDocuments();
+    await refreshEvalDatasets();
   } catch (error) {
     clearAuthToken();
     authUser.value = null;
@@ -785,6 +1077,7 @@ async function submitLogout(): Promise<void> {
   viewMode.value = "viewer";
   uploadResult.value = null;
   uploadFallbackAvailable.value = false;
+  clearEvalDatasetState();
   authState.value = "success";
 }
 
@@ -1118,6 +1411,9 @@ onMounted(async () => {
   await checkAuth();
   if (canUseReadSurface.value) {
     void refreshDocuments();
+  }
+  if (canUseIngestion.value) {
+    void refreshEvalDatasets();
   }
 });
 </script>
@@ -1453,6 +1749,178 @@ onMounted(async () => {
             </ul>
           </div>
         </details>
+      </article>
+
+      <article class="panel eval-dataset-surface" aria-label="Eval dataset 管理">
+        <div class="panel-heading">
+          <div>
+            <h2>Eval Dataset</h2>
+            <p>Admin / Analyst 管理 RAG evaluation dataset 與 eval items。</p>
+          </div>
+          <span class="status-pill" :class="`status-${evalDatasetState}`">{{ evalDatasetStatusLabel }}</span>
+        </div>
+
+        <form class="eval-dataset-form" @submit.prevent="submitEvalDataset">
+          <label>
+            <span>Dataset name</span>
+            <input v-model="evalDatasetName" type="text" :disabled="!canUseIngestion || evalDatasetState === 'loading'" />
+          </label>
+          <label>
+            <span>Description</span>
+            <input
+              v-model="evalDatasetDescription"
+              type="text"
+              :disabled="!canUseIngestion || evalDatasetState === 'loading'"
+            />
+          </label>
+          <div class="eval-form-actions">
+            <button type="submit" class="button" :disabled="!canUseIngestion || evalDatasetState === 'loading'">
+              {{ selectedEvalDataset ? "更新 dataset" : "建立 dataset" }}
+            </button>
+            <button type="button" class="button secondary-button" :disabled="evalDatasetState === 'loading'" @click="resetEvalDatasetForm">
+              新增
+            </button>
+            <button
+              type="button"
+              class="button danger-button"
+              :disabled="!canUseIngestion || !selectedEvalDataset || evalDatasetState === 'loading'"
+              @click="removeSelectedEvalDataset"
+            >
+              刪除
+            </button>
+          </div>
+        </form>
+
+        <p v-if="evalDatasetMessage" class="success-message">{{ evalDatasetMessage }}</p>
+        <p v-if="evalDatasetError" class="error">{{ evalDatasetError }}</p>
+
+        <div class="eval-management-grid">
+          <section class="eval-dataset-list-panel" aria-label="Eval dataset list">
+            <div class="status-toolbar">
+              <button type="button" class="button secondary-button compact-button" :disabled="evalDatasetState === 'loading'" @click="refreshEvalDatasets()">
+                重新整理
+              </button>
+            </div>
+
+            <p v-if="evalDatasetState === 'loading'" class="muted compact-note">讀取 eval datasets 中...</p>
+            <p v-else-if="evalDatasets.length === 0" class="muted compact-note">尚未建立 eval dataset。</p>
+
+            <ul v-else class="eval-dataset-list">
+              <li
+                v-for="dataset in evalDatasets"
+                :key="dataset.dataset_id"
+                :class="{ selected: selectedEvalDatasetId === dataset.dataset_id }"
+              >
+                <button type="button" class="link-button" @click="selectEvalDataset(dataset)">
+                  {{ dataset.name }}
+                </button>
+                <small>{{ dataset.dataset_id }}</small>
+                <div class="eval-dataset-badges">
+                  <span class="status-pill status-success">{{ dataset.item_count }} items</span>
+                  <span class="status-pill status-ready">{{ dataset.schema_version }}</span>
+                  <span class="status-pill status-idle">{{ evalDatasetUpdatedLabel(dataset) }}</span>
+                </div>
+              </li>
+            </ul>
+          </section>
+
+          <section class="eval-item-panel" aria-label="Eval item management">
+            <form class="eval-item-form" @submit.prevent="submitEvalItem">
+              <label class="eval-item-query">
+                <span>Query</span>
+                <textarea
+                  v-model="evalItemQuery"
+                  rows="3"
+                  :disabled="!canUseIngestion || !selectedEvalDataset || evalItemState === 'loading'"
+                />
+              </label>
+              <label>
+                <span>Expected terms</span>
+                <textarea
+                  v-model="evalItemExpectedTerms"
+                  rows="2"
+                  :disabled="!canUseIngestion || !selectedEvalDataset || evalItemState === 'loading'"
+                />
+              </label>
+              <label>
+                <span>Document IDs</span>
+                <input
+                  v-model="evalItemExpectedDocumentIds"
+                  type="text"
+                  :disabled="!canUseIngestion || !selectedEvalDataset || evalItemState === 'loading'"
+                />
+              </label>
+              <label>
+                <span>Chunk IDs</span>
+                <input
+                  v-model="evalItemExpectedChunkIds"
+                  type="text"
+                  :disabled="!canUseIngestion || !selectedEvalDataset || evalItemState === 'loading'"
+                />
+              </label>
+              <label>
+                <span>Tags</span>
+                <input
+                  v-model="evalItemTags"
+                  type="text"
+                  :disabled="!canUseIngestion || !selectedEvalDataset || evalItemState === 'loading'"
+                />
+              </label>
+              <label>
+                <span>Notes</span>
+                <input
+                  v-model="evalItemNotes"
+                  type="text"
+                  :disabled="!canUseIngestion || !selectedEvalDataset || evalItemState === 'loading'"
+                />
+              </label>
+              <div class="eval-form-actions">
+                <button
+                  type="submit"
+                  class="button"
+                  :disabled="!canUseIngestion || !selectedEvalDataset || evalItemState === 'loading'"
+                >
+                  {{ evalItemFormModeLabel }}
+                </button>
+                <button type="button" class="button secondary-button" :disabled="evalItemState === 'loading'" @click="resetEvalItemForm">
+                  清空
+                </button>
+              </div>
+            </form>
+
+            <p v-if="evalItemMessage" class="success-message">{{ evalItemMessage }}</p>
+            <p v-if="evalItemError" class="error">{{ evalItemError }}</p>
+            <p v-if="!selectedEvalDataset" class="muted compact-note">請先選擇或建立 dataset。</p>
+            <p v-else-if="evalItemState === 'loading'" class="muted compact-note">同步 eval items 中...</p>
+            <p v-else-if="evalItems.length === 0" class="muted compact-note">目前沒有 eval item。</p>
+
+            <ul v-else class="eval-item-list">
+              <li v-for="item in evalItems" :key="item.item_id">
+                <div>
+                  <strong>{{ item.query }}</strong>
+                  <small>{{ item.item_id }}</small>
+                </div>
+                <div class="eval-dataset-badges">
+                  <span v-for="term in item.expected_terms" :key="`${item.item_id}-${term}`" class="status-pill status-ready">
+                    {{ term }}
+                  </span>
+                  <span v-for="tag in item.tags" :key="`${item.item_id}-${tag}`" class="status-pill status-idle">
+                    {{ tag }}
+                  </span>
+                </div>
+                <p v-if="item.notes" class="muted compact-note">{{ item.notes }}</p>
+                <div class="eval-form-actions">
+                  <button type="button" class="button secondary-button compact-button" @click="fillEvalItemForm(item)">
+                    編輯
+                  </button>
+                  <button type="button" class="button danger-button compact-button" @click="removeEvalItem(item)">
+                    刪除
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </section>
+        </div>
       </article>
 
       <article class="panel eval-surface" aria-label="測試RAG">

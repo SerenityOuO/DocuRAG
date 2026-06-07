@@ -478,20 +478,27 @@ Stale vector cleanup identifies older Qdrant points by tenant / project / docume
 
 `36-01` is a Markdown-only contract ticket. It defines the future evaluation dashboard and rerank analysis shape on top of the existing retrieval eval runner and built-in RAG benchmark. It does not add runtime endpoints, frontend UI, dataset persistence, LLM-as-judge, answer faithfulness scoring, citation quality scoring, OCR eval or ranking algorithm changes.
 
-### Future API Surface
+### Phase 36 Runtime API Surface
 
-The current runtime remains `POST /eval/rag/built-in`. Future Phase 36 implementation tickets may expose the following contract:
+The built-in benchmark remains `POST /eval/rag/built-in`. `36-02` adds controlled eval dataset / eval item management for Admin / Analyst. Strategy comparison and run history remain future `36-03` scope.
 
 | Method | Endpoint | Purpose |
 |---|---|---|
 | GET | `/eval/datasets` | List eval datasets visible to the active project. |
 | POST | `/eval/datasets` | Create a demo-safe eval dataset. |
-| GET | `/eval/datasets/{dataset_id}` | Read dataset metadata and item count. |
-| POST | `/eval/runs` | Run one or more retrieval strategies against a dataset. |
-| GET | `/eval/runs/{run_id}` | Read run summary, environment and strategy metrics. |
-| GET | `/eval/runs/{run_id}/items` | Read failed / fallback / selected case details. |
+| GET | `/eval/datasets/{dataset_id}` | Read dataset metadata and current eval items. |
+| PATCH | `/eval/datasets/{dataset_id}` | Update dataset name / description. |
+| DELETE | `/eval/datasets/{dataset_id}` | Delete one dataset and its eval items. |
+| GET | `/eval/datasets/{dataset_id}/items` | List eval items in a dataset. |
+| POST | `/eval/datasets/{dataset_id}/items` | Create an eval item. |
+| GET | `/eval/datasets/{dataset_id}/items/{item_id}` | Read one eval item. |
+| PATCH | `/eval/datasets/{dataset_id}/items/{item_id}` | Update query, expected terms, expected ids, tags or notes. |
+| DELETE | `/eval/datasets/{dataset_id}/items/{item_id}` | Delete one eval item. |
+| POST | `/eval/runs` | Future `36-03`: run one or more retrieval strategies against a dataset. |
+| GET | `/eval/runs/{run_id}` | Future `36-03`: read run summary, environment and strategy metrics. |
+| GET | `/eval/runs/{run_id}/items` | Future `36-03`: read failed / fallback / selected case details. |
 
-Those endpoints are contract targets only in `36-01`. They must reuse existing project access checks: Viewer can read visible published results only if a later ticket explicitly allows it; Admin / Analyst run evaluation jobs. Cross-project dataset or run access must return generic `403 forbidden`.
+`36-02` endpoints reuse the existing ingestion guard. Admin / Analyst can create, update and delete eval datasets / items. Viewer receives `403 forbidden` in demo / formal auth mode and cannot manage datasets. Formal auth datasets are project-scoped to the active project; cross-project dataset access returns generic `403 forbidden`.
 
 ### Data Shapes
 
@@ -503,9 +510,10 @@ Those endpoints are contract targets only in `36-01`. They must reuse existing p
   "name": "Invoice retrieval quality v1",
   "description": "Demo-safe retrieval cases for invoice evidence.",
   "project_id": "project_demo",
-  "case_count": 12,
+  "item_count": 12,
   "schema_version": "eval_dataset_v1",
-  "created_at": "2026-06-07T00:00:00Z"
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
 }
 ```
 
@@ -513,12 +521,17 @@ Those endpoints are contract targets only in `36-01`. They must reuse existing p
 
 ```json
 {
-  "case_id": "invoice_due_date_001",
+  "item_id": "invoice_due_date_001",
+  "dataset_id": "invoice_quality_v1",
+  "project_id": "project_demo",
   "query": "付款期限是什麼？",
   "expected_document_ids": ["doc_aurora"],
   "expected_chunk_ids": ["doc_aurora:chunk:payment_terms"],
-  "expected_answer_contains": ["Net 15"],
-  "tags": ["invoice", "payment_terms", "zh_tw"]
+  "expected_terms": ["Net 15"],
+  "tags": ["invoice", "payment_terms", "zh_tw"],
+  "notes": "Demo-safe invoice evidence case.",
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
 }
 ```
 
