@@ -4,7 +4,7 @@
 
 DocuRAG AgentOps 是一個面試展示用的 AI 文件平台。長期目標是整合文件上傳、OCR/VLM 解析、RAG 問答、citation trace、RAG 評估與 AI Agent tool-use，展示端到端 AI Application Engineering 能力。
 
-目前 MVP 不追求一次完成所有 AI 與 infra 元件，而是用 local-demo 邊界逐步交付可展示切片。到 v0.29.0 為止，主線已具備文件上傳、direct txt / text-native PDF ingestion、provider-selected OCR、VLM-first parser、demo auth role guard、Agent tool-use trace、citation trace、retrieval eval runner、後台內建「測試RAG」surface，以及 default `hybrid_rerank` RAG / Agent search with fallback。這仍是 demo-first runtime，不把 production DB、worker、正式多租戶權限或 deployment hardening 提前塞進目前 MVP。
+目前 MVP 不追求一次完成所有 AI 與 infra 元件，而是用 local-demo 邊界逐步交付可展示切片。到 v0.32.0 為止，主線已具備文件上傳、direct txt / text-native PDF ingestion、provider-selected OCR、VLM-first parser、demo auth role guard、formal Auth / RBAC / tenant boundary release、Agent tool-use trace、citation trace、retrieval eval runner、後台內建「測試RAG」surface，以及 default `hybrid_rerank` RAG / Agent search with fallback。Phase 33 已新增 opt-in Redis cache / rate-limit / session slice 與 demo-safe NATS worker skeleton / task status slice。這仍是 demo-first runtime，不把 production DB、durable worker、正式 production identity provider 或 deployment hardening 提前塞進目前 MVP。
 
 ## Problem
 
@@ -52,7 +52,7 @@ DocuRAG AgentOps 是一個面試展示用的 AI 文件平台。長期目標是�
 - LLM-as-judge、answer faithfulness scoring、citation quality scoring、query rewriting 或 BM25 dependency。
 - PDF rendering、image preprocessing、多頁 production OCR pipeline 或 OCR / VLM 準確率評估。
 - PostgreSQL schema、正式 multi-user project isolation、production RBAC、SSO、OAuth 或 MFA。
-- Redis、NATS、async worker、queue、Agent runtime、K8s 或 deployment hardening。
+- Production Redis session rotation、production NATS event bus、durable async worker queue、Agent runtime、K8s 或 deployment hardening。
 
 ## Success Criteria
 

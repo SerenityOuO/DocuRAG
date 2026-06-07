@@ -1,6 +1,6 @@
 # MVP Architecture
 
-本文件描述 DocuRAG AgentOps 目前的受控 MVP 架構。到 v0.32.0 為止，專案已完成 backend / frontend demo、provider-selected OCR、citation trace、retrieval eval runner、built-in RAG eval admin API、vector / rerank / hybrid / `hybrid_rerank` retrieval building blocks、Viewer Chat / Admin Ingestion role split、deterministic Agent tool-use trace、VLM-first parser provider spike、OCR / VLM evidence alignment、aggressive demo defaults、`.txt` direct ingestion、text-native PDF extraction、demo auth mode、後台「測試RAG」surface、opt-in PostgreSQL metadata repository foundation，以及 formal Auth / RBAC / tenant boundary 的可展示 release。Phase 33 `33-01` 固定 Redis / NATS worker pipeline contract；`33-02` 新增 opt-in Redis runtime slice，用於 session cache、RAG query cache 與 rate limit，Redis 未設定或不可用時仍走 fallback。這不代表已新增 NATS runtime、async worker、production eval dashboard 或 scanned PDF OCR。
+本文件描述 DocuRAG AgentOps 目前的受控 MVP 架構。到 v0.32.0 為止，專案已完成 backend / frontend demo、provider-selected OCR、citation trace、retrieval eval runner、built-in RAG eval admin API、vector / rerank / hybrid / `hybrid_rerank` retrieval building blocks、Viewer Chat / Admin Ingestion role split、deterministic Agent tool-use trace、VLM-first parser provider spike、OCR / VLM evidence alignment、aggressive demo defaults、`.txt` direct ingestion、text-native PDF extraction、demo auth mode、後台「測試RAG」surface、opt-in PostgreSQL metadata repository foundation，以及 formal Auth / RBAC / tenant boundary 的可展示 release。Phase 33 `33-01` 固定 Redis / NATS worker pipeline contract；`33-02` 新增 opt-in Redis runtime slice，用於 session cache、RAG query cache 與 rate limit，Redis 未設定或不可用時仍走 fallback；`33-03` 新增 demo-safe NATS helper、worker skeleton 與 task status API。這不代表已完成 production NATS event bus、durable async worker、production eval dashboard 或 scanned PDF OCR。
 
 ## MVP Shape
 
@@ -31,9 +31,11 @@ FastAPI Backend
     |-- manual vector indexing API
     |-- built-in RAG eval API / retrieval eval runner CLI
     |
-Phase 33 Redis Slice / Worker Pipeline Contract
+Phase 33 Redis Slice / Worker Pipeline Skeleton
     |
     |-- opt-in Redis session cache / query cache / rate limit
+    |-- NATS publish / subscribe helper
+    |-- worker skeleton placeholder handlers
     |-- NATS / JetStream event topics
     |-- task status / retry / idempotency policy
     |
@@ -60,9 +62,9 @@ Phase 29 的「測試RAG」只把既有 retrieval eval runner 包成後台可操
 
 ## Phase 33 Redis / NATS Worker Pipeline Boundary
 
-`33-01` 固定 worker pipeline 的文件合約。`33-02` 只啟用最小 Redis backend slice：當 `DOCURAG_REDIS_URL` 為空時，系統維持既有 fallback-only demo；當 Redis 設定存在時，backend 會 best-effort 使用 Redis 做 demo-safe session cache、RAG query cache 與 rate limit。Redis 不可用時 `/health` 會顯示 `redis=unavailable`，RAG request 仍可繼續，並在 trace metadata 標示 cache / rate-limit fallback 狀態。
+`33-01` 固定 worker pipeline 的文件合約。`33-02` 只啟用最小 Redis backend slice：當 `DOCURAG_REDIS_URL` 為空時，系統維持既有 fallback-only demo；當 Redis 設定存在時，backend 會 best-effort 使用 Redis 做 demo-safe session cache、RAG query cache 與 rate limit。Redis 不可用時 `/health` 會顯示 `redis=unavailable`，RAG request 仍可繼續，並在 trace metadata 標示 cache / rate-limit fallback 狀態。`33-03` 新增 NATS publish / subscribe helper、worker skeleton placeholder handlers、`worker_tasks.json` task status store 與 `/tasks` read API，讓 publish / consume / status update 可以被 smoke 驗證。
 
-`33-02` 不啟動 NATS、JetStream、worker process、async job queue、distributed lock runtime 或 production session rotation。同步 API 與現有 frontend best-effort orchestration 仍維持現況。
+`33-03` 不把 OCR、parser、indexing 或 eval 的核心 model 行為搬進 production async queue，也不新增 K8s autoscaling、dead-letter dashboard、full observability stack、vLLM、OpenAI API、fine-tuning 或 Agent planner 變更。同步 API 與現有 frontend best-effort orchestration 仍維持現況。
 
 Redis responsibilities：
 
@@ -91,6 +93,14 @@ NATS / JetStream topics：
 | `document.parse.requested` | API / OCR completion worker | Parser worker | `document_id`、`task_id`、parser source policy、idempotency key。 |
 | `document.index.requested` | API / parser completion worker | Indexing worker | `document_id`、`task_id`、chunk source version、idempotency key。 |
 | `rag.eval.requested` | Admin / Analyst eval API | Eval worker | `eval_run_id`、dataset id、strategy、project id、idempotency key。 |
+
+`33-03` runtime coverage：
+
+- `DOCURAG_NATS_URL` 預設為空，NATS helper 回 `disabled`；`memory://` 可用於本機 smoke，不需要真實 NATS server。
+- 真實 NATS client 收斂在 optional `backend[nats]` extra；Docker image 需以 `DOCURAG_INSTALL_NATS=true` 建置才會安裝 client。
+- Docker Compose 提供 `nats` profile，可用 `DOCURAG_INSTALL_NATS=true DOCURAG_NATS_URL=nats://nats:4222 docker compose --profile nats ...` 明確啟用。
+- `WorkerSkeleton` 會訂閱 OCR、parser、indexing、eval topics，placeholder handler 只把 task status 從 `queued` 更新到 `running` 再到 `succeeded`。
+- `GET /tasks` 與 `GET /tasks/{task_id}` 讀取 `worker_tasks.json` 中的 task records；formal auth mode 會依 project access 過濾或拒絕 cross-project task。
 
 Event payload contract：
 
@@ -122,7 +132,7 @@ Task status lifecycle：
 | `failed` | Task 結束且不再重試，需保存 failure reason。 |
 | `cancelled` | Task 被明確取消或被新版同類 task 取代。 |
 
-Task status schema 至少包含 `task_id`、`task_type`、`status`、`organization_id`、`project_id`、`document_id` 或 `eval_run_id`、`idempotency_key`、`attempt`、`max_attempts`、`created_at`、`started_at`、`updated_at`、`finished_at`、`failure_reason`、`error_code` 與 `trace_metadata`。Phase 33 後續 runtime ticket 可把它映射到 PostgreSQL `processing_jobs` 或 future worker task table；`33-01` 不建立 schema 或 migration。
+Task status schema 至少包含 `task_id`、`task_type`、`status`、`organization_id`、`project_id`、`document_id` 或 `eval_run_id`、`idempotency_key`、`attempt`、`max_attempts`、`created_at`、`started_at`、`updated_at`、`finished_at`、`failure_reason`、`error_code` 與 `trace_metadata`。`33-03` 先保存到 local JSON `worker_tasks.json`；future DB-backed worker task table 或 PostgreSQL migration 仍留給後續 ticket。
 
 Retry / failure policy：
 
@@ -508,7 +518,7 @@ Completed in `32-03`: endpoint permission guards and cross-project filtering enf
 - Production eval dashboard、strategy comparison UI、LLM-as-judge、answer faithfulness scoring、citation quality scoring。
 - Multi-user tenancy、production login、RBAC、destructive migration、production DB operation。Phase 31 目前已完成 PostgreSQL boundary / schema contract / opt-in repository adapter，不代表 production tenancy、production database operation 或 release sync 已完成。
 - Production Redis session rotation、cross-service cache invalidation 與 worker lock runtime；`33-02` 只完成 opt-in demo-safe session cache、query cache 與 rate limit slice。
-- NATS event bus。
+- Production NATS event bus、durable JetStream consumer、async OCR / parser / indexing / eval worker execution；`33-03` 只完成 NATS helper、worker skeleton 與 task status slice。
 - Production autonomous Agent、LLM planner、arbitrary tool runtime 或 destructive tool execution。
 - vLLM / OpenAI-compatible serving。
 - K8s manifests and deployment hardening。

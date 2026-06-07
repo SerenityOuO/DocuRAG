@@ -26,6 +26,9 @@ postgres = [
 redis = [
   "redis>=5.0,<6.0",
 ]
+nats = [
+  "nats-py>=2.9,<3.0",
+]
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -33,7 +36,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["app*"]
+include = ["app*", "workers*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

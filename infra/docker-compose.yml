@@ -7,6 +7,7 @@ services:
       args:
         DOCURAG_INSTALL_REAL_OCR: ${DOCURAG_INSTALL_REAL_OCR:-false}
         DOCURAG_INSTALL_REDIS: ${DOCURAG_INSTALL_REDIS:-false}
+        DOCURAG_INSTALL_NATS: ${DOCURAG_INSTALL_NATS:-false}
     environment:
       DOCURAG_APP_NAME: DocuRAG AgentOps Backend
       DOCURAG_VERSION: 0.32.0
@@ -23,6 +24,7 @@ services:
       DOCURAG_RERANK_PROVIDER: ${DOCURAG_RERANK_PROVIDER:-fastembed}
       DOCURAG_QDRANT_URL: ${DOCURAG_QDRANT_URL:-http://qdrant:6333}
       DOCURAG_REDIS_URL: ${DOCURAG_REDIS_URL:-}
+      DOCURAG_NATS_URL: ${DOCURAG_NATS_URL:-}
     volumes:
       - ../data:/app/data
     ports:
@@ -42,6 +44,15 @@ services:
       - redis
     ports:
       - "6379:6379"
+
+  nats:
+    image: nats:2-alpine
+    command: ["-js"]
+    profiles:
+      - nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"
 
 volumes:
   qdrant_storage:

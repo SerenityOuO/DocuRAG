@@ -143,7 +143,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 Phase 31 `v0.31.0` release sync 與 Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync，並已建立 Phase 33 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04`、Phase 33 `33-01` worker pipeline contract 與 `33-02` Redis cache / rate limit / session slice 均已完成；不宣稱 Phase 33 到 Phase 39 已整體完成。
+- 已完成 Phase 31 `v0.31.0` release sync 與 Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync，並已建立 Phase 33 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04`、Phase 33 `33-01` worker pipeline contract、`33-02` Redis cache / rate limit / session slice 與 `33-03` NATS worker skeleton / task status 均已完成；不宣稱 Phase 33 到 Phase 39 已整體完成。
 
 ### Phase 31 - PostgreSQL / Schema / Repository Foundation
 
@@ -265,6 +265,13 @@ Expected Outcome：
 - Docker Compose includes an optional `redis` profile and backend image build arg `DOCURAG_INSTALL_REDIS=true`; the default demo still starts without Redis.
 - Release Impact: Version bump required: no. This ticket does not add NATS, worker runtime, async queue, distributed lock runtime, production session rotation or model behavior changes.
 - Validation passed: backend test script (`221 passed`, 1 pytest cache warning), manual Redis health fallback check, ticket `rg` and `git diff --check`.
+
+33-03 NATS Worker Skeleton and Task Status:
+- Completed optional NATS publish / subscribe helper, in-memory smoke runtime, worker skeleton placeholder handlers, local JSON task status store and `GET /tasks` / `GET /tasks/{task_id}` API.
+- Worker skeleton subscribes to `document.ocr.requested`, `document.parse.requested`, `document.index.requested` and `rag.eval.requested`, then updates task status from `queued` to `running` to `succeeded`; unavailable publish marks the task `failed` with `error_code=nats_unavailable`.
+- Docker Compose includes an optional `nats` profile and backend image build arg `DOCURAG_INSTALL_NATS=true`; the default demo still starts without NATS.
+- Release Impact: Version bump required: no. This ticket does not move OCR, parser, indexing or eval model execution into a production async queue and does not add autoscaling, K8s, dead-letter dashboard, full observability, vLLM, OpenAI API, fine-tuning or Agent planner changes.
+- Validation passed: backend test script (`227 passed`, 1 pytest cache warning), `scripts/nats-worker-smoke.ps1`, ticket `rg` and `git diff --check`.
 
 ### Phase 34 - Production OCR / Scanned PDF Pipeline
 

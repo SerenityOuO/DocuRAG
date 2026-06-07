@@ -70,6 +70,9 @@ class Settings(BaseSettings):
     redis_query_cache_ttl_seconds: int = 60
     redis_rate_limit_per_minute: int = 60
     redis_rate_limit_window_seconds: int = 60
+    nats_url: str | None = None
+    nats_timeout_seconds: float = 1.0
+    nats_task_max_attempts: int = 3
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

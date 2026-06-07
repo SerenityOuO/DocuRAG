@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import agent, auth, documents, evaluation, health, rag
+from app.api.routes import agent, auth, documents, evaluation, health, rag, tasks
 from app.core.config import get_settings
 
 
@@ -31,3 +31,4 @@ app.include_router(documents.router)
 app.include_router(rag.router)
 app.include_router(agent.router)
 app.include_router(evaluation.router)
+app.include_router(tasks.router)

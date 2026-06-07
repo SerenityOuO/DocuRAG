@@ -127,6 +127,7 @@
 58. `tasks/phase-31-enterprise-roadmap/31-02-postgresql-boundary-and-migration-policy.md` 已完成，固定 Phase 31 PostgreSQL boundary、migration policy 與 local JSON fallback / migration path；文件 ticket，不 bump version。
 59. `tasks/phase-31-enterprise-roadmap/31-03-db-schema-contract.md` 已完成，固定 Phase 31 core tables schema contract 與 local JSON mapping；文件 ticket，不 bump version。
 60. `tasks/phase-33-redis-nats-worker-pipeline/33-02-redis-cache-rate-limit-session-slice.md` 已完成，新增 opt-in Redis session cache、RAG query cache、rate limit、health fallback 與 Docker Compose redis profile；不 bump version。
+61. `tasks/phase-33-redis-nats-worker-pipeline/33-03-nats-worker-skeleton-and-task-status.md` 已完成，新增 optional NATS helper、worker skeleton placeholder handlers、task status store / API 與 NATS worker smoke script；不 bump version。
 
 ## Phase 30 Parser / Ingestion Hardening
 
@@ -161,7 +162,7 @@ Phase 32 `v0.32.0` - Formal Auth / RBAC / tenant boundary：
 Phase 33 `v0.33.0` - Redis + NATS worker pipeline：
 - [x] `tasks/phase-33-redis-nats-worker-pipeline/33-01-redis-nats-worker-contract.md`: 完成 Markdown-only Redis / NATS worker pipeline contract，定義 Redis responsibilities / boundaries、NATS / JetStream topics、event payload、task status lifecycle、retry / failure policy 與 idempotency key；不 bump version。
 - [x] `tasks/phase-33-redis-nats-worker-pipeline/33-02-redis-cache-rate-limit-session-slice.md`: 完成 opt-in Redis backend slice，支援 session cache、RAG query cache、rate limit、health fallback 與 Docker Compose redis profile；不 bump version。
-- [ ] `tasks/phase-33-redis-nats-worker-pipeline/33-03-nats-worker-skeleton-and-task-status.md`
+- [x] `tasks/phase-33-redis-nats-worker-pipeline/33-03-nats-worker-skeleton-and-task-status.md`: 完成 optional NATS publish / subscribe helper、worker skeleton placeholder handlers、local JSON task status store、`/tasks` API 與 smoke script；不 bump version。
 - [ ] `tasks/phase-33-redis-nats-worker-pipeline/33-04-worker-demo-smoke-and-release-sync.md`
 
 Phase 34 `v0.34.0` - Production OCR / scanned PDF pipeline：
@@ -203,7 +204,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 `33-01` 已完成 worker pipeline contract，`33-02` 已完成 Redis cache / rate limit / session slice；除 Phase 31、Phase 32、Phase 33 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 `33-01` 已完成 worker pipeline contract，`33-02` 已完成 Redis cache / rate limit / session slice，`33-03` 已完成 NATS worker skeleton / task status；除 Phase 31、Phase 32、Phase 33 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
@@ -276,6 +277,15 @@ Phase 31-39 guardrails：
 - Docker Compose 新增 optional `redis` profile，backend image 可用 `DOCURAG_INSTALL_REDIS=true` 安裝 Redis client；預設仍不啟動 Redis、不要求外部服務。
 - 本 ticket 不新增 NATS、worker、async queue、distributed lock runtime、production session rotation、OAuth、MFA、enterprise auth，也不修改 OCR、parser、RAG ranking 或 Agent planner。
 - Validation 已通過：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`221 passed`，1 pytest cache warning）；manual Redis health fallback check 通過（Redis client 未安裝時 `/health` 回 `redis: unavailable` 且 service `ok`）；ticket `rg` 與 `git diff --check` 通過。
+- Release Impact：Version bump required: no；`v0.33.0` 版本同步留到 `33-04`。
+
+33-03 NATS Worker Skeleton and Task Status：
+- 已完成。新增 optional NATS runtime helper，`DOCURAG_NATS_URL=memory://` 可用於本機 smoke；真實 NATS client 收斂在 optional `backend[nats]` extra。
+- 新增 `WorkerSkeleton` placeholder handlers，訂閱 `document.ocr.requested`、`document.parse.requested`、`document.index.requested` 與 `rag.eval.requested`，只回寫 task status，不執行 OCR / parser / indexing / eval 核心 model 行為。
+- 新增 local JSON `worker_tasks.json` task status store 與 `GET /tasks` / `GET /tasks/{task_id}` API，狀態包含 `queued`、`running`、`succeeded`、`failed`、`retrying`、`cancelled`。
+- Docker Compose 新增 optional `nats` profile，backend image 可用 `DOCURAG_INSTALL_NATS=true` 安裝 NATS client；預設仍不啟動 NATS、不要求外部服務。
+- 本 ticket 不新增 production autoscaling、K8s、dead-letter dashboard、full observability stack、vLLM、OpenAI API、fine-tuning 或 Agent planner 變更。
+- Validation 已通過：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`227 passed`，1 pytest cache warning）；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\nats-worker-smoke.ps1`；ticket `rg` 與 `git diff --check` 通過。
 - Release Impact：Version bump required: no；`v0.33.0` 版本同步留到 `33-04`。
 ## Phase 40 Interview Evidence Hardening
 
@@ -440,8 +450,8 @@ Phase 40 guardrails：
 
 - [ ] Production-grade OCR / VLM parser（v0.7 / v0.8 只先完成 provider spike 與 runtime stabilization）。
 - [ ] Production-grade background embedding / Qdrant indexing pipeline（v0.27.0 只有 demo best-effort / manual indexing，不是正式 worker）。
-- [ ] Redis session / cache / rate limit。
-- [ ] NATS worker。
+- [ ] Production Redis session rotation / cross-service cache invalidation / worker lock runtime（33-02 只完成 demo-safe session cache、query cache 與 rate limit slice）。
+- [ ] Production NATS worker pipeline / durable async execution（33-03 只完成 NATS helper、worker skeleton 與 task status slice）。
 - [ ] Production-grade LLM / rerank / citation quality evaluation（local Ollama generation 與 FastEmbed adapter 已有 demo default，正式評測仍未做）。
 - [ ] vLLM / OpenAI-compatible provider。
 

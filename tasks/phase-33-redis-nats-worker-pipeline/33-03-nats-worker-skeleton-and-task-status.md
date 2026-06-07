@@ -32,15 +32,18 @@
 - `.env.example`
 - `infra/docker-compose.yml`
 - `docs/architecture.md`
+- `docs/api.md`
+- `README_DEV.md`
+- `backend/README.md`
 - `TODO.md`
 - `tasks/phase-33-redis-nats-worker-pipeline/33-03-nats-worker-skeleton-and-task-status.md`
 
 ## Acceptance Criteria
 
-- [ ] NATS publish / consume helper 可被 smoke 驗證。
-- [ ] Worker skeleton 能處理至少一個 demo topic 並回寫 task status。
-- [ ] Task status API 或 metadata 可顯示 queued / running / succeeded / failed。
-- [ ] Runtime unavailable 時有清楚 fallback 或 skip 訊息。
+- [x] NATS publish / consume helper 可被 smoke 驗證。
+- [x] Worker skeleton 能處理至少一個 demo topic 並回寫 task status。
+- [x] Task status API 或 metadata 可顯示 queued / running / succeeded / failed。
+- [x] Runtime unavailable 時有清楚 fallback 或 skip 訊息。
 
 ## Validation
 
@@ -48,3 +51,10 @@
 - NATS worker smoke script。
 - `rg -n "NATS|JetStream|worker|task status|document.ocr.requested|document.index.requested" backend scripts docs infra TODO.md tasks/phase-33-redis-nats-worker-pipeline`
 - `git diff --check`
+
+## Validation Result
+
+- Passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`227 passed`，1 pytest cache warning）。
+- Passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\nats-worker-smoke.ps1`。
+- Passed: `rg -n "NATS|JetStream|worker|task status|document.ocr.requested|document.index.requested" backend scripts docs infra TODO.md tasks/phase-33-redis-nats-worker-pipeline`。
+- Passed: `git diff --check`。

@@ -78,9 +78,9 @@ SSO, OAuth, MFA, password reset, email verification, Redis-backed session storag
 
 ## Phase 33 Redis / NATS Worker Task Contract
 
-`33-01` defines the Redis / NATS worker task contract. `33-02` adds only an opt-in Redis backend slice for session cache, RAG query cache and rate limit. If `DOCURAG_REDIS_URL` is empty, Redis behavior is disabled and existing demo APIs keep working. If Redis is configured but unavailable, requests fall back without hard failing.
+`33-01` defines the Redis / NATS worker task contract. `33-02` adds only an opt-in Redis backend slice for session cache, RAG query cache and rate limit. `33-03` adds a demo-safe NATS helper, worker skeleton and task status store / API. If `DOCURAG_REDIS_URL` or `DOCURAG_NATS_URL` is empty, those runtimes are disabled and existing demo APIs keep working. If Redis or NATS is configured but unavailable, requests and smoke paths fall back without hard failing.
 
-`33-02` does not add NATS runtime services, worker code, async queues, migrations, distributed locks or production session rotation.
+`33-03` does not move OCR, parser, indexing or eval model execution into a production async queue. The worker skeleton only publishes / consumes demo messages and updates task status.
 
 ### Redis Responsibilities
 
@@ -103,6 +103,16 @@ SSO, OAuth, MFA, password reset, email verification, Redis-backed session storag
 Redis query cache keys include auth mode, role, organization / project access, provider settings and the visible document / chunk signature. Cache entries must not be shared across projects or roles.
 
 The Redis Python client is optional. Install the backend with `.[dev,redis]`, or build Docker with `DOCURAG_INSTALL_REDIS=true`, before expecting `DOCURAG_REDIS_URL` to connect to a real Redis service. Without that client, `/health` reports `redis=unavailable` and existing APIs keep their fallback path.
+
+### NATS Worker Skeleton
+
+| Surface | Behavior | Fallback |
+|---|---|---|
+| `NatsRuntime.publish` / `subscribe` | Publishes JSON payloads and dispatches subscribed handlers. `memory://` is supported for smoke validation. | Returns `disabled` or `unavailable` instead of raising when runtime is missing. |
+| `WorkerSkeleton` | Subscribes to OCR, parser, indexing and eval topics, then marks placeholder task handlers as `running` -> `succeeded`. | Failed publish marks the task `failed` with `error_code=nats_unavailable`. |
+| `scripts/nats-worker-smoke.ps1` | Runs an in-memory publish / consume / task status smoke check. | Does not require a real NATS server. |
+
+The optional real NATS client is in `backend[nats]`. Docker Compose includes a `nats` profile, but the default backend image does not install the client unless `DOCURAG_INSTALL_NATS=true` is set.
 
 ### NATS / JetStream Topics
 
@@ -143,6 +153,13 @@ Event payloads must not include file bytes, raw OCR text, secrets, API keys or c
 ```
 
 Allowed task statuses are `queued`, `running`, `retrying`, `succeeded`, `failed` and `cancelled`.
+
+Task status endpoints:
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/tasks` | Lists stored worker task records. Formal auth mode filters by accessible project ids. |
+| `GET` | `/tasks/{task_id}` | Returns one worker task record; formal auth mode denies cross-project access. |
 
 Retry policy:
 
