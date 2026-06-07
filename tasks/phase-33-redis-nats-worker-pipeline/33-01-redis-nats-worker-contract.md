@@ -34,12 +34,17 @@
 
 ## Acceptance Criteria
 
-- [ ] 文件列出 Redis responsibilities 與不可濫用的邊界。
-- [ ] 文件列出 NATS topics、payload contract 與 retry / failure policy。
-- [ ] task status lifecycle 與 idempotency key 明確。
-- [ ] 明確標示本 ticket 不新增 runtime service 或 worker code。
+- [x] 文件列出 Redis responsibilities 與不可濫用的邊界。
+- [x] 文件列出 NATS topics、payload contract 與 retry / failure policy。
+- [x] task status lifecycle 與 idempotency key 明確。
+- [x] 明確標示本 ticket 不新增 runtime service 或 worker code。
 
 ## Validation
 
 - `rg -n "Redis|NATS|JetStream|worker|task status|idempotency|Phase 33" docs README_DEV.md TODO.md tasks/phase-33-redis-nats-worker-pipeline`
 - `git diff --check`
+
+## Validation Result
+
+- `rg -n "Redis|NATS|JetStream|worker|task status|idempotency|Phase 33" docs README_DEV.md TODO.md tasks/phase-33-redis-nats-worker-pipeline` passed。
+- `git diff --check` passed（僅 Windows LF/CRLF 提示）。

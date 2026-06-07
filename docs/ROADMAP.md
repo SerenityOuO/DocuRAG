@@ -253,6 +253,12 @@ Expected Outcome：
 - OCR、parser、indexing、eval jobs 可由 worker skeleton 消費並回寫 task status。
 - 不改 OCR / parser / RAG model 行為，不新增 production autoscaling。
 
+33-01 Redis NATS Worker Contract Status:
+- Completed Markdown-only Redis / NATS worker pipeline contract. Redis responsibilities are limited to session cache, query cache, rate limit, worker lock and short-term chat history, with explicit boundaries against using Redis as source of truth or cross-tenant cache.
+- NATS / JetStream topics are documented for `document.uploaded`, `document.ocr.requested`, `document.parse.requested`, `document.index.requested` and `rag.eval.requested`, including payload boundaries and no file bytes / secrets in events.
+- Task status lifecycle, retry / failure policy and deterministic idempotency key policy are defined for future worker runtime tickets.
+- Release Impact: Version bump required: no. This ticket does not add Redis / NATS runtime services, worker code, dependency, migration, deployment config, autoscaling or model behavior changes.
+
 ### Phase 34 - Production OCR / Scanned PDF Pipeline
 
 Target version：`v0.34.0`

@@ -1,6 +1,6 @@
 # MVP Architecture
 
-本文件描述 DocuRAG AgentOps 目前的受控 MVP 架構。到 v0.29.0 為止，專案已完成 backend / frontend demo、provider-selected OCR、citation trace、retrieval eval runner、built-in RAG eval admin API、vector / rerank / hybrid / `hybrid_rerank` retrieval building blocks、Viewer Chat / Admin Ingestion role split、deterministic Agent tool-use trace、VLM-first parser provider spike、OCR / VLM evidence alignment、aggressive demo defaults、`.txt` direct ingestion、text-native PDF extraction、demo auth mode 與後台「測試RAG」surface。Phase 27 把 RAG / Agent search default 切成 `hybrid_rerank`，並讓 frontend 後台 OCR 後 best-effort 執行 parser 與 vector indexing；v0.27.1 補上 VLM image + OCR context 與欄位 evidence mapping；v0.28.0 補上 first-class `text_upload` / `pdf_text` sources 與 demo role gates；v0.29.0 讓 Admin / Analyst 可執行固定 `hybrid_rerank` 的內建中文發票 retrieval benchmark。這不代表已新增 production VLM parser、正式 auth / RBAC、worker、DB runtime、production eval dashboard 或 scanned PDF OCR。
+本文件描述 DocuRAG AgentOps 目前的受控 MVP 架構。到 v0.32.0 為止，專案已完成 backend / frontend demo、provider-selected OCR、citation trace、retrieval eval runner、built-in RAG eval admin API、vector / rerank / hybrid / `hybrid_rerank` retrieval building blocks、Viewer Chat / Admin Ingestion role split、deterministic Agent tool-use trace、VLM-first parser provider spike、OCR / VLM evidence alignment、aggressive demo defaults、`.txt` direct ingestion、text-native PDF extraction、demo auth mode、後台「測試RAG」surface、opt-in PostgreSQL metadata repository foundation，以及 formal Auth / RBAC / tenant boundary 的可展示 release。Phase 33 `33-01` 只新增 Redis / NATS worker pipeline contract，定義 cache、event、task status、retry 與 idempotency 邊界；它不是 runtime service、worker code、dependency 或 deployment 設定。這不代表已新增 production VLM parser、Redis / NATS runtime、async worker、production eval dashboard 或 scanned PDF OCR。
 
 ## MVP Shape
 
@@ -25,10 +25,17 @@ Admin / Analyst Ingestion Surface
 FastAPI Backend
     |
     |-- demo auth API / role guard dependencies
+    |-- formal signed bearer guard / project access filtering
     |-- health / document API / OCR API / RAG API / parse / fields API
     |-- Agent run / lookup API
     |-- manual vector indexing API
     |-- built-in RAG eval API / retrieval eval runner CLI
+    |
+Phase 33 Worker Pipeline Contract (not runtime yet)
+    |
+    |-- Redis responsibilities / boundaries
+    |-- NATS / JetStream event topics
+    |-- task status / retry / idempotency policy
     |
 Local Data Store
     |
@@ -50,6 +57,75 @@ Phase 23 的 role split 是 demo surface 與產品敘事邊界，不是正式權
 Phase 28 的 demo auth mode 只把這個 role split 變成可登入展示的本機切片：`DOCURAG_AUTH_MODE=demo` 時，frontend 會顯示 Admin / Analyst / Viewer login，backend 會對 upload、OCR、mock OCR、parse 與 vector index 做 role guard。Download 在 demo mode 下需要登入，但三種角色都可使用。這不是 tenant isolation、project permission、正式 session store 或 production RBAC。
 
 Phase 29 的「測試RAG」只把既有 retrieval eval runner 包成後台可操作的 built-in benchmark。它固定 `hybrid_rerank` 與 synthetic 中文發票 dataset，只顯示第一版核心 metrics；fallback cases 以摺疊明細呈現。這不是 strategy comparison UI、production eval dashboard、eval history storage、自訂 dataset builder、OCR eval、VLM parser eval 或 LLM-as-judge。
+
+## Phase 33 Redis / NATS Worker Pipeline Contract Boundary
+
+`33-01` 只固定 worker pipeline 的文件合約，不啟動 Redis、NATS、JetStream、worker process、Docker service 或 deployment 設定。同步 API 與現有 frontend best-effort orchestration 仍維持現況。
+
+Redis responsibilities：
+
+| Responsibility | Intended use | Boundary |
+|---|---|---|
+| Session cache | Future formal auth session / refresh metadata cache。 | 不保存 password、raw secret 或 production identity provider state；不得取代 backend Auth / RBAC guard。 |
+| Query cache | 短 TTL 快取 project-scoped RAG query result 或 retrieval candidates。 | Cache key 必須包含 organization / project / role / provider config；不得跨 tenant 共用。 |
+| Rate limit | 依 user、organization、IP 或 API group 記錄短期 counter。 | 只做節流輔助，不是 audit log 或 permission source of truth。 |
+| Worker lock | 以 idempotency key 防止同一 document / task 重複處理。 | Lock 必須有 TTL；不得作長期 task status 或資料庫替代品。 |
+| Short-term chat history | 保存短期 conversation context 或 UI draft。 | 不保存 canonical citations、document chunks、Agent run history 或 eval result。 |
+
+NATS / JetStream topics：
+
+| Topic | Producer | Consumer | Payload boundary |
+|---|---|---|---|
+| `document.uploaded` | Document upload API | Future router / OCR dispatcher | `document_id`、`organization_id`、`project_id`、`source_type`、`actor_user_id`。不得附 file bytes。 |
+| `document.ocr.requested` | API / worker dispatcher | OCR worker | `document_id`、`task_id`、provider hints、idempotency key。 |
+| `document.parse.requested` | API / OCR completion worker | Parser worker | `document_id`、`task_id`、parser source policy、idempotency key。 |
+| `document.index.requested` | API / parser completion worker | Indexing worker | `document_id`、`task_id`、chunk source version、idempotency key。 |
+| `rag.eval.requested` | Admin / Analyst eval API | Eval worker | `eval_run_id`、dataset id、strategy、project id、idempotency key。 |
+
+Event payload contract：
+
+```json
+{
+  "event_id": "evt_01HX...",
+  "schema_version": "phase33.worker_event.v1",
+  "event_type": "document.ocr.requested",
+  "occurred_at": "2026-06-07T14:30:00Z",
+  "organization_id": "org_demo",
+  "project_id": "project_demo",
+  "actor_user_id": "user_admin",
+  "document_id": "doc_123",
+  "task_id": "task_123",
+  "idempotency_key": "ocr:project_demo:doc_123:source_v1",
+  "attempt": 1,
+  "trace_id": "trace_123"
+}
+```
+
+Task status lifecycle：
+
+| Status | Meaning |
+|---|---|
+| `queued` | Task 已建立並等待 worker 消費。 |
+| `running` | Worker 已取得 lock 並開始執行。 |
+| `retrying` | 暫時性失敗，等待 backoff 後重試。 |
+| `succeeded` | Task 完成且結果已寫回 canonical store。 |
+| `failed` | Task 結束且不再重試，需保存 failure reason。 |
+| `cancelled` | Task 被明確取消或被新版同類 task 取代。 |
+
+Task status schema 至少包含 `task_id`、`task_type`、`status`、`organization_id`、`project_id`、`document_id` 或 `eval_run_id`、`idempotency_key`、`attempt`、`max_attempts`、`created_at`、`started_at`、`updated_at`、`finished_at`、`failure_reason`、`error_code` 與 `trace_metadata`。Phase 33 後續 runtime ticket 可把它映射到 PostgreSQL `processing_jobs` 或 future worker task table；`33-01` 不建立 schema 或 migration。
+
+Retry / failure policy：
+
+- Transient failures such as `provider_unavailable`, `qdrant_unavailable`, `rate_limited` or `worker_lock_conflict` may retry with exponential backoff and jitter.
+- Terminal failures such as `permission_denied`, `project_access_denied`, `unsupported_file`, `invalid_input`, `unsafe_path` or `schema_validation_failed` must not retry automatically.
+- Default max attempts for worker tasks is 3 unless a later implementation ticket defines a stricter value.
+- Every retry must preserve the same `idempotency_key`, increment `attempt` and keep the original `trace_id`.
+
+Idempotency key policy：
+
+- Key format should be deterministic: `{task_type}:{project_id}:{resource_id}:{source_version}:{request_fingerprint}`.
+- Replaying the same event with the same key must not duplicate OCR results, parser fields, vector points, eval runs or Agent traces.
+- New source version, changed parser policy or changed indexing strategy should create a new key rather than mutate a completed task silently.
 
 ## Phase 24 Parser Contract Boundary
 

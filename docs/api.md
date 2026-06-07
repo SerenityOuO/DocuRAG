@@ -76,6 +76,72 @@ SSO, OAuth, MFA, password reset, email verification, Redis-backed session storag
 
 `32-03` status: backend permission guards are connected for formal signed bearer tokens when `DOCURAG_AUTH_MODE=formal`. Formal tokens must include `sub`, `display_name`, `role`, `organization_id`, `project_ids` and active `project_id`; `/auth/login` still does not implement production login in formal mode. Document reads, downloads, OCR, parser, vector indexing, RAG query and Agent lookup are filtered or denied by project access. Document upload, OCR, parser, vector indexing, built-in eval and Agent run require Analyst or Admin. Viewer receives a generic `403 forbidden`; cross-project denied responses do not include target document or project identifiers.
 
+## Phase 33 Redis / NATS Worker Task Contract
+
+`33-01` defines a contract only. It does not add Redis / NATS runtime services, worker code, Docker Compose services, dependencies, migrations or deployment settings.
+
+### Redis Responsibilities
+
+| Responsibility | API-facing meaning | Boundary |
+|---|---|---|
+| Session cache | Future formal auth session / refresh metadata cache. | Not a password store, identity provider or RBAC source of truth. |
+| Query cache | Short TTL cache for project-scoped RAG query results or retrieval candidates. | Cache keys must include organization / project / role / provider config. |
+| Rate limit | Per user / organization / IP / API group counters. | Not an audit log or permission check replacement. |
+| Worker lock | Idempotency lock for OCR / parser / index / eval tasks. | TTL required; not long-term task status. |
+| Short-term chat history | Ephemeral chat context for future UI continuity. | Not canonical citations, document chunks, Agent run history or eval result storage. |
+
+### NATS / JetStream Topics
+
+| Topic | Trigger | Payload keys |
+|---|---|---|
+| `document.uploaded` | Upload API saves document metadata. | `event_id`, `document_id`, `organization_id`, `project_id`, `actor_user_id`, `source_type`, `trace_id` |
+| `document.ocr.requested` | API or dispatcher requests OCR. | `task_id`, `document_id`, `provider`, `idempotency_key`, `attempt`, `trace_id` |
+| `document.parse.requested` | API or OCR completion requests parser. | `task_id`, `document_id`, `parser_source`, `idempotency_key`, `attempt`, `trace_id` |
+| `document.index.requested` | API or parser completion requests indexing. | `task_id`, `document_id`, `chunk_source_version`, `idempotency_key`, `attempt`, `trace_id` |
+| `rag.eval.requested` | Admin / Analyst requests built-in eval. | `task_id`, `eval_run_id`, `dataset_id`, `strategy`, `project_id`, `idempotency_key` |
+
+Event payloads must not include file bytes, raw OCR text, secrets, API keys or cross-project data. Workers must fetch canonical data by id and re-check project access / task authorization through backend policy.
+
+### Task Status Schema
+
+```json
+{
+  "task_id": "task_123",
+  "task_type": "ocr",
+  "status": "queued",
+  "organization_id": "org_demo",
+  "project_id": "project_demo",
+  "document_id": "doc_123",
+  "eval_run_id": null,
+  "idempotency_key": "ocr:project_demo:doc_123:source_v1",
+  "attempt": 1,
+  "max_attempts": 3,
+  "created_at": "2026-06-07T14:30:00Z",
+  "started_at": null,
+  "updated_at": "2026-06-07T14:30:00Z",
+  "finished_at": null,
+  "failure_reason": null,
+  "error_code": null,
+  "trace_metadata": {
+    "trace_id": "trace_123"
+  }
+}
+```
+
+Allowed task statuses are `queued`, `running`, `retrying`, `succeeded`, `failed` and `cancelled`.
+
+Retry policy:
+
+- Retry transient failures such as `provider_unavailable`, `qdrant_unavailable`, `rate_limited` and `worker_lock_conflict` with exponential backoff and jitter.
+- Do not retry terminal failures such as `permission_denied`, `project_access_denied`, `unsupported_file`, `invalid_input`, `unsafe_path` or `schema_validation_failed`.
+- Retries must keep the same `idempotency_key`, increment `attempt` and preserve `trace_id`.
+
+Idempotency key policy:
+
+- Use deterministic keys such as `{task_type}:{project_id}:{resource_id}:{source_version}:{request_fingerprint}`.
+- Replayed events with the same key must not duplicate OCR results, parser fields, vector points, eval runs or Agent traces.
+- A new source version, parser policy or indexing strategy must produce a new key.
+
 ## Projects
 
 | Method | Endpoint | Description |

@@ -158,7 +158,7 @@ Phase 32 `v0.32.0` - Formal Auth / RBAC / tenant boundary：
 - [x] `tasks/phase-32-auth-rbac-tenant-boundary/32-04-frontend-role-surface-and-release-sync.md`: 完成 frontend role surface、Viewer UI / API write guard validation、`v0.32.0` backend / frontend / Docker Compose / health test 版本同步與 README / README_DEV / backend README / frontend README / TODO / ROADMAP release sync。
 
 Phase 33 `v0.33.0` - Redis + NATS worker pipeline：
-- [ ] `tasks/phase-33-redis-nats-worker-pipeline/33-01-redis-nats-worker-contract.md`
+- [x] `tasks/phase-33-redis-nats-worker-pipeline/33-01-redis-nats-worker-contract.md`: 完成 Markdown-only Redis / NATS worker pipeline contract，定義 Redis responsibilities / boundaries、NATS / JetStream topics、event payload、task status lifecycle、retry / failure policy 與 idempotency key；不 bump version。
 - [ ] `tasks/phase-33-redis-nats-worker-pipeline/33-02-redis-cache-rate-limit-session-slice.md`
 - [ ] `tasks/phase-33-redis-nats-worker-pipeline/33-03-nats-worker-skeleton-and-task-status.md`
 - [ ] `tasks/phase-33-redis-nats-worker-pipeline/33-04-worker-demo-smoke-and-release-sync.md`
@@ -202,7 +202,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync；除 Phase 31、Phase 32 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 `33-01` 已完成 worker pipeline contract；除 Phase 31、Phase 32、Phase 33 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
@@ -260,6 +260,13 @@ Phase 31-39 guardrails：
 - Frontend role surface 已對齊 backend guard：Admin / Analyst 可使用 ingestion、built-in eval 與 Agent write surface；Viewer 只能查詢，且 UI 與 API 都不能執行 ingestion / eval / Agent write。
 - README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 ticket 已同步 Phase 32 release 狀態；文件明確保留 SSO、OAuth、MFA、Redis session、worker、deployment hardening 與 production login runtime 尚未完成的邊界。
 - Validation 已通過：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`216 passed`，1 pytest cache warning）；`npm.cmd run build`；`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1`（health version `0.32.0`）；Browser 檢查 Admin / Analyst / Viewer desktop / mobile role surface 與 horizontal overflow 通過；Viewer API 403 檢查通過；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+
+33-01 Redis NATS Worker Contract Status：
+- 已完成。`docs/architecture.md` 與 `docs/api.md` 已定義 Phase 33 Redis / NATS worker pipeline contract。
+- Redis responsibilities 已限定為 session cache、query cache、rate limit、worker lock 與 short-term chat history；文件明確禁止把 Redis 當成 canonical store、permission source of truth 或跨 tenant cache。
+- NATS / JetStream topics 已固定為 `document.uploaded`、`document.ocr.requested`、`document.parse.requested`、`document.index.requested` 與 `rag.eval.requested`，並定義 payload 不包含 file bytes、secret 或跨 project data。
+- Task status lifecycle、retry / failure policy 與 deterministic idempotency key 已固定；本 ticket 不新增 runtime service、worker code、dependency、migration、deployment config、autoscaling 或 model behavior changes。
+- Release Impact：Version bump required: no。
 ## Phase 40 Interview Evidence Hardening
 
 - [x] `tasks/phase-40-interview-evidence-hardening/40-01-phase-40-jd-evidence-plan.md`: 新增 Phase 40 `v0.40.0` JD evidence hardening roadmap；文件 ticket，不 bump version。
