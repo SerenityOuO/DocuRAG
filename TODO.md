@@ -545,11 +545,12 @@ Phase 42 `v0.42.0` - Inference gateway / capacity planning：
 - `42-04` validation 已通過：Phase 42 capacity docs `rg` 與 `git diff --check`。本 ticket 不要求真實 NPU 硬體或 TOPS profiler、不下載大型模型、不啟動長時間 benchmark、不承諾 production throughput，也不新增 production metrics service 或 autoscaling controller。
 
 Phase 43 `v0.43.0` - AgentOps governance / secure tool runtime：
-- [ ] `tasks/phase-43-agentops-governance-secure-runtime/43-01-agent-governance-contract.md`
+- [x] `tasks/phase-43-agentops-governance-secure-runtime/43-01-agent-governance-contract.md`: 完成 Phase 43 Agent governance contract；文件固定 tool tiers、tool policy、risk score、approval states、audit event、replay event 與 trace completeness 邊界，並說明與 Phase 38 deterministic Agent MVP 的關係。不 bump version。
 - [ ] `tasks/phase-43-agentops-governance-secure-runtime/43-02-tool-permission-policy-runtime.md`
 - [ ] `tasks/phase-43-agentops-governance-secure-runtime/43-03-human-approval-risk-tier.md`
 - [ ] `tasks/phase-43-agentops-governance-secure-runtime/43-04-agent-run-replay-and-eval.md`
 - [ ] `tasks/phase-43-agentops-governance-secure-runtime/43-05-phase-43-release-sync.md`
+- `43-01` validation 已通過：Phase 43 governance keyword `rg` 與 `git diff --check`。本 ticket 不新增 runtime tool execution、不改 deterministic Agent planner、不新增任意 SQL、shell、filesystem command、production approval workflow、外部 IAM、SSO 或 audit log pipeline。
 
 Phase 44 `v0.44.0` - Document Intelligence QA / human review loop：
 - [ ] `tasks/phase-44-document-intelligence-qa-human-review/44-01-document-intelligence-qa-contract.md`

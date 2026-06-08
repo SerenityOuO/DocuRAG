@@ -735,6 +735,12 @@ Expected Outcome：
 - Agent replay / eval artifact 可檢查 tool correctness、permission compliance、evidence coverage 與 fallback reason。
 - 不允許任意 SQL、shell、filesystem command 或 destructive tool runtime。
 
+43-01 Agent Governance Contract Status：
+
+- 已完成。`docs/architecture.md` 與 `docs/api.md` 已固定 Phase 43 Agent governance / secure tool runtime contract，涵蓋 tool tiers、tool policy、risk score、approval states、audit event、replay event、trace completeness 與 forbidden destructive boundary。
+- 本 ticket 說明 Phase 43 與既有 Phase 25 / Phase 38 deterministic Agent MVP 的關係：目前可執行路徑仍是受控 read-only allowlisted tools；Phase 43 先補治理資料邊界，不新增 runtime tool execution。
+- Validation 已通過：Phase 43 governance keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: no；版本同步留到 `43-05`。
+
 ### Phase 44 - Document Intelligence QA / Human Review Loop
 
 Target version：`v0.44.0`

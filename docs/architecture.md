@@ -286,6 +286,52 @@ Forbidden boundary：
 - Phase 38 contract 明確禁止任意 SQL、shell command、filesystem command、arbitrary network tool、delete、drop table、destructive reindex、credential mutation、production database mutation 或任何 destructive tool。
 - `38-01` 不修改既有 Agent run API 行為；後續 `38-02` / `38-03` 若實作 runtime，必須先符合本 contract。
 
+## Phase 43 AgentOps Governance Contract
+
+`43-01` 是 Agent governance contract ticket，只定義 governance / secure tool runtime 邊界，不新增 runtime tool execution、不新增 tool、不修改 deterministic Agent planner，也不改 OCR、parser、RAG 或 inference 行為。它承接 Phase 38 的 permission guard：Phase 38 已讓既有 read-only Agent tools 可被 role / project / tier guard 控制；Phase 43 則把後續面試可展示的治理資料邊界固定下來，讓 tool policy、risk score、approval、audit 與 replay 有一致語意。
+
+Relationship to deterministic Agent MVP：
+
+- Phase 25 / Phase 38 的 deterministic planner 與既有 allowlisted read-only tools 仍是目前唯一可執行路徑。
+- Phase 43 不把 Agent 升級成 production autonomous Agent，不開放 arbitrary SQL、shell、filesystem command、external side-effect tool 或 destructive tool runtime。
+- 後續 runtime ticket 若要新增 write / admin tool，必須逐項 allowlist，並在執行前通過 role、project access、tool tier、risk score、approval state 與 input schema guard。
+
+Agent governance tool tiers：
+
+| Tier | Governance boundary | Approval / risk contract |
+|---|---|---|
+| `read-only` | 只讀使用者可存取 project 內既有資料，例如文件、parser fields、retrieval evidence、eval result 或 Agent run。 | `risk_score` 通常為 low；`approval_state=not_required`；仍需 permission / project access check。 |
+| `write` | 建立或更新 project-scoped、可回溯、非 destructive 的應用資料；必須由後續 runtime ticket 明確 allowlist。 | 需要 Analyst / Admin、project access、`approval_state=required` 或明確 approved state；需 audit event。 |
+| `admin` | project / organization 管理型動作；必須可 audit，且不得由 planner 自行發明。 | 需要 Admin、project access、較高 `risk_score`、approval 與 audit event。 |
+| `destructive` | 刪除、drop、destructive reindex、不可逆資料改動、任意 SQL、shell、filesystem command、network side effect、secret / credential mutation。 | 在 Phase 43 contract 中仍為 prohibited boundary；若未來 ticket 要新增，必須另有 rollback / approval / data safety 規範。 |
+
+Tool policy boundary：
+
+- `tool_name`、`tool_tier`、`allowed_roles`、`project_access_required`、`risk_score`、`approval_required`、`side_effect_policy`、`audit_required` 與 `replay_supported` 必須可由文件或 trace 解釋。
+- `risk_score` 是治理判斷資料，不是模型信心分數；它描述 tool call 的資料改動、跨 project 風險、外部 side effect 與回復難度。
+- Unknown tool、unknown tier、schema-extra input、cross-project request、unapproved write / admin request 或任何 destructive request 都必須 fail closed，且不得洩漏 unauthorized resource details。
+
+Approval state boundary：
+
+| State | Meaning |
+|---|---|
+| `not_required` | read-only 或低風險 tool call，permission check 通過即可執行。 |
+| `required` | tool call 需要 human approval；未 approved 前不得執行。 |
+| `approved` | 已由允許角色確認，可在同一 policy snapshot 下執行。 |
+| `rejected` | human reviewer 拒絕；Agent run 必須停止該 tool call 並保留 generic reason。 |
+| `expired` | approval 已過期或 policy snapshot 已不一致；不得沿用舊核准。 |
+
+Audit / replay event boundary：
+
+- Audit event 至少需能描述 `event_id`、`run_id`、`step_id`、`tool_name`、`tool_tier`、`risk_score`、`actor_role`、`project_id`、`permission_decision`、`approval_state`、`reason_code` 與 timestamp；不得保存 raw bearer token、API key、secret 或 private credential。
+- Replay event 至少需能描述 `replay_id`、`source_run_id`、`policy_snapshot_id`、`tool_policy_snapshot`、`input_summary`、`observation_summary`、`citations`、`fallback_reason`、`final_answer_source` 與 replay result status。
+- Replay 預設是 inspection / eval artifact，不重新執行 destructive 或 external side-effect tools；若後續 ticket 實作 replay runtime，必須保留 original run 與 replay run 的 policy snapshot 差異。
+
+Trace completeness boundary：
+
+- Agent run trace 必須保留 planning、tool selection、permission / approval decision、observation、reflection / fallback、citation evidence 與 final answer source。
+- Trace 欄位不足時，Agent eval 只能標示 evidence incomplete 或 replay not available，不得假裝 governance evidence 完整。
+
 ## Phase 26 VLM Parser Provider Boundary
 
 Phase 26 的目標是把 parser default 切成 VLM-first demo path：`vlm_invoice` 先從既有 upload metadata 解析 demo-safe image input，再呼叫可設定的 local VLM provider；provider unavailable、timeout、unsupported file、invalid response、missing fields 或 confidence too low 時，才 fallback 到 `deterministic_invoice`。v0.27.1 起 VLM request 也帶 compact OCR context，VLM 欄位結果會嘗試對回 OCR line / bbox。這不改 Phase 25 Agent planner / tool allowlist；Agent 仍只透過 `get_document_fields` 讀取保存後的 parser result。

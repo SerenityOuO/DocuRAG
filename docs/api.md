@@ -1198,6 +1198,54 @@ Agent run trace now includes:
 
 Forbidden role or unsafe tool selection fails before tool execution and saves a failed Agent run with `fallback_reason=tool_permission_forbidden` or deterministic planner fallback. This runtime slice still does not add destructive tool execution, arbitrary SQL, shell, filesystem command, external browser/tool access, Auth / RBAC schema changes, RAG ranking changes or parser behavior changes.
 
+## Phase 43 Agent Governance Contract
+
+`43-01` is a contract-only ticket. It defines the Agent governance / secure tool runtime data boundary without adding endpoints, new runtime tool execution, arbitrary SQL, shell, filesystem access, external side-effect tools, production approval workflow or audit log pipeline. Existing `POST /agent/run` behavior remains the Phase 38 guarded read-only tool path.
+
+### Tool Policy Object
+
+Future runtime slices must be able to explain each allowlisted tool with a policy shape equivalent to:
+
+| Field | Meaning |
+|---|---|
+| `tool_name` | Stable allowlisted tool id. Unknown tools fail closed. |
+| `tool_tier` | One of `read-only`, `write`, `admin`, `destructive`. |
+| `allowed_roles` | Roles that may request the tool after project access check. |
+| `project_access_required` | Whether the active project must match the target resource project. |
+| `risk_score` | Governance risk metadata for side effect, data mutation, cross-project exposure and rollback difficulty. |
+| `approval_required` | Whether a human approval state is needed before execution. |
+| `side_effect_policy` | `no_side_effects`, `project_scoped_write`, `admin_action` or `prohibited`. |
+| `audit_required` | Whether an audit event must be produced. |
+| `replay_supported` | Whether the run can be replayed as inspection / eval evidence. |
+
+`risk_score` is not model confidence. It is governance metadata. Read-only tools should remain low risk and `approval_state=not_required`; write / admin tools require explicit later runtime tickets, higher risk metadata and approval handling; destructive tools remain prohibited unless a future ticket defines rollback, approval and data safety rules.
+
+### Approval State Contract
+
+| State | API / trace meaning |
+|---|---|
+| `not_required` | The tool is low-risk read-only and passed role / project / permission checks. |
+| `required` | Human approval is required and the tool must not execute yet. |
+| `approved` | The request was approved for the current policy snapshot. |
+| `rejected` | Approval was denied; the run must record a generic denied reason. |
+| `expired` | Approval cannot be reused because time or policy context changed. |
+
+### Audit Event Boundary
+
+Agent governance audit events must be safe to store and should contain at least `event_id`, `run_id`, `step_id`, `tool_name`, `tool_tier`, `risk_score`, `actor_role`, `project_id`, `permission_decision`, `approval_state`, `reason_code` and timestamp. They must not store raw bearer tokens, API keys, production secrets, private credentials or unmasked provider settings.
+
+### Replay Event Boundary
+
+Agent replay is an inspection / eval artifact, not a hidden re-execution path. Replay event data should contain `replay_id`, `source_run_id`, `policy_snapshot_id`, `tool_policy_snapshot`, `input_summary`, `observation_summary`, `citations`, `fallback_reason`, `final_answer_source` and result status. Replay must not execute destructive or external side-effect tools.
+
+### Trace Completeness
+
+Agent run trace must retain planning, tool selection, permission decision, approval state, observation, reflection / fallback, citations and final answer source. If a trace lacks required governance fields, Agent eval must mark the replay / audit evidence incomplete rather than claiming governance coverage.
+
+### Forbidden Boundary
+
+Phase 43 keeps the same hard stop as Phase 38 for arbitrary SQL, shell command, filesystem command, arbitrary network tool, delete, drop table, destructive reindex, credential mutation, production database mutation and any unauthorized destructive tool. `43-01` documents this boundary only; later Phase 43 tickets must stay inside it.
+
 ## Phase 26 VLM Parser Provider Contract Draft
 
 Phase 26 將 parser default 切成 VLM-first provider spike：`POST /documents/{document_id}/parse` 預設先嘗試 `vlm_invoice`，只有 VLM provider unavailable、timeout、unsupported file、invalid JSON、missing required fields 或 confidence too low 時，才 fallback 到 Phase 24 的 `deterministic_invoice`。這個 default-on 只代表 demo parser path 預設 VLM-first，不代表 production VLM parser、OpenAI SDK、streaming、function calling、PDF rendering、多頁 parser pipeline、worker、DB、RBAC 或 autonomous Agent。
