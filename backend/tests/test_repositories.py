@@ -206,6 +206,16 @@ def test_local_json_repository_manages_eval_datasets_and_items(tmp_path: Path) -
 
     assert repository.list_eval_items(dataset.dataset_id)[0].query == "更新後的付款期限問題"
 
+    repository.save_eval_run(
+        {
+            "run_id": "eval-run-local-001",
+            "dataset_id": dataset.dataset_id,
+            "strategy": "hybrid_rerank",
+            "created_at": "2026-06-07T00:00:00Z",
+        }
+    )
+    assert repository.list_eval_runs()[0]["run_id"] == "eval-run-local-001"
+
     repository.delete_eval_item(dataset.dataset_id, item.item_id)
 
     assert repository.list_eval_items(dataset.dataset_id) == []

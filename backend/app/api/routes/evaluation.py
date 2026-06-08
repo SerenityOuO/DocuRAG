@@ -26,12 +26,16 @@ from app.schemas.evaluation import (
     EvalItemCreateRequest,
     EvalItemListResponse,
     EvalItemUpdateRequest,
+    EvalRunCreateRequest,
+    EvalRunItemsResponse,
+    EvalRunResponse,
 )
 from app.services.evaluation import (
     BUILT_IN_RAG_EVAL_DATASET_NAME,
     RetrievalEvalResult,
     result_fallback_reasons,
     run_built_in_rag_eval,
+    run_strategy_comparison_eval,
 )
 from app.services.document_storage import DocumentStorage
 
@@ -227,6 +231,50 @@ async def delete_eval_item(
     return EvalDeleteResponse(dataset_id=dataset.dataset_id, item_id=item_id)
 
 
+@router.post("/runs", response_model=EvalRunResponse)
+async def run_eval_strategy_comparison(
+    request: EvalRunCreateRequest,
+    storage: DocumentStorageDep,
+    auth_user: IngestionUserDep,
+) -> EvalRunResponse:
+    dataset = _get_accessible_dataset(storage, auth_user, request.dataset_id)
+    items = storage.list_eval_items(dataset.dataset_id)
+    try:
+        run = run_strategy_comparison_eval(
+            dataset=dataset,
+            items=items,
+            documents=storage.list_documents_for_rag(accessible_project_ids(auth_user)),
+            strategies=request.strategies,
+            top_k=request.top_k,
+            settings=get_settings(),
+        )
+    except ValueError as exc:
+        raise _unprocessable(str(exc)) from exc
+
+    storage.save_eval_run(run)
+    return EvalRunResponse.model_validate(run)
+
+
+@router.get("/runs/{run_id}", response_model=EvalRunResponse)
+async def get_eval_run(
+    run_id: str,
+    storage: DocumentStorageDep,
+    auth_user: IngestionUserDep,
+) -> EvalRunResponse:
+    run = _get_accessible_run(storage, auth_user, run_id)
+    return EvalRunResponse.model_validate(run)
+
+
+@router.get("/runs/{run_id}/items", response_model=EvalRunItemsResponse)
+async def get_eval_run_items(
+    run_id: str,
+    storage: DocumentStorageDep,
+    auth_user: IngestionUserDep,
+) -> EvalRunItemsResponse:
+    run = _get_accessible_run(storage, auth_user, run_id)
+    return EvalRunItemsResponse.model_validate(run)
+
+
 def _case_result(result: RetrievalEvalResult) -> BuiltInRagEvalCaseResult:
     return BuiltInRagEvalCaseResult(
         case_id=result.case_id,
@@ -251,6 +299,20 @@ def _get_accessible_dataset(
 
     require_project_access(auth_user, dataset.project_id)
     return dataset
+
+
+def _get_accessible_run(
+    storage: DocumentStorage,
+    auth_user: RequestAuthContext | None,
+    run_id: str,
+) -> dict[str, object]:
+    run = storage.get_eval_run(run_id)
+    if run is None:
+        raise _not_found("Eval run not found.")
+
+    project_id = run.get("project_id")
+    require_project_access(auth_user, str(project_id) if project_id else None)
+    return run
 
 
 def _not_found(message: str) -> HTTPException:

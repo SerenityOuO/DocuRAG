@@ -213,6 +213,35 @@ Idempotency key policy:
 |---|---|---|
 | GET | `/projects/{project_id}/eval-runs` | List sample eval metrics |
 | POST | `/eval/rag/built-in` | v0.29.0 built-in RAG benchmark for Admin / Analyst; fixed `hybrid_rerank`, synthetic Chinese invoice fixtures |
+| POST | `/eval/runs` | v0.36.0 managed dataset strategy comparison run for Admin / Analyst |
+| GET | `/eval/runs/{run_id}` | v0.36.0 strategy comparison summary lookup |
+| GET | `/eval/runs/{run_id}/items` | v0.36.0 failure cases, fallback cases and rerank analysis rows |
+
+## Phase 36 Eval Run API
+
+`POST /eval/runs` runs a managed eval dataset against selected retrieval strategies. Request body:
+
+```json
+{
+  "dataset_id": "eval_dataset_123",
+  "strategies": ["keyword", "hybrid_rerank", "vector"],
+  "top_k": 5
+}
+```
+
+Allowed strategies are `keyword`, `vector`, `vector_rerank`, `hybrid` and `hybrid_rerank`. The endpoint stores the eval run result and returns a compact strategy comparison summary:
+
+- `strategy_summaries`: one row per strategy with Hit Rate@K, MRR@K, Recall@K, average latency, failure count, fallback count, trace metadata count and fallback reasons.
+- `strategies`: the de-duplicated strategy config used by the run.
+- `dataset_name`, `top_k`, `created_at` and `run_id`: UI display and lookup metadata.
+
+`GET /eval/runs/{run_id}` returns the persisted summary. `GET /eval/runs/{run_id}/items` returns detail rows for:
+
+- `failed_cases`: queries with no hit or runtime error.
+- `fallback_cases`: queries with explicit fallback metadata, for example vector or rerank runtime unavailable.
+- `rerank_analysis`: before / after ranking and rerank score rows for `vector_rerank` or `hybrid_rerank`, including `pre_rerank_rank`, `post_rerank_rank`, `pre_rerank_score`, `rerank_score`, `rerank_status` and `fallback_state`.
+
+When embedding, Qdrant or reranker runtime is unavailable, vector-backed strategies are represented with explicit failure / fallback rows instead of crashing the whole strategy comparison. This API does not change the default retrieval provider, does not tune the rerank model, and is not LLM-as-judge, answer faithfulness scoring, citation quality scoring or production monitoring trend storage.
 
 ## Phase 29 Built-in RAG Eval Contract
 
@@ -480,7 +509,7 @@ Stale vector cleanup identifies older Qdrant points by tenant / project / docume
 
 ### Phase 36 Runtime API Surface
 
-The built-in benchmark remains `POST /eval/rag/built-in`. `36-02` adds controlled eval dataset / eval item management for Admin / Analyst. Strategy comparison and run history remain future `36-03` scope.
+The built-in benchmark remains `POST /eval/rag/built-in`. `36-02` adds controlled eval dataset / eval item management for Admin / Analyst. `36-03` adds managed eval run strategy comparison and persisted run lookup for Admin / Analyst.
 
 | Method | Endpoint | Purpose |
 |---|---|---|

@@ -45,6 +45,12 @@ class DocumentMetadataRepository(Protocol):
     def delete_eval_item(self, dataset_id: str, item_id: str) -> None:
         ...
 
+    def save_eval_run(self, eval_run: dict[str, Any]) -> None:
+        ...
+
+    def list_eval_runs(self) -> list[dict[str, Any]]:
+        ...
+
 
 class LocalJsonDocumentRepository:
     name = "local_json"
@@ -55,6 +61,7 @@ class LocalJsonDocumentRepository:
         self.agent_runs_path = data_dir / "agent_runs.json"
         self.eval_datasets_path = data_dir / "eval_datasets.json"
         self.eval_items_path = data_dir / "eval_items.json"
+        self.eval_runs_path = data_dir / "eval_runs.json"
 
     def list_documents(self) -> list[DocumentMetadata]:
         self._ensure_documents_storage()
@@ -154,6 +161,24 @@ class LocalJsonDocumentRepository:
             self.eval_items_path,
             [item.model_dump(mode="json") for item in items],
         )
+
+    def save_eval_run(self, eval_run: dict[str, Any]) -> None:
+        run_id = str(eval_run.get("run_id") or "")
+        if not run_id:
+            raise ValueError("Eval run payload requires run_id.")
+
+        runs = self.list_eval_runs()
+        for index, saved_run in enumerate(runs):
+            if str(saved_run.get("run_id") or "") == run_id:
+                runs[index] = eval_run
+                self._write_json(self.eval_runs_path, runs)
+                return
+
+        runs.append(eval_run)
+        self._write_json(self.eval_runs_path, runs)
+
+    def list_eval_runs(self) -> list[dict[str, Any]]:
+        return self._read_json_list(self.eval_runs_path)
 
     def _ensure_documents_storage(self) -> None:
         self.data_dir.mkdir(parents=True, exist_ok=True)

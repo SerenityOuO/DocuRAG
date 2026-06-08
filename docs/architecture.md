@@ -494,7 +494,7 @@ Boundary rules：
 
 ## Phase 36 Eval Dashboard / Rerank Analysis Contract
 
-`36-01` only defines the target contract for a broader RAG quality surface. It upgrades the Phase 29 built-in benchmark language into a future dashboard shape. `36-02` adds the first runtime slice: Admin / Analyst can manage eval datasets and eval items through synchronous backend APIs and a compact frontend surface. It still does not add strategy comparison runs, DB-backed eval history, worker execution, new ranking algorithms or LLM-as-judge.
+`36-01` defines the target contract for a broader RAG quality surface. It upgrades the Phase 29 built-in benchmark language into a dashboard shape. `36-02` adds eval dataset / eval item management for Admin / Analyst. `36-03` adds synchronous strategy comparison runs for managed eval datasets, persists run summaries and case details, and exposes failure cases, fallback cases and rerank analysis in the frontend. It still does not add worker execution, new ranking algorithms, production monitoring trends, answer faithfulness scoring or LLM-as-judge.
 
 Future architecture:
 
@@ -637,7 +637,7 @@ Completed in `32-03`: endpoint permission guards and cross-project filtering enf
 
 - Production VLM / parser pipeline、PDF rendering、image preprocessing、多頁 production OCR pipeline。
 - Production indexing worker、自動 queue reindex、DB-backed retrieval management。
-- Production eval dashboard、strategy comparison UI、LLM-as-judge、answer faithfulness scoring、citation quality scoring。
+- Production eval dashboard trend monitoring、LLM-as-judge、answer faithfulness scoring、citation quality scoring。
 - Multi-user tenancy、production login、RBAC、destructive migration、production DB operation。Phase 31 目前已完成 PostgreSQL boundary / schema contract / opt-in repository adapter，不代表 production tenancy、production database operation 或 release sync 已完成。
 - Production Redis session rotation、cross-service cache invalidation 與 worker lock runtime；`33-02` 只完成 opt-in demo-safe session cache、query cache 與 rate limit slice。
 - Production NATS event bus、durable JetStream consumer、async OCR / parser / indexing / eval worker execution；`33-03` 只完成 NATS helper、worker skeleton 與 task status slice。

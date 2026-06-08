@@ -656,6 +656,7 @@ td {
 
 .eval-surface,
 .eval-dataset-surface,
+.strategy-comparison-panel,
 .agent-surface {
   grid-column: 1 / -1;
 }
@@ -783,6 +784,94 @@ td {
 .eval-result {
   display: grid;
   gap: 14px;
+}
+
+.strategy-comparison-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.strategy-run-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.strategy-run-heading > div {
+  min-width: 0;
+}
+
+.strategy-run-heading h3 {
+  color: #172033;
+  font-size: 16px;
+  margin: 0;
+}
+
+.strategy-run-heading p {
+  color: #667085;
+  line-height: 1.5;
+  margin: 5px 0 0;
+}
+
+.strategy-topk-label {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.strategy-topk-label span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.strategy-topk-label input {
+  background: #ffffff;
+  border: 1px solid #c4d0df;
+  border-radius: 8px;
+  color: #172033;
+  min-height: 42px;
+  padding: 10px 12px;
+  width: 76px;
+}
+
+.strategy-eval-result,
+.rerank-analysis-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.strategy-detail-grid {
+  align-items: start;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.strategy-table-wrap {
+  border: 1px solid #e5edf4;
+  border-radius: 8px;
+}
+
+.strategy-metrics-table th,
+.strategy-metrics-table td {
+  min-width: 118px;
+}
+
+.strategy-metrics-table td:first-child,
+.strategy-metrics-table td:nth-child(2),
+.rerank-table td:first-child,
+.rerank-table td:nth-child(2) {
+  white-space: nowrap;
+}
+
+.rerank-table small {
+  color: #64748b;
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
 }
 
 .eval-metric-grid {
@@ -1679,6 +1768,7 @@ pre {
   .eval-item-form,
   .eval-management-grid,
   .eval-metric-grid,
+  .strategy-detail-grid,
   .agent-form,
   .agent-tool-details {
     grid-template-columns: 1fr;
@@ -1736,5 +1826,41 @@ pre {
 
   .status-pill {
     margin-top: 12px;
+  }
+
+  .strategy-run-heading {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .strategy-run-heading .status-pill,
+  .strategy-comparison-panel .status-pill {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .strategy-comparison-panel .eval-toolbar {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .strategy-comparison-panel .eval-toolbar > * {
+    max-width: 100%;
+  }
+
+  .strategy-comparison-panel p {
+    overflow-wrap: anywhere;
+  }
+
+  .strategy-topk-label {
+    justify-content: space-between;
+  }
+
+  .strategy-comparison-panel .button {
+    white-space: normal;
   }
 }

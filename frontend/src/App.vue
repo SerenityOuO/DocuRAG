@@ -8,6 +8,7 @@ import {
   createEvalItem,
   deleteEvalDataset,
   deleteEvalItem,
+  getEvalRunItems,
   getHealth,
   getMe,
   listEvalDatasets,
@@ -20,6 +21,7 @@ import {
   queryRag,
   runAgent,
   runBuiltInRagEval,
+  runEvalStrategyComparison,
   runMockOcr,
   runSelectedOcr,
   updateEvalDataset,
@@ -34,6 +36,11 @@ import {
   type DocumentFields,
   type EvalDataset,
   type EvalItem,
+  type EvalRerankAnalysisRow,
+  type EvalRunCaseResult,
+  type EvalRunItemsResponse,
+  type EvalRunResponse,
+  type EvalStrategy,
   type ExtractedField,
   type HealthResponse,
   type ParserResult,
@@ -112,6 +119,12 @@ const evalItemTags = ref("invoice");
 const evalItemNotes = ref("");
 const evalItemError = ref("");
 const evalItemMessage = ref("");
+const strategyEvalState = ref<RequestState>("idle");
+const strategyEvalResult = ref<EvalRunResponse | null>(null);
+const strategyEvalItems = ref<EvalRunItemsResponse | null>(null);
+const strategyEvalTopK = ref(5);
+const strategyEvalStrategies = ref<EvalStrategy[]>(["keyword", "hybrid_rerank", "vector"]);
+const strategyEvalError = ref("");
 const loginUsername = ref("admin");
 const loginPassword = ref("demo-admin-pass");
 
@@ -314,6 +327,22 @@ const evalDatasetStatusLabel = computed(() => {
   return "尚未建立";
 });
 const evalItemFormModeLabel = computed(() => (editingEvalItemId.value ? "更新 item" : "新增 item"));
+
+const strategyEvalStatusLabel = computed(() => {
+  if (strategyEvalState.value === "loading") {
+    return "Running";
+  }
+
+  if (strategyEvalResult.value) {
+    return `${strategyEvalResult.value.strategy_summaries.length} strategies`;
+  }
+
+  if (selectedEvalDataset.value) {
+    return "Ready";
+  }
+
+  return "Select dataset";
+});
 
 const demoUsers: Array<{ role: AuthRole; label: string; username: string; password: string }> = [
   {
@@ -609,6 +638,44 @@ function formatPercent(value: number): string {
 
 function formatLatency(value: number): string {
   return `${value.toLocaleString(undefined, { maximumFractionDigits: 1 })} ms`;
+}
+
+function formatScore(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return "n/a";
+  }
+
+  return value.toFixed(4);
+}
+
+function strategyCaseRank(caseResult: EvalRunCaseResult): string {
+  if (!caseResult.hit || caseResult.first_relevant_rank === null) {
+    return "No hit";
+  }
+
+  return `Rank ${caseResult.first_relevant_rank}`;
+}
+
+function strategyFallbackReasons(caseResult: EvalRunCaseResult): string {
+  if (caseResult.fallback_reasons.length === 0) {
+    return caseResult.error ?? "No fallback reason";
+  }
+
+  return caseResult.fallback_reasons.join(", ");
+}
+
+function strategySummaryFallbackReasons(summary: { fallback_reasons: Array<{ reason: string; count: number }> }): string {
+  if (summary.fallback_reasons.length === 0) {
+    return "none";
+  }
+
+  return summary.fallback_reasons.map((reason) => `${reason.reason} (${reason.count})`).join(", ");
+}
+
+function rerankRowLabel(row: EvalRerankAnalysisRow): string {
+  const beforeRank = row.pre_rerank_rank ?? "-";
+  const afterRank = row.post_rerank_rank ?? row.rank;
+  return `${beforeRank} -> ${afterRank}`;
 }
 
 function ragEvalCaseRank(caseResult: BuiltInRagEvalCaseResult): string {
@@ -1406,6 +1473,37 @@ async function submitBuiltInRagEval(): Promise<void> {
   }
 }
 
+async function submitStrategyComparisonEval(): Promise<void> {
+  if (!canUseIngestion.value) {
+    strategyEvalError.value = "Viewer cannot run strategy comparison.";
+    return;
+  }
+
+  if (!selectedEvalDataset.value) {
+    strategyEvalError.value = "Select an eval dataset before running strategy comparison.";
+    return;
+  }
+
+  strategyEvalState.value = "loading";
+  strategyEvalError.value = "";
+
+  try {
+    const result = await runEvalStrategyComparison({
+      dataset_id: selectedEvalDataset.value.dataset_id,
+      strategies: strategyEvalStrategies.value,
+      top_k: strategyEvalTopK.value,
+    });
+    strategyEvalResult.value = result;
+    strategyEvalItems.value = await getEvalRunItems(result.run_id);
+    strategyEvalState.value = "success";
+  } catch (error) {
+    strategyEvalResult.value = null;
+    strategyEvalItems.value = null;
+    strategyEvalError.value = error instanceof Error ? error.message : "Strategy comparison failed.";
+    strategyEvalState.value = "error";
+  }
+}
+
 onMounted(async () => {
   void checkHealth();
   await checkAuth();
@@ -1921,6 +2019,163 @@ onMounted(async () => {
             </ul>
           </section>
         </div>
+      </article>
+
+      <article class="panel strategy-comparison-panel" aria-label="strategy comparison eval dashboard">
+          <div class="strategy-run-heading">
+            <div>
+              <h3>Strategy comparison</h3>
+              <p>Compare keyword, hybrid_rerank and optional vector-backed strategy on the selected eval dataset.</p>
+            </div>
+            <span class="status-pill" :class="`status-${strategyEvalState}`">{{ strategyEvalStatusLabel }}</span>
+          </div>
+
+          <div class="eval-toolbar">
+            <label class="strategy-topk-label">
+              <span>Top K</span>
+              <input
+                v-model.number="strategyEvalTopK"
+                type="number"
+                min="1"
+                max="10"
+                :disabled="!canUseIngestion || strategyEvalState === 'loading'"
+              />
+            </label>
+            <button
+              type="button"
+              class="button"
+              :disabled="!canUseIngestion || !selectedEvalDataset || strategyEvalState === 'loading'"
+              @click="submitStrategyComparisonEval"
+            >
+              {{ strategyEvalState === "loading" ? "Running comparison..." : "Run strategy comparison" }}
+            </button>
+            <span class="status-pill status-ready">{{ strategyEvalStrategies.join(" / ") }}</span>
+          </div>
+
+          <p v-if="strategyEvalError" class="error">{{ strategyEvalError }}</p>
+          <p v-if="!strategyEvalResult" class="muted compact-note">
+            Run strategy comparison to inspect Hit Rate@K, MRR@K, Recall@K, failure cases, fallback cases and rerank score changes.
+          </p>
+
+          <section v-if="strategyEvalResult" class="strategy-eval-result" aria-label="strategy comparison result">
+            <div class="eval-dataset-row">
+              <span class="status-pill status-ready">{{ strategyEvalResult.dataset_name }}</span>
+              <span class="status-pill status-success">Top {{ strategyEvalResult.top_k }}</span>
+              <span class="status-pill status-idle">{{ strategyEvalResult.run_id }}</span>
+            </div>
+
+            <div class="table-wrap strategy-table-wrap">
+              <table class="strategy-metrics-table">
+                <thead>
+                  <tr>
+                    <th>Strategy</th>
+                    <th>Hit Rate@K</th>
+                    <th>MRR@K</th>
+                    <th>Recall@K</th>
+                    <th>Latency</th>
+                    <th>Failure / Fallback</th>
+                    <th>Trace metadata</th>
+                    <th>Fallback reasons</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="summary in strategyEvalResult.strategy_summaries" :key="summary.strategy">
+                    <td><strong>{{ summary.strategy }}</strong></td>
+                    <td>{{ formatPercent(summary.hit_rate_at_k) }}</td>
+                    <td>{{ summary.mrr_at_k.toFixed(2) }}</td>
+                    <td>{{ formatPercent(summary.recall_at_k) }}</td>
+                    <td>{{ formatLatency(summary.average_latency_ms) }}</td>
+                    <td>{{ summary.failure_count }} / {{ summary.fallback_count }}</td>
+                    <td>{{ summary.trace_metadata_count }}</td>
+                    <td>{{ strategySummaryFallbackReasons(summary) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="strategy-detail-grid">
+              <details class="collapsible-status eval-case-details" :open="Boolean(strategyEvalItems?.fallback_cases.length)">
+                <summary>
+                  <div>
+                    <h3>Fallback cases</h3>
+                    <p>{{ strategyEvalItems?.fallback_cases.length ?? 0 }} fallback cases from this strategy comparison.</p>
+                  </div>
+                </summary>
+                <ul v-if="strategyEvalItems?.fallback_cases.length" class="eval-case-list">
+                  <li v-for="caseResult in strategyEvalItems.fallback_cases" :key="`${caseResult.strategy}-${caseResult.case_id}`">
+                    <div>
+                      <strong>{{ caseResult.strategy }} / {{ caseResult.case_id }}</strong>
+                      <small>{{ strategyCaseRank(caseResult) }} / Top {{ caseResult.top_k }}</small>
+                    </div>
+                    <p>{{ caseResult.query }}</p>
+                    <small>{{ strategyFallbackReasons(caseResult) }}</small>
+                  </li>
+                </ul>
+                <p v-else class="muted compact-note">No fallback cases.</p>
+              </details>
+
+              <details class="collapsible-status eval-case-details" :open="Boolean(strategyEvalItems?.failed_cases.length)">
+                <summary>
+                  <div>
+                    <h3>Failure cases</h3>
+                    <p>{{ strategyEvalItems?.failed_cases.length ?? 0 }} failure cases from this strategy comparison.</p>
+                  </div>
+                </summary>
+                <ul v-if="strategyEvalItems?.failed_cases.length" class="eval-case-list">
+                  <li v-for="caseResult in strategyEvalItems.failed_cases" :key="`${caseResult.strategy}-${caseResult.case_id}`">
+                    <div>
+                      <strong>{{ caseResult.strategy }} / {{ caseResult.case_id }}</strong>
+                      <small>{{ strategyCaseRank(caseResult) }} / Top {{ caseResult.top_k }}</small>
+                    </div>
+                    <p>{{ caseResult.query }}</p>
+                    <small>{{ caseResult.error ?? caseResult.matched_expected_terms.join(", ") }}</small>
+                  </li>
+                </ul>
+                <p v-else class="muted compact-note">No failure cases.</p>
+              </details>
+            </div>
+
+            <section class="rerank-analysis-panel" aria-label="rerank analysis">
+              <div class="strategy-run-heading">
+                <div>
+                  <h3>Rerank analysis</h3>
+                  <p>Before / after ranking and rerank score for vector_rerank or hybrid_rerank candidates.</p>
+                </div>
+                <span class="status-pill status-ready">{{ strategyEvalItems?.rerank_analysis.length ?? 0 }} rows</span>
+              </div>
+
+              <div v-if="strategyEvalItems?.rerank_analysis.length" class="table-wrap strategy-table-wrap">
+                <table class="strategy-metrics-table rerank-table">
+                  <thead>
+                    <tr>
+                      <th>Case</th>
+                      <th>Strategy</th>
+                      <th>Rank change</th>
+                      <th>Pre score</th>
+                      <th>Rerank score</th>
+                      <th>Status</th>
+                      <th>Chunk</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="row in strategyEvalItems.rerank_analysis" :key="`${row.case_id}-${row.strategy}-${row.chunk_id}-${row.rank}`">
+                      <td>{{ row.case_id }}</td>
+                      <td><strong>{{ row.strategy }}</strong></td>
+                      <td>{{ rerankRowLabel(row) }}</td>
+                      <td>{{ formatScore(row.pre_rerank_score) }}</td>
+                      <td>{{ formatScore(row.rerank_score) }}</td>
+                      <td>{{ row.rerank_status ?? row.fallback_state ?? "n/a" }}</td>
+                      <td>
+                        <strong>{{ row.filename || row.document_id }}</strong>
+                        <small>{{ row.chunk_id }}</small>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p v-else class="muted compact-note">No rerank analysis rows yet.</p>
+            </section>
+          </section>
       </article>
 
       <article class="panel eval-surface" aria-label="測試RAG">

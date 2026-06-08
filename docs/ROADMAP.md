@@ -412,6 +412,14 @@ Expected Outcome：
 - Release Impact：Version bump required: no。這是 Phase 36 runtime slice，版本同步留到 `36-04`；不新增 strategy comparison dashboard、LLM-as-judge、answer faithfulness、OCR eval、citation quality scoring 或 retrieval / rerank runtime behavior。
 - Validation：focused backend tests `15 passed`；backend full test `245 passed`；frontend build；Admin API CRUD；Viewer blocked API；Edge headless desktop / mobile DOM surface check；ticket `rg` 與 `git diff --check`。in-app Browser 控制工具因 Node REPL sandbox 錯誤不可用，已改用 Edge headless DOM 檢查。
 
+36-03 Strategy Comparison and Rerank Analysis Status：
+
+- 已完成 strategy comparison runtime：backend 提供 `/eval/runs`、`/eval/runs/{run_id}` 與 `/eval/runs/{run_id}/items`，可針對 eval dataset 比較 keyword、vector、hybrid、vector_rerank 與 hybrid_rerank，並保存 eval run summary、case result、failure / fallback cases 與 rerank analysis。
+- Frontend 後台新增 Strategy comparison panel，顯示 Hit Rate@K、MRR@K、Recall@K、latency、failure / fallback counts、trace metadata count、fallback reasons，以及 rerank before / after rank、score、final score source 與 rerank status。
+- Runtime unavailable 時 vector-backed strategy 會保留 fallback cases 與 fallback reasons，不把 fallback 結果當成完整成功。
+- Release Impact：Version bump required: no。這是 Phase 36 runtime slice，版本同步留到 `36-04`；不新增 LLM-as-judge、answer faithfulness、citation quality scoring、production monitoring trend，也不更換 default retrieval provider 或 rerank model。
+- Validation：targeted backend tests `8 passed, 26 deselected`；eval dashboard smoke `7 passed, 27 deselected`；backend full test `246 passed`；frontend build；Edge headless desktop / mobile screenshot check；ticket `rg` 與 `git diff --check`。in-app Browser 控制工具仍因 Node REPL sandbox `spawn setup refresh` 錯誤不可用，已改用 Edge headless 截圖檢查。
+
 ### Phase 37 - Inference Ops / vLLM Serving
 
 Target version：`v0.37.0`

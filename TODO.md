@@ -186,7 +186,7 @@ Phase 35 `v0.35.0` - RAG indexing quality hardening：
 Phase 36 `v0.36.0` - Eval dashboard / rerank analysis：
 - [x] `tasks/phase-36-eval-dashboard-rerank-analysis/36-01-eval-dashboard-contract.md`: 完成 eval dashboard / rerank analysis contract；不 bump version。
 - [x] `tasks/phase-36-eval-dashboard-rerank-analysis/36-02-eval-dataset-management.md`: 完成 eval dataset / eval item CRUD API、repository persistence、frontend management surface 與 permission boundary；不 bump version。
-- [ ] `tasks/phase-36-eval-dashboard-rerank-analysis/36-03-strategy-comparison-and-rerank-analysis.md`
+- [x] `tasks/phase-36-eval-dashboard-rerank-analysis/36-03-strategy-comparison-and-rerank-analysis.md`: 完成 strategy comparison eval run API、result persistence、frontend comparison panel 與 rerank analysis visibility；不 bump version。
 - [ ] `tasks/phase-36-eval-dashboard-rerank-analysis/36-04-eval-dashboard-release-sync.md`
 
 36-01 Eval Dashboard Contract：
@@ -203,6 +203,13 @@ Phase 36 `v0.36.0` - Eval dashboard / rerank analysis：
 - Permission boundary：Admin / Analyst 可管理 eval datasets / items；Viewer 在 demo / formal auth write path 會收到 `403 forbidden`。
 - Validation 通過：focused backend tests `15 passed`；backend full test `245 passed`；frontend build；Admin API CRUD；Viewer blocked API；Edge headless desktop / mobile DOM surface check；ticket `rg` 與 `git diff --check`。in-app Browser 控制工具因 Node REPL sandbox `spawn setup refresh` 錯誤不可用，改用 Edge headless DOM 檢查。
 - Release Impact：Version bump required: no。版本同步留到 `36-04`；本 ticket 不新增 strategy comparison dashboard、LLM-as-judge、answer faithfulness、OCR eval、citation quality scoring 或 retrieval / rerank runtime behavior。
+
+36-03 Strategy Comparison and Rerank Analysis：
+- 已完成。Backend 新增 `/eval/runs`、`/eval/runs/{run_id}` 與 `/eval/runs/{run_id}/items`，可對 eval dataset 執行 keyword、vector、hybrid、vector_rerank、hybrid_rerank strategy comparison，並保存 eval run summary、case result、failure / fallback cases 與 rerank analysis payload。
+- Eval run 會保存 strategy config、Hit Rate@K、MRR@K、Recall@K、average latency、failure count、fallback count、trace metadata coverage 與 fallback reasons；vector-backed runtime unavailable 時會保留 fallback cases，不把 fallback 偽裝成完整成功。
+- Frontend 後台新增 Strategy comparison panel，顯示 metrics table、Top K、strategy set、failure / fallback cases、trace metadata count、fallback reasons，以及 rerank before / after rank、score、final score source 與 rerank status。
+- Validation 通過：targeted backend tests `8 passed, 26 deselected`；eval dashboard smoke `7 passed, 27 deselected`；backend full test `246 passed`；frontend build；Edge headless desktop / mobile screenshot check；ticket `rg`；`git diff --check`。pytest cache warning 與 Edge registry usage stats warning 為本機工具環境提示。
+- Release Impact：Version bump required: no。版本同步留到 `36-04`；本 ticket 不新增 LLM-as-judge、answer faithfulness、citation quality scoring、production monitoring trend，也不更換 default retrieval provider 或 rerank model。
 
 Phase 37 `v0.37.0` - Inference Ops / vLLM serving：
 - [ ] `tasks/phase-37-inference-ops-vllm/37-01-inference-provider-ops-contract.md`

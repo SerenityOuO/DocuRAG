@@ -277,6 +277,82 @@ export type EvalItemPayload = {
   notes?: string | null;
 };
 
+export type EvalStrategy = "keyword" | "vector" | "vector_rerank" | "hybrid" | "hybrid_rerank";
+
+export type EvalFallbackReason = {
+  reason: string;
+  count: number;
+};
+
+export type EvalRunStrategySummary = {
+  strategy: EvalStrategy;
+  case_count: number;
+  hit_rate_at_k: number;
+  mrr_at_k: number;
+  recall_at_k: number;
+  average_latency_ms: number;
+  failure_count: number;
+  fallback_count: number;
+  trace_metadata_count: number;
+  result_strategy_counts: Record<string, number>;
+  fallback_reasons: EvalFallbackReason[];
+  environment: Record<string, unknown>;
+};
+
+export type EvalRunCaseResult = {
+  case_id: string;
+  item_id: string;
+  strategy: string;
+  query: string;
+  top_k: number;
+  hit: boolean;
+  first_relevant_rank: number | null;
+  matched_expected_terms: string[];
+  error: string | null;
+  fallback_reasons: string[];
+};
+
+export type EvalRerankAnalysisRow = {
+  case_id: string;
+  item_id: string;
+  strategy: string;
+  rank: number;
+  document_id: string;
+  filename: string;
+  chunk_id: string;
+  text: string;
+  pre_rerank_rank: number | null;
+  post_rerank_rank: number | null;
+  pre_rerank_score: number | null;
+  rerank_score: number | null;
+  rerank_status: string | null;
+  fallback_state: string | null;
+};
+
+export type EvalRunResponse = {
+  run_id: string;
+  dataset_id: string;
+  dataset_name: string;
+  project_id: string | null;
+  created_at: string;
+  top_k: number;
+  strategies: EvalStrategy[];
+  strategy_summaries: EvalRunStrategySummary[];
+};
+
+export type EvalRunItemsResponse = {
+  run_id: string;
+  failed_cases: EvalRunCaseResult[];
+  fallback_cases: EvalRunCaseResult[];
+  rerank_analysis: EvalRerankAnalysisRow[];
+};
+
+export type EvalRunPayload = {
+  dataset_id: string;
+  strategies?: EvalStrategy[];
+  top_k?: number;
+};
+
 export type AgentToolStatus = "completed" | "failed";
 
 export type AgentRunStatus = "pending" | "running" | "completed" | "failed";
@@ -613,6 +689,24 @@ export async function deleteEvalItem(datasetId: string, itemId: string): Promise
   });
 
   await readJson<unknown>(response);
+}
+
+export async function runEvalStrategyComparison(payload: EvalRunPayload): Promise<EvalRunResponse> {
+  const response = await fetch(`${API_BASE_URL}/eval/runs`, {
+    method: "POST",
+    headers: jsonHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  return readJson<EvalRunResponse>(response);
+}
+
+export async function getEvalRunItems(runId: string): Promise<EvalRunItemsResponse> {
+  const response = await fetch(`${API_BASE_URL}/eval/runs/${runId}/items`, {
+    headers: authHeaders(),
+  });
+
+  return readJson<EvalRunItemsResponse>(response);
 }
 
 export async function runAgent(request: AgentRunRequest): Promise<AgentRun> {

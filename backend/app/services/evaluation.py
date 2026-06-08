@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from app.core.config import Settings, get_settings
 from app.schemas.documents import DocumentChunk, DocumentMetadata, DocumentStatus, OcrResult, OcrStatus
+from app.schemas.evaluation import EvalDataset, EvalItem
 from app.schemas.rag import RagQueryResponse, RetrievedChunk
 from app.services.embedding import create_embedding_provider
 from app.services.rag import KeywordRagProvider, RagProvider, VectorRagProvider
@@ -42,6 +43,8 @@ class RetrievalEvalCase:
     expected_chunk_hints: list[str]
     expected_terms: list[str]
     tags: list[str]
+    expected_document_ids: list[str] = field(default_factory=list)
+    expected_chunk_ids: list[str] = field(default_factory=list)
     notes: str = ""
 
     @classmethod
@@ -583,21 +586,26 @@ def evaluate_retrieval_response(
     latency_ms: float,
 ) -> RetrievalEvalResult:
     expected_documents = {filename.casefold() for filename in case.expected_document_filenames}
+    expected_document_ids = {document_id.casefold() for document_id in case.expected_document_ids}
+    expected_chunk_ids = {chunk_id.casefold() for chunk_id in case.expected_chunk_ids}
     first_relevant_rank: int | None = None
     matched_expected_terms: list[str] = []
 
     for rank, chunk in enumerate(response.retrieved_chunks[: case.top_k], start=1):
+        if expected_document_ids and chunk.document_id.casefold() not in expected_document_ids:
+            continue
         if expected_documents and chunk.filename.casefold() not in expected_documents:
             continue
 
         chunk_matched_terms = _matched_values(case.expected_terms, chunk)
         chunk_matched_hints = _matched_values(case.expected_chunk_hints, chunk)
+        chunk_id_matched = bool(expected_chunk_ids and chunk.chunk_id.casefold() in expected_chunk_ids)
 
         for term in chunk_matched_terms:
             if term not in matched_expected_terms:
                 matched_expected_terms.append(term)
 
-        if first_relevant_rank is None and (chunk_matched_terms or chunk_matched_hints):
+        if first_relevant_rank is None and (chunk_matched_terms or chunk_matched_hints or chunk_id_matched):
             first_relevant_rank = rank
 
     reciprocal_rank = 0.0 if first_relevant_rank is None else 1 / first_relevant_rank
@@ -762,6 +770,128 @@ def run_built_in_rag_eval(settings: Settings, repo_root: Path | None = None) -> 
     )
 
 
+def run_strategy_comparison_eval(
+    dataset: EvalDataset,
+    items: list[EvalItem],
+    documents: list[DocumentMetadata],
+    strategies: list[EvalStrategy],
+    top_k: int,
+    settings: Settings,
+) -> dict[str, object]:
+    cases = _managed_eval_cases(items, top_k)
+    if not cases:
+        raise ValueError("Eval dataset requires at least one eval item before running comparison.")
+
+    unique_strategies = _unique_strategies(strategies)
+    created_at = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    strategy_runs: list[RetrievalEvalRun] = []
+
+    for strategy in unique_strategies:
+        provider, environment = create_fallback_safe_eval_provider(strategy, documents, settings)
+        strategy_runs.append(
+            run_retrieval_eval(
+                cases=cases,
+                documents=documents,
+                provider=provider,
+                strategy=strategy,
+                dataset_path=Path("managed-eval-dataset") / dataset.dataset_id,
+                environment={
+                    **environment,
+                    "dataset_id": dataset.dataset_id,
+                    "dataset_name": dataset.name,
+                    "document_count": len(documents),
+                    "case_count": len(cases),
+                },
+            )
+        )
+
+    run_id = f"eval-run-{uuid4().hex[:12]}"
+    return {
+        "run_id": run_id,
+        "dataset_id": dataset.dataset_id,
+        "dataset_name": dataset.name,
+        "project_id": dataset.project_id,
+        "created_at": created_at,
+        "top_k": top_k,
+        "strategies": unique_strategies,
+        "strategy_summaries": [_strategy_summary_payload(run) for run in strategy_runs],
+        "failed_cases": [
+            _case_result_payload(result)
+            for run in strategy_runs
+            for result in run.results
+            if not result.hit or result.error
+        ],
+        "fallback_cases": [
+            _case_result_payload(result)
+            for run in strategy_runs
+            for result in run.results
+            if result_fallback_reasons(result)
+        ],
+        "rerank_analysis": [
+            row
+            for run in strategy_runs
+            for result in run.results
+            for row in _rerank_analysis_payload(result)
+        ],
+        "strategy_runs": [run.to_dict() for run in strategy_runs],
+    }
+
+
+def create_fallback_safe_eval_provider(
+    strategy: EvalStrategy,
+    documents: list[DocumentMetadata],
+    settings: Settings,
+) -> tuple[RagProvider, dict[str, object]]:
+    eval_settings = _built_in_eval_settings(settings)
+    keyword_provider = KeywordRagProvider()
+    if strategy == "keyword":
+        return keyword_provider, {
+            "retrieval_provider": "keyword",
+            "fallback_safe": True,
+        }
+
+    vector_provider, environment = _fallback_safe_vector_provider(keyword_provider, documents, eval_settings)
+    environment = {
+        **environment,
+        "retrieval_provider": strategy,
+        "fallback_safe": True,
+    }
+
+    if strategy == "vector":
+        return vector_provider, environment
+
+    if strategy in {"hybrid", "hybrid_rerank"}:
+        environment.update(
+            {
+                "merge_policy": "rank_based_fusion",
+                "dedupe_key": "document_id_chunk_id",
+            }
+        )
+    if strategy == "hybrid":
+        return HybridEvalProvider(keyword_provider, vector_provider), environment
+
+    rerank_service = create_rerank_service(eval_settings)
+    environment.update(
+        {
+            "rerank_provider": rerank_service.provider.name,
+            "rerank_model": str(rerank_service.provider.model or ""),
+            "rerank_top_k": rerank_service.top_k,
+            "rerank_timeout_seconds": rerank_service.timeout_seconds,
+        }
+    )
+    if strategy == "hybrid_rerank":
+        return (
+            HybridRerankEvalProvider(
+                HybridEvalProvider(keyword_provider, vector_provider),
+                keyword_provider,
+                rerank_service,
+            ),
+            environment,
+        )
+
+    return VectorRerankEvalProvider(vector_provider, keyword_provider, rerank_service), environment
+
+
 def create_built_in_hybrid_rerank_provider(
     documents: list[DocumentMetadata],
     settings: Settings,
@@ -851,6 +981,211 @@ def create_built_in_hybrid_rerank_provider(
     )
 
 
+def _fallback_safe_vector_provider(
+    keyword_provider: KeywordRagProvider,
+    documents: list[DocumentMetadata],
+    settings: Settings,
+) -> tuple[RagProvider, dict[str, object]]:
+    try:
+        embedding_provider = create_embedding_provider(settings)
+        vector_store = create_qdrant_vector_store(settings)
+    except Exception as exc:
+        reason = str(exc)
+        return (
+            UnavailableVectorEvalProvider(keyword_provider, reason, settings),
+            {
+                "vector_preflight_status": "failed",
+                "vector_preflight_reason": reason,
+                "embedding_provider": str(settings.embedding_provider or "disabled"),
+                "embedding_model": settings.embedding_model,
+                "qdrant_collection": settings.qdrant_collection,
+                "qdrant_vector_size": settings.qdrant_vector_size,
+                "indexed_document_count": 0,
+                "indexed_chunk_count": 0,
+            },
+        )
+
+    environment: dict[str, object] = {
+        "embedding_provider": embedding_provider.name,
+        "embedding_model": str(getattr(embedding_provider, "model", settings.embedding_model)),
+        "qdrant_collection": vector_store.collection_name,
+        "qdrant_vector_size": vector_store.vector_size,
+    }
+    embedding_health = embedding_provider.check_health()
+    environment.update(
+        {
+            "embedding_health_available": embedding_health.available,
+            "embedding_health_message": embedding_health.message,
+        }
+    )
+
+    if not embedding_health.available:
+        reason = embedding_health.message
+        environment.update(
+            {
+                "vector_preflight_status": "failed",
+                "vector_preflight_reason": reason,
+                "indexed_document_count": 0,
+                "indexed_chunk_count": 0,
+            }
+        )
+        return UnavailableVectorEvalProvider(keyword_provider, reason, settings), environment
+
+    try:
+        collection = vector_store.ensure_collection()
+        indexing_service = VectorIndexingService(embedding_provider, vector_store)
+        indexing_results = [indexing_service.index_document(document) for document in documents]
+        failed_indexing = [result for result in indexing_results if result.status != "completed"]
+        if failed_indexing:
+            details = "; ".join(result.error or result.reason or result.status for result in failed_indexing)
+            raise RuntimeError(f"Eval vector indexing did not complete. {details}")
+
+        environment.update(
+            {
+                "vector_preflight_status": "completed",
+                "qdrant_collection_exists": collection.exists,
+                "indexed_document_count": len(indexing_results),
+                "indexed_chunk_count": sum(result.indexed_chunk_count for result in indexing_results),
+            }
+        )
+        return VectorRagProvider(keyword_provider, embedding_provider, vector_store), environment
+    except Exception as exc:
+        reason = str(exc)
+        environment.update(
+            {
+                "vector_preflight_status": "failed",
+                "vector_preflight_reason": reason,
+                "indexed_document_count": 0,
+                "indexed_chunk_count": 0,
+            }
+        )
+        return UnavailableVectorEvalProvider(keyword_provider, reason, settings), environment
+
+
+def _managed_eval_cases(items: list[EvalItem], top_k: int) -> list[RetrievalEvalCase]:
+    return [
+        RetrievalEvalCase(
+            id=item.item_id,
+            query=item.query,
+            top_k=top_k,
+            expected_document_filenames=[],
+            expected_chunk_hints=item.expected_chunk_ids,
+            expected_terms=item.expected_terms,
+            tags=item.tags,
+            expected_document_ids=item.expected_document_ids,
+            expected_chunk_ids=item.expected_chunk_ids,
+            notes=item.notes or "",
+        )
+        for item in items
+    ]
+
+
+def _unique_strategies(strategies: list[EvalStrategy]) -> list[EvalStrategy]:
+    cleaned: list[EvalStrategy] = []
+    for strategy in strategies:
+        if strategy not in cleaned:
+            cleaned.append(strategy)
+
+    if not cleaned:
+        return ["keyword", "hybrid_rerank", "vector"]
+
+    return cleaned
+
+
+def _strategy_summary_payload(run: RetrievalEvalRun) -> dict[str, object]:
+    summary = run.summary.to_dict()
+    return {
+        "strategy": run.strategy,
+        "case_count": summary["case_count"],
+        "hit_rate_at_k": summary["hit_rate_at_k"],
+        "mrr_at_k": summary["mrr_at_k"],
+        "recall_at_k": summary["recall_at_k"],
+        "average_latency_ms": summary["average_latency_ms"],
+        "failure_count": summary["failure_count"],
+        "fallback_count": summary["fallback_count"],
+        "trace_metadata_count": summary["trace_metadata_count"],
+        "result_strategy_counts": summary["result_strategy_counts"],
+        "fallback_reasons": summary["fallback_reasons"],
+        "environment": run.environment,
+    }
+
+
+def _case_result_payload(result: RetrievalEvalResult) -> dict[str, object]:
+    return {
+        "case_id": result.case_id,
+        "item_id": result.case_id,
+        "strategy": result.strategy,
+        "query": result.query,
+        "top_k": result.top_k,
+        "hit": result.hit,
+        "first_relevant_rank": result.first_relevant_rank,
+        "matched_expected_terms": result.matched_expected_terms,
+        "error": result.error,
+        "fallback_reasons": result_fallback_reasons(result),
+    }
+
+
+def _rerank_analysis_payload(result: RetrievalEvalResult) -> list[dict[str, object]]:
+    rows = []
+    for chunk in result.retrieved_chunks:
+        metadata = chunk.get("metadata")
+        if not isinstance(metadata, dict):
+            continue
+
+        if not (
+            metadata.get("strategy_label") in {"hybrid_rerank", "vector_rerank"}
+            or metadata.get("rerank_status")
+            or metadata.get("rerank_score")
+        ):
+            continue
+
+        rows.append(
+            {
+                "case_id": result.case_id,
+                "item_id": result.case_id,
+                "strategy": result.strategy,
+                "rank": _optional_int(chunk.get("rank")) or len(rows) + 1,
+                "document_id": str(chunk.get("document_id") or ""),
+                "filename": str(chunk.get("filename") or ""),
+                "chunk_id": str(chunk.get("chunk_id") or ""),
+                "text": str(chunk.get("text") or ""),
+                "pre_rerank_rank": _optional_int(metadata.get("rerank_input_rank"))
+                or _optional_int(metadata.get("merged_rank")),
+                "post_rerank_rank": _optional_int(metadata.get("rerank_rank"))
+                or _optional_int(metadata.get("final_rank")),
+                "pre_rerank_score": _optional_float(metadata.get("pre_rerank_score"))
+                or _optional_float(metadata.get("merged_score")),
+                "rerank_score": _optional_float(metadata.get("rerank_score")),
+                "rerank_status": _optional_string(metadata.get("rerank_status")),
+                "fallback_state": _optional_string(metadata.get("fallback_state")),
+            }
+        )
+
+    return rows
+
+
+def _optional_int(value: object) -> int | None:
+    try:
+        return int(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_float(value: object) -> float | None:
+    try:
+        return float(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_string(value: object) -> str | None:
+    if value is None:
+        return None
+
+    text = str(value).strip()
+    return text or None
+
+
 def default_repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
@@ -931,6 +1266,15 @@ def _recall_at_k(
     if case.expected_terms:
         return len(matched_expected_terms) / len(case.expected_terms)
 
+    if case.expected_chunk_ids:
+        expected_chunk_ids = {chunk_id.casefold() for chunk_id in case.expected_chunk_ids}
+        matched_chunk_ids = {
+            chunk.chunk_id.casefold()
+            for chunk in retrieved_chunks
+            if chunk.chunk_id.casefold() in expected_chunk_ids
+        }
+        return len(matched_chunk_ids) / len(expected_chunk_ids)
+
     matched_hints = {
         hint
         for chunk in retrieved_chunks
@@ -938,6 +1282,15 @@ def _recall_at_k(
     }
     if case.expected_chunk_hints:
         return len(matched_hints) / len(case.expected_chunk_hints)
+
+    if case.expected_document_ids:
+        expected_document_ids = {document_id.casefold() for document_id in case.expected_document_ids}
+        matched_document_ids = {
+            chunk.document_id.casefold()
+            for chunk in retrieved_chunks
+            if chunk.document_id.casefold() in expected_document_ids
+        }
+        return len(matched_document_ids) / len(expected_document_ids)
 
     expected_documents = {filename.casefold() for filename in case.expected_document_filenames}
     matched_documents = {

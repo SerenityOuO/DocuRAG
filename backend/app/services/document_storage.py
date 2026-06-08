@@ -262,6 +262,30 @@ class DocumentStorage:
         self.repository.delete_eval_item(dataset_id, item_id)
         return True
 
+    def save_eval_run(self, eval_run: dict[str, object]) -> dict[str, object]:
+        self.repository.save_eval_run(eval_run)
+        return eval_run
+
+    def list_eval_runs(self, project_ids: frozenset[str] | None = None) -> list[dict[str, object]]:
+        runs = [
+            run
+            for run in self.repository.list_eval_runs()
+            if self._project_visible(_optional_project_id(run.get("project_id")), project_ids)
+        ]
+
+        return sorted(
+            runs,
+            key=lambda run: str(run.get("created_at") or ""),
+            reverse=True,
+        )
+
+    def get_eval_run(self, run_id: str) -> dict[str, object] | None:
+        for run in self.repository.list_eval_runs():
+            if str(run.get("run_id") or "") == run_id:
+                return run
+
+        return None
+
     def list_documents_for_rag(self, project_ids: frozenset[str] | None = None) -> list[DocumentMetadata]:
         documents = self._read_documents()
         documents_changed = False
@@ -1234,3 +1258,11 @@ class DocumentStorage:
         )
         document.processing_jobs.append(job)
         document.latest_job = job
+
+
+def _optional_project_id(value: object) -> str | None:
+    if value is None:
+        return None
+
+    text = str(value).strip()
+    return text or None
