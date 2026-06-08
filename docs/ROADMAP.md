@@ -741,6 +741,12 @@ Expected Outcome：
 - 本 ticket 說明 Phase 43 與既有 Phase 25 / Phase 38 deterministic Agent MVP 的關係：目前可執行路徑仍是受控 read-only allowlisted tools；Phase 43 先補治理資料邊界，不新增 runtime tool execution。
 - Validation 已通過：Phase 43 governance keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: no；版本同步留到 `43-05`。
 
+43-02 Tool Permission Policy Runtime Status：
+
+- 已完成。既有 allowlisted Agent tools 仍只包含 `get_document_fields`、`search_documents` 與 `summarize_invoice_fields`，並維持 read-only tier、Admin / Analyst required roles、project access metadata 與 no-side-effect policy。
+- Runtime trace 已補上 `risk_tier`、`risk_score`、`approval_required`、`approval_state`；run-level trace 會彙總 risk / approval 狀態，Viewer denied path 會在 tool execution 前留下 generic permission trace。
+- Validation 已通過：focused Agent tests `20 passed`；backend full test script `265 passed`（1 pytest cache warning）；Phase 43 permission keyword `rg`；`git diff --check`。Release Impact：Version bump required: no；版本同步留到 `43-05`。
+
 ### Phase 44 - Document Intelligence QA / Human Review Loop
 
 Target version：`v0.44.0`

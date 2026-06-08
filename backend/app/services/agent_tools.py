@@ -19,6 +19,7 @@ INVOICE_FIELD_NAMES = [
 ]
 
 ToolTier = Literal["read-only", "write", "admin", "destructive"]
+RiskTier = Literal["low", "medium", "high", "prohibited"]
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,10 @@ class AgentToolPolicy:
     required_roles: tuple[str, ...]
     permission_requirement: str
     side_effect_policy: str
+    risk_tier: RiskTier = "low"
+    risk_score: int = 10
+    approval_required: bool = False
+    approval_state: str = "not_required"
     human_confirmation_required: str = "not_required"
     human_confirmation_status: str = "not_required"
     project_access_required: bool = True
@@ -92,7 +97,7 @@ def evaluate_agent_tool_permission(
     policy = AGENT_TOOL_POLICIES[tool_name]
     project_access = "checked" if project_id else "not_required"
 
-    if policy.tier == "destructive":
+    if policy.tier == "destructive" or policy.risk_tier == "prohibited":
         return AgentToolPermissionDecision(
             tool_name=tool_name,
             policy=policy,
@@ -132,6 +137,10 @@ def tool_policy_metadata(policy: AgentToolPolicy) -> dict[str, str]:
         "required_roles": ",".join(policy.required_roles),
         "permission_requirement": policy.permission_requirement,
         "side_effect_policy": policy.side_effect_policy,
+        "risk_tier": policy.risk_tier,
+        "risk_score": str(policy.risk_score),
+        "approval_required": "true" if policy.approval_required else "false",
+        "approval_state": policy.approval_state,
         "human_confirmation_required": policy.human_confirmation_required,
         "human_confirmation_status": policy.human_confirmation_status,
         "destructive": "true" if policy.tier == "destructive" else "false",

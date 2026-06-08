@@ -33,9 +33,9 @@
 
 ## Acceptance Criteria
 
-- [ ] Agent tool calls 依 role / project access / tool tier 做 permission check。
-- [ ] Denied tool call 留下 generic trace，不暴露 unauthorized resource details。
-- [ ] Backend tests 覆蓋 Viewer / Analyst / Admin tool permission。
+- [x] Agent tool calls 依 role / project access / tool tier 做 permission check。
+- [x] Denied tool call 留下 generic trace，不暴露 unauthorized resource details。
+- [x] Backend tests 覆蓋 Viewer / Analyst / Admin tool permission。
 
 ## Validation
 
@@ -43,3 +43,10 @@
 - Backend full test script。
 - `rg -n "tool tier|permission|project access|approval_required|denied|destructive" backend docs README_DEV.md TODO.md tasks/phase-43-agentops-governance-secure-runtime`
 - `git diff --check`
+
+## Completion Notes
+
+- `backend/app/services/agent_tools.py` 已為既有 read-only Agent tools 補上 `risk_tier`、`risk_score`、`approval_required` 與 `approval_state` policy metadata；不新增任何新 tool。
+- `backend/app/services/agent.py` 已在 Agent run-level trace 彙總 risk / approval 狀態；Viewer forbidden path 仍在 tool execution 前停止並留下 generic permission trace。
+- `backend/tests/test_agent.py` 與 `backend/tests/test_agent_tools.py` 已補 Viewer / Analyst / Admin permission behavior 與 risk / approval metadata assertions。
+- 文件已同步 `docs/architecture.md`、`docs/api.md`、`README_DEV.md`、`TODO.md` 與 `docs/ROADMAP.md`。本 ticket 不 bump version，版本同步留到 `43-05`。

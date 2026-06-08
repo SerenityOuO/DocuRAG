@@ -123,6 +123,10 @@ def test_agent_run_returns_plan_tool_calls_answer_and_citations(client: TestClie
     assert body["trace"]["tool_policy"] == "allowlisted_read_only"
     assert body["trace"]["permission_decision"] == "allowed"
     assert body["trace"]["permission_checked_tool_count"] == "3"
+    assert body["trace"]["risk_tiers"] == "low"
+    assert body["trace"]["risk_scores"] == "10"
+    assert body["trace"]["approval_required"] == "false"
+    assert body["trace"]["approval_state"] == "not_required"
     assert body["trace"]["tool_count"] == "3"
     assert body["trace"]["fallback_count"] == "2"
     for tool_call in body["tool_calls"]:
@@ -131,6 +135,10 @@ def test_agent_run_returns_plan_tool_calls_answer_and_citations(client: TestClie
         assert metadata["permission_decision"] == "allowed"
         assert metadata["required_roles"] == "admin,analyst"
         assert metadata["side_effect_policy"] == "no_side_effects"
+        assert metadata["risk_tier"] == "low"
+        assert metadata["risk_score"] == "10"
+        assert metadata["approval_required"] == "false"
+        assert metadata["approval_state"] == "not_required"
         assert metadata["human_confirmation_required"] == "not_required"
     assert body["tool_calls"][0]["observation"]["fallback_reason"] == "unsupported_file"
     assert body["tool_calls"][2]["observation"]["fallback_reason"] == "unsupported_file"
@@ -258,6 +266,9 @@ def test_agent_run_blocks_forbidden_tool_execution_for_viewer_role(tmp_path: Pat
     assert result.trace["permission_decision"] == "forbidden"
     assert result.trace["permission_denied_tool"] == "search_documents"
     assert result.trace["permission_fallback_reason"] == "tool_permission_forbidden"
+    assert result.trace["risk_tiers"] == "low"
+    assert result.trace["approval_required"] == "false"
+    assert result.trace["approval_state"] == "not_required"
     assert result.trace["role"] == "viewer"
 
 

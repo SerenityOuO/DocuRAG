@@ -1242,6 +1242,29 @@ Agent replay is an inspection / eval artifact, not a hidden re-execution path. R
 
 Agent run trace must retain planning, tool selection, permission decision, approval state, observation, reflection / fallback, citations and final answer source. If a trace lacks required governance fields, Agent eval must mark the replay / audit evidence incomplete rather than claiming governance coverage.
 
+### 43-02 Tool Permission Policy Runtime
+
+`43-02` keeps the Agent tool allowlist unchanged: `get_document_fields`, `search_documents` and `summarize_invoice_fields` are still read-only, project-scoped, no-side-effect tools for Admin / Analyst roles. It adds governance metadata to the existing policy runtime; it does not add write, admin or destructive tool execution.
+
+Tool-call `trace_metadata` now includes:
+
+- `tool_tier`
+- `required_roles`
+- `permission_requirement`
+- `permission_decision`
+- `permission_reason`
+- `project_access`
+- `side_effect_policy`
+- `risk_tier`
+- `risk_score`
+- `approval_required`
+- `approval_state`
+- `human_confirmation_required`
+- `human_confirmation_status`
+- `destructive`
+
+Run-level Agent trace now also includes `risk_tiers`, `risk_scores`, `approval_required` and `approval_state`. Viewer role requests are denied before tool execution with generic `tool_permission_forbidden` metadata. The response must not expose unauthorized target document ids, target project ids or cross-project resource details.
+
 ### Forbidden Boundary
 
 Phase 43 keeps the same hard stop as Phase 38 for arbitrary SQL, shell command, filesystem command, arbitrary network tool, delete, drop table, destructive reindex, credential mutation, production database mutation and any unauthorized destructive tool. `43-01` documents this boundary only; later Phase 43 tickets must stay inside it.

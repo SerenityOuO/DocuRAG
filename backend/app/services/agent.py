@@ -337,6 +337,16 @@ def _permission_trace(decisions: list[AgentToolPermissionDecision]) -> dict[str,
         "side_effect_policy": ",".join(
             sorted({permission.policy.side_effect_policy for permission in decisions})
         ),
+        "risk_tiers": ",".join(sorted({permission.policy.risk_tier for permission in decisions})),
+        "risk_scores": ",".join(
+            sorted({str(permission.policy.risk_score) for permission in decisions})
+        ),
+        "approval_required": ",".join(
+            sorted({"true" if permission.policy.approval_required else "false" for permission in decisions})
+        ),
+        "approval_state": ",".join(
+            sorted({permission.policy.approval_state for permission in decisions})
+        ),
         "human_confirmation_required": ",".join(
             sorted({permission.policy.human_confirmation_required for permission in decisions})
         ),

@@ -2,6 +2,8 @@ from datetime import UTC, datetime
 import json
 from pathlib import Path
 
+import pytest
+
 from app.schemas.agent import AgentToolStatus
 from app.schemas.documents import (
     DocumentChunk,
@@ -14,7 +16,7 @@ from app.schemas.documents import (
     ParserStatus,
 )
 from app.schemas.rag import RagCitation
-from app.services.agent_tools import AgentToolService
+from app.services.agent_tools import AgentToolService, evaluate_agent_tool_permission
 from app.services.document_storage import DocumentStorage
 
 
@@ -97,8 +99,52 @@ def test_get_document_fields_returns_saved_parser_result(tmp_path: Path) -> None
     assert result.trace_metadata["required_roles"] == "admin,analyst"
     assert result.trace_metadata["permission_requirement"] == "agent_run_tool_execution"
     assert result.trace_metadata["side_effect_policy"] == "no_side_effects"
+    assert result.trace_metadata["risk_tier"] == "low"
+    assert result.trace_metadata["risk_score"] == "10"
+    assert result.trace_metadata["approval_required"] == "false"
+    assert result.trace_metadata["approval_state"] == "not_required"
     assert result.trace_metadata["human_confirmation_required"] == "not_required"
     assert result.trace_metadata["tool_source"] == "local_metadata"
+
+
+@pytest.mark.parametrize("role", ["admin", "analyst"])
+def test_tool_permission_allows_admin_and_analyst_with_project_trace(role: str) -> None:
+    decision = evaluate_agent_tool_permission(
+        "search_documents",
+        role=role,
+        project_id="project-a",
+    )
+
+    metadata = decision.trace_metadata()
+
+    assert decision.allowed is True
+    assert metadata["permission_decision"] == "allowed"
+    assert metadata["permission_reason"] == "role_allowed"
+    assert metadata["tool_tier"] == "read-only"
+    assert metadata["project_access"] == "checked"
+    assert metadata["risk_tier"] == "low"
+    assert metadata["approval_required"] == "false"
+    assert metadata["approval_state"] == "not_required"
+
+
+def test_tool_permission_blocks_viewer_with_generic_trace() -> None:
+    decision = evaluate_agent_tool_permission(
+        "search_documents",
+        role="viewer",
+        project_id="project-a",
+    )
+
+    metadata = decision.trace_metadata()
+
+    assert decision.allowed is False
+    assert metadata["permission_decision"] == "forbidden"
+    assert metadata["permission_reason"] == "tool_permission_forbidden"
+    assert metadata["tool_tier"] == "read-only"
+    assert metadata["project_access"] == "checked"
+    assert metadata["risk_tier"] == "low"
+    assert metadata["approval_required"] == "false"
+    assert "target_document_id" not in metadata
+    assert "target_project_id" not in metadata
 
 
 def test_get_document_fields_returns_failure_when_parser_result_is_missing(tmp_path: Path) -> None:

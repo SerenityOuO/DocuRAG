@@ -332,6 +332,14 @@ Trace completeness boundary：
 - Agent run trace 必須保留 planning、tool selection、permission / approval decision、observation、reflection / fallback、citation evidence 與 final answer source。
 - Trace 欄位不足時，Agent eval 只能標示 evidence incomplete 或 replay not available，不得假裝 governance evidence 完整。
 
+43-02 Tool permission policy runtime：
+
+- 既有 allowlisted Agent tools 仍只有 `get_document_fields`、`search_documents` 與 `summarize_invoice_fields`，全部維持 `read-only` tier、`no_side_effects` policy 與 Admin / Analyst required roles。
+- Runtime policy metadata 現在會輸出 `risk_tier=low`、`risk_score=10`、`approval_required=false` 與 `approval_state=not_required`；這是治理 trace metadata，不新增 approval workflow。
+- Agent run-level trace 會彙總 `risk_tiers`、`risk_scores`、`approval_required` 與 `approval_state`，讓 Viewer blocked path 即使沒有 tool call 也能留下 generic permission trace。
+- Viewer role 會在 tool execution 前被擋下，final answer / trace 只保留 generic `tool_permission_forbidden` 與 denied tool name；不暴露 cross-project target document 或 unauthorized resource details。
+- 本 runtime slice 不新增 write / admin / destructive tool，不新增任意 SQL、shell、filesystem command、external side-effect tool、production IAM、SSO、OAuth、MFA 或外部 approval service。
+
 ## Phase 26 VLM Parser Provider Boundary
 
 Phase 26 的目標是把 parser default 切成 VLM-first demo path：`vlm_invoice` 先從既有 upload metadata 解析 demo-safe image input，再呼叫可設定的 local VLM provider；provider unavailable、timeout、unsupported file、invalid response、missing fields 或 confidence too low 時，才 fallback 到 `deterministic_invoice`。v0.27.1 起 VLM request 也帶 compact OCR context，VLM 欄位結果會嘗試對回 OCR line / bbox。這不改 Phase 25 Agent planner / tool allowlist；Agent 仍只透過 `get_document_fields` 讀取保存後的 parser result。
