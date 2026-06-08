@@ -827,7 +827,7 @@ Tickets：
 - [x] `tasks/phase-45-production-readiness-portfolio-pack/45-01-jd-evidence-matrix.md`
 - [x] `tasks/phase-45-production-readiness-portfolio-pack/45-02-system-design-walkthrough.md`
 - [x] `tasks/phase-45-production-readiness-portfolio-pack/45-03-demo-scenario-pack.md`
-- `tasks/phase-45-production-readiness-portfolio-pack/45-04-risk-boundary-and-tradeoff-report.md`
+- [x] `tasks/phase-45-production-readiness-portfolio-pack/45-04-risk-boundary-and-tradeoff-report.md`
 - `tasks/phase-45-production-readiness-portfolio-pack/45-05-phase-45-final-release-sync.md`
 
 Expected Outcome：
@@ -862,6 +862,12 @@ Phase 41-45 Validation Direction：
 - 已完成。新增 `docs/demo-scenario-pack.md`，把 final interview demo 拆成 RAG quality、Document Intelligence QA、AgentOps governance 三條主線，並補 Inference Gateway / capacity planning、Observability evidence、K8s / deployment boundary optional path。
 - 每條 path 都列出前置條件、操作步驟、預期畫面 / 輸出與 fallback 解讀，讓 unavailable optional runtime 可以被正確說成 skip-safe / fallback，而不是 demo failure 或 production success。
 - Validation 已通過：demo scenario keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: no；版本同步留到 `45-05`。本 ticket 不新增 demo runtime、sample secrets、外部服務帳號、paid API、optional runtime requirement 或影片媒體。
+
+45-04 Risk Boundary and Tradeoff Report Status：
+
+- 已完成。新增 `docs/risk-boundary-and-tradeoff-report.md`，覆蓋 data isolation、production DB migration、worker durability、observability、model latency、OCR / VLM accuracy 與 Agent safety。
+- 每個 risk boundary 都列出目前 mitigation、remaining gap、next step / future backlog，並補充面試時可直接回答的 tradeoff：為什麼保留 fallback、為什麼不提前導入 production service、為什麼 local JSON / sync API 仍是 demo default。
+- Validation 已通過：risk boundary keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: no；版本同步留到 `45-05`。本 ticket 不新增 runtime safety control、production incident workflow、SLO、pager、external vendor integration 或功能行為變更，也不把 future hardening 寫成已完成。
 
 ## v0.2.0 Demo UI Milestone
 

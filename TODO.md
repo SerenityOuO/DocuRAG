@@ -572,11 +572,12 @@ Phase 45 `v0.45.0` - Production readiness / interview portfolio pack：
 - [x] `tasks/phase-45-production-readiness-portfolio-pack/45-01-jd-evidence-matrix.md`: 新增 `docs/jd-evidence-matrix.md`，逐列對照 JD keyword、project evidence、demo command、file path、status、面試說法、honesty boundary、next action 與 gap summary。不 bump version。
 - [x] `tasks/phase-45-production-readiness-portfolio-pack/45-02-system-design-walkthrough.md`: 新增 `docs/system-design-walkthrough.md`，提供 10 分鐘 talk track、白板式資料流、failure / fallback 解讀與主要 tradeoffs。不 bump version。
 - [x] `tasks/phase-45-production-readiness-portfolio-pack/45-03-demo-scenario-pack.md`: 新增 `docs/demo-scenario-pack.md`，整理 RAG quality、Document Intelligence QA、AgentOps governance 三條主線，以及 Inference Gateway / Observability / K8s optional path。不 bump version。
-- [ ] `tasks/phase-45-production-readiness-portfolio-pack/45-04-risk-boundary-and-tradeoff-report.md`
+- [x] `tasks/phase-45-production-readiness-portfolio-pack/45-04-risk-boundary-and-tradeoff-report.md`: 新增 `docs/risk-boundary-and-tradeoff-report.md`，整理 data isolation、DB migration、worker durability、observability、latency、OCR / VLM accuracy 與 Agent safety 的 mitigation、缺口與下一步。不 bump version。
 - [ ] `tasks/phase-45-production-readiness-portfolio-pack/45-05-phase-45-final-release-sync.md`
 - `45-01` validation 已通過：JD evidence keyword `rg` 與 `git diff --check`。本 ticket 不新增 runtime、dependency、測試程式、截圖、demo media 或 version bump，也不把 future backlog 寫成 completed。
 - `45-02` validation 已通過：system design keyword `rg` 與 `git diff --check`。本 ticket 不新增架構圖生成工具、runtime、infra config、deployment service 或 public README 長篇 release log，也不把 future backlog 寫成 completed。
 - `45-03` validation 已通過：demo scenario keyword `rg` 與 `git diff --check`。本 ticket 不新增 demo runtime、sample secrets、外部服務帳號、paid API、optional runtime requirement、影片媒體或 version bump。
+- `45-04` validation 已通過：risk boundary keyword `rg` 與 `git diff --check`。本 ticket 不新增 runtime safety control、production incident workflow、SLO、pager、external vendor integration、功能行為變更或 version bump，也不把 future hardening 寫成已完成。
 
 Phase 41-45 guardrails：
 

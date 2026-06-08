@@ -32,9 +32,15 @@
 
 ## Acceptance Criteria
 
-- [ ] Report 覆蓋資料隔離、DB migration、worker durability、observability、latency、OCR / VLM accuracy 與 Agent safety。
-- [ ] 每個風險都有 mitigation、剩餘缺口與下一步。
-- [ ] 文件可作為面試時回答 tradeoff 的材料。
+- [x] Report 覆蓋資料隔離、DB migration、worker durability、observability、latency、OCR / VLM accuracy 與 Agent safety。
+- [x] 每個風險都有 mitigation、剩餘缺口與下一步。
+- [x] 文件可作為面試時回答 tradeoff 的材料。
+
+## Completion Notes
+
+- 新增 `docs/risk-boundary-and-tradeoff-report.md`，以 risk matrix 整理 data isolation、production DB migration、worker durability、observability、model latency、OCR / VLM accuracy 與 Agent safety。
+- 每個 risk boundary 都列出 current status、mitigation、remaining gap 與 next step / future backlog，並補充面試回答用 tradeoff。
+- 文件與 JD evidence matrix、system design walkthrough、demo scenario pack 互相引用；未新增 runtime safety control、production incident workflow、SLO、pager、external vendor integration 或功能行為變更。
 
 ## Validation
 
