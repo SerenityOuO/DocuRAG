@@ -355,6 +355,41 @@ Trace completeness boundary：
 - Replay eval dimensions 固定為 tool correctness、permission compliance、evidence coverage、fallback reason 與 groundedness notes；groundedness 是 citation / observation coverage note，不是 LLM-as-judge。
 - `sample-data/eval/agent-replay-report.json` 是 demo-safe evidence report，可用來檢查 tool selection、permission guard、observation coverage、fallback reason 與 final answer 是否保留可追溯證據。
 
+## Phase 44 Document Intelligence QA Contract
+
+`44-01` 是 Document Intelligence QA / human review loop 的 contract ticket，只定義 OCR / VLM parser 結果如何被檢查、修正與量化，不新增 runtime、不修改 parser / OCR default behavior，也不新增 full annotation platform、production workflow、多人審核權限或外部 labeling tool。
+
+Relationship to existing OCR / VLM evidence alignment：
+
+- Phase 24 / 26 / 27.1 已讓 `ExtractedField` 保留 `confidence`、`source_text`、`source_page`、`source_bbox`、`parser_source` 與 `fallback_reason`；Phase 44 在這些欄位上定義 QA / review 語意，不新增平行 parser schema。
+- Phase 34 scanned PDF OCR blocks 已保留 page、bbox 與 confidence；Phase 44 可以引用這些 evidence，但不得假造 layout analysis、table reconstruction、deskew result 或 production OCR accuracy score。
+- Agent `get_document_fields` 仍只讀已保存 parser result；Phase 44 不讓 Agent 直接修改欄位、不新增任意 tool、不改 RAG ranking 或 VLM parser prompt。
+
+Field QA metadata boundary：
+
+| Field | Meaning |
+|---|---|
+| `field_confidence` | 欄位可信度，沿用 parser / VLM / OCR evidence 的 `0..1` 分數；未知時為 `null`，不可硬填高分。 |
+| `evidence_source` | 欄位證據來源，例如 `ocr_line`、`vlm_ocr_match`、`vlm_unmatched`、`manual_correction` 或 `unavailable`。 |
+| `source_page` / `source_bbox` | 來自 OCR line、page OCR block 或既有 VLM evidence alignment；沒有來源時保持 `null`。 |
+| `review_status` | human review 狀態，最小集合為 `unreviewed`、`needs_review`、`confirmed`、`corrected`、`rejected`。 |
+| `correction_version` | 人工修正版本，從原始 parser result 的 `0` 開始；每次人工修正遞增，保留 original value 供 eval 比較。 |
+
+Parser field accuracy metrics：
+
+- `field_accuracy` 用 golden labels 對比 parser output，可用 exact / normalized match 計算；此指標不是 LLM-as-judge。
+- `missing_field_count` 統計 golden label 有值但 parser 未產生可用值的欄位。
+- `wrong_value_count` 統計 parser 值存在但與 golden label 不一致的欄位。
+- `evidence_mismatch_count` 統計欄位值雖可能正確，但 `source_text`、`source_page` 或 `source_bbox` 無法對回 golden evidence 的情況。
+- 指標需可回溯到 document id、field name、parser source、correction version 與 golden label version；不得把 eval 結果寫成 production OCR guarantee。
+
+Human correction / golden labels boundary：
+
+- Human correction 是 demo-safe review artifact：保存欄位名稱、原始 parser value、corrected value、review status、correction version、review note 與 evidence reference。
+- Golden labels 是 parser / VLM eval 的輸入資料，不是 model training dataset、production annotation task queue 或多人審批流程。
+- Golden labels 至少保留 `document_id`、`field_name`、`expected_value`、可選 normalized value、evidence source、source page / bbox、correction version、label version 與 created timestamp。
+- Phase 44 不新增 production labeling UI、正式 reviewer RBAC、外部 labeling vendor、batch annotation workflow、layout analysis、table reconstruction 或 production OCR tuning。
+
 ## Phase 26 VLM Parser Provider Boundary
 
 Phase 26 的目標是把 parser default 切成 VLM-first demo path：`vlm_invoice` 先從既有 upload metadata 解析 demo-safe image input，再呼叫可設定的 local VLM provider；provider unavailable、timeout、unsupported file、invalid response、missing fields 或 confidence too low 時，才 fallback 到 `deterministic_invoice`。v0.27.1 起 VLM request 也帶 compact OCR context，VLM 欄位結果會嘗試對回 OCR line / bbox。這不改 Phase 25 Agent planner / tool allowlist；Agent 仍只透過 `get_document_fields` 讀取保存後的 parser result。

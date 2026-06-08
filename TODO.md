@@ -557,11 +557,12 @@ Phase 43 `v0.43.0` - AgentOps governance / secure tool runtime：
 - `43-05` validation 已通過：backend full test `269 passed, 1 warning`（pytest cache permission warning）、frontend build、Agent replay smoke、Phase 43 keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: yes，Phase 43 已完成 `v0.43.0` AgentOps governance / secure tool runtime release；不新增 production autonomous Agent、任意 SQL、shell、filesystem command、destructive tool、external side-effect tool、production approval workflow 或 production audit storage。
 
 Phase 44 `v0.44.0` - Document Intelligence QA / human review loop：
-- [ ] `tasks/phase-44-document-intelligence-qa-human-review/44-01-document-intelligence-qa-contract.md`
+- [x] `tasks/phase-44-document-intelligence-qa-human-review/44-01-document-intelligence-qa-contract.md`: 完成 Phase 44 Document Intelligence QA contract；文件固定 field confidence、evidence source、source page / bbox、review status、correction version、human correction、golden labels 與 parser field accuracy 指標邊界。不 bump version。
 - [ ] `tasks/phase-44-document-intelligence-qa-human-review/44-02-field-confidence-and-evidence-view.md`
 - [ ] `tasks/phase-44-document-intelligence-qa-human-review/44-03-human-correction-and-golden-labels.md`
 - [ ] `tasks/phase-44-document-intelligence-qa-human-review/44-04-parser-field-accuracy-eval.md`
 - [ ] `tasks/phase-44-document-intelligence-qa-human-review/44-05-phase-44-release-sync.md`
+- `44-01` validation 已通過：Phase 44 keyword `rg` 與 `git diff --check`。本 ticket 不新增 full annotation platform、production workflow、多人審核權限、外部 labeling tool、layout analysis、table reconstruction、deskew deep tuning、production OCR accuracy tuning，也不修改 parser / OCR default behavior。
 
 Phase 45 `v0.45.0` - Production readiness / interview portfolio pack：
 - [ ] `tasks/phase-45-production-readiness-portfolio-pack/45-01-jd-evidence-matrix.md`

@@ -773,7 +773,7 @@ Goal：補強 OCR / VLM 欄位抽取可信度，讓文件理解結果可檢查�
 
 Tickets：
 
-- `tasks/phase-44-document-intelligence-qa-human-review/44-01-document-intelligence-qa-contract.md`
+- [x] `tasks/phase-44-document-intelligence-qa-human-review/44-01-document-intelligence-qa-contract.md`
 - `tasks/phase-44-document-intelligence-qa-human-review/44-02-field-confidence-and-evidence-view.md`
 - `tasks/phase-44-document-intelligence-qa-human-review/44-03-human-correction-and-golden-labels.md`
 - `tasks/phase-44-document-intelligence-qa-human-review/44-04-parser-field-accuracy-eval.md`
@@ -785,6 +785,12 @@ Expected Outcome：
 - Human correction / golden labels 可保存 corrected value、reviewer、reason、version 與 timestamp。
 - Parser field accuracy eval 可量化 field accuracy、missing field、wrong value 與 evidence mismatch。
 - 不新增 full annotation platform、model training、layout analysis 或 production OCR accuracy tuning。
+
+44-01 Document Intelligence QA Contract Status：
+
+- 已完成。`docs/architecture.md` 與 `docs/api.md` 已固定 Phase 44 Document Intelligence QA / human review loop contract，涵蓋 field confidence、evidence source、source page / bbox、review status、correction version、human correction、golden labels 與 parser field accuracy 指標。
+- 本 ticket 說明 Phase 44 與既有 OCR / VLM evidence alignment 的關係：Phase 44 在既有 `ExtractedField` / `ParserResult` evidence 上定義 QA / review 語意，不新增平行 parser schema，也不修改 OCR / parser default behavior。
+- Validation 已通過：Phase 44 keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: no；版本同步留到 `44-05`。本 ticket 不新增 full annotation platform、production workflow、多人審核權限、外部 labeling tool、layout analysis、table reconstruction、deskew deep tuning 或 production OCR accuracy tuning。
 
 ### Phase 45 - Production Readiness / Interview Portfolio Pack
 

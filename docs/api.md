@@ -1298,6 +1298,77 @@ Report dimensions are `tool correctness`, `permission compliance`, `evidence cov
 
 Phase 43 keeps the same hard stop as Phase 38 for arbitrary SQL, shell command, filesystem command, arbitrary network tool, delete, drop table, destructive reindex, credential mutation, production database mutation and any unauthorized destructive tool. `43-01` documents this boundary only; later Phase 43 tickets must stay inside it.
 
+## Phase 44 Document Intelligence QA Contract
+
+`44-01` is a contract-only ticket for Document Intelligence QA / human review loop. It defines how OCR / VLM parser fields can carry confidence, evidence, review status, correction version and eval metrics. It does not add endpoints, change `POST /documents/{document_id}/parse`, change OCR provider behavior, add a production annotation platform or create a model training dataset.
+
+### Field QA Metadata
+
+Future field QA responses or artifacts should preserve the existing `ExtractedField` shape and add review metadata without replacing the parser output:
+
+```json
+{
+  "field_name": "invoice_number",
+  "parser_value": "INV-2026-001",
+  "corrected_value": null,
+  "field_confidence": 0.86,
+  "evidence_source": "vlm_ocr_match",
+  "source_text": "Invoice No: INV-2026-001",
+  "source_page": 1,
+  "source_bbox": {
+    "x_min": 10,
+    "y_min": 20,
+    "x_max": 260,
+    "y_max": 44
+  },
+  "review_status": "unreviewed",
+  "correction_version": 0
+}
+```
+
+Field metadata rules:
+
+- `field_confidence` is parser / VLM / OCR evidence confidence, not ground truth. Unknown confidence remains `null`.
+- `evidence_source` should be one of `ocr_line`, `vlm_ocr_match`, `vlm_unmatched`, `manual_correction` or `unavailable`.
+- `source_page` and `source_bbox` must come from OCR blocks, OCR / VLM evidence alignment or a human correction evidence reference. Missing evidence remains `null`.
+- `review_status` uses `unreviewed`, `needs_review`, `confirmed`, `corrected` or `rejected`.
+- `correction_version` starts at `0` for the original parser result and increments only when a human correction artifact changes a field.
+
+### Human Correction and Golden Labels
+
+Human correction artifacts should be project-scoped and demo-safe. A correction records the original parser value, corrected value, review status, correction version, reviewer note and evidence reference. It must not silently overwrite the original parser output used for trace comparison.
+
+Golden labels are eval artifacts derived from reviewed corrections:
+
+```json
+{
+  "label_version": "golden-labels-v1",
+  "document_id": "doc_123",
+  "field_name": "total_amount",
+  "expected_value": "1248.50",
+  "normalized_expected_value": 1248.5,
+  "evidence_source": "manual_correction",
+  "source_page": 1,
+  "source_bbox": null,
+  "correction_version": 2
+}
+```
+
+Golden labels feed parser / VLM eval only. They are not a production workflow queue, external labeling tool integration, model training dataset, full annotation platform or multi-reviewer approval system.
+
+### Parser Field Accuracy Metrics
+
+Parser field accuracy eval should compare parser output to golden labels and report:
+
+| Metric | Meaning |
+|---|---|
+| `field_accuracy` | Matched fields divided by comparable golden label fields, with exact or normalized comparison recorded. |
+| `missing_field_count` | Golden label has a value but parser output is missing or empty. |
+| `wrong_value_count` | Parser output exists but does not match the golden label. |
+| `evidence_mismatch_count` | Parser value may match, but evidence source / page / bbox does not match expected evidence. |
+
+This contract does not implement layout analysis, table reconstruction, deskew deep tuning, production OCR accuracy tuning, RAG ranking changes, Agent behavior changes or inference provider changes.
+
 ## Phase 26 VLM Parser Provider Contract Draft
 
 Phase 26 將 parser default 切成 VLM-first provider spike：`POST /documents/{document_id}/parse` 預設先嘗試 `vlm_invoice`，只有 VLM provider unavailable、timeout、unsupported file、invalid JSON、missing required fields 或 confidence too low 時，才 fallback 到 Phase 24 的 `deterministic_invoice`。這個 default-on 只代表 demo parser path 預設 VLM-first，不代表 production VLM parser、OpenAI SDK、streaming、function calling、PDF rendering、多頁 parser pipeline、worker、DB、RBAC 或 autonomous Agent。
