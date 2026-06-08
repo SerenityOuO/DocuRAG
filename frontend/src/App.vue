@@ -585,11 +585,11 @@ function chunkReadiness(document: DocumentMetadata): string {
 function documentSourceLabel(document: DocumentMetadata): string {
   const sourceType = document.chunks[0]?.source_type;
   if (sourceType === "text_upload") {
-    return "直接文字匯入";
+    return "直接文字";
   }
 
   if (sourceType === "pdf_text") {
-    return "text-native PDF";
+    return "PDF 文字";
   }
 
   if (sourceType) {
@@ -609,10 +609,33 @@ function documentSourceLabel(document: DocumentMetadata): string {
   }
 
   if (document.file_type === "pdf") {
-    return "PDF 文字待抽取";
+    return "PDF 待處理";
   }
 
   return "圖片 OCR";
+}
+
+function documentDisplayName(document: DocumentMetadata): string {
+  const filename = document.filename.trim();
+  const fileType = document.file_type.trim();
+
+  if (filename && filename !== fileType) {
+    return filename;
+  }
+
+  const storedPrefix = `${document.document_id}-`;
+  if (document.stored_filename.startsWith(storedPrefix)) {
+    const storedName = document.stored_filename.slice(storedPrefix.length).trim();
+    if (storedName && storedName !== fileType) {
+      return storedName;
+    }
+  }
+
+  if (filename) {
+    return fileType ? `未命名 ${fileType.toUpperCase()} 文件` : filename;
+  }
+
+  return "未命名文件";
 }
 
 function documentStatusTone(status: string): string {
@@ -1627,7 +1650,7 @@ async function submitFieldCorrection(document: DocumentMetadata, fieldName: Invo
   if (!value) {
     correctionErrors.value = {
       ...correctionErrors.value,
-      [key]: "請輸入 corrected value。",
+      [key]: "請輸入修正後欄位值。",
     };
     return;
   }
@@ -2048,10 +2071,10 @@ onMounted(async () => {
                 :disabled="!canUseIngestion || goldenLabelsState === 'loading'"
                 @click="submitGoldenLabelsExport"
               >
-                {{ goldenLabelsState === "loading" ? "匯出中..." : "匯出 golden labels" }}
+                {{ goldenLabelsState === "loading" ? "匯出中..." : "匯出標準答案" }}
               </button>
               <span v-if="goldenLabelsExport" class="status-pill status-success">
-                {{ goldenLabelsExport.labels.length }} labels
+                {{ goldenLabelsExport.labels.length }} 筆標準答案
               </span>
               <button type="button" class="button secondary-button compact-button" @click="refreshDocuments">
                 重新整理
@@ -2067,7 +2090,7 @@ onMounted(async () => {
             <ul v-else class="document-status-list">
               <li v-for="document in latestDocuments" :key="document.document_id">
                 <div>
-                  <strong>{{ document.filename }}</strong>
+                  <strong>{{ documentDisplayName(document) }}</strong>
                   <small>{{ document.document_id }}</small>
                 </div>
                 <div class="document-status-row">
@@ -2075,7 +2098,7 @@ onMounted(async () => {
                     文件 {{ statusLabel(document.status) }}
                   </span>
                   <span class="status-pill status-ready">
-                    {{ documentSourceLabel(document) }}
+                    來源：{{ documentSourceLabel(document) }}
                   </span>
                   <span class="status-pill" :class="documentStatusTone(document.processing.ocr)">
                     OCR {{ statusLabel(document.processing.ocr) }}
@@ -2146,13 +2169,13 @@ onMounted(async () => {
                         </div>
                       </dl>
                       <p v-if="latestFieldCorrection(document, field[0])" class="field-correction-latest">
-                        <strong>golden label v{{ latestFieldCorrection(document, field[0])?.version }}</strong>
+                        <strong>標準答案 v{{ latestFieldCorrection(document, field[0])?.version }}</strong>
                         <span>{{ formatCorrectionValue(latestFieldCorrection(document, field[0])?.corrected_value ?? null) }}</span>
-                        <small>reviewer: {{ latestFieldCorrection(document, field[0])?.reviewer }}</small>
+                        <small>審核者：{{ latestFieldCorrection(document, field[0])?.reviewer }}</small>
                       </p>
                       <div v-if="canUseIngestion" class="field-correction-form">
                         <label>
-                          <span>corrected value</span>
+                          <span>修正後欄位值</span>
                           <input
                             type="text"
                             :value="correctionDraftValue(document.document_id, field[0])"
@@ -2160,7 +2183,7 @@ onMounted(async () => {
                           />
                         </label>
                         <label>
-                          <span>reviewer reason</span>
+                          <span>修正原因</span>
                           <textarea
                             rows="2"
                             :value="correctionDraftReason(document.document_id, field[0])"
@@ -2176,7 +2199,7 @@ onMounted(async () => {
                           {{
                             correctionStates[correctionStateKey(document.document_id, field[0])] === "loading"
                               ? "保存中..."
-                              : "保存 golden label"
+                              : "保存標準答案"
                           }}
                         </button>
                         <p

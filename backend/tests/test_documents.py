@@ -2030,3 +2030,16 @@ def test_unsafe_filename_cannot_escape_upload_directory(
     assert upload_path.is_file()
     assert upload_path.relative_to(upload_root)
     assert not (tmp_path / "outside").exists()
+
+
+def test_unicode_filename_is_preserved_for_display(client: TestClient) -> None:
+    response = client.post(
+        "/documents/upload",
+        files={"file": ("周峻緯履歷.pdf", b"%PDF-1.4\n%%EOF", "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["filename"] == "周峻緯履歷.pdf"
+    assert body["file_type"] == "pdf"

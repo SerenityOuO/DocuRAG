@@ -590,6 +590,10 @@ Phase 41-45 guardrails：
 - Phase 45 聚焦 JD evidence matrix、system design walkthrough、demo scenario pack 與 risk / tradeoff report，不新增新的 production runtime。
 - Phase 45 已完成 `v0.45.0` release sync；後續若有新需求，必須先新增有效 ticket，不得自行發明下一個 Phase。
 
+Post-v0.45.0 focused hardening：
+
+- [x] `tasks/admin-ingestion-ui-filename-copy-hardening.md`: 修正後台資料匯入狀態中文檔名保存與欄位修正文案；validation 已通過 backend document tests 與 frontend build。不 bump version，不新增 document delete API、文件刪除按鈕或 destructive edit / delete flow。
+
 ## Phase 00 - Bootstrap Documents and Tickets
 
 - [x] 建立 Phase 00 文件與任務票規範。

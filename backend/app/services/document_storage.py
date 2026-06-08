@@ -911,7 +911,7 @@ class DocumentStorage:
 
     def _safe_filename(self, filename: str) -> str:
         name = Path(filename.replace("\\", "/")).name
-        name = re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("._")
+        name = re.sub(r"[^\w.-]+", "_", name, flags=re.UNICODE).strip("._")
 
         return name or "uploaded-file"
 
