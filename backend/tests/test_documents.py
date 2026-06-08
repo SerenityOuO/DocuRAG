@@ -262,6 +262,68 @@ def test_upload_document_saves_file_and_metadata(client: TestClient, tmp_path: P
     assert metadata[0]["processing_jobs"][0]["document_id"] == body["document_id"]
 
 
+def test_delete_document_removes_metadata_and_upload_artifact(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("invoice.txt", b"Invoice number: AUR-2026-051", "text/plain")},
+    )
+    document_id = upload_response.json()["document_id"]
+    upload_path = tmp_path / "data" / "uploads" / upload_response.json()["stored_filename"]
+
+    assert upload_path.is_file()
+
+    delete_response = client.delete(f"/documents/{document_id}")
+
+    assert delete_response.status_code == 200
+    assert delete_response.json() == {
+        "document_id": document_id,
+        "filename": "invoice.txt",
+        "status": "deleted",
+        "deleted_file_count": 1,
+        "missing_file_count": 0,
+        "skipped_file_count": 0,
+    }
+    assert not upload_path.exists()
+    assert client.get(f"/documents/{document_id}").status_code == 404
+    assert client.get("/documents").json()["documents"] == []
+    assert json.loads((tmp_path / "data" / "documents.json").read_text(encoding="utf-8")) == []
+
+
+def test_delete_document_removes_rendered_pdf_page_images(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    upload_response = client.post(
+        "/documents/upload",
+        files={"file": ("scanned.pdf", _pdf_bytes([]), "application/pdf")},
+    )
+    body = upload_response.json()
+    document_id = body["document_id"]
+    upload_path = tmp_path / "data" / "uploads" / body["stored_filename"]
+    page_image_path = tmp_path / "data" / body["page_images"][0]["path"]
+
+    assert upload_path.is_file()
+    assert page_image_path.is_file()
+
+    delete_response = client.delete(f"/documents/{document_id}")
+
+    assert delete_response.status_code == 200
+    assert delete_response.json()["deleted_file_count"] == 2
+    assert delete_response.json()["missing_file_count"] == 0
+    assert delete_response.json()["skipped_file_count"] == 0
+    assert not upload_path.exists()
+    assert not page_image_path.exists()
+
+
+def test_delete_unknown_document_returns_404(client: TestClient) -> None:
+    response = client.delete("/documents/not-found")
+
+    assert response.status_code == 404
+
+
 def test_upload_txt_direct_ingestion_creates_text_upload_chunks(
     client: TestClient,
     tmp_path: Path,

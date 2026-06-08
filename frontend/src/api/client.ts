@@ -55,6 +55,15 @@ export type DocumentListResponse = {
   documents: DocumentMetadata[];
 };
 
+export type DocumentDeleteResponse = {
+  document_id: string;
+  filename: string;
+  status: "deleted";
+  deleted_file_count: number;
+  missing_file_count: number;
+  skipped_file_count: number;
+};
+
 export type OcrResult = {
   status: string;
   text: string;
@@ -579,6 +588,15 @@ export async function getDocument(documentId: string): Promise<DocumentMetadata>
     headers: authHeaders(),
   });
   return readJson<DocumentMetadata>(response);
+}
+
+export async function deleteDocument(documentId: string): Promise<DocumentDeleteResponse> {
+  const response = await fetch(`${API_BASE_URL}/documents/${documentId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+
+  return readJson<DocumentDeleteResponse>(response);
 }
 
 export async function runMockOcr(documentId: string): Promise<OcrResultResponse> {

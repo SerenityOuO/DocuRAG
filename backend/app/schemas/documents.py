@@ -320,6 +320,15 @@ class DocumentDetailResponse(DocumentMetadata):
     pass
 
 
+class DocumentDeleteResponse(BaseModel):
+    document_id: str = Field(..., min_length=1)
+    filename: str = Field(..., min_length=1)
+    status: Literal["deleted"] = "deleted"
+    deleted_file_count: int = Field(default=0, ge=0)
+    missing_file_count: int = Field(default=0, ge=0)
+    skipped_file_count: int = Field(default=0, ge=0)
+
+
 class OcrResultResponse(OcrResult):
     document_id: str = Field(..., min_length=1)
 

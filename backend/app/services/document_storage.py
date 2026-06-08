@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
@@ -39,6 +40,15 @@ from app.schemas.evaluation import (
 )
 from app.services.ocr import OcrProvider
 from app.services.pdf_rendering import PdfPageRenderer, PdfRenderingError
+
+
+@dataclass(frozen=True)
+class DocumentDeleteResult:
+    document_id: str
+    filename: str
+    deleted_file_count: int
+    missing_file_count: int
+    skipped_file_count: int
 
 
 class DocumentStorage:
@@ -343,18 +353,64 @@ class DocumentStorage:
         ]
 
     def get_file_path(self, document: DocumentMetadata) -> Path | None:
-        upload_root = self.upload_dir.resolve()
-        file_path = (upload_root / document.stored_filename).resolve()
-
-        try:
-            file_path.relative_to(upload_root)
-        except ValueError:
+        file_path = self._resolve_upload_artifact_path(document.stored_filename)
+        if file_path is None:
             return None
 
         if not file_path.is_file():
             return None
 
         return file_path
+
+    def delete_document(self, document_id: str) -> DocumentDeleteResult | None:
+        document = self.get_document(document_id)
+        if document is None:
+            return None
+
+        artifact_paths: list[Path] = []
+        skipped_file_count = 0
+        upload_path = self._resolve_upload_artifact_path(document.stored_filename)
+        if upload_path is None:
+            skipped_file_count += 1
+        else:
+            artifact_paths.append(upload_path)
+
+        for page_image in document.page_images:
+            page_image_path = self._resolve_data_artifact_path(page_image.path)
+            if page_image_path is None:
+                skipped_file_count += 1
+                continue
+
+            artifact_paths.append(page_image_path)
+
+        deleted_file_count = 0
+        missing_file_count = 0
+        seen_paths: set[Path] = set()
+        for artifact_path in artifact_paths:
+            if artifact_path in seen_paths:
+                continue
+
+            seen_paths.add(artifact_path)
+            if not artifact_path.exists():
+                missing_file_count += 1
+                continue
+
+            if not artifact_path.is_file():
+                skipped_file_count += 1
+                continue
+
+            artifact_path.unlink()
+            deleted_file_count += 1
+
+        self.repository.delete_document(document_id)
+
+        return DocumentDeleteResult(
+            document_id=document.document_id,
+            filename=document.filename,
+            deleted_file_count=deleted_file_count,
+            missing_file_count=missing_file_count,
+            skipped_file_count=skipped_file_count,
+        )
 
     async def save_upload(self, file: UploadFile, project_id: str | None = None) -> DocumentMetadata:
         self._ensure_storage()
@@ -835,6 +891,28 @@ class DocumentStorage:
 
     def _ensure_storage(self) -> None:
         self.upload_dir.mkdir(parents=True, exist_ok=True)
+
+    def _resolve_upload_artifact_path(self, stored_filename: str) -> Path | None:
+        upload_root = self.upload_dir.resolve()
+        file_path = (upload_root / stored_filename).resolve()
+
+        try:
+            file_path.relative_to(upload_root)
+        except ValueError:
+            return None
+
+        return file_path
+
+    def _resolve_data_artifact_path(self, relative_path: str) -> Path | None:
+        data_root = self.data_dir.resolve()
+        file_path = (data_root / relative_path).resolve()
+
+        try:
+            file_path.relative_to(data_root)
+        except ValueError:
+            return None
+
+        return file_path
 
     def _read_documents(self) -> list[DocumentMetadata]:
         self._ensure_storage()

@@ -46,6 +46,7 @@
 - Phase 43 -> `v0.43.0`
 - Phase 44 -> `v0.44.0`
 - Phase 45 -> `v0.45.0`
+- Phase 46 -> `v0.46.0`
 
 後續 ticket 若完成整個 Phase，必須同步更新版本號、README / README_DEV、TODO、ROADMAP 與 validation 狀態；若不 bump version，ticket 必須明確寫原因。
 
@@ -134,6 +135,7 @@
 60. `tasks/phase-33-redis-nats-worker-pipeline/33-02-redis-cache-rate-limit-session-slice.md` 已完成，新增 opt-in Redis session cache、RAG query cache、rate limit、health fallback 與 Docker Compose redis profile；不 bump version。
 61. `tasks/phase-33-redis-nats-worker-pipeline/33-03-nats-worker-skeleton-and-task-status.md` 已完成，新增 optional NATS helper、worker skeleton placeholder handlers、task status store / API 與 NATS worker smoke script；不 bump version。
 62. `tasks/phase-33-redis-nats-worker-pipeline/33-04-worker-demo-smoke-and-release-sync.md` 已完成，新增 worker demo smoke script，並同步 `v0.33.0` backend / frontend / Docker Compose / health test / README / README_DEV / backend README / frontend README / TODO / ROADMAP。
+63. `tasks/phase-46-admin-document-delete/46-01-admin-document-delete-flow.md` 已完成，新增 Admin / Analyst 文件刪除 API、後台「刪除文件」按鈕、本機 upload / PDF page image artifact 清理與 `v0.46.0` release sync。
 
 ## Phase 30 Parser / Ingestion Hardening
 
@@ -580,15 +582,20 @@ Phase 45 `v0.45.0` - Production readiness / interview portfolio pack：
 - `45-04` validation 已通過：risk boundary keyword `rg` 與 `git diff --check`。本 ticket 不新增 runtime safety control、production incident workflow、SLO、pager、external vendor integration、功能行為變更或 version bump，也不把 future hardening 寫成已完成。
 - `45-05` validation 已通過：backend full test、frontend build、demo smoke、Phase 45 evidence `rg` 與 `git diff --check`。Release Impact：Version bump required: yes，Phase 45 已完成 `v0.45.0` final interview portfolio pack release；不新增 runtime feature、外部服務、production deployment、模型訓練、paid API、production guarantee 或 JD 100% 完成宣稱。
 
-Phase 41-45 guardrails：
+Phase 46 `v0.46.0` - Admin document delete flow：
+- [x] `tasks/phase-46-admin-document-delete/46-01-admin-document-delete-flow.md`: 新增 role-gated `DELETE /documents/{document_id}` 與後台「刪除文件」按鈕；刪除成功會移除文件 metadata、本機 upload artifact 與 PDF page image artifact，Viewer 會被 403 擋下。
+- `46-01` validation 已通過：focused backend document / auth / health tests、frontend build、Phase 46 keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: yes，Phase 46 已完成 `v0.46.0` Admin Document Delete Flow release；不新增 Agent destructive tool、Qdrant cleanup API、restore / recycle bin、production approval workflow、audit storage、worker 清理流程、migration 或 deployment 變更。
 
-- Phase 41-45 用來補強 JD 面試追問證據，不取代 Phase 35-40 的既有 backlog；仍必須一張 ticket 一張 ticket 執行。
+Phase 41-46 guardrails：
+
+- Phase 41-46 用來補強 JD 面試追問證據與後台操作完整性，不取代 Phase 35-40 的既有 backlog；仍必須一張 ticket 一張 ticket 執行。
 - Phase 41 聚焦 RAG quality regression、golden dataset、CI-style report 與 chunking / indexing ablation，不新增 LLM-as-judge 或 production eval dashboard。
 - Phase 42 聚焦 inference gateway、provider fallback、timeout guardrails 與 capacity planning，不要求 production autoscaling、多 GPU serving、paid API key 或外部 secret。
 - Phase 43 聚焦 Agent tool permission、approval state、audit / replay evidence，不允許任意 SQL、shell、filesystem command 或 destructive tool。
 - Phase 44 聚焦 OCR / VLM 欄位可信度、人工作業修正與 parser field accuracy eval，不新增 full annotation platform 或 model training。
 - Phase 45 聚焦 JD evidence matrix、system design walkthrough、demo scenario pack 與 risk / tradeoff report，不新增新的 production runtime。
-- Phase 45 已完成 `v0.45.0` release sync；後續若有新需求，必須先新增有效 ticket，不得自行發明下一個 Phase。
+- Phase 46 聚焦後台文件刪除與本機 artifact 清理；不新增 Agent destructive tool、Qdrant cleanup API、restore / recycle bin、production deletion governance、migration 或 deployment 變更。
+- Phase 46 已完成 `v0.46.0` release sync；後續若有新需求，必須先新增有效 ticket，不得自行發明下一個 Phase。
 
 Post-v0.45.0 focused hardening：
 

@@ -15,6 +15,7 @@ from app.api.routes.auth import (
 )
 from app.repositories.document_metadata import create_document_storage
 from app.schemas.documents import (
+    DocumentDeleteResponse,
     DocumentDetailResponse,
     DocumentListResponse,
     DocumentUploadResponse,
@@ -274,6 +275,27 @@ async def get_document(
     document = _get_accessible_document(storage, document_id, auth_user)
 
     return DocumentDetailResponse.model_validate(document.model_dump())
+
+
+@router.delete("/{document_id}", response_model=DocumentDeleteResponse)
+async def delete_document(
+    document_id: str,
+    storage: DocumentStorageDep,
+    auth_user: IngestionUserDep,
+) -> DocumentDeleteResponse:
+    _get_accessible_document(storage, document_id, auth_user)
+    result = storage.delete_document(document_id)
+
+    if result is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    return DocumentDeleteResponse(
+        document_id=result.document_id,
+        filename=result.filename,
+        deleted_file_count=result.deleted_file_count,
+        missing_file_count=result.missing_file_count,
+        skipped_file_count=result.skipped_file_count,
+    )
 
 
 @router.post("/{document_id}/ocr/mock", response_model=OcrResultResponse)

@@ -21,6 +21,9 @@ class DocumentMetadataRepository(Protocol):
     def write_documents(self, documents: list[DocumentMetadata]) -> None:
         ...
 
+    def delete_document(self, document_id: str) -> None:
+        ...
+
     def list_agent_runs(self) -> list[AgentRun]:
         ...
 
@@ -73,6 +76,14 @@ class LocalJsonDocumentRepository:
             self.metadata_path,
             [document.model_dump(mode="json") for document in documents],
         )
+
+    def delete_document(self, document_id: str) -> None:
+        documents = [
+            document
+            for document in self.list_documents()
+            if document.document_id != document_id
+        ]
+        self.write_documents(documents)
 
     def list_agent_runs(self) -> list[AgentRun]:
         self._ensure_agent_run_storage()
@@ -405,6 +416,15 @@ class PostgresDocumentRepository:
                     ),
                 )
                 self._upsert_document_children(connection, document)
+
+    def delete_document(self, document_id: str) -> None:
+        self.ensure_schema()
+        with self._connect() as connection:
+            connection.execute("DELETE FROM document_pages WHERE document_id = %s", (document_id,))
+            connection.execute("DELETE FROM document_chunks WHERE document_id = %s", (document_id,))
+            connection.execute("DELETE FROM extracted_fields WHERE document_id = %s", (document_id,))
+            connection.execute("DELETE FROM processing_jobs WHERE document_id = %s", (document_id,))
+            connection.execute("DELETE FROM documents WHERE document_id = %s", (document_id,))
 
     def get_document(self, document_id: str) -> DocumentMetadata | None:
         self.ensure_schema()

@@ -20,8 +20,8 @@ Phase 28 demo auth mode is disabled by default. Set `DOCURAG_AUTH_MODE=demo` to 
 
 | Username | Role | Demo usage |
 |---|---|---|
-| `admin` | `admin` | Can upload, OCR, parse, vector index, download and query. |
-| `analyst` | `analyst` | Can upload, OCR, parse, vector index, download and query. |
+| `admin` | `admin` | Can upload, OCR, parse, vector index, delete, download and query. |
+| `analyst` | `analyst` | Can upload, OCR, parse, vector index, delete, download and query. |
 | `viewer` | `viewer` | Can query and download existing files, but cannot run ingestion write APIs. |
 
 `POST /auth/login` returns a bearer token and user object, never a password. In demo mode, write / ingestion endpoints require `Authorization: Bearer {token}`. Viewer receives 403 forbidden for upload, provider-selected OCR, mock OCR, parse and vector index. Download requires login in demo mode but is allowed for all three demo roles.
@@ -74,7 +74,7 @@ SSO, OAuth, MFA, password reset, email verification, Redis-backed session storag
 
 `32-02` status: the formal schema foundation and explicit migration command exist, including demo seed users and a disabled user record with password-hash persistence. Endpoint permission guards, cross-project filtering enforcement and frontend role surface remain deferred to `32-03` / `32-04`.
 
-`32-03` status: backend permission guards are connected for formal signed bearer tokens when `DOCURAG_AUTH_MODE=formal`. Formal tokens must include `sub`, `display_name`, `role`, `organization_id`, `project_ids` and active `project_id`; `/auth/login` still does not implement production login in formal mode. Document reads, downloads, OCR, parser, vector indexing, RAG query and Agent lookup are filtered or denied by project access. Document upload, OCR, parser, vector indexing, built-in eval and Agent run require Analyst or Admin. Viewer receives a generic `403 forbidden`; cross-project denied responses do not include target document or project identifiers.
+`32-03` status: backend permission guards are connected for formal signed bearer tokens when `DOCURAG_AUTH_MODE=formal`. Formal tokens must include `sub`, `display_name`, `role`, `organization_id`, `project_ids` and active `project_id`; `/auth/login` still does not implement production login in formal mode. Document reads, downloads, OCR, parser, vector indexing, RAG query and Agent lookup are filtered or denied by project access. Document upload, delete, OCR, parser, vector indexing, built-in eval and Agent run require Analyst or Admin. Viewer receives a generic `403 forbidden`; cross-project denied responses do not include target document or project identifiers.
 
 ## Phase 33 Redis / NATS Worker Task Contract
 
@@ -188,6 +188,7 @@ Idempotency key policy:
 | GET | `/projects/{project_id}/documents` | List documents |
 | POST | `/projects/{project_id}/documents` | Create document metadata |
 | GET | `/documents/{document_id}` | Document detail |
+| DELETE | `/documents/{document_id}` | Delete document metadata plus local upload / PDF page image artifacts; requires Analyst or Admin |
 | GET | `/documents/{document_id}/pages` | OCR page text |
 | GET | `/documents/{document_id}/fields` | Extracted fields |
 | POST | `/documents/{document_id}/parse` | Run the MVP parser for an OCR-completed, direct text, or text-native PDF document |

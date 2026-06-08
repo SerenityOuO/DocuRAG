@@ -16,7 +16,7 @@ DocuRAG 是技術探索導向的 AI 文件知識庫專案，將文件上傳、OC
 
 - 前台知識庫問答
 - 回答引用來源
-- 後台文件匯入
+- 後台文件匯入與刪除
 - PaddleOCR 優先 OCR
 - VLM-first 欄位解析
 - Hybrid rerank 檢索
@@ -109,6 +109,7 @@ viewer / demo-viewer-pass
 
 - `GET /health`：檢查服務版本與狀態。
 - `POST /documents/upload`：上傳文件。
+- `DELETE /documents/{document_id}`：刪除後台文件紀錄與本機檔案。
 - `POST /documents/{document_id}/ocr`：執行 OCR。
 - `POST /documents/{document_id}/parse`：解析欄位。
 - `POST /documents/{document_id}/index/vector`：建立向量索引。
@@ -167,7 +168,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 
 ## 目前邊界
 
-目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.45.0 已完成 final interview portfolio pack：JD evidence matrix、system design walkthrough、demo scenario pack 與 risk / tradeoff report 已整理成可面試展示、可被追問、可快速驗證的入口；v0.44.0 的 Document Intelligence QA、v0.43.0 的 AgentOps 治理證據、v0.42.0 的推論維運證據、v0.41.0 的品質回歸證據與 v0.40.0 的 JD evidence pack 仍保留為展示基礎。這不代表 production annotation platform、production human review workflow、完整 layout understanding、table reconstruction、model training、production OCR accuracy tuning、production autonomous Agent、任意 SQL、shell、filesystem command、destructive tool、external side-effect tool、production approval workflow、production audit storage、production inference gateway、multi-GPU serving、production K8s autoscaling、multi-cluster deployment、managed secret integration、production training pipeline、model registry、OpenAI billing / secret vault、RAG ranking 變更、VLM parser schema 變更、LLM-as-judge、answer faithfulness、citation quality scoring、production eval platform、production alerting / incident workflow、production indexing worker、production async OCR worker 或 production guarantee 已完成。
+目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.46.0 已補齊後台文件刪除：Admin / Analyst 可從資料匯入狀態移除文件紀錄與本機 upload / PDF page image artifacts；v0.45.0 的 final interview portfolio pack、v0.44.0 的 Document Intelligence QA、v0.43.0 的 AgentOps 治理證據、v0.42.0 的推論維運證據、v0.41.0 的品質回歸證據與 v0.40.0 的 JD evidence pack 仍保留為展示基礎。這不代表 production recycle bin、restore workflow、deletion approval workflow、production audit storage、Qdrant vector cleanup API、production annotation platform、production human review workflow、完整 layout understanding、table reconstruction、model training、production OCR accuracy tuning、production autonomous Agent、任意 SQL、shell、filesystem command、Agent destructive tool、external side-effect tool、production inference gateway、multi-GPU serving、production K8s autoscaling、multi-cluster deployment、managed secret integration、production training pipeline、model registry、OpenAI billing / secret vault、RAG ranking 變更、VLM parser schema 變更、LLM-as-judge、answer faithfulness、citation quality scoring、production eval platform、production alerting / incident workflow、production indexing worker、production async OCR worker 或 production guarantee 已完成。
 
 ## 文件入口
 

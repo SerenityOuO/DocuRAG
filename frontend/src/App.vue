@@ -6,6 +6,7 @@ import {
   clearAuthToken,
   createEvalDataset,
   createEvalItem,
+  deleteDocument,
   deleteEvalDataset,
   deleteEvalItem,
   exportGoldenLabels,
@@ -100,6 +101,9 @@ const uploadError = ref("");
 const uploadMessage = ref("");
 const parseStates = ref<Record<string, RequestState>>({});
 const parseErrors = ref<Record<string, string>>({});
+const deleteStates = ref<Record<string, RequestState>>({});
+const deleteErrors = ref<Record<string, string>>({});
+const deleteMessage = ref("");
 const correctionDrafts = ref<Record<string, Record<string, CorrectionDraft>>>({});
 const correctionStates = ref<Record<string, RequestState>>({});
 const correctionErrors = ref<Record<string, string>>({});
@@ -151,7 +155,7 @@ const suggestedQuestions = [
   "When is the renewal date?",
 ];
 
-const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.45.0"));
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.46.0"));
 
 const demoAuthRequired = computed(() => authMode.value === "demo" && authUser.value === null);
 const formalAuthRequired = computed(() => authMode.value === "formal" && authUser.value === null);
@@ -1273,6 +1277,53 @@ function updateDocumentParserResult(documentId: string, parserResult: ParserResu
   );
 }
 
+function clearDocumentUiState(documentId: string): void {
+  const nextParseStates = { ...parseStates.value };
+  const nextParseErrors = { ...parseErrors.value };
+  const nextDeleteStates = { ...deleteStates.value };
+  const nextDeleteErrors = { ...deleteErrors.value };
+
+  delete nextParseStates[documentId];
+  delete nextParseErrors[documentId];
+  delete nextDeleteStates[documentId];
+  delete nextDeleteErrors[documentId];
+
+  parseStates.value = nextParseStates;
+  parseErrors.value = nextParseErrors;
+  deleteStates.value = nextDeleteStates;
+  deleteErrors.value = nextDeleteErrors;
+
+  const nextCorrectionStates = { ...correctionStates.value };
+  const nextCorrectionErrors = { ...correctionErrors.value };
+  const nextCorrectionMessages = { ...correctionMessages.value };
+  for (const key of Object.keys(nextCorrectionStates)) {
+    if (key.startsWith(`${documentId}:`)) {
+      delete nextCorrectionStates[key];
+      delete nextCorrectionErrors[key];
+      delete nextCorrectionMessages[key];
+    }
+  }
+  correctionStates.value = nextCorrectionStates;
+  correctionErrors.value = nextCorrectionErrors;
+  correctionMessages.value = nextCorrectionMessages;
+}
+
+function removeDocumentFromState(documentId: string): void {
+  documents.value = documents.value.filter((document) => document.document_id !== documentId);
+  clearDocumentUiState(documentId);
+
+  if (uploadResult.value?.document_id === documentId) {
+    uploadResult.value = null;
+    uploadFallbackAvailable.value = false;
+  }
+
+  if (agentDocumentId.value === documentId) {
+    agentDocumentId.value = latestDocuments.value[0]?.document_id ?? "";
+  }
+
+  syncAgentDocumentSelection();
+}
+
 function syncAgentDocumentSelection(): void {
   const hasSelectedDocument = documents.value.some((document) => document.document_id === agentDocumentId.value);
 
@@ -1632,6 +1683,49 @@ async function submitFieldParse(document: DocumentMetadata): Promise<void> {
     };
     parseStates.value = {
       ...parseStates.value,
+      [document.document_id]: "error",
+    };
+    await refreshDocuments();
+  }
+}
+
+async function submitDocumentDelete(document: DocumentMetadata): Promise<void> {
+  if (!canUseIngestion.value) {
+    deleteErrors.value = {
+      ...deleteErrors.value,
+      [document.document_id]: "Viewer 角色不能刪除文件。",
+    };
+    return;
+  }
+
+  const displayName = documentDisplayName(document);
+  const confirmed = window.confirm(`確定要刪除「${displayName}」？此操作會移除本機文件紀錄與上傳檔案。`);
+  if (!confirmed) {
+    return;
+  }
+
+  deleteStates.value = {
+    ...deleteStates.value,
+    [document.document_id]: "loading",
+  };
+  deleteErrors.value = {
+    ...deleteErrors.value,
+    [document.document_id]: "",
+  };
+  deleteMessage.value = "";
+
+  try {
+    const result = await deleteDocument(document.document_id);
+    removeDocumentFromState(document.document_id);
+    documentsState.value = "success";
+    deleteMessage.value = `已刪除 ${result.filename}。`;
+  } catch (error) {
+    deleteErrors.value = {
+      ...deleteErrors.value,
+      [document.document_id]: error instanceof Error ? error.message : "文件刪除失敗",
+    };
+    deleteStates.value = {
+      ...deleteStates.value,
       [document.document_id]: "error",
     };
     await refreshDocuments();
@@ -2082,6 +2176,7 @@ onMounted(async () => {
             </div>
 
             <p v-if="goldenLabelsMessage" class="success-message">{{ goldenLabelsMessage }}</p>
+            <p v-if="deleteMessage" class="success-message">{{ deleteMessage }}</p>
             <p v-if="goldenLabelsError" class="error">{{ goldenLabelsError }}</p>
             <p v-if="documentsError" class="error">{{ documentsError }}</p>
             <p v-if="documentsState === 'loading'" class="muted">讀取文件狀態中...</p>
@@ -2125,10 +2220,21 @@ onMounted(async () => {
                           : "解析欄位"
                     }}
                   </button>
+                  <button
+                    type="button"
+                    class="button danger-button compact-button"
+                    :disabled="!canUseIngestion || deleteStates[document.document_id] === 'loading'"
+                    @click="submitDocumentDelete(document)"
+                  >
+                    {{ deleteStates[document.document_id] === "loading" ? "刪除中..." : "刪除文件" }}
+                  </button>
                   <small v-if="!canParseDocument(document)">OCR 完成、直接文字匯入或 text-native PDF 後才能解析欄位。</small>
                 </div>
                 <p v-if="parseErrors[document.document_id]" class="error">
                   {{ parseErrors[document.document_id] }}
+                </p>
+                <p v-if="deleteErrors[document.document_id]" class="error">
+                  {{ deleteErrors[document.document_id] }}
                 </p>
                 <section
                   v-if="document.parser_result?.status === 'parsed'"

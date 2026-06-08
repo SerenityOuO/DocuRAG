@@ -114,6 +114,7 @@ def test_viewer_role_cannot_use_ingestion_apis(tmp_path: Path) -> None:
     mock_ocr_forbidden = client.post(f"/documents/{document_id}/ocr/mock", headers=viewer_headers)
     ocr_forbidden = client.post(f"/documents/{document_id}/ocr", headers=viewer_headers)
     parse_forbidden = client.post(f"/documents/{document_id}/parse", headers=viewer_headers)
+    delete_forbidden = client.delete(f"/documents/{document_id}", headers=viewer_headers)
     correction_allowed = client.post(
         f"/documents/{document_id}/corrections",
         headers=admin_headers,
@@ -150,6 +151,7 @@ def test_viewer_role_cannot_use_ingestion_apis(tmp_path: Path) -> None:
         mock_ocr_forbidden,
         ocr_forbidden,
         parse_forbidden,
+        delete_forbidden,
         correction_forbidden,
         index_forbidden,
     ]:
@@ -187,7 +189,7 @@ def test_download_requires_login_but_allows_viewer(tmp_path: Path) -> None:
         ("analyst", "demo-analyst-pass", "analyst"),
     ],
 )
-def test_admin_and_analyst_can_upload_documents(
+def test_admin_and_analyst_can_upload_and_delete_documents(
     username: str,
     password: str,
     expected_role: str,
@@ -206,5 +208,10 @@ def test_admin_and_analyst_can_upload_documents(
 
     assert response.status_code == 200
     assert response.json()["chunks"][0]["source_type"] == "text_upload"
+    document_id = response.json()["document_id"]
+    delete_response = client.delete(f"/documents/{document_id}", headers=headers)
+
+    assert delete_response.status_code == 200
+    assert delete_response.json()["status"] == "deleted"
     me_response = client.get("/auth/me", headers=headers)
     assert me_response.json()["user"]["role"] == expected_role

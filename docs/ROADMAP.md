@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、v0.31.0 PostgreSQL / Schema / Repository Foundation release、v0.32.0 Formal Auth / RBAC / Tenant Boundary release、v0.33.0 Redis + NATS Worker Pipeline release、v0.34.0 Production OCR / Scanned PDF Pipeline release、v0.35.0 RAG Indexing Quality Hardening release、v0.36.0 Eval Dashboard / Rerank Analysis release、v0.37.0 Inference Ops / vLLM Serving release、v0.38.0 Agent Runtime Hardening release、v0.39.0 Deployment / Observability / Fine-tuning Track release、Phase 40 interview evidence hardening roadmap，以及 Phase 41-45 JD completion / portfolio roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、v0.31.0 PostgreSQL / Schema / Repository Foundation release、v0.32.0 Formal Auth / RBAC / Tenant Boundary release、v0.33.0 Redis + NATS Worker Pipeline release、v0.34.0 Production OCR / Scanned PDF Pipeline release、v0.35.0 RAG Indexing Quality Hardening release、v0.36.0 Eval Dashboard / Rerank Analysis release、v0.37.0 Inference Ops / vLLM Serving release、v0.38.0 Agent Runtime Hardening release、v0.39.0 Deployment / Observability / Fine-tuning Track release、Phase 40 interview evidence hardening roadmap，以及 Phase 41-46 JD completion / portfolio / admin ops roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -98,6 +98,7 @@ Expected Outcome：
 - v0.38.0 Agent Runtime Hardening 只做受控 LLM planner provider boundary、deterministic fallback、read-only tool permission guards、Agent trace hardening 與 release sync；不新增 arbitrary autonomous Agent、任意 SQL、shell、filesystem command、destructive tool、external browser control、production approval workflow 或 production audit dashboard。
 - Phase 31-39 roadmap planning 只新增未來版本拆分與 guardrails；不新增 runtime、外部依賴、DB schema、worker、deployment 或 version bump。
 - Phase 40 interview evidence planning 只新增 JD evidence hardening tickets；不新增 runtime、外部依賴、training pipeline、benchmark runtime、observability service 或 version bump。
+- v0.46.0 Admin Document Delete Flow 只做後台文件刪除 API、UI 按鈕、本機 upload / PDF page image artifact 清理與 release sync；不新增 Agent destructive tool、Qdrant cleanup API、restore / recycle bin、production approval workflow、audit storage、worker 清理流程、migration 或 deployment 變更。
 - `README.md` 的 Release Status 必須只列版本號；Phase 細節寫在本 roadmap。
 - 每張 ticket 完成後才進下一張，不平行擴張範圍。
 
@@ -641,13 +642,13 @@ Phase 40 Guardrails：
 - `40-04` 不新增 production alerting、SLO、incident workflow 或 APM vendor integration。
 - `43-05` 已完成 release sync，backend / frontend / health / Docker Compose version 已同步到 `v0.43.0`；下一步依 ticket-first 流程進入 Phase 44。
 
-## Phase 41-45 JD Completion / Portfolio Roadmap
+## Phase 41-46 JD Completion / Portfolio / Admin Ops Roadmap
 
-Goal：在 Phase 40 的面試證據包之後，補上更像 production AI 系統會被追問的五個收尾能力：RAG 品質回歸、推論 gateway / capacity planning、AgentOps 治理、文件理解 QA，以及最終 portfolio pack。這些 phase 不取代 Phase 35-40，而是把 JD 對「能長期維護、能量化、能治理、能說清楚取捨」的要求補完整。
+Goal：在 Phase 40 的面試證據包之後，補上更像 production AI 系統會被追問的收尾能力：RAG 品質回歸、推論 gateway / capacity planning、AgentOps 治理、文件理解 QA、最終 portfolio pack，以及後台文件管理常見的刪除操作。這些 phase 不取代 Phase 35-40，而是把 JD 對「能長期維護、能量化、能治理、能說清楚取捨」的要求補完整。
 
 Planning source：
 
-- 使用者在目前對話中確認擴充 Phase 41 到 Phase 45。
+- 使用者在目前對話中確認擴充 Phase 41 到 Phase 46，且 Phase 46 由本張 ticket 直接建立並執行。
 
 ### Phase 41 - RAG Quality Regression / DatasetOps
 
@@ -838,7 +839,7 @@ Expected Outcome：
 - Risk / tradeoff report 誠實整理 completed、demo-safe、research-only 與 future backlog。
 - 不新增新的 production runtime，不宣稱 JD 100% 完成或 production guarantee。
 
-Phase 41-45 Validation Direction：
+Phase 41-46 Validation Direction：
 
 - 每個 phase 仍採 ticket-first；先 contract / artifact，再 runtime slice 或 report，最後 release sync。
 - 任何 release sync ticket 才能 bump backend / frontend / health / Docker Compose version。
@@ -874,6 +875,31 @@ Phase 41-45 Validation Direction：
 - 已完成。`v0.45.0` 已同步 backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example` 與 demo smoke expected version。
 - Public `README.md` 保持精簡展示 final portfolio pack；README_DEV、backend README、frontend README、TODO 與 ROADMAP 則整理 Phase 41-45 final evidence，並連到 JD evidence matrix、system design walkthrough、demo scenario pack 與 risk boundary report。
 - 文件已明確區分 completed、demo-safe、research-only 與 future backlog。Validation 已通過：backend full test、frontend build、demo smoke、Phase 45 evidence keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: yes，Phase 45 已完成 `v0.45.0` final interview portfolio pack release；不新增 runtime feature、外部服務、production deployment、模型訓練、paid API、production guarantee 或 JD 100% 完成宣稱。
+
+### Phase 46 - Admin Document Delete Flow
+
+Target version：`v0.46.0`
+
+Goal：補齊後台資料匯入狀態的文件刪除操作，讓 Admin / Analyst 可以移除不需要的文件紀錄與本機 artifacts。
+
+Tickets：
+
+- [x] `tasks/phase-46-admin-document-delete/46-01-admin-document-delete-flow.md`
+
+Expected Outcome：
+
+- Backend 新增 role-gated `DELETE /documents/{document_id}`。
+- Local JSON 與 opt-in PostgreSQL metadata repository 都支援刪除指定文件 metadata。
+- 本機 upload artifact 與 PDF page image artifact 會在 path safety 檢查後移除。
+- Frontend 後台資料匯入狀態新增「刪除文件」按鈕、確認訊息、刪除中 / 失敗狀態與成功提示。
+- Viewer 在 demo / formal auth mode 下不可刪除文件。
+- 不新增 Agent destructive tool、Qdrant cleanup API、restore / recycle bin、production approval workflow、audit storage、worker 清理流程、migration 或 deployment 變更。
+
+46-01 Admin Document Delete Flow Status：
+
+- 已完成。Admin / Analyst 可透過後台「刪除文件」按鈕或 `DELETE /documents/{document_id}` 刪除文件；刪除成功後文件不再出現在列表，詳情回 `404`。
+- Storage 會移除本機 upload artifact 與 PDF page image artifact；artifact 不存在時記錄 missing，不阻止 metadata 刪除；unsafe path 會被 skipped。
+- Viewer write guard 已涵蓋 delete API。Validation 已通過：focused backend document / auth / health tests、frontend build、Phase 46 keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: yes，Phase 46 已完成 `v0.46.0` Admin Document Delete Flow release。
 
 ## v0.2.0 Demo UI Milestone
 
