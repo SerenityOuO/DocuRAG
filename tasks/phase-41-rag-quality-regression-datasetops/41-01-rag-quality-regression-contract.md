@@ -34,9 +34,16 @@
 
 ## Acceptance Criteria
 
-- [ ] 文件定義 Phase 41 golden dataset / regression report / strategy snapshot 的資料邊界。
-- [ ] 文件列出 Hit Rate@K、MRR@K、Recall@K、latency、fallback count 與 failure count 的 regression use case。
-- [ ] 文件明確說明 Phase 41 不新增 LLM-as-judge 或 production eval dashboard。
+- [x] 文件定義 Phase 41 golden dataset / regression report / strategy snapshot 的資料邊界。
+- [x] 文件列出 Hit Rate@K、MRR@K、Recall@K、latency、fallback count 與 failure count 的 regression use case。
+- [x] 文件明確說明 Phase 41 不新增 LLM-as-judge 或 production eval dashboard。
+
+## Completion Notes
+
+- `docs/api.md` 已定義 golden dataset、eval run、strategy snapshot 與 regression report 的資料邊界。
+- `docs/architecture.md` 已補上 Phase 41 evidence flow、metric use case 與 pass / warn / fail regression gate。
+- `docs/ROADMAP.md`、`README_DEV.md` 與 `TODO.md` 已同步 `41-01` 完成狀態。
+- 本 ticket 不 bump version，也不新增 backend runtime、frontend UI、CI workflow、資料庫 schema、migration、LLM-as-judge 或 production eval dashboard。
 
 ## Validation
 

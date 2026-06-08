@@ -692,6 +692,47 @@ Rerank analysis rows should expose:
 
 UI contract for Phase 36 should stay operational and compact: summary metric cards, strategy comparison table, failure / fallback case lists, and a rerank analysis table. It must not display answer faithfulness, citation quality scoring or LLM-as-judge output unless a later ticket explicitly adds those features.
 
+## Phase 41 RAG Quality Regression / DatasetOps Contract
+
+`41-01` is a Markdown-only contract ticket. It turns the existing eval dataset / eval run model into a longer-lived RAG quality regression boundary. It does not add endpoints, frontend UI, CI workflow, database schema, migration, LLM-as-judge, answer faithfulness scoring, citation quality scoring or production eval dashboard behavior.
+
+### Regression Data Boundary
+
+| Artifact | Boundary | Required Fields |
+|---|---|---|
+| Golden dataset | Versioned set of demo-safe retrieval cases used as regression input. | `dataset_id`, `dataset_version`, `source_document_version`, `case_version`, `query`, `expected_document_ids`, `expected_chunk_ids`, `expected_terms`, `case_tags`, `demo_safe_note`. |
+| Eval run | One execution of one or more retrieval strategies against a golden dataset version. | `run_id`, `dataset_id`, `dataset_version`, `created_at`, `strategies`, `top_k`, `provider_availability`, `run_status`, `skip_reason`. |
+| Strategy snapshot | Per-strategy environment and retrieval configuration captured for comparison. | `strategy`, `retrieval_top_k`, `rerank_top_k`, `chunking_strategy`, `chunking_version`, `embedding_provider`, `reranker_provider`, `qdrant_available`, `fallback_policy`. |
+| Regression report | Baseline vs current comparison used by humans or a future CI-style gate. | `baseline_run_id`, `current_run_id`, `metric_delta`, `gate_status`, `warn_reasons`, `fail_reasons`, `trace_metadata_coverage`. |
+
+### Regression Metrics Use Case
+
+| Metric | Regression Use |
+|---|---|
+| Hit Rate@K | Detects whether expected evidence disappears from the top K retrieval set after strategy, chunking or indexing changes. |
+| MRR@K | Detects ranking regressions when evidence is still found but pushed lower. |
+| Recall@K | Detects partial evidence loss for cases with multiple expected chunks. |
+| Latency | Detects slower retrieval / rerank paths for the same dataset and strategy snapshot. |
+| Fallback count | Detects hidden runtime degradation, such as vector unavailable, reranker unavailable or provider timeout fallback. |
+| Failure count | Detects cases where no expected evidence is found or the strategy cannot produce evaluable output. |
+| Trace metadata coverage | Detects missing strategy, score, fallback or provider metadata that would make failures hard to debug. |
+
+### Strategy Comparison Boundary
+
+Phase 41 comparisons must preserve the existing strategy names: `keyword`, `vector`, `hybrid`, `vector_rerank` and `hybrid_rerank`. Future chunking variants may be represented as strategy snapshots, for example `chunking_strategy=fixed_size`, `semantic` or `parent_child`, without changing `/rag/query` defaults or tuning the ranking algorithm in this ticket.
+
+### Regression Gate
+
+The regression gate is a report interpretation rule, not a new runtime blocker in `41-01`:
+
+| Status | Meaning |
+|---|---|
+| `pass` | Current run keeps required metrics within configured tolerance and trace metadata coverage is sufficient. |
+| `warn` | Metrics are within a reviewable range, but latency, fallback count, failure count or metadata coverage needs manual inspection. |
+| `fail` | Hit Rate@K, MRR@K, Recall@K or failure count crosses the accepted threshold and should block a release candidate in a future CI-style workflow. |
+
+Phase 41 does not judge generated answer quality. LLM-as-judge, answer faithfulness, citation quality scoring, human labeling tools and production eval dashboard trends remain out of scope unless a later ticket explicitly adds them.
+
 VLM structured fields 不在本 ticket 自動寫入 retrieval chunks；若後續要把欄位索引進 Qdrant，必須另開 ticket 定義 field-indexing policy、dedupe key 與 citation semantics。
 
 Phase 24 的 parser contract 先支援 invoice MVP。`24-01` 固定文件與 API 草案，`24-02` 新增 deterministic parser service，`24-03` 新增 parse / fields API 與 local JSON persistence。此 contract 是 VLM-compatible，不代表目前已接真正 VLM、LLM parser、DB、worker 或 production parser pipeline。

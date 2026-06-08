@@ -574,6 +574,42 @@ Boundary rules:
 - The first UI surface should remain a diagnostic tool for Admin / Analyst; Viewer access to eval results requires a later ticket.
 - LLM-as-judge, answer faithfulness, citation quality scoring, OCR eval and VLM parser accuracy eval remain out of scope.
 
+## Phase 41 RAG Quality Regression / DatasetOps Contract
+
+`41-01` defines how the project should treat RAG quality regression after the Phase 36 eval dashboard work. It is a Markdown-only contract: it does not add backend runtime, frontend UI, CI workflow, database schema, migration, external service, LLM-as-judge or production eval dashboard.
+
+Target evidence flow:
+
+```text
+Golden dataset version
+    |
+    |-- cases with query, expected documents / chunks, expected terms, case tags
+    |
+Strategy snapshot
+    |
+    |-- keyword / vector / hybrid / vector_rerank / hybrid_rerank
+    |-- chunking strategy, top K, provider availability, fallback policy
+    |
+Eval run
+    |
+    |-- Hit Rate@K / MRR@K / Recall@K / latency
+    |-- fallback count / failure count / trace metadata coverage
+    |
+Regression report
+    |
+    |-- baseline vs current metric delta
+    |-- pass / warn / fail regression gate
+    |-- failure and fallback reasons for manual review
+```
+
+Boundary rules:
+
+- Golden dataset is the stable input contract. Each case should carry `case_version`, `source_document_version`, expected evidence ids, expected terms and tags so later changes can explain why a metric moved.
+- Strategy snapshot is required for every eval run. A metric without strategy, chunking, provider availability and fallback metadata is not comparable.
+- Regression report compares baseline vs current for Hit Rate@K, MRR@K, Recall@K, latency, fallback count, failure count and trace metadata coverage.
+- `regression gate=pass` means metrics stay within tolerance; `warn` means manual review is needed; `fail` means expected evidence quality regressed enough to block a future release candidate.
+- Phase 41 keeps answer quality evaluation out of scope. It does not add LLM-as-judge, answer faithfulness, citation quality scoring, human labeling, ranking tuning, default `/rag/query` behavior changes or long-term production trend storage.
+
 ## Phase 37 Inference Provider Ops Contract
 
 `37-01` defines the inference provider boundary for LLMOps-facing work. `37-02` adds the first OpenAI-compatible LLM adapter for RAG generation only. It does not start vLLM, add a deployment file, change the VLM parser route, change the Agent planner or remove the current Ollama-first demo path.

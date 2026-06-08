@@ -526,7 +526,7 @@ Phase 40 guardrails：
 ## Phase 41-45 JD Completion Roadmap
 
 Phase 41 `v0.41.0` - RAG quality regression / DatasetOps：
-- [ ] `tasks/phase-41-rag-quality-regression-datasetops/41-01-rag-quality-regression-contract.md`
+- [x] `tasks/phase-41-rag-quality-regression-datasetops/41-01-rag-quality-regression-contract.md`: 完成 Phase 41 RAG quality regression contract；固定 golden dataset、eval run、strategy snapshot、regression report、Hit Rate@K / MRR@K / Recall@K / latency / fallback count / failure count / trace metadata coverage 與 pass / warn / fail regression gate。文件 ticket，不 bump version。
 - [ ] `tasks/phase-41-rag-quality-regression-datasetops/41-02-golden-dataset-versioning.md`
 - [ ] `tasks/phase-41-rag-quality-regression-datasetops/41-03-retrieval-regression-ci-report.md`
 - [ ] `tasks/phase-41-rag-quality-regression-datasetops/41-04-chunking-indexing-ablation-report.md`
