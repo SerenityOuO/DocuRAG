@@ -388,6 +388,7 @@ def test_keyword_rag_provider_uses_llm_generation_with_retrieved_chunks() -> Non
                 load_duration_ms=10.0,
                 think=False,
                 num_predict=512,
+                timeout_ms=30000,
             )
 
     llm_provider = StubLlmProvider()
@@ -442,6 +443,10 @@ def test_keyword_rag_provider_uses_llm_generation_with_retrieved_chunks() -> Non
         "llm_load_duration_ms": "10.00",
         "llm_think": "false",
         "llm_num_predict": "512",
+        "llm_max_tokens": "512",
+        "llm_timeout_ms": "30000",
+        "llm_streaming_mode": "disabled",
+        "llm_truncated_reason": "",
         "llm_generation_latency_ms": response.citations[0].trace_metadata["llm_generation_latency_ms"],
     }
 
@@ -529,6 +534,50 @@ def test_keyword_rag_provider_falls_back_when_llm_generation_fails() -> None:
     assert response.citations[0].trace_metadata["llm_provider"] == "ollama"
     assert response.citations[0].trace_metadata["llm_model"] == "qwen3.5:4b"
     assert response.citations[0].trace_metadata["llm_error"] == "Cannot connect to Ollama"
+
+
+def test_keyword_rag_provider_records_timeout_guardrails_when_llm_times_out() -> None:
+    class TimeoutLlmProvider:
+        name = "ollama"
+        model = "qwen3.5:4b"
+        timeout_seconds = 1.0
+        num_predict = 128
+
+        def generate(self, prompt: str, system: str | None = None) -> LlmGeneration:
+            raise LlmProviderError("Ollama request timed out after 1.0s at http://127.0.0.1:11434.")
+
+    document = DocumentMetadata(
+        document_id="doc-001",
+        filename="invoice-a.txt",
+        stored_filename="doc-001-invoice-a.txt",
+        file_type="txt",
+        content_type="text/plain",
+        size=100,
+        status=DocumentStatus.READY,
+        created_at="2026-05-20T00:00:00Z",
+        chunks=[
+            DocumentChunk(
+                chunk_id="chunk-001",
+                document_id="doc-001",
+                text="Invoice total is USD 42.00.",
+                source="ocr_paddleocr",
+                created_at="2026-05-20T00:00:00Z",
+            )
+        ],
+    )
+
+    response = KeywordRagProvider(llm_provider=TimeoutLlmProvider()).query("invoice total", 3, [document])
+    metadata = response.citations[0].trace_metadata
+
+    assert "LLM generation unavailable; returning retrieved OCR chunks only" in response.answer
+    assert metadata["llm_generation_status"] == "failed"
+    assert metadata["llm_provider_status"] == "timeout"
+    assert metadata["llm_fallback_target"] == "retrieved_chunks"
+    assert metadata["llm_timeout_ms"] == "1000"
+    assert metadata["llm_num_predict"] == "128"
+    assert metadata["llm_max_tokens"] == "128"
+    assert metadata["llm_streaming_mode"] == "disabled"
+    assert metadata["llm_truncated_reason"] == ""
 
 
 def test_vector_rag_provider_uses_embedding_and_qdrant_results() -> None:

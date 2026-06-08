@@ -696,6 +696,13 @@ Capacity planning report boundary:
 - Vector retrieval records `vector_provider_selected`, `vector_provider_status` and `vector_fallback_target=keyword` when embedding or Qdrant is unavailable; rerank records `rerank_provider_selected`, `rerank_provider_status` and `rerank_fallback_target=original_candidates` when disabled, timeout or failed.
 - This is metadata glue only. It does not change provider defaults, start vLLM, add load balancing, add production circuit breaker runtime or make optional providers mandatory.
 
+`42-03` streaming / timeout guardrail runtime notes:
+
+- Ollama and OpenAI-compatible LLM calls remain non-streaming for the demo API path (`stream=false`). This ticket does not add SSE, WebSocket, frontend token streaming or a queue-based scheduler.
+- RAG citation trace now exposes `llm_timeout_ms`, `llm_num_predict`, `llm_max_tokens`, `llm_streaming_mode`, `llm_truncated_reason` and `llm_generation_latency_ms` when the path can measure or derive them.
+- Timeout failures record `llm_provider_status=timeout`, keep `llm_fallback_target=retrieved_chunks` and preserve the original error in `llm_error`, so a slow provider does not hard fail the demo.
+- Truncation is provider-reported only. Unknown truncation state stays empty rather than being inferred from fabricated token counts.
+
 ## Phase 39 Deployment / Observability / Fine-tuning Research Contract
 
 `39-01` is a Markdown-only contract for deployment and MLOps-facing evidence. It defines what later Phase 39 tickets may add, but does not add manifests, runtime services, notebooks, dependencies or version changes by itself.

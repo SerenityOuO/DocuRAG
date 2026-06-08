@@ -136,6 +136,9 @@ def test_ollama_generate_sends_non_streaming_request_and_parses_response() -> No
     assert result.load_duration_ms == 2.0
     assert result.think is False
     assert result.num_predict == 512
+    assert result.timeout_ms == 5000
+    assert result.streaming_mode == "disabled"
+    assert result.truncated_reason is None
 
 
 def test_ollama_generate_allows_think_and_num_predict_overrides() -> None:
@@ -225,6 +228,43 @@ def test_openai_compatible_generate_sends_chat_completion_request_and_parses_met
     assert result.provider_latency_ms >= 0
     assert result.tokens_per_second is not None
     assert result.num_predict == 64
+    assert result.timeout_ms == 5000
+    assert result.streaming_mode == "disabled"
+    assert result.truncated_reason is None
+
+
+def test_openai_compatible_generate_marks_length_finish_as_truncated() -> None:
+    def transport(request: urllib.request.Request, timeout: float) -> FakeResponse:
+        return FakeResponse(
+            {
+                "id": "chatcmpl-local-002",
+                "model": "local-qwen",
+                "choices": [
+                    {
+                        "message": {"role": "assistant", "content": "Partial answer"},
+                        "finish_reason": "length",
+                    }
+                ],
+                "usage": {
+                    "completion_tokens": 64,
+                },
+            }
+        )
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="http://127.0.0.1:8000/v1",
+        model="local-qwen",
+        timeout_seconds=5,
+        max_tokens=64,
+        transport=transport,
+    )
+
+    result = provider.generate("hello")
+
+    assert result.num_predict == 64
+    assert result.timeout_ms == 5000
+    assert result.streaming_mode == "disabled"
+    assert result.truncated_reason == "max_tokens"
 
 
 def test_openai_compatible_generate_reports_malformed_response_without_message_content() -> None:

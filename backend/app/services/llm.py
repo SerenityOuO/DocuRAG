@@ -29,6 +29,9 @@ class LlmGeneration:
     load_duration_ms: float | None = None
     think: bool | None = None
     num_predict: int | None = None
+    timeout_ms: int | None = None
+    streaming_mode: str = "disabled"
+    truncated_reason: str | None = None
     raw: dict[str, Any] = field(default_factory=dict)
 
 
@@ -128,6 +131,9 @@ class OllamaLlmProvider:
             load_duration_ms=self._nanoseconds_to_milliseconds(data.get("load_duration")),
             think=self.think,
             num_predict=self.num_predict,
+            timeout_ms=self._timeout_milliseconds(),
+            streaming_mode="disabled",
+            truncated_reason=self._truncated_reason(data),
             raw=data,
         )
 
@@ -247,6 +253,17 @@ class OllamaLlmProvider:
             return None
         return value / 1_000_000
 
+    def _timeout_milliseconds(self) -> int:
+        return int(self.timeout_seconds * 1000)
+
+    def _truncated_reason(self, data: dict[str, Any]) -> str | None:
+        done_reason = data.get("done_reason")
+        if isinstance(done_reason, str) and done_reason.lower() in {"length", "max_tokens", "num_predict"}:
+            return done_reason
+        if data.get("done") is False:
+            return "provider_not_done"
+        return None
+
 
 class OpenAiCompatibleLlmProvider:
     name = "openai_compatible"
@@ -315,6 +332,9 @@ class OpenAiCompatibleLlmProvider:
             tokens_per_second=self._tokens_per_second(completion_tokens, latency_ms),
             provider_request_id=str(data.get("id")) if data.get("id") else None,
             num_predict=self.max_tokens,
+            timeout_ms=self._timeout_milliseconds(),
+            streaming_mode="disabled",
+            truncated_reason="max_tokens" if choices[0].get("finish_reason") == "length" else None,
             raw=data,
         )
 
@@ -442,6 +462,9 @@ class OpenAiCompatibleLlmProvider:
         if completion_tokens is None or latency_ms <= 0:
             return None
         return completion_tokens / (latency_ms / 1000)
+
+    def _timeout_milliseconds(self) -> int:
+        return int(self.timeout_seconds * 1000)
 
 
 def create_llm_provider(settings: Settings) -> LlmProvider:

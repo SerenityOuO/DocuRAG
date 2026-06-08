@@ -385,6 +385,21 @@ Capacity planning reports may include latency p50 / p95, tokens/sec, VRAM, KV ca
 
 The response shape remains backward-compatible because `42-02` only appends metadata fields to existing trace dictionaries.
 
+### 42-03 Streaming Timeout Guardrail Notes
+
+`42-03` keeps demo RAG generation on the existing non-streaming path and exposes the guardrails in citation trace metadata:
+
+| Metadata | Meaning |
+|---|---|
+| `llm_timeout_ms` | Backend request timeout budget in milliseconds. |
+| `llm_num_predict` / `llm_max_tokens` | Current generation token cap used by Ollama `num_predict` or OpenAI-compatible `max_tokens`. |
+| `llm_streaming_mode` | `disabled` for the current demo API path; no SSE or WebSocket response is added by this ticket. |
+| `llm_truncated_reason` | Empty when the provider did not report truncation; `max_tokens`, `length`, `num_predict` or `provider_not_done` when the provider reports a bounded or incomplete output. |
+| `llm_generation_latency_ms` | Measured backend generation latency for successful non-streaming calls. |
+| `llm_provider_status=timeout` | Timeout failure path; the API falls back to retrieved chunks and preserves the error in `llm_error`. |
+
+Streaming may be added by a later UI / API ticket when the frontend can render token events safely. Until then, non-streaming remains the interview demo default because it has a bounded timeout, a bounded token cap and clear fallback metadata.
+
 ## Phase 29 Built-in RAG Eval Contract
 
 `POST /eval/rag/built-in` wraps the existing retrieval eval runner for the backend admin surface. It is intentionally narrow:

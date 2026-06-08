@@ -198,7 +198,7 @@ class KeywordRagProvider:
         if not text:
             return (
                 f"{fallback_answer}\n\nLLM generation unavailable; model returned an empty answer.",
-                self._llm_failure_trace_metadata("model returned an empty answer"),
+                self._llm_failure_trace_metadata("model returned an empty answer", generation),
             )
 
         return text, self._llm_success_trace_metadata(generation, latency_ms, len(retrieved_chunks))
@@ -245,6 +245,7 @@ class KeywordRagProvider:
             "llm_prompt_chunk_count": str(chunk_count),
             "llm_generation_latency_ms": f"{latency_ms:.2f}",
         }
+        fields.update(self._llm_guardrail_trace_metadata(generation))
 
         if generation.prompt_tokens is not None:
             fields["llm_prompt_tokens"] = str(generation.prompt_tokens)
@@ -276,12 +277,9 @@ class KeywordRagProvider:
         if generation.think is not None:
             fields["llm_think"] = str(generation.think).lower()
 
-        if generation.num_predict is not None:
-            fields["llm_num_predict"] = str(generation.num_predict)
-
         return fields
 
-    def _llm_failure_trace_metadata(self, error: str) -> dict[str, str]:
+    def _llm_failure_trace_metadata(self, error: str, generation: LlmGeneration | None = None) -> dict[str, str]:
         provider_name = self.llm_provider.name if self.llm_provider is not None else "unknown"
         model = getattr(self.llm_provider, "model", None)
         provider_status = _provider_failure_status(error)
@@ -294,11 +292,44 @@ class KeywordRagProvider:
             "llm_fallback_reason": "provider_error",
             "llm_error": error[:500],
         }
+        fields.update(self._llm_guardrail_trace_metadata(generation))
 
         if model:
             fields["llm_model"] = str(model)
 
         return fields
+
+    def _llm_guardrail_trace_metadata(self, generation: LlmGeneration | None = None) -> dict[str, str]:
+        fields = {
+            "llm_streaming_mode": generation.streaming_mode if generation is not None else self._provider_streaming_mode(),
+            "llm_truncated_reason": generation.truncated_reason if generation and generation.truncated_reason else "",
+        }
+
+        timeout_ms = generation.timeout_ms if generation is not None and generation.timeout_ms is not None else None
+        if timeout_ms is None and self.llm_provider is not None:
+            timeout_seconds = getattr(self.llm_provider, "timeout_seconds", None)
+            if isinstance(timeout_seconds, (int, float)):
+                timeout_ms = int(timeout_seconds * 1000)
+        if timeout_ms is not None:
+            fields["llm_timeout_ms"] = str(timeout_ms)
+
+        token_limit = generation.num_predict if generation is not None and generation.num_predict is not None else None
+        if token_limit is None and self.llm_provider is not None:
+            for attribute in ("num_predict", "max_tokens"):
+                value = getattr(self.llm_provider, attribute, None)
+                if isinstance(value, int):
+                    token_limit = value
+                    break
+        if token_limit is not None:
+            fields["llm_num_predict"] = str(token_limit)
+            fields["llm_max_tokens"] = str(token_limit)
+
+        return fields
+
+    def _provider_streaming_mode(self) -> str:
+        if self.llm_provider is None:
+            return "disabled"
+        return "enabled" if bool(getattr(self.llm_provider, "streaming_enabled", False)) else "disabled"
 
 
 class VectorRagProvider:

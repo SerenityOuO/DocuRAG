@@ -33,9 +33,9 @@
 
 ## Acceptance Criteria
 
-- [ ] Timeout / token limit / streaming mode 在文件或 trace metadata 中清楚可見。
-- [ ] Slow provider path 有 fallback 或 clear failure reason。
-- [ ] Validation 覆蓋 timeout / guardrail behavior。
+- [x] Timeout / token limit / streaming mode 在文件或 trace metadata 中清楚可見。
+- [x] Slow provider path 有 fallback 或 clear failure reason。
+- [x] Validation 覆蓋 timeout / guardrail behavior。
 
 ## Validation
 
@@ -43,3 +43,10 @@
 - Backend full test script。
 - `rg -n "timeout|streaming|num_predict|max tokens|generation latency|truncated|guardrail" backend docs README_DEV.md TODO.md tasks/phase-42-inference-gateway-capacity-planning`
 - `git diff --check`
+
+## Completion Notes
+
+- RAG LLM generation trace now records `llm_timeout_ms`, `llm_num_predict`, `llm_max_tokens`, `llm_streaming_mode`, `llm_truncated_reason` and `llm_generation_latency_ms`.
+- Ollama and OpenAI-compatible generation remain non-streaming (`stream=false`) for the demo API path; no frontend SSE / WebSocket streaming UI was added.
+- Provider timeout is classified as `llm_provider_status=timeout`, keeps `llm_fallback_target=retrieved_chunks` and preserves the bounded error in `llm_error`.
+- Version bump required: no. Phase 42 version sync remains scoped to `42-05`.
