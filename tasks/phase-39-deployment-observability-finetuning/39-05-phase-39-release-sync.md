@@ -40,10 +40,10 @@
 
 ## Acceptance Criteria
 
-- [ ] `/health` 回傳 `0.39.0`。
-- [ ] README / README_DEV 整理 Phase 31-39 enterprise completion 狀態。
-- [ ] K8s / observability / research artifact validation 有紀錄。
-- [ ] 文件不宣稱 production autoscaling 或 production training pipeline 已完成。
+- [x] `/health` 回傳 `0.39.0`。
+- [x] README / README_DEV 整理 Phase 31-39 enterprise completion 狀態。
+- [x] K8s / observability / research artifact validation 有紀錄。
+- [x] 文件不宣稱 production autoscaling 或 production training pipeline 已完成。
 
 ## Validation
 
@@ -55,3 +55,14 @@
 - Research artifact `rg` validation。
 - `rg -n "v0.39.0|Phase 39|K8s|observability|Loki|Grafana|OpenSearch|fine-tuning|synthetic data|production autoscaling" README.md README_DEV.md backend/README.md frontend/README.md docs/ROADMAP.md TODO.md backend frontend infra docs scripts tasks/phase-39-deployment-observability-finetuning`
 - `git diff --check`
+
+## Status
+
+- Completed. Phase 39 is released as `v0.39.0`.
+- Synchronized backend package / app version, frontend package / lock / fallback version, health test, Docker Compose `DOCURAG_VERSION`, `.env.example`, K8s sample image tag, README, README_DEV, backend README, frontend README, TODO, ROADMAP, demo smoke expected version and this ticket.
+- Release boundary remains explicit: this ticket does not add production autoscaling, multi-cluster deployment, managed secret integration, production alerting / incident workflow or production training pipeline.
+
+## Validation Result
+
+- Passed: backend full test `260 passed, 1 warning`（pytest cache permission warning）; frontend build; baseline demo smoke（health `0.39.0`，local Qdrant unavailable keyword fallback matched expected baseline）; K8s offline YAML lint `15 documents`; observability smoke `5 passed, 1 warning`; Docker Compose observability profile config（Docker config permission warning, config parsed successfully）; research artifact `rg`; JSONL parse sanity check; release `rg`; `git diff --check`.
+- Attempted: `kubectl apply --dry-run=client --validate=false -f .\infra\k8s`; local machine has no Kubernetes API context, so kubectl failed during API discovery against `localhost:8080`.

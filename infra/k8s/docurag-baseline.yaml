@@ -16,7 +16,7 @@ metadata:
     app.kubernetes.io/part-of: docurag-agentops
 data:
   DOCURAG_APP_NAME: "DocuRAG AgentOps Backend"
-  DOCURAG_VERSION: "0.38.0"
+  DOCURAG_VERSION: "0.39.0"
   DOCURAG_ENVIRONMENT: "k8s"
   DOCURAG_DATA_DIR: "/app/data"
   DOCURAG_AUTH_MODE: "demo"
@@ -80,7 +80,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/serenityouo/docurag-agentops-backend:0.38.0
+          image: ghcr.io/serenityouo/docurag-agentops-backend:0.39.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -165,7 +165,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ghcr.io/serenityouo/docurag-agentops-frontend:0.38.0
+          image: ghcr.io/serenityouo/docurag-agentops-frontend:0.39.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -247,7 +247,7 @@ spec:
     spec:
       containers:
         - name: worker
-          image: ghcr.io/serenityouo/docurag-agentops-backend:0.38.0
+          image: ghcr.io/serenityouo/docurag-agentops-backend:0.39.0
           imagePullPolicy: IfNotPresent
           command:
             - python

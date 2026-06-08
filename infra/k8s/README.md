@@ -25,7 +25,7 @@ Use `--validate=false` so the manifest shape can be checked without requiring a 
 
 ## Rollout
 
-This baseline expects immutable image tags in real use. Replace the sample `0.38.0` image tags during release sync or deployment packaging.
+This baseline expects immutable image tags in real use. Phase 39 release sync sets the sample image tags to `0.39.0`; replace them during deployment packaging when publishing real images.
 
 ```powershell
 kubectl apply -f .\infra\k8s\docurag-baseline.yaml

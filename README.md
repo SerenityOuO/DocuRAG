@@ -157,7 +157,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 
 ## 目前邊界
 
-目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.38.0 已完成 Agent runtime hardening：`llm_planner` 只能產生受 schema 驗證的安全計畫，失敗會 fallback 到 deterministic planner；既有 Agent tools 只允許 read-only allowlist，並在 trace 顯示 permission decision、tool tier、side-effect policy 與 fallback reason。這不代表 production autonomous Agent、任意 SQL、shell、filesystem command、destructive tool、production approval workflow、production inference gateway、multi-GPU serving、K8s autoscaling、model registry、OpenAI billing / secret vault、RAG ranking 變更、VLM parser schema 變更、LLM-as-judge、answer faithfulness、citation quality scoring、production monitoring trend、production indexing worker、完整 layout understanding、table reconstruction、human correction workflow、production OCR accuracy tuning、production async OCR worker 或 K8s hardening 已完成。
+目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.39.0 已完成 deployment / observability / fine-tuning track release sync：K8s baseline manifests、opt-in Loki / Grafana local observability path、RAG / eval / worker JSONL trace logs 與 research-only synthetic data artifacts 已整理成可驗證交付物。這不代表 production autonomous Agent、任意 SQL、shell、filesystem command、destructive tool、production approval workflow、production inference gateway、multi-GPU serving、production K8s autoscaling、multi-cluster deployment、managed secret integration、production training pipeline、model registry、OpenAI billing / secret vault、RAG ranking 變更、VLM parser schema 變更、LLM-as-judge、answer faithfulness、citation quality scoring、production alerting / incident workflow、production indexing worker、完整 layout understanding、table reconstruction、human correction workflow、production OCR accuracy tuning 或 production async OCR worker 已完成。
 
 ## 文件入口
 

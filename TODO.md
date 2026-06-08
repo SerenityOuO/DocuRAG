@@ -295,7 +295,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 - [x] `tasks/phase-39-deployment-observability-finetuning/39-02-k8s-manifest-baseline.md`: 新增 `infra/k8s/` baseline manifests，包含 API、frontend、worker placeholder、Qdrant、Redis、NATS、ConfigMap、Secret template、probes、resources、rollout / rollback docs 與 optional HPA template；不 bump version。
 - [x] `tasks/phase-39-deployment-observability-finetuning/39-03-observability-stack-and-rag-trace-logs.md`: 新增 opt-in JSONL observability exporter、API / RAG / eval / worker events、Loki + Grafana local profile、Promtail config、LogQL query docs 與 observability smoke；不 bump version。
 - [x] `tasks/phase-39-deployment-observability-finetuning/39-04-finetuning-synthetic-data-research-track.md`: 新增 research-only fine-tuning / synthetic data artifact pack，包含 dataset card、notebook skeleton、SFT JSONL、embedding positive / negative pairs、reranker pairwise samples 與 evaluation template；不 bump version。
-- [ ] `tasks/phase-39-deployment-observability-finetuning/39-05-phase-39-release-sync.md`
+- [x] `tasks/phase-39-deployment-observability-finetuning/39-05-phase-39-release-sync.md`: 完成 `v0.39.0` Phase 39 release sync，更新 backend / frontend / Docker Compose / `.env.example` / health test / K8s sample image tag 版本與 README / README_DEV / backend README / frontend README / TODO / ROADMAP；保留 production autoscaling、multi-cluster deployment、managed secret integration 與 production training pipeline 為未完成邊界。
 
 39-01 Deployment Observability Research Contract Status：
 
@@ -311,7 +311,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 - `infra/k8s/hpa-optional.yaml` 僅作 optional API HPA shape，不宣稱 production autoscaling 或大規模壓測完成。
 - 文件已補充 local YAML lint、cluster dry-run、rollout / rollback、config checksum、readiness gate、failed rollout triage 與 boundary。
 - Validation 已通過：offline YAML lint（15 個 K8s YAML documents，均有 `apiVersion` / `kind` / `metadata.name`）、ticket `rg` 與 `git diff --check` / `git diff --cached --check`。`kubectl apply --dry-run=client --validate=false -f .\infra\k8s` 已嘗試，但本機無 Kubernetes API context，kubectl v1.34.1 在 API discovery 階段連 `localhost:8080` 失敗。
-- Release Impact：Version bump required: no。此 ticket 是 deployment artifact baseline，sample image tag 維持目前 `0.38.0`，版本同步留到 `39-05`。
+- Release Impact：Version bump required: no。此 ticket 是 deployment artifact baseline；sample image tag 已由 `39-05` release sync 更新到 `0.39.0`。
 
 39-03 Observability Stack and RAG Trace Logs Status：
 
@@ -320,7 +320,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 - Eval endpoints 匯出 Hit Rate@K、MRR@K、average latency、failure count、fallback count 與 trace metadata count；worker task store 匯出 queued / running / succeeded / failed lifecycle。
 - `infra/observability/` 已新增 Loki / Promtail / Grafana opt-in path、JSON label config 與 LogQL query examples，覆蓋 API p95 latency、error rate、worker failures、retrieval / rerank / generation latency、fallback count、Hit Rate 與 MRR。
 - Validation 已通過：backend full test `260 passed, 1 warning`（pytest cache permission warning）、observability smoke `5 passed, 1 warning`、`docker-compose -f .\infra\docker-compose.yml --profile observability config`（通過但本機 Docker config 權限 warning）、ticket `rg` 與 `git diff --check`。
-- Release Impact：Version bump required: no。此 ticket 是 Phase 39 observability runtime / docs slice，版本同步留到 `39-05`。
+- Release Impact：Version bump required: no。此 ticket 是 Phase 39 observability runtime / docs slice；版本已由 `39-05` release sync 統一更新到 `v0.39.0`。
 
 39-04 Fine Tuning Synthetic Data Research Track Status：
 
@@ -328,11 +328,18 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 - `sample-data/fine-tuning/` 已新增 SFT schema extraction JSONL、embedding positive / negative pairs、reranker pairwise samples 與 evaluation CSV，覆蓋 invoice、contract、report examples。
 - Evaluation template 明確保留 Hit Rate@K、MRR@K、Recall@K、parser field accuracy、sample count、data source 與 skip reason。
 - Validation 已通過：ticket `rg`、JSONL parse sanity check 與 `git diff --check`。
-- Release Impact：Version bump required: no。此 ticket 是 Phase 39 research artifact slice，不執行 training、不下載大型模型、不新增 dependency、不接 production runtime；版本同步留到 `39-05`。
+- Release Impact：Version bump required: no。此 ticket 是 Phase 39 research artifact slice，不執行 training、不下載大型模型、不新增 dependency、不接 production runtime；版本已由 `39-05` release sync 統一更新到 `v0.39.0`。
+
+39-05 Phase 39 Release Sync Status：
+
+- 已完成。backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、K8s sample image tag、README、README_DEV、backend README、frontend README、TODO、ROADMAP、demo smoke expected version 與 ticket 已同步到 `0.39.0` / `v0.39.0`。
+- Validation 已通過：backend full test `260 passed, 1 warning`（pytest cache permission warning）、frontend build、baseline demo smoke（health `0.39.0`，本機 Qdrant unavailable 時 keyword fallback 符合預期）、K8s offline YAML lint `15 documents`、observability smoke `5 passed, 1 warning`、Docker Compose observability profile config（Docker config permission warning，但 config 解析成功）、research artifact `rg`、JSONL parse sanity check、release `rg` 與 `git diff --check`。
+- `kubectl apply --dry-run=client --validate=false -f .\infra\k8s` 已嘗試；本機無 Kubernetes API context，kubectl 在 API discovery 階段連 `localhost:8080` 失敗。此環境限制已記錄，offline YAML lint 通過。
+- Release Impact：Version bump required: yes。Phase 39 已完成 `v0.39.0` deployment / observability / fine-tuning track release；不新增 production autoscaling、multi-cluster deployment、managed secret integration、production alerting / incident workflow 或 production training pipeline。
 
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync，Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release sync，Phase 37 已完成 `v0.37.0` inference ops / vLLM serving release sync，Phase 38 已完成 `v0.38.0` Agent runtime hardening release sync。Phase 39 目前只剩 `39-05` release sync 未完成；Phase 40 planning 票已完成，後續 evidence tickets 尚未實作。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync，Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release sync，Phase 37 已完成 `v0.37.0` inference ops / vLLM serving release sync，Phase 38 已完成 `v0.38.0` Agent runtime hardening release sync，Phase 39 已完成 `v0.39.0` deployment / observability / fine-tuning track release sync。Phase 40 planning 票已完成，後續 evidence tickets 尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
