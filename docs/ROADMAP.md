@@ -453,8 +453,17 @@ Expected Outcome：
 - Provider boundary covers `ollama`, `openai_compatible` and `vllm`; vLLM remains an OpenAI-compatible serving path, not the only runtime.
 - Metrics contract covers prompt tokens, completion tokens, total tokens, latency, throughput, finish reason, GPU memory estimate and KV cache estimate.
 - Fallback contract covers unavailable provider, timeout, malformed response, rate limit / overload and unsupported modality without changing RAG prompt, Agent planner, VLM parser schema, ranking or frontend streaming behavior.
-- Release Impact: Version bump required: no. Runtime implementation remains deferred to `37-02` / `37-03`; version sync remains deferred to `37-04`.
+- Release Impact: Version bump required: no. OpenAI-compatible runtime is handled by `37-02`; vLLM serving / benchmark docs remain deferred to `37-03`, and version sync remains deferred to `37-04`.
 - Validation: ticket `rg` and `git diff --check`.
+
+37-02 OpenAI Compatible Client Boundary Status：
+
+- Completed the OpenAI-compatible LLM adapter for RAG generation. It is explicitly enabled with `DOCURAG_LLM_PROVIDER=openai_compatible` and uses `DOCURAG_LLM_BASE_URL`, `DOCURAG_LLM_MODEL`, `DOCURAG_LLM_TIMEOUT_SECONDS` and optional `DOCURAG_LLM_API_KEY`.
+- The adapter calls `{base_url}/chat/completions`, parses response text, prompt tokens, completion tokens, total tokens, finish reason, provider request id, measured provider latency and derived throughput into existing RAG trace metadata.
+- Timeout, malformed response and unavailable endpoint keep the existing provider fallback path; retrieved chunks remain the safe response and trace metadata records `llm_fallback_reason=provider_error`.
+- Ollama remains the default local provider. This ticket does not add a vLLM server, OpenAI SDK dependency, VLM parser runtime change, Agent planner change, RAG prompt change, production API key vault or production inference gateway.
+- Release Impact: Version bump required: no. Version sync remains deferred to `37-04`.
+- Validation: focused backend tests `39 passed`; backend full test `251 passed` with 1 pytest cache warning; ticket `rg`; `git diff --check`.
 
 ### Phase 38 - Agent Runtime Hardening
 

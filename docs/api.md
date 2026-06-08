@@ -245,14 +245,14 @@ When embedding, Qdrant or reranker runtime is unavailable, vector-backed strateg
 
 ## Phase 37 Inference Provider Ops Contract
 
-`37-01` is a Markdown-only contract ticket. It defines how future LLM / VLM inference providers should report selection, latency, token usage and fallback state before any OpenAI-compatible client or vLLM server is added. Existing Ollama behavior remains the default demo path until a later runtime ticket explicitly changes it.
+`37-01` was a Markdown-only contract ticket. It defines how LLM / VLM inference providers should report selection, latency, token usage and fallback state. `37-02` adds the first OpenAI-compatible LLM adapter for RAG generation while keeping Ollama as the default local fallback path. vLLM server setup remains deferred to `37-03`.
 
 ### Provider Boundary
 
 | Provider label | HTTP shape | Intended use | Boundary |
 |---|---|---|---|
 | `ollama` | Ollama `/api/generate` and embedding endpoints | Current local demo LLM / VLM path and fallback baseline. | Must remain available as a local fallback path; no production SLA claim. |
-| `openai_compatible` | OpenAI-compatible chat / responses-style endpoint, configured by base URL and model. | Future adapter for hosted or local compatible servers. | Requires explicit env selection and must not require a production secret for local validation. |
+| `openai_compatible` | OpenAI-compatible chat endpoint, configured by base URL and model. | Implemented in `37-02` for RAG generation against hosted or local compatible servers. | Requires explicit env selection and must not require a production secret for local validation. |
 | `vllm` | OpenAI-compatible endpoint served by vLLM. | Future local serving / benchmark path. | `37-01` does not start vLLM, add Docker runtime, or make vLLM the only provider. |
 
 Provider selection must be explicit in trace metadata:
@@ -267,7 +267,7 @@ Provider selection must be explicit in trace metadata:
 }
 ```
 
-Future runtime tickets may expose `DOCURAG_LLM_PROVIDER=ollama|openai_compatible|vllm` and matching VLM settings, but this contract does not add those runtime branches. Existing `DOCURAG_LLM_PROVIDER` and `DOCURAG_VLM_PROVIDER` behavior remains unchanged unless a later ticket implements it.
+`37-02` exposes `DOCURAG_LLM_PROVIDER=ollama|openai_compatible` for RAG answer generation. `openai_compatible` uses `DOCURAG_LLM_BASE_URL` as the endpoint root, `DOCURAG_LLM_MODEL` as the model name, `DOCURAG_LLM_TIMEOUT_SECONDS` as the request timeout and optional `DOCURAG_LLM_API_KEY` as a bearer token. Local compatible servers that do not require auth can leave `DOCURAG_LLM_API_KEY` empty. `DOCURAG_VLM_PROVIDER` behavior remains unchanged in `37-02`; OpenAI-compatible VLM parsing is not added by this ticket.
 
 ### Metrics Contract
 
@@ -301,7 +301,14 @@ Fallback metadata belongs in response trace metadata and persisted run metadata 
 
 ### Validation Boundary
 
-`37-01` only validates documentation coverage. It does not add an endpoint, SDK dependency, vLLM server, GPU benchmark script, paid API key handling, streaming API or production inference gateway.
+`37-02` validates the OpenAI-compatible LLM adapter with backend tests for success, timeout, malformed response and unavailable endpoint handling. It does not add an OpenAI SDK dependency, vLLM server, GPU benchmark script, paid API key handling, streaming API, VLM parser runtime change, Agent planner change or production inference gateway.
+
+### 37-02 Runtime Notes
+
+- `OpenAiCompatibleLlmProvider` calls `{DOCURAG_LLM_BASE_URL}/chat/completions` with non-streaming chat completion payloads.
+- The adapter normalizes prompt tokens, completion tokens, total tokens, finish reason, provider request id, provider latency and tokens per second into the existing RAG trace metadata when the provider returns those fields.
+- Timeout, connection failure and malformed response raise provider errors; `/rag/query` keeps the existing provider fallback path and returns retrieved chunks with `llm_fallback_reason=provider_error`.
+- Ollama remains the default `DOCURAG_LLM_PROVIDER=ollama` path and is not removed.
 
 ## Phase 29 Built-in RAG Eval Contract
 

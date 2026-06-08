@@ -219,7 +219,7 @@ Phase 36 `v0.36.0` - Eval dashboard / rerank analysis：
 
 Phase 37 `v0.37.0` - Inference Ops / vLLM serving：
 - [x] `tasks/phase-37-inference-ops-vllm/37-01-inference-provider-ops-contract.md`: 完成 inference provider ops contract；不 bump version、不新增 runtime。
-- [ ] `tasks/phase-37-inference-ops-vllm/37-02-openai-compatible-client-boundary.md`
+- [x] `tasks/phase-37-inference-ops-vllm/37-02-openai-compatible-client-boundary.md`: 新增 OpenAI-compatible LLM client adapter，可透過 env 明確啟用；保留 Ollama default / fallback，不 bump version。
 - [ ] `tasks/phase-37-inference-ops-vllm/37-03-vllm-local-serving-and-benchmark-docs.md`
 - [ ] `tasks/phase-37-inference-ops-vllm/37-04-inference-ops-release-sync.md`
 
@@ -229,6 +229,13 @@ Phase 37 `v0.37.0` - Inference Ops / vLLM serving：
 - 本 ticket 是 Markdown-only contract，不新增 OpenAI-compatible client runtime、vLLM server、dependency、Docker runtime、multi-GPU serving、autoscaling、K8s deployment、production inference gateway、RAG prompt 變更、Agent planner 變更或 VLM parser 行為變更。
 - Validation 已通過：`rg -n "inference|vLLM|OpenAI-compatible|Ollama|KV cache|GPU memory|Phase 37" docs README_DEV.md TODO.md tasks/phase-37-inference-ops-vllm` 與 `git diff --check`。
 - Release Impact：Version bump required: no。這是 Phase 37 contract ticket，版本同步留到 `37-04`。
+
+37-02 OpenAI Compatible Client Boundary：
+- 已完成。`DOCURAG_LLM_PROVIDER=openai_compatible` 可啟用 OpenAI-compatible LLM adapter，使用 `DOCURAG_LLM_BASE_URL`、`DOCURAG_LLM_MODEL`、`DOCURAG_LLM_TIMEOUT_SECONDS` 與可選 `DOCURAG_LLM_API_KEY` 呼叫 `{base_url}/chat/completions`。
+- Provider success path 會回填 prompt tokens、completion tokens、total tokens、finish reason、provider request id、provider latency 與 tokens per second；timeout、malformed response 或 unavailable endpoint 會保留既有 RAG retrieved-chunks fallback，並在 trace metadata 標示 `llm_fallback_reason=provider_error`。
+- Ollama default / fallback 未移除；本 ticket 不新增 OpenAI SDK dependency、vLLM server、VLM parser runtime、Agent planner 變更、RAG prompt 變更、production API key vault 或 production inference gateway。
+- Validation 已通過：focused backend tests `39 passed`、backend full test `251 passed`（1 pytest cache warning）、ticket `rg` 與 `git diff --check`。
+- Release Impact：Version bump required: no。這是 Phase 37 runtime slice，版本同步留到 `37-04`。
 
 Phase 38 `v0.38.0` - Agent runtime hardening：
 - [ ] `tasks/phase-38-agent-runtime-hardening/38-01-agent-runtime-permission-contract.md`

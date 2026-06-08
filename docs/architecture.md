@@ -538,7 +538,7 @@ Boundary rules:
 
 ## Phase 37 Inference Provider Ops Contract
 
-`37-01` defines the inference provider boundary for future LLMOps-facing work. It does not add a new OpenAI-compatible client, does not start vLLM, does not add a deployment file and does not change the current Ollama-first demo path.
+`37-01` defines the inference provider boundary for LLMOps-facing work. `37-02` adds the first OpenAI-compatible LLM adapter for RAG generation only. It does not start vLLM, add a deployment file, change the VLM parser route, change the Agent planner or remove the current Ollama-first demo path.
 
 Target architecture:
 
@@ -564,12 +564,13 @@ Provider boundary:
 | Provider | Role | Required fallback behavior |
 |---|---|---|
 | `ollama` | Current local demo provider for generation and VLM parser spike. | Remains local fallback when compatible endpoints are disabled or unavailable. |
-| `openai_compatible` | Future adapter for local or hosted compatible endpoints. | Must be explicitly enabled; unavailable / timeout / malformed response falls back to existing safe path. |
+| `openai_compatible` | Implemented in `37-02` for RAG generation through `{base_url}/chat/completions`. | Must be explicitly enabled with `DOCURAG_LLM_PROVIDER=openai_compatible`; unavailable / timeout / malformed response falls back to existing safe path. |
 | `vllm` | Future local serving path exposed through OpenAI-compatible API. | Must never become the only runtime; vLLM server setup is deferred to `37-03`. |
 
 Metrics boundary:
 
 - `prompt_tokens`, `completion_tokens`, `total_tokens`, `latency_ms`, `tokens_per_second`, `finish_reason`, `provider_request_id`.
+- `37-02` maps compatible response `usage.prompt_tokens`, `usage.completion_tokens`, `usage.total_tokens`, `choices[0].finish_reason`, response `id`, measured provider latency and derived throughput into existing RAG citation trace metadata.
 - Local serving estimates may include `gpu_memory_estimate_mb` and `kv_cache_estimate_mb`, but estimates must be labeled as estimates unless a later benchmark ticket measures them.
 - Metrics must be attached to existing trace metadata or report artifacts; missing metrics stay `null` / unavailable rather than being displayed as `0`.
 

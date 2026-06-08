@@ -11,6 +11,7 @@ from app.services.llm import (
     LlmProviderDisabledError,
     LlmProviderError,
     OllamaLlmProvider,
+    OpenAiCompatibleLlmProvider,
     create_llm_provider,
 )
 
@@ -62,6 +63,27 @@ def test_create_llm_provider_applies_generation_guardrail_settings() -> None:
     assert isinstance(provider, OllamaLlmProvider)
     assert provider.think is True
     assert provider.num_predict == 128
+
+
+def test_create_llm_provider_enables_openai_compatible_provider() -> None:
+    provider = create_llm_provider(
+        Settings(
+            llm_provider="openai_compatible",
+            llm_base_url="http://127.0.0.1:8000/v1",
+            llm_model="local-qwen",
+            llm_timeout_seconds=7,
+            llm_api_key="local-token",
+            llm_num_predict=128,
+        )
+    )
+
+    assert isinstance(provider, OpenAiCompatibleLlmProvider)
+    assert provider.name == "openai_compatible"
+    assert provider.base_url == "http://127.0.0.1:8000/v1"
+    assert provider.model == "local-qwen"
+    assert provider.timeout_seconds == 7
+    assert provider.api_key == "local-token"
+    assert provider.max_tokens == 128
 
 
 def test_ollama_generate_sends_non_streaming_request_and_parses_response() -> None:
@@ -137,6 +159,119 @@ def test_ollama_generate_allows_think_and_num_predict_overrides() -> None:
     assert captured["body"]["options"] == {"num_predict": 128}
     assert result.think is True
     assert result.num_predict == 128
+
+
+def test_openai_compatible_generate_sends_chat_completion_request_and_parses_metadata() -> None:
+    captured: dict[str, Any] = {}
+
+    def transport(request: urllib.request.Request, timeout: float) -> FakeResponse:
+        captured["url"] = request.full_url
+        captured["method"] = request.get_method()
+        captured["timeout"] = timeout
+        captured["authorization"] = request.get_header("Authorization")
+        captured["body"] = json.loads(request.data.decode("utf-8"))
+        return FakeResponse(
+            {
+                "id": "chatcmpl-local-001",
+                "model": "local-qwen",
+                "choices": [
+                    {
+                        "message": {"role": "assistant", "content": "Compatible answer"},
+                        "finish_reason": "stop",
+                    }
+                ],
+                "usage": {
+                    "prompt_tokens": 11,
+                    "completion_tokens": 5,
+                    "total_tokens": 16,
+                },
+            }
+        )
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="http://127.0.0.1:8000/v1/",
+        model="local-qwen",
+        timeout_seconds=5,
+        api_key="local-token",
+        max_tokens=64,
+        transport=transport,
+    )
+
+    result = provider.generate("  hello  ", system="Only answer from context.")
+
+    assert captured == {
+        "url": "http://127.0.0.1:8000/v1/chat/completions",
+        "method": "POST",
+        "timeout": 5,
+        "authorization": "Bearer local-token",
+        "body": {
+            "model": "local-qwen",
+            "messages": [
+                {"role": "system", "content": "Only answer from context."},
+                {"role": "user", "content": "hello"},
+            ],
+            "stream": False,
+            "max_tokens": 64,
+        },
+    }
+    assert result.text == "Compatible answer"
+    assert result.model == "local-qwen"
+    assert result.prompt_tokens == 11
+    assert result.completion_tokens == 5
+    assert result.total_tokens == 16
+    assert result.finish_reason == "stop"
+    assert result.provider_request_id == "chatcmpl-local-001"
+    assert result.provider_latency_ms is not None
+    assert result.provider_latency_ms >= 0
+    assert result.tokens_per_second is not None
+    assert result.num_predict == 64
+
+
+def test_openai_compatible_generate_reports_malformed_response_without_message_content() -> None:
+    def transport(request: urllib.request.Request, timeout: float) -> FakeResponse:
+        return FakeResponse({"model": "local-qwen", "choices": [{"message": {"role": "assistant"}}]})
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="http://127.0.0.1:8000/v1",
+        model="local-qwen",
+        transport=transport,
+    )
+
+    with pytest.raises(LlmProviderError, match="string message content"):
+        provider.generate("hello")
+
+
+def test_openai_compatible_generate_reports_timeout() -> None:
+    def transport(request: urllib.request.Request, timeout: float) -> FakeResponse:
+        raise socket.timeout("timed out")
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="http://127.0.0.1:8000/v1",
+        model="local-qwen",
+        timeout_seconds=1,
+        transport=transport,
+    )
+
+    with pytest.raises(LlmProviderError, match="timed out after 1.0s"):
+        provider.generate("hello")
+
+
+def test_openai_compatible_health_reports_unavailable_endpoint() -> None:
+    def transport(request: urllib.request.Request, timeout: float) -> FakeResponse:
+        raise urllib.error.URLError(ConnectionRefusedError("connection refused"))
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="http://127.0.0.1:8000/v1",
+        model="local-qwen",
+        transport=transport,
+    )
+
+    health = provider.check_health()
+
+    assert health.enabled is True
+    assert health.available is False
+    assert health.provider == "openai_compatible"
+    assert "Cannot connect to OpenAI-compatible endpoint" in health.message
 
 
 def test_ollama_generate_reports_malformed_response_without_final_text() -> None:

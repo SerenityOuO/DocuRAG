@@ -35,13 +35,21 @@
 
 ## Acceptance Criteria
 
-- [ ] OpenAI-compatible provider 可透過 env 明確啟用。
-- [ ] Provider 回傳 token / latency metadata，並保留 fallback reason。
-- [ ] Ollama fallback 不被移除。
-- [ ] Backend tests 覆蓋 provider success 與 error paths。
+- [x] OpenAI-compatible provider 可透過 env 明確啟用。
+- [x] Provider 回傳 token / latency metadata，並保留 fallback reason。
+- [x] Ollama fallback 不被移除。
+- [x] Backend tests 覆蓋 provider success 與 error paths。
 
 ## Validation
 
 - `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
 - `rg -n "OpenAI-compatible|base_url|completion tokens|prompt tokens|provider fallback" backend docs TODO.md tasks/phase-37-inference-ops-vllm`
 - `git diff --check`
+
+## Completion Notes
+
+- Added `OpenAiCompatibleLlmProvider` behind `DOCURAG_LLM_PROVIDER=openai_compatible`.
+- Reused `DOCURAG_LLM_BASE_URL`, `DOCURAG_LLM_MODEL`, `DOCURAG_LLM_TIMEOUT_SECONDS`, optional `DOCURAG_LLM_API_KEY` and `DOCURAG_LLM_NUM_PREDICT` for the compatible chat completion request.
+- Normalized prompt tokens, completion tokens, total tokens, finish reason, provider request id, provider latency and tokens per second into existing RAG trace metadata.
+- Preserved Ollama as the default provider and safe fallback path; no vLLM server, OpenAI SDK dependency, VLM parser runtime, Agent planner change, RAG prompt change, production API key vault or production inference gateway was added.
+- Validation passed: focused backend tests `39 passed`; backend full test `251 passed` with 1 pytest cache warning; ticket `rg`; `git diff --check`.

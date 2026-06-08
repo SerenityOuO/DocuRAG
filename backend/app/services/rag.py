@@ -240,6 +240,21 @@ class KeywordRagProvider:
         if generation.completion_tokens is not None:
             fields["llm_completion_tokens"] = str(generation.completion_tokens)
 
+        if generation.total_tokens is not None:
+            fields["llm_total_tokens"] = str(generation.total_tokens)
+
+        if generation.finish_reason is not None:
+            fields["llm_finish_reason"] = generation.finish_reason
+
+        if generation.provider_latency_ms is not None:
+            fields["llm_provider_latency_ms"] = f"{generation.provider_latency_ms:.2f}"
+
+        if generation.tokens_per_second is not None:
+            fields["llm_tokens_per_second"] = f"{generation.tokens_per_second:.2f}"
+
+        if generation.provider_request_id is not None:
+            fields["llm_provider_request_id"] = generation.provider_request_id
+
         if generation.total_duration_ms is not None:
             fields["llm_total_duration_ms"] = f"{generation.total_duration_ms:.2f}"
 
@@ -260,6 +275,7 @@ class KeywordRagProvider:
         fields = {
             "llm_generation_status": "failed",
             "llm_provider": provider_name,
+            "llm_fallback_reason": "provider_error",
             "llm_error": error[:500],
         }
 
