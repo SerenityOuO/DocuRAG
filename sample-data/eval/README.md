@@ -9,6 +9,8 @@
 - `golden-dataset-metadata.json`：Phase 41 golden dataset metadata manifest，為既有 eval cases 補上 case version、source document version、expected evidence mapping、expected answer outline 與 case tags，不改 runtime eval JSON schema。
 - `golden-dataset-changelog.md`：dataset changelog，記錄新增或調整 eval cases / metadata 的理由、demo-safe 邊界與 regression gate 影響。
 - `chunking-indexing-ablation-template.json`：Phase 41 chunking / indexing ablation artifact template，列出 fixed-size、semantic、parent-child、Qdrant payload index、stale vector cleanup 與 reindex 的比較欄位；未實測 row 必須標成 `pending_hypothesis` 或 `not_supported`。
+- `agent-replay-sample.json`：Phase 43 Agent replay artifact，保存 read-only Agent run 的 policy snapshot、tool calls、observations、citations、fallback reason 與 final answer source。
+- `agent-replay-report.json`：Phase 43 Agent replay smoke 產生的 deterministic eval report，包含 tool correctness、permission compliance、evidence coverage、fallback reason 與 groundedness notes。
 
 ## Data Safety
 
@@ -64,6 +66,22 @@ v0.29.0 的後台「測試RAG」會呼叫 backend built-in API 直接載入 `bui
 Baseline eval 不依賴 Ollama embedding、Qdrant 或 FastEmbed runtime。Optional runtime 不可用時，baseline keyword smoke 仍應可重跑；vector-backed optional smoke 會在 preflight 階段停止並回報缺少的 local runtime。
 
 `hybrid_rerank` candidate metadata 會刻意分開 score source：`keyword_score` / `vector_score` 是 branch score，`merged_score` / `merged_rank` 是 hybrid merge 後的分數與排名，`rerank_score` / `rerank_rank` 是 reranker 結果，`final_score_source` 說明最後排序使用的是 rerank 或 fallback 分數。缺少 optional metadata 時，report 應顯示 `metadata unavailable` 或明確 fallback state，而不是把缺值當成錯誤。
+
+## Agent Replay Artifact
+
+Phase 43 的 Agent replay fixture 不會重新執行 Agent tool。它只讀取 `agent-replay-sample.json`，檢查既有 run-shaped evidence 是否能重現 tool selection、observation、fallback reason 與 final answer source。
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\agent-replay-smoke.ps1
+```
+
+若要重生 tracked demo report：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\agent-replay-smoke.ps1 -ReportPath .\sample-data\eval\agent-replay-report.json
+```
+
+這不是 production autonomous Agent eval platform、LLM-as-judge、production audit storage 或外部副作用 replay。`permission compliance` 只檢查 artifact 中的 policy snapshot 沒有 destructive / prohibited / approval bypass 狀態；它不替代 runtime RBAC guard。
 
 ## Regression Report
 

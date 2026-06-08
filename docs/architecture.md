@@ -348,6 +348,13 @@ Trace completeness boundary：
 - API / trace 呈現等待 approval 或 rejected state 時，應使用 `permission_decision=forbidden`、`permission_reason=approval_required|approval_rejected|approval_expired`、`approval_required=true`、`approval_state=<state>` 與既有 `risk_tier` / `risk_score`。
 - Frontend 若後續 ticket 呈現 approval state，應只讀 trace metadata，不自行判斷或覆寫 permission decision；本 ticket 不新增 UI。
 
+43-04 Agent replay / eval artifact boundary：
+
+- `sample-data/eval/agent-replay-sample.json` 是 inspection-only replay artifact，保存 source run id、policy snapshot、plan steps、tool calls、observations、citations、fallback reason 與 final answer source。
+- `scripts/agent-replay-smoke.ps1` 只讀 replay artifact 並產生 deterministic report；它不呼叫 backend API、不重新執行 Agent tools、不連線外部服務，也不執行 SQL、shell、filesystem 或 destructive tool。
+- Replay eval dimensions 固定為 tool correctness、permission compliance、evidence coverage、fallback reason 與 groundedness notes；groundedness 是 citation / observation coverage note，不是 LLM-as-judge。
+- `sample-data/eval/agent-replay-report.json` 是 demo-safe evidence report，可用來檢查 tool selection、permission guard、observation coverage、fallback reason 與 final answer 是否保留可追溯證據。
+
 ## Phase 26 VLM Parser Provider Boundary
 
 Phase 26 的目標是把 parser default 切成 VLM-first demo path：`vlm_invoice` 先從既有 upload metadata 解析 demo-safe image input，再呼叫可設定的 local VLM provider；provider unavailable、timeout、unsupported file、invalid response、missing fields 或 confidence too low 時，才 fallback 到 `deterministic_invoice`。v0.27.1 起 VLM request 也帶 compact OCR context，VLM 欄位結果會嘗試對回 OCR line / bbox。這不改 Phase 25 Agent planner / tool allowlist；Agent 仍只透過 `get_document_fields` 讀取保存後的 parser result。

@@ -35,9 +35,9 @@
 
 ## Acceptance Criteria
 
-- [ ] Agent replay artifact 可重現 tool calls、observations、fallback 與 final answer。
-- [ ] Agent eval report 至少包含 tool correctness、permission compliance 與 evidence coverage。
-- [ ] 文件明確標示 replay 不執行高風險外部副作用。
+- [x] Agent replay artifact 可重現 tool calls、observations、fallback 與 final answer。
+- [x] Agent eval report 至少包含 tool correctness、permission compliance 與 evidence coverage。
+- [x] 文件明確標示 replay 不執行高風險外部副作用。
 
 ## Validation
 
@@ -45,3 +45,10 @@
 - Backend tests if runtime changes。
 - `rg -n "Agent replay|tool correctness|permission compliance|evidence coverage|groundedness|fallback reason" backend scripts docs sample-data README_DEV.md TODO.md tasks/phase-43-agentops-governance-secure-runtime`
 - `git diff --check`
+
+## Completion Notes
+
+- 新增 `sample-data/eval/agent-replay-sample.json` 作為 inspection-only replay artifact，保存 policy snapshot、plan steps、tool calls、observations、citations、fallback reason 與 final answer source。
+- 新增 `scripts/agent-replay-smoke.ps1`，只讀 replay artifact 並產生 deterministic report，不呼叫 backend API、不重新執行 Agent tool、不連線外部服務。
+- 新增 `sample-data/eval/agent-replay-report.json`，包含 tool correctness、permission compliance、evidence coverage、fallback reason 與 groundedness notes。
+- 本 ticket 未改 backend runtime，因此不需要 backend tests；版本同步留到 `43-05`。

@@ -1,0 +1,177 @@
+{
+  "schema_version": "agent_replay_v1",
+  "replay_id": "agent-replay-demo-001",
+  "source_run_id": "agent-run-demo-001",
+  "policy_snapshot_id": "phase-43-read-only-policy-v1",
+  "replay_mode": "inspection_only_no_tool_execution",
+  "input_summary": {
+    "task": "Summarize invoice fields and cite payment terms.",
+    "document_id": "doc-demo-invoice-aurora",
+    "query": "payment terms",
+    "top_k": 3
+  },
+  "tool_policy_snapshot": [
+    {
+      "tool_name": "get_document_fields",
+      "tool_tier": "read-only",
+      "risk_tier": "low",
+      "risk_score": 10,
+      "approval_required": false,
+      "approval_state": "not_required",
+      "side_effect_policy": "no_side_effects",
+      "permission_decision": "allowed",
+      "replay_supported": true
+    },
+    {
+      "tool_name": "search_documents",
+      "tool_tier": "read-only",
+      "risk_tier": "low",
+      "risk_score": 10,
+      "approval_required": false,
+      "approval_state": "not_required",
+      "side_effect_policy": "no_side_effects",
+      "permission_decision": "allowed",
+      "replay_supported": true
+    },
+    {
+      "tool_name": "summarize_invoice_fields",
+      "tool_tier": "read-only",
+      "risk_tier": "low",
+      "risk_score": 10,
+      "approval_required": false,
+      "approval_state": "not_required",
+      "side_effect_policy": "no_side_effects",
+      "permission_decision": "allowed",
+      "replay_supported": true
+    }
+  ],
+  "plan_steps": [
+    {
+      "step_id": "step-001",
+      "order": 1,
+      "tool_name": "get_document_fields",
+      "status": "completed",
+      "input_summary": "Read structured invoice fields from doc-demo-invoice-aurora.",
+      "observation_summary": "Parser fields were available through deterministic invoice fallback.",
+      "fallback_reason": "unsupported_file"
+    },
+    {
+      "step_id": "step-002",
+      "order": 2,
+      "tool_name": "search_documents",
+      "status": "completed",
+      "input_summary": "Search payment terms evidence for doc-demo-invoice-aurora.",
+      "observation_summary": "Found a supporting text_upload chunk with payment terms.",
+      "fallback_reason": null
+    },
+    {
+      "step_id": "step-003",
+      "order": 3,
+      "tool_name": "summarize_invoice_fields",
+      "status": "completed",
+      "input_summary": "Summarize structured fields with retrieved citation evidence.",
+      "observation_summary": "Final answer was grounded in parser fields and the retrieved payment terms chunk.",
+      "fallback_reason": "unsupported_file"
+    }
+  ],
+  "tool_calls": [
+    {
+      "tool_name": "get_document_fields",
+      "status": "completed",
+      "input_summary": "document_id=doc-demo-invoice-aurora",
+      "output_summary": "Invoice AUR-2026-051 fields are available.",
+      "observation_summary": "Parser result returned invoice number, vendor, issue date, total amount and currency.",
+      "fallback_reason": "unsupported_file",
+      "citations": [],
+      "trace_metadata": {
+        "permission_decision": "allowed",
+        "permission_reason": "role_allowed",
+        "tool_tier": "read-only",
+        "risk_tier": "low",
+        "risk_score": "10",
+        "approval_required": "false",
+        "approval_state": "not_required",
+        "side_effect_policy": "no_side_effects",
+        "destructive": "false"
+      }
+    },
+    {
+      "tool_name": "search_documents",
+      "status": "completed",
+      "input_summary": "query=payment terms; top_k=3",
+      "output_summary": "Found payment terms evidence in mock-invoice-aurora.txt.",
+      "observation_summary": "Retrieved chunk mock-invoice-aurora.txt::chunk-001 mentions Payment terms: Net 15.",
+      "fallback_reason": null,
+      "citations": [
+        {
+          "document_id": "doc-demo-invoice-aurora",
+          "chunk_id": "mock-invoice-aurora.txt::chunk-001",
+          "filename": "mock-invoice-aurora.txt",
+          "source_type": "text_upload",
+          "page_number": null,
+          "snippet": "Payment terms: Net 15",
+          "score": 1.0
+        }
+      ],
+      "trace_metadata": {
+        "permission_decision": "allowed",
+        "permission_reason": "role_allowed",
+        "tool_tier": "read-only",
+        "risk_tier": "low",
+        "risk_score": "10",
+        "approval_required": "false",
+        "approval_state": "not_required",
+        "side_effect_policy": "no_side_effects",
+        "destructive": "false"
+      }
+    },
+    {
+      "tool_name": "summarize_invoice_fields",
+      "status": "completed",
+      "input_summary": "Summarize invoice fields with citations.",
+      "output_summary": "Invoice AUR-2026-051 is from Aurora Office Supplies Demo LLC; total amount is USD 1,248.50; payment terms are Net 15.",
+      "observation_summary": "Summary used parser fields and citation mock-invoice-aurora.txt::chunk-001.",
+      "fallback_reason": "unsupported_file",
+      "citations": [
+        {
+          "document_id": "doc-demo-invoice-aurora",
+          "chunk_id": "mock-invoice-aurora.txt::chunk-001",
+          "filename": "mock-invoice-aurora.txt",
+          "source_type": "text_upload",
+          "page_number": null,
+          "snippet": "Payment terms: Net 15",
+          "score": 1.0
+        }
+      ],
+      "trace_metadata": {
+        "permission_decision": "allowed",
+        "permission_reason": "role_allowed",
+        "tool_tier": "read-only",
+        "risk_tier": "low",
+        "risk_score": "10",
+        "approval_required": "false",
+        "approval_state": "not_required",
+        "side_effect_policy": "no_side_effects",
+        "destructive": "false"
+      }
+    }
+  ],
+  "citations": [
+    {
+      "document_id": "doc-demo-invoice-aurora",
+      "chunk_id": "mock-invoice-aurora.txt::chunk-001",
+      "filename": "mock-invoice-aurora.txt",
+      "source_type": "text_upload",
+      "page_number": null,
+      "snippet": "Payment terms: Net 15",
+      "score": 1.0
+    }
+  ],
+  "fallback_reason": "unsupported_file",
+  "final_answer_source": "tool_observation_and_citations",
+  "final_answer": {
+    "status": "completed",
+    "text": "Invoice AUR-2026-051 is from Aurora Office Supplies Demo LLC. Total amount is USD 1,248.50. Payment terms are Net 15. Citations: mock-invoice-aurora.txt::chunk-001.",
+    "fallback_reason": "unsupported_file"
+  }
+}

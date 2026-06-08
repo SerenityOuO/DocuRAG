@@ -753,6 +753,12 @@ Expected Outcome：
 - Trace / API 文件已固定 `required`、`approved`、`rejected`、`expired` 的呈現方式；`approved` 仍不會繞過 role、project access、tool tier、side-effect policy 或 destructive boundary。
 - Validation 已通過：focused Agent approval tests `24 passed`；backend full test script `269 passed`（1 pytest cache warning）；Phase 43 approval keyword `rg`；`git diff --check`。Release Impact：Version bump required: no；版本同步留到 `43-05`。
 
+43-04 Agent Run Replay and Eval Status：
+
+- 已完成。`sample-data/eval/agent-replay-sample.json` 保存 inspection-only Agent replay artifact，涵蓋 policy snapshot、plan steps、tool calls、observations、citations、fallback reason 與 final answer source。
+- `scripts/agent-replay-smoke.ps1` 會產生 deterministic report `sample-data/eval/agent-replay-report.json`，檢查 tool correctness、permission compliance、evidence coverage、fallback reason 與 groundedness notes。
+- Validation 已通過：Agent replay smoke；Phase 43 replay keyword `rg`；`git diff --check`。Release Impact：Version bump required: no；版本同步留到 `43-05`。本 ticket 未改 backend runtime，因此未跑 backend tests。
+
 ### Phase 44 - Document Intelligence QA / Human Review Loop
 
 Target version：`v0.44.0`
