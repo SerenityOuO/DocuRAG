@@ -569,11 +569,12 @@ Phase 44 `v0.44.0` - Document Intelligence QA / human review loop：
 - `44-05` validation 已通過：backend full test `270 passed, 1 warning`（pytest cache permission warning）、frontend build、parser field accuracy smoke（field accuracy `0.6`、sample count `5`、missing / wrong / evidence mismatch 各 `1`）、Phase 44 keyword `rg` 與 `git diff --check`。Browser validation 未重跑，因本 release sync 只同步 fallback version label 與文件，未新增或重排 UI surface。Release Impact：Version bump required: yes，Phase 44 已完成 `v0.44.0` Document Intelligence QA / human review loop release；不新增 production annotation platform、layout analysis、table reconstruction、model training 或 production OCR accuracy tuning。
 
 Phase 45 `v0.45.0` - Production readiness / interview portfolio pack：
-- [ ] `tasks/phase-45-production-readiness-portfolio-pack/45-01-jd-evidence-matrix.md`
+- [x] `tasks/phase-45-production-readiness-portfolio-pack/45-01-jd-evidence-matrix.md`: 新增 `docs/jd-evidence-matrix.md`，逐列對照 JD keyword、project evidence、demo command、file path、status、面試說法、honesty boundary、next action 與 gap summary。不 bump version。
 - [ ] `tasks/phase-45-production-readiness-portfolio-pack/45-02-system-design-walkthrough.md`
 - [ ] `tasks/phase-45-production-readiness-portfolio-pack/45-03-demo-scenario-pack.md`
 - [ ] `tasks/phase-45-production-readiness-portfolio-pack/45-04-risk-boundary-and-tradeoff-report.md`
 - [ ] `tasks/phase-45-production-readiness-portfolio-pack/45-05-phase-45-final-release-sync.md`
+- `45-01` validation 已通過：JD evidence keyword `rg` 與 `git diff --check`。本 ticket 不新增 runtime、dependency、測試程式、截圖、demo media 或 version bump，也不把 future backlog 寫成 completed。
 
 Phase 41-45 guardrails：
 

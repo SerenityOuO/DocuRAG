@@ -824,7 +824,7 @@ Goal：把所有成果整理成可面試展示、可被追問、可快速驗證�
 
 Tickets：
 
-- `tasks/phase-45-production-readiness-portfolio-pack/45-01-jd-evidence-matrix.md`
+- [x] `tasks/phase-45-production-readiness-portfolio-pack/45-01-jd-evidence-matrix.md`
 - `tasks/phase-45-production-readiness-portfolio-pack/45-02-system-design-walkthrough.md`
 - `tasks/phase-45-production-readiness-portfolio-pack/45-03-demo-scenario-pack.md`
 - `tasks/phase-45-production-readiness-portfolio-pack/45-04-risk-boundary-and-tradeoff-report.md`
@@ -844,6 +844,12 @@ Phase 41-45 Validation Direction：
 - 任何 release sync ticket 才能 bump backend / frontend / health / Docker Compose version。
 - Runtime ticket 若涉及 backend / frontend，必須跑 backend tests、frontend build 或對應 smoke；純文件 ticket 用 `rg` 與 `git diff --check`。
 - Public `README.md` 保持精簡展示入口；完整 JD evidence、risk report 與 demo pack 優先放 `README_DEV.md` / `docs/`。
+
+45-01 JD Evidence Matrix Status：
+
+- 已完成。新增 `docs/jd-evidence-matrix.md`，以 AI Core、Software / System Architecture、Inference & Ops 三大區塊逐列對照 JD keyword、project evidence、demo command、file path、status、面試說法、honesty boundary 與 next action。
+- Matrix 已覆蓋 RAG / embedding / chunking / vector DB、rerank / Hit Rate / MRR、VLM / OCR、SFT / synthetic data、Agent planning、FastAPI / Vue、RBAC / logs / SQL / NoSQL、NATS / gRPC boundary、Redis、vLLM / Ollama、GPU / NPU / KV cache、Docker / K8s，並在 gap summary 區分 completed、demo-safe、research-only、skip-safe、future backlog 與 not covered。
+- Validation 已通過：JD evidence keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: no；版本同步留到 `45-05`。本 ticket 不新增 runtime、dependency、測試程式、截圖或 demo media。
 
 ## v0.2.0 Demo UI Milestone
 

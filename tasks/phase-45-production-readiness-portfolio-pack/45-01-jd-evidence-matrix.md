@@ -36,14 +36,21 @@
 
 ## Acceptance Criteria
 
-- [ ] JD evidence matrix 覆蓋 AI Core、System Architecture、Inference & Ops。
-- [ ] 每列包含 project evidence、demo / validation path 與 honesty boundary。
-- [ ] 文件清楚區分 completed、demo-safe、research-only 與 future backlog。
-- [ ] Matrix 逐條覆蓋 JD 原文能力，不只用大分類概括。
-- [ ] 每列包含 JD keyword、project evidence、demo command、file path、status、面試說法、honesty boundary 與 next action。
-- [ ] Gap summary 誠實列出 not covered / intentionally out of scope 的項目。
+- [x] JD evidence matrix 覆蓋 AI Core、System Architecture、Inference & Ops。
+- [x] 每列包含 project evidence、demo / validation path 與 honesty boundary。
+- [x] 文件清楚區分 completed、demo-safe、research-only 與 future backlog。
+- [x] Matrix 逐條覆蓋 JD 原文能力，不只用大分類概括。
+- [x] 每列包含 JD keyword、project evidence、demo command、file path、status、面試說法、honesty boundary 與 next action。
+- [x] Gap summary 誠實列出 not covered / intentionally out of scope 的項目。
 
 ## Validation
 
 - `rg -n "JD evidence matrix|AI Core|System Architecture|Inference|RAG|Embedding|SFT|synthetic data|VLM|OCR|Agent|RBAC|NATS|Redis|vLLM|KV cache|K8s|completed|demo-safe|research-only|skip-safe|future backlog|honesty boundary|gap summary" docs README_DEV.md TODO.md tasks/phase-45-production-readiness-portfolio-pack`
 - `git diff --check`
+
+## Completion Notes
+
+- Added `docs/jd-evidence-matrix.md`.
+- Matrix covers AI Core, Software / System Architecture and Inference & Ops evidence rows with JD keyword, project evidence, demo command, file path, status, interview wording, honesty boundary and next action.
+- Gap summary explicitly separates `not covered`, `future backlog`, `research-only`, `demo-safe` and `completed`.
+- No runtime, dependency, test program, screenshot, demo media or version bump was added.
