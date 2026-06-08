@@ -339,7 +339,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync，Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release sync，Phase 37 已完成 `v0.37.0` inference ops / vLLM serving release sync，Phase 38 已完成 `v0.38.0` Agent runtime hardening release sync，Phase 39 已完成 `v0.39.0` deployment / observability / fine-tuning track release sync，Phase 40 已完成 `v0.40.0` JD evidence hardening release sync。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync，Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release sync，Phase 37 已完成 `v0.37.0` inference ops / vLLM serving release sync，Phase 38 已完成 `v0.38.0` Agent runtime hardening release sync，Phase 39 已完成 `v0.39.0` deployment / observability / fine-tuning track release sync，Phase 40 已完成 `v0.40.0` JD evidence hardening release sync，Phase 41 已完成 `v0.41.0` RAG quality regression / DatasetOps release sync。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
@@ -521,7 +521,7 @@ Phase 40 guardrails：
 - `40-02` 可以補 SFT / embedding tuning / synthetic data report 或 notebook skeleton，但不得下載大型模型或執行長時間 training。
 - `40-03` 可以補 inference benchmark report、KV cache / TOPS / NPU 評估方式與 script/template，但不得宣稱沒有實測的硬體結果。
 - `40-04` 可以補 observability dashboard / query examples / demo-safe screenshots，但不得宣稱 production alerting 或 incident workflow 已完成。
-- `40-05` 已完成 release sync，backend / frontend / health / Docker Compose version 已同步到 `v0.40.0`；Phase 41 仍需另依 ticket-first 流程執行。
+- `41-05` 已完成 release sync，backend / frontend / health / Docker Compose version 已同步到 `v0.41.0`；Phase 42 仍需另依 ticket-first 流程執行。
 
 ## Phase 41-45 JD Completion Roadmap
 
@@ -530,7 +530,8 @@ Phase 41 `v0.41.0` - RAG quality regression / DatasetOps：
 - [x] `tasks/phase-41-rag-quality-regression-datasetops/41-02-golden-dataset-versioning.md`: 新增 golden dataset metadata manifest 與 dataset changelog，為既有 demo-safe eval cases 補上 case version、source document version、expected evidence mapping、expected answer outline 與 case tags；runtime eval JSON schema 不變，不 bump version。
 - [x] `tasks/phase-41-rag-quality-regression-datasetops/41-03-retrieval-regression-ci-report.md`: 新增 CI-safe retrieval regression report script 與 baseline artifact，預設跑 keyword strategy，比較 baseline vs current Hit Rate@K / MRR@K / Recall@K / latency / fallback summary，並輸出 dataset version、provider availability、skip reason 與 threshold gate；不 bump version。
 - [x] `tasks/phase-41-rag-quality-regression-datasetops/41-04-chunking-indexing-ablation-report.md`: 新增 chunking / indexing ablation report 與 sample artifact template，說明 fixed-size、semantic、parent-child、Qdrant payload filter / payload index、stale vector cleanup 與 reindex 的比較方式；欄位連回 Hit Rate@K / MRR@K / Recall@K / latency / fallback，並明確標示 keyword baseline 是實測，其餘策略為待測假設或 runtime 尚不支援。不 bump version。
-- [ ] `tasks/phase-41-rag-quality-regression-datasetops/41-05-phase-41-release-sync.md`
+- [x] `tasks/phase-41-rag-quality-regression-datasetops/41-05-phase-41-release-sync.md`: 完成 `v0.41.0` release sync，更新 backend / frontend / Docker Compose / `.env.example` / health test / demo smoke expected version，並同步 README / README_DEV / backend README / frontend README / TODO / ROADMAP；整理 golden dataset、regression report 與 ablation report validation，明確標示 Phase 41 是品質追蹤與回歸證據，不是 production eval platform。
+- Validation 已通過：backend full test、frontend build、retrieval regression report smoke、Phase 41 keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: yes，Phase 41 已完成 `v0.41.0` RAG quality regression / DatasetOps release；不新增 LLM-as-judge、production eval dashboard、DB eval history、排程任務或外部 monitoring。
 
 Phase 42 `v0.42.0` - Inference gateway / capacity planning：
 - [ ] `tasks/phase-42-inference-gateway-capacity-planning/42-01-inference-gateway-contract.md`

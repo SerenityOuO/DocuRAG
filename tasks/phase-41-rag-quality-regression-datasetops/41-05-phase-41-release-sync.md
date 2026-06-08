@@ -37,9 +37,9 @@
 
 ## Acceptance Criteria
 
-- [ ] Backend / frontend / Docker Compose / health test version 同步到 `0.41.0`。
-- [ ] README / README_DEV 清楚說明 Phase 41 的品質回歸證據。
-- [ ] Golden dataset、regression report 與 ablation report 都有 validation 紀錄。
+- [x] Backend / frontend / Docker Compose / health test version 同步到 `0.41.0`。
+- [x] README / README_DEV 清楚說明 Phase 41 的品質回歸證據。
+- [x] Golden dataset、regression report 與 ablation report 都有 validation 紀錄。
 
 ## Validation
 
@@ -48,3 +48,9 @@
 - Retrieval regression report smoke。
 - Phase 41 keyword `rg` validation。
 - `git diff --check`
+
+## Completion Notes
+
+- backend package / app version、frontend package / lock / fallback label、health test、Docker Compose `DOCURAG_VERSION`、`.env.example` 與 demo smoke expected version 已同步到 `0.41.0`。
+- README / README_DEV / backend README / frontend README / TODO / ROADMAP 已整理 Phase 41 golden dataset、regression report 與 ablation report validation。
+- Phase 41 明確標示為品質追蹤與回歸證據 release，不宣稱 production eval platform、LLM-as-judge、DB eval history、排程任務或外部 monitoring。

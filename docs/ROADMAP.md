@@ -639,7 +639,7 @@ Phase 40 Guardrails：
 - `40-02` 不下載大型模型、不執行長時間 training、不把 fine-tuned model 接到 production runtime。
 - `40-03` 不宣稱沒有實測的 TOPS / NPU 數據；可以提供評估方式與 benchmark template。
 - `40-04` 不新增 production alerting、SLO、incident workflow 或 APM vendor integration。
-- `40-05` 已完成 release sync，backend / frontend / health / Docker Compose version 已同步到 `v0.40.0`；Phase 41 仍需逐張 ticket 執行。
+- `41-05` 已完成 release sync，backend / frontend / health / Docker Compose version 已同步到 `v0.41.0`；Phase 42 仍需逐張 ticket 執行。
 
 ## Phase 41-45 JD Completion / Portfolio Roadmap
 
@@ -661,7 +661,7 @@ Tickets：
 - [x] `tasks/phase-41-rag-quality-regression-datasetops/41-02-golden-dataset-versioning.md`
 - [x] `tasks/phase-41-rag-quality-regression-datasetops/41-03-retrieval-regression-ci-report.md`
 - [x] `tasks/phase-41-rag-quality-regression-datasetops/41-04-chunking-indexing-ablation-report.md`
-- `tasks/phase-41-rag-quality-regression-datasetops/41-05-phase-41-release-sync.md`
+- [x] `tasks/phase-41-rag-quality-regression-datasetops/41-05-phase-41-release-sync.md`
 
 Current Status：
 
@@ -670,6 +670,8 @@ Current Status：
 - `41-02` 已新增 `sample-data/eval/golden-dataset-metadata.json` 與 `golden-dataset-changelog.md`，為既有 demo-safe eval cases 補上 case version、source document version、expected evidence mapping、expected answer outline 與 case tags；runtime eval JSON schema 不變。
 - `41-03` 已新增 CI-safe retrieval regression report script 與 baseline artifact，預設只跑 keyword strategy，輸出 baseline vs current metrics、dataset version、provider availability、skip reason 與 threshold / regression gate 解讀。
 - `41-04` 已新增 chunking / indexing ablation report 與 sample artifact template，將 fixed-size、semantic、parent-child、Qdrant payload filter / payload index、stale vector cleanup 與 reindex 比較欄位連回 Phase 35 / Phase 36 / Phase 41 metrics；目前只把 keyword baseline 標成實測，其餘 row 保持待測假設或 runtime 尚不支援。
+- `41-05` 已完成 Phase 41 `v0.41.0` release sync；backend package / app version、frontend package / lock / fallback version、frontend fallback label、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、demo smoke expected version、README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 ticket 已同步。
+- Validation passed: backend full test；frontend build；retrieval regression report smoke；Phase 41 keyword `rg`；`git diff --check`。Release Impact：Version bump required: yes，Phase 41 is released as `v0.41.0`；不新增 LLM-as-judge、production eval dashboard、DB eval history、排程任務或外部 monitoring。
 
 Expected Outcome：
 
