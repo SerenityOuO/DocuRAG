@@ -32,11 +32,18 @@
 
 ## Acceptance Criteria
 
-- [ ] Walkthrough 可在 10 分鐘內說清楚系統資料流與能力邊界。
-- [ ] 文件包含 failure / fallback 解讀與主要 tradeoffs。
-- [ ] 文件不誇大 production readiness。
+- [x] Walkthrough 可在 10 分鐘內說清楚系統資料流與能力邊界。
+- [x] 文件包含 failure / fallback 解讀與主要 tradeoffs。
+- [x] 文件不誇大 production readiness。
 
 ## Validation
 
 - `rg -n "system design walkthrough|Viewer Chat|Admin Ingestion|Redis|NATS|PostgreSQL|inference gateway|observability|tradeoff|fallback" docs README_DEV.md TODO.md tasks/phase-45-production-readiness-portfolio-pack`
 - `git diff --check`
+
+## Completion Notes
+
+- Added `docs/system-design-walkthrough.md`.
+- Walkthrough includes 10-minute talk track, whiteboard-style data flow, runtime surfaces, failure / fallback reading and main tradeoffs.
+- It explicitly frames Redis / NATS, PostgreSQL, inference gateway and observability as demo-safe or opt-in evidence where appropriate, not production readiness.
+- No runtime, infra config, deployment service, public README release log or diagram generation tool was added.
