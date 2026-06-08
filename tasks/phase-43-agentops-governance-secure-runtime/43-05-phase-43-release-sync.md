@@ -37,9 +37,9 @@
 
 ## Acceptance Criteria
 
-- [ ] Backend / frontend / Docker Compose / health test version 同步到 `0.43.0`。
-- [ ] README / README_DEV 清楚說明 Phase 43 Agent governance 能力與邊界。
-- [ ] Tool permission、approval state 與 Agent replay / eval 都有 validation 紀錄。
+- [x] Backend / frontend / Docker Compose / health test version 同步到 `0.43.0`。
+- [x] README / README_DEV 清楚說明 Phase 43 Agent governance 能力與邊界。
+- [x] Tool permission、approval state 與 Agent replay / eval 都有 validation 紀錄。
 
 ## Validation
 
@@ -48,3 +48,9 @@
 - Agent governance / replay smoke。
 - Phase 43 keyword `rg` validation。
 - `git diff --check`
+
+## Completion Notes
+
+- 已同步 backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example` 與 demo smoke expected version 到 `0.43.0`。
+- 已更新 README、README_DEV、backend README、frontend README、TODO、ROADMAP 與本 ticket，明確標示 Phase 43 是 demo-safe Agent governance evidence，不是 production autonomous Agent、任意 SQL、shell、filesystem command、destructive tool、external side-effect tool、production approval workflow 或 production audit storage。
+- Validation 已通過：backend full test `269 passed, 1 warning`（pytest cache permission warning）、frontend build、Agent replay smoke、Phase 43 keyword `rg` 與 `git diff --check`。

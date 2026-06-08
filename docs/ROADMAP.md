@@ -639,7 +639,7 @@ Phase 40 Guardrails：
 - `40-02` 不下載大型模型、不執行長時間 training、不把 fine-tuned model 接到 production runtime。
 - `40-03` 不宣稱沒有實測的 TOPS / NPU 數據；可以提供評估方式與 benchmark template。
 - `40-04` 不新增 production alerting、SLO、incident workflow 或 APM vendor integration。
-- `42-05` 已完成 release sync，backend / frontend / health / Docker Compose version 已同步到 `v0.42.0`；Phase 43 仍需逐張 ticket 執行。
+- `43-05` 已完成 release sync，backend / frontend / health / Docker Compose version 已同步到 `v0.43.0`；下一步依 ticket-first 流程進入 Phase 44。
 
 ## Phase 41-45 JD Completion / Portfolio Roadmap
 
@@ -722,11 +722,11 @@ Goal：把 Agent tool-use 從 demo trace 推進到可控、可審計、可回放
 
 Tickets：
 
-- `tasks/phase-43-agentops-governance-secure-runtime/43-01-agent-governance-contract.md`
-- `tasks/phase-43-agentops-governance-secure-runtime/43-02-tool-permission-policy-runtime.md`
-- `tasks/phase-43-agentops-governance-secure-runtime/43-03-human-approval-risk-tier.md`
-- `tasks/phase-43-agentops-governance-secure-runtime/43-04-agent-run-replay-and-eval.md`
-- `tasks/phase-43-agentops-governance-secure-runtime/43-05-phase-43-release-sync.md`
+- [x] `tasks/phase-43-agentops-governance-secure-runtime/43-01-agent-governance-contract.md`
+- [x] `tasks/phase-43-agentops-governance-secure-runtime/43-02-tool-permission-policy-runtime.md`
+- [x] `tasks/phase-43-agentops-governance-secure-runtime/43-03-human-approval-risk-tier.md`
+- [x] `tasks/phase-43-agentops-governance-secure-runtime/43-04-agent-run-replay-and-eval.md`
+- [x] `tasks/phase-43-agentops-governance-secure-runtime/43-05-phase-43-release-sync.md`
 
 Expected Outcome：
 
@@ -758,6 +758,12 @@ Expected Outcome：
 - 已完成。`sample-data/eval/agent-replay-sample.json` 保存 inspection-only Agent replay artifact，涵蓋 policy snapshot、plan steps、tool calls、observations、citations、fallback reason 與 final answer source。
 - `scripts/agent-replay-smoke.ps1` 會產生 deterministic report `sample-data/eval/agent-replay-report.json`，檢查 tool correctness、permission compliance、evidence coverage、fallback reason 與 groundedness notes。
 - Validation 已通過：Agent replay smoke；Phase 43 replay keyword `rg`；`git diff --check`。Release Impact：Version bump required: no；版本同步留到 `43-05`。本 ticket 未改 backend runtime，因此未跑 backend tests。
+
+43-05 Phase 43 Release Sync Status：
+
+- 已完成 Phase 43 `v0.43.0` release sync；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、demo smoke expected version、README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 ticket 已同步。
+- Phase 43 artifacts 已整理為 tool permission policy、approval fail-closed gate、Agent replay / eval sample 與 deterministic report；仍不代表 production autonomous Agent、任意 SQL、shell、filesystem command、destructive tool、external side-effect tool、production approval workflow 或 production audit storage。
+- Validation 已通過：backend full test `269 passed, 1 warning`（pytest cache permission warning）、frontend build、Agent replay smoke、Phase 43 keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: yes，Phase 43 is released as `v0.43.0`。
 
 ### Phase 44 - Document Intelligence QA / Human Review Loop
 

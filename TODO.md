@@ -521,7 +521,7 @@ Phase 40 guardrails：
 - `40-02` 可以補 SFT / embedding tuning / synthetic data report 或 notebook skeleton，但不得下載大型模型或執行長時間 training。
 - `40-03` 可以補 inference benchmark report、KV cache / TOPS / NPU 評估方式與 script/template，但不得宣稱沒有實測的硬體結果。
 - `40-04` 可以補 observability dashboard / query examples / demo-safe screenshots，但不得宣稱 production alerting 或 incident workflow 已完成。
-- `42-05` 已完成 release sync，backend / frontend / health / Docker Compose version 已同步到 `v0.42.0`；Phase 43 仍需另依 ticket-first 流程執行。
+- `43-05` 已完成 release sync，backend / frontend / health / Docker Compose version 已同步到 `v0.43.0`；下一步依 ticket-first 流程進入 Phase 44。
 
 ## Phase 41-45 JD Completion Roadmap
 
@@ -549,11 +549,12 @@ Phase 43 `v0.43.0` - AgentOps governance / secure tool runtime：
 - [x] `tasks/phase-43-agentops-governance-secure-runtime/43-02-tool-permission-policy-runtime.md`: 補齊既有 allowlisted Agent tools 的 permission policy runtime metadata；read-only tools 會輸出 risk / approval trace，Agent run-level trace 會彙總 risk / approval 狀態，Viewer denied path 保留 generic trace。不 bump version。
 - [x] `tasks/phase-43-agentops-governance-secure-runtime/43-03-human-approval-risk-tier.md`: 補齊 high-risk tool policy 的 human approval fail-closed gate；`required`、`rejected`、`expired` 會在 tool execution 前被擋下，`approved` 仍需通過 role / project / tier guard。不 bump version。
 - [x] `tasks/phase-43-agentops-governance-secure-runtime/43-04-agent-run-replay-and-eval.md`: 新增 Agent replay sample、inspection-only smoke script 與 deterministic eval report；可檢查 tool correctness、permission compliance、evidence coverage、fallback reason 與 groundedness notes。不 bump version。
-- [ ] `tasks/phase-43-agentops-governance-secure-runtime/43-05-phase-43-release-sync.md`
+- [x] `tasks/phase-43-agentops-governance-secure-runtime/43-05-phase-43-release-sync.md`: 完成 `v0.43.0` release sync，更新 backend / frontend / Docker Compose / `.env.example` / health test / demo smoke expected version，並同步 README / README_DEV / backend README / frontend README / TODO / ROADMAP；整理 tool permission、approval state 與 Agent replay / eval validation。
 - `43-01` validation 已通過：Phase 43 governance keyword `rg` 與 `git diff --check`。本 ticket 不新增 runtime tool execution、不改 deterministic Agent planner、不新增任意 SQL、shell、filesystem command、production approval workflow、外部 IAM、SSO 或 audit log pipeline。
 - `43-02` validation 已通過：focused Agent tests `20 passed`；backend full test script `265 passed`（1 pytest cache warning）；Phase 43 permission keyword `rg`；`git diff --check`。本 ticket 不新增任意 SQL、shell、filesystem command、external side-effect tools、production IAM、SSO、OAuth、MFA、外部 approval service 或 destructive tool runtime。
 - `43-03` validation 已通過：focused Agent approval tests `24 passed`；backend full test script `269 passed`（1 pytest cache warning）；Phase 43 approval keyword `rg`；`git diff --check`。本 ticket 不新增 production workflow engine、通知系統、Slack / email integration、外部審批平台、destructive action、資料刪除工具或 RBAC / project access 繞過。
 - `43-04` validation 已通過：Agent replay smoke；Phase 43 replay keyword `rg`；`git diff --check`。本 ticket 未改 backend runtime，因此未跑 backend tests；不新增 autonomous planner training、LLM-as-judge、自動修正工具、production audit storage、destructive / external side-effect replay、任意 SQL、shell 或 filesystem command tool。
+- `43-05` validation 已通過：backend full test `269 passed, 1 warning`（pytest cache permission warning）、frontend build、Agent replay smoke、Phase 43 keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: yes，Phase 43 已完成 `v0.43.0` AgentOps governance / secure tool runtime release；不新增 production autonomous Agent、任意 SQL、shell、filesystem command、destructive tool、external side-effect tool、production approval workflow 或 production audit storage。
 
 Phase 44 `v0.44.0` - Document Intelligence QA / human review loop：
 - [ ] `tasks/phase-44-document-intelligence-qa-human-review/44-01-document-intelligence-qa-contract.md`

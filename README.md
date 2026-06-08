@@ -24,6 +24,7 @@ DocuRAG 是技術探索導向的 AI 文件知識庫專案，將文件上傳、OC
 - 內建 RAG 測試
 - Agent tool-use trace
 - Agent planner fallback / tool permission trace
+- Agent governance / replay evidence
 - Admin / Analyst / Viewer role-gated surface
 - Redis + NATS worker demo smoke
 - Scanned PDF OCR baseline smoke
@@ -137,6 +138,12 @@ Agent runtime smoke：
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\agent-runtime-smoke.ps1
 ```
 
+Agent replay smoke：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\agent-replay-smoke.ps1
+```
+
 Worker demo smoke：
 
 ```powershell
@@ -159,7 +166,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 
 ## 目前邊界
 
-目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.42.0 已完成 Phase 42 inference gateway / capacity planning release sync：provider routing / fallback metadata、timeout guardrails、non-streaming demo boundary 與 capacity planning report 已整理成可驗證推論維運證據；v0.41.0 的品質回歸證據與 v0.40.0 的 JD evidence pack 仍保留為展示基礎。這不代表 production autonomous Agent、任意 SQL、shell、filesystem command、destructive tool、production approval workflow、production inference gateway、multi-GPU serving、production K8s autoscaling、multi-cluster deployment、managed secret integration、production training pipeline、model registry、OpenAI billing / secret vault、RAG ranking 變更、VLM parser schema 變更、LLM-as-judge、answer faithfulness、citation quality scoring、production eval platform、production alerting / incident workflow、production indexing worker、完整 layout understanding、table reconstruction、human correction workflow、production OCR accuracy tuning、production async OCR worker 或 production guarantee 已完成。
+目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.43.0 已完成 Phase 43 AgentOps governance / secure tool runtime release sync：tool permission policy、human approval fail-closed gate、Agent replay / eval artifact 與 forbidden boundary 已整理成可驗證 Agent 治理證據；v0.42.0 的推論維運證據、v0.41.0 的品質回歸證據與 v0.40.0 的 JD evidence pack 仍保留為展示基礎。這不代表 production autonomous Agent、任意 SQL、shell、filesystem command、destructive tool、external side-effect tool、production approval workflow、production audit storage、production inference gateway、multi-GPU serving、production K8s autoscaling、multi-cluster deployment、managed secret integration、production training pipeline、model registry、OpenAI billing / secret vault、RAG ranking 變更、VLM parser schema 變更、LLM-as-judge、answer faithfulness、citation quality scoring、production eval platform、production alerting / incident workflow、production indexing worker、完整 layout understanding、table reconstruction、human correction workflow、production OCR accuracy tuning、production async OCR worker 或 production guarantee 已完成。
 
 ## 文件入口
 
