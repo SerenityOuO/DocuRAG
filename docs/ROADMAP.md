@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、v0.31.0 PostgreSQL / Schema / Repository Foundation release、v0.32.0 Formal Auth / RBAC / Tenant Boundary release、v0.33.0 Redis + NATS Worker Pipeline release、v0.34.0 Production OCR / Scanned PDF Pipeline release、v0.35.0 RAG Indexing Quality Hardening release、v0.36.0 Eval Dashboard / Rerank Analysis release、Phase 37-39 enterprise completion roadmap、Phase 40 interview evidence hardening roadmap，以及 Phase 41-45 JD completion / portfolio roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、v0.31.0 PostgreSQL / Schema / Repository Foundation release、v0.32.0 Formal Auth / RBAC / Tenant Boundary release、v0.33.0 Redis + NATS Worker Pipeline release、v0.34.0 Production OCR / Scanned PDF Pipeline release、v0.35.0 RAG Indexing Quality Hardening release、v0.36.0 Eval Dashboard / Rerank Analysis release、v0.37.0 Inference Ops / vLLM Serving release、Phase 38-39 enterprise completion roadmap、Phase 40 interview evidence hardening roadmap，以及 Phase 41-45 JD completion / portfolio roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -145,7 +145,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 Phase 31 `v0.31.0` release sync、Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync、Phase 33 `v0.33.0` Redis + NATS Worker Pipeline release sync、Phase 34 `v0.34.0` Production OCR / Scanned PDF Pipeline release sync、Phase 35 `v0.35.0` RAG Indexing Quality Hardening release sync 與 Phase 36 `v0.36.0` Eval Dashboard / Rerank Analysis release sync，並已建立 Phase 37 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04`、Phase 33 `33-01` 到 `33-04`、Phase 34 `34-01` 到 `34-04`、Phase 35 `35-01` 到 `35-04` 與 Phase 36 `36-01` 到 `36-04` 均已完成；不宣稱 Phase 37 到 Phase 39 已整體完成。
+- 已完成 Phase 31 `v0.31.0` release sync、Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync、Phase 33 `v0.33.0` Redis + NATS Worker Pipeline release sync、Phase 34 `v0.34.0` Production OCR / Scanned PDF Pipeline release sync、Phase 35 `v0.35.0` RAG Indexing Quality Hardening release sync、Phase 36 `v0.36.0` Eval Dashboard / Rerank Analysis release sync 與 Phase 37 `v0.37.0` Inference Ops / vLLM Serving release sync，並已建立 Phase 38 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04`、Phase 33 `33-01` 到 `33-04`、Phase 34 `34-01` 到 `34-04`、Phase 35 `35-01` 到 `35-04`、Phase 36 `36-01` 到 `36-04` 與 Phase 37 `37-01` 到 `37-04` 均已完成；不宣稱 Phase 38 到 Phase 39 已整體完成。
 
 ### Phase 31 - PostgreSQL / Schema / Repository Foundation
 
@@ -473,6 +473,14 @@ Expected Outcome：
 - The Docker Compose backend service now passes through LLM model, timeout and API key env values; this does not add a vLLM service or production inference serving.
 - Release Impact: Version bump required: no. Version sync remains deferred to `37-04`.
 - Validation: inference benchmark smoke; ticket `rg`; `git diff --check`.
+
+37-04 Inference Ops Phase 37 Release Sync Status：
+
+- Completed `v0.37.0` release sync across backend package / app version, frontend package / lock / fallback version, health test, Docker Compose `DOCURAG_VERSION`, `.env.example`, README, README_DEV, backend README, frontend README, TODO, ROADMAP and the ticket.
+- Phase 37 is now a LLMOps-facing local serving demonstration: OpenAI-compatible provider boundary, vLLM local / Docker guide, benchmark smoke and latency / token / throughput / KV cache / GPU memory estimate report are documented.
+- Release boundary remains explicit: vLLM is a serving path / benchmark, not the only runtime, production inference gateway, multi-GPU serving, K8s autoscaling, model registry, OpenAI billing / secret vault, RAG ranking change, VLM parser schema change or Agent planner.
+- Release Impact: Version bump required: yes. Phase 37 is released as `v0.37.0`.
+- Validation: backend full test `251 passed` with 1 pytest cache warning; frontend build; baseline demo smoke; inference benchmark smoke with local vLLM endpoint unavailable `status=skipped` report; ticket `rg`; `git diff --check`.
 
 ### Phase 38 - Agent Runtime Hardening
 

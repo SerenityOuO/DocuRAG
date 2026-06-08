@@ -28,6 +28,7 @@ DocuRAG 是技術探索導向的 AI 文件知識庫專案，將文件上傳、OC
 - Scanned PDF OCR baseline smoke
 - RAG indexing quality smoke
 - Eval dashboard strategy comparison smoke
+- Inference ops / vLLM benchmark smoke
 
 ## 需求
 
@@ -149,7 +150,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 
 ## 目前邊界
 
-目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.36.0 已完成 eval dashboard / rerank analysis release：Admin / Analyst 可管理 eval dataset，執行 keyword、vector、hybrid、vector_rerank、hybrid_rerank strategy comparison，查看 Hit Rate@K、MRR@K、Recall@K、failure / fallback cases、trace metadata coverage 與 rerank 前後排名 / score。這不代表 LLM-as-judge、answer faithfulness、citation quality scoring、production monitoring trend、production indexing worker、完整 layout understanding、table reconstruction、human correction workflow、production OCR accuracy tuning、production async OCR worker、K8s hardening 或 production autonomous Agent 已完成。
+目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.37.0 已完成 inference ops / vLLM serving demonstration：OpenAI-compatible provider 可明確啟用，vLLM local / Docker path 有本機啟動文件與 benchmark smoke，可記錄 latency、tokens、throughput、KV cache / GPU memory estimate 或 vLLM unavailable skip reason。這不代表 production inference gateway、multi-GPU serving、K8s autoscaling、model registry、OpenAI billing / secret vault、RAG ranking 變更、VLM parser schema 變更、Agent planner、LLM-as-judge、answer faithfulness、citation quality scoring、production monitoring trend、production indexing worker、完整 layout understanding、table reconstruction、human correction workflow、production OCR accuracy tuning、production async OCR worker、K8s hardening 或 production autonomous Agent 已完成。
 
 ## 文件入口
 

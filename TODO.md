@@ -221,7 +221,7 @@ Phase 37 `v0.37.0` - Inference Ops / vLLM serving：
 - [x] `tasks/phase-37-inference-ops-vllm/37-01-inference-provider-ops-contract.md`: 完成 inference provider ops contract；不 bump version、不新增 runtime。
 - [x] `tasks/phase-37-inference-ops-vllm/37-02-openai-compatible-client-boundary.md`: 新增 OpenAI-compatible LLM client adapter，可透過 env 明確啟用；保留 Ollama default / fallback，不 bump version。
 - [x] `tasks/phase-37-inference-ops-vllm/37-03-vllm-local-serving-and-benchmark-docs.md`: 新增 vLLM local / Docker serving guide 與 inference benchmark smoke，記錄 latency、tokens、throughput、KV cache / GPU memory estimate；vLLM unavailable 時寫入 skipped report 與 Ollama / deterministic fallback，不 bump version。
-- [ ] `tasks/phase-37-inference-ops-vllm/37-04-inference-ops-release-sync.md`
+- [x] `tasks/phase-37-inference-ops-vllm/37-04-inference-ops-release-sync.md`: 完成 `v0.37.0` inference ops / vLLM serving release sync，更新 backend / frontend / Docker Compose / health test version 與 README / README_DEV / backend README / frontend README / TODO / ROADMAP；保留 vLLM 為 serving path / benchmark，不宣稱 production inference serving。
 
 37-01 Inference Provider Ops Contract：
 - 已完成。`docs/architecture.md` 已定義 Phase 37 inference provider router、Ollama / OpenAI-compatible / vLLM provider boundary、metrics boundary 與 fallback boundary。
@@ -244,6 +244,14 @@ Phase 37 `v0.37.0` - Inference Ops / vLLM serving：
 - `.env.example` 與 `infra/docker-compose.yml` 補上 local OpenAI-compatible / vLLM env pass-through，但不新增 vLLM service，不把 vLLM 設成唯一 runtime。
 - Validation 已通過：inference benchmark smoke、ticket `rg` 與 `git diff --check`。
 - Release Impact：Version bump required: no。這是 Phase 37 ops / docs / smoke ticket，版本同步留到 `37-04`。
+
+37-04 Inference Ops Phase 37 Release Sync：
+
+- 已完成。backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 ticket 已同步到 `0.37.0` / `v0.37.0`。
+- OpenAI-compatible provider boundary、vLLM local / Docker guide、inference benchmark smoke、latency / token / throughput / KV cache / GPU memory estimate 與 provider unavailable skip reason 已形成可展示 release。
+- Release boundary 保持明確：vLLM 是 local serving path / benchmark，不是唯一 runtime、production inference gateway、multi-GPU serving、K8s autoscaling、model registry、OpenAI billing / secret vault、RAG ranking 變更、VLM parser schema 變更或 Agent planner。
+- Validation 已通過：backend full test `251 passed`（1 pytest cache warning）、frontend build、baseline demo smoke、inference benchmark smoke（本機 vLLM endpoint unavailable 時產出 `status=skipped` report）、ticket `rg` 與 `git diff --check`。
+- Release Impact：Version bump required: yes。Phase 37 已完成 `v0.37.0` inference ops / vLLM serving demonstration release。
 
 Phase 38 `v0.38.0` - Agent runtime hardening：
 - [ ] `tasks/phase-38-agent-runtime-hardening/38-01-agent-runtime-permission-contract.md`
