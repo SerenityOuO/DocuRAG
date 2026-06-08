@@ -339,7 +339,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync，Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release sync，Phase 37 已完成 `v0.37.0` inference ops / vLLM serving release sync，Phase 38 已完成 `v0.38.0` Agent runtime hardening release sync，Phase 39 已完成 `v0.39.0` deployment / observability / fine-tuning track release sync。Phase 40 planning、`40-02` Embedding / SFT experiment evidence、`40-03` inference hardware benchmark evidence 與 `40-04` observability dashboard evidence 已完成，`40-05` 尚未實作。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync，Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release sync，Phase 37 已完成 `v0.37.0` inference ops / vLLM serving release sync，Phase 38 已完成 `v0.38.0` Agent runtime hardening release sync，Phase 39 已完成 `v0.39.0` deployment / observability / fine-tuning track release sync，Phase 40 已完成 `v0.40.0` JD evidence hardening release sync。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
@@ -489,7 +489,13 @@ Phase 40 `v0.40.0` - JD evidence hardening：
 - [x] `tasks/phase-40-interview-evidence-hardening/40-02-embedding-sft-experiment-evidence.md`: 補齊 research-only Embedding / SFT experiment evidence report、before / after eval table、synthetic data coverage、skip reason 與 risk notes；不 bump version、不新增 runtime。
 - [x] `tasks/phase-40-interview-evidence-hardening/40-03-inference-hardware-benchmark-evidence.md`: 補齊 inference hardware benchmark evidence report，整理 vLLM / Ollama / OpenAI-compatible matrix、KV cache、TOPS / NPU、VRAM、tokens/sec、latency 與 skip reason；不 bump version、不新增 runtime。
 - [x] `tasks/phase-40-interview-evidence-hardening/40-04-observability-dashboard-evidence.md`: 補齊 observability dashboard evidence docs、Loki / Grafana query examples、Grafana dashboard JSON skeleton、log schema mapping 與 fallback / unavailable 說明；不 bump version、不新增 production alerting。
-- [ ] `tasks/phase-40-interview-evidence-hardening/40-05-phase-40-release-sync.md`
+- [x] `tasks/phase-40-interview-evidence-hardening/40-05-phase-40-release-sync.md`: 完成 `v0.40.0` release sync，更新 backend / frontend / Docker Compose / `.env.example` / health test / K8s sample image tag / demo smoke expected version，並同步 README / README_DEV / backend README / frontend README / TODO / ROADMAP；保留 production training、production inference autoscaling、production alerting / incident workflow 與 production guarantee 為未完成邊界。
+
+40-05 Phase 40 Release Sync Status：
+- 已完成。backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、K8s sample image tag、demo smoke expected version、README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 ticket 已同步到 `0.40.0` / `v0.40.0`。
+- Phase 40 三個 JD evidence artifacts 已收束：Embedding / SFT experiment evidence、inference hardware benchmark evidence（KV cache / TOPS / provider skip reason）與 observability dashboard evidence（Grafana / Loki query examples / dashboard skeleton）。
+- Validation 已通過：backend full test `260 passed, 1 warning`（pytest cache permission warning）、frontend build、baseline demo smoke（health `0.40.0`；本機 Qdrant unavailable 時 aggressive vector indexing 失敗但 fallback 符合預期；RAG answer source `ollama/qwen3.5:4b`，retrieval source `hybrid_rerank fallback: reranker_unavailable`）、Phase 40 evidence `rg`、release `rg` 與 `git diff --check`（只有 LF/CRLF 提示）。
+- Release Impact：Version bump required: yes。Phase 40 已完成 `v0.40.0` JD evidence hardening release；不新增 production training、production inference autoscaling、production alerting / incident workflow 或 production guarantee。
 
 40-02 Embedding SFT Experiment Evidence Status：
 - 已完成 Phase 40 Embedding / SFT experiment evidence。新增 `fine-tuning/phase40-experiment-evidence.md` 與 `sample-data/fine-tuning/phase40-before-after-eval.csv`，並更新 fine-tuning dataset card / README。
@@ -515,7 +521,7 @@ Phase 40 guardrails：
 - `40-02` 可以補 SFT / embedding tuning / synthetic data report 或 notebook skeleton，但不得下載大型模型或執行長時間 training。
 - `40-03` 可以補 inference benchmark report、KV cache / TOPS / NPU 評估方式與 script/template，但不得宣稱沒有實測的硬體結果。
 - `40-04` 可以補 observability dashboard / query examples / demo-safe screenshots，但不得宣稱 production alerting 或 incident workflow 已完成。
-- `40-05` 完成 release sync 時才允許 bump backend / frontend / health / Docker Compose version 到 `v0.40.0`。
+- `40-05` 已完成 release sync，backend / frontend / health / Docker Compose version 已同步到 `v0.40.0`；Phase 41 仍需另依 ticket-first 流程執行。
 
 ## Phase 41-45 JD Completion Roadmap
 

@@ -586,7 +586,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 Phase 40 planning、`40-02` Embedding / SFT experiment evidence、`40-03` inference hardware benchmark evidence 與 `40-04` observability dashboard evidence。`40-05` 尚未實作，不 bump version、不新增 runtime，也不宣稱 Phase 40 已完成。
+- 已完成 Phase 40 planning、`40-02` Embedding / SFT experiment evidence、`40-03` inference hardware benchmark evidence、`40-04` observability dashboard evidence 與 `40-05` `v0.40.0` release sync。Phase 40 已完成 JD evidence hardening release；不新增 runtime，也不宣稱 production training、production inference autoscaling、production alerting 或 production guarantee 已完成。
 
 ### Phase 40 - JD Evidence Hardening
 
@@ -627,13 +627,19 @@ Expected Outcome：
 - Release Impact：Version bump required: no。版本同步留到 `40-05`；不新增 production alerting、SLO、incident workflow、distributed tracing 或 APM vendor integration，也不改 RAG ranking、Agent planner、OCR / parser behavior 或 worker runtime。
 - Validation：ticket `rg`、Grafana dashboard JSON parse 與 `git diff --check` 通過。
 
+40-05 Phase 40 Release Sync Status：
+- 已完成 Phase 40 `v0.40.0` release sync。backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、K8s sample image tag、demo smoke expected version、README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 ticket 已同步。
+- Phase 40 JD evidence artifacts 已整理成可展示交付物：Embedding / SFT research evidence、inference hardware benchmark evidence（KV cache / TOPS / provider skip reason）與 observability dashboard evidence。
+- Validation passed: backend full test `260 passed, 1 warning`（pytest cache permission warning）；frontend build；baseline demo smoke（health `0.40.0`；本機 Qdrant unavailable 時 aggressive vector indexing fallback 符合預期；RAG answer source `ollama/qwen3.5:4b`，retrieval source `hybrid_rerank fallback: reranker_unavailable`）；Phase 40 evidence `rg`；release `rg`；`git diff --check`（只有 LF/CRLF 提示）。
+- Release Impact：Version bump required: yes。Phase 40 is released as `v0.40.0`；不新增 production training、production inference autoscaling、production alerting / incident workflow 或 production guarantee。
+
 Phase 40 Guardrails：
 
 - Phase 40 不新增新的 product feature 主線，只補面試證據 artifacts。
 - `40-02` 不下載大型模型、不執行長時間 training、不把 fine-tuned model 接到 production runtime。
 - `40-03` 不宣稱沒有實測的 TOPS / NPU 數據；可以提供評估方式與 benchmark template。
 - `40-04` 不新增 production alerting、SLO、incident workflow 或 APM vendor integration。
-- `40-05` 完成 release sync 前，不更新 backend / frontend / health / Docker Compose version。
+- `40-05` 已完成 release sync，backend / frontend / health / Docker Compose version 已同步到 `v0.40.0`；Phase 41 仍需逐張 ticket 執行。
 
 ## Phase 41-45 JD Completion / Portfolio Roadmap
 

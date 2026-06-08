@@ -12,7 +12,7 @@ param(
     [string]$QdrantUrl = "http://127.0.0.1:6333",
     [string]$QdrantCollection = "docurag_chunks_v1",
     [int]$QdrantVectorSize = 1024,
-    [string]$ExpectedVersion = "0.39.0",
+    [string]$ExpectedVersion = "0.40.0",
     [switch]$RunVlmFake
 )
 

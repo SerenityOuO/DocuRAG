@@ -30,6 +30,7 @@ DocuRAG 是技術探索導向的 AI 文件知識庫專案，將文件上傳、OC
 - RAG indexing quality smoke
 - Eval dashboard strategy comparison smoke
 - Inference ops / vLLM benchmark smoke
+- JD evidence hardening pack (Embedding / SFT, inference hardware, observability dashboard evidence)
 
 ## 需求
 
@@ -157,7 +158,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 
 ## 目前邊界
 
-目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.39.0 已完成 deployment / observability / fine-tuning track release sync：K8s baseline manifests、opt-in Loki / Grafana local observability path、RAG / eval / worker JSONL trace logs 與 research-only synthetic data artifacts 已整理成可驗證交付物。這不代表 production autonomous Agent、任意 SQL、shell、filesystem command、destructive tool、production approval workflow、production inference gateway、multi-GPU serving、production K8s autoscaling、multi-cluster deployment、managed secret integration、production training pipeline、model registry、OpenAI billing / secret vault、RAG ranking 變更、VLM parser schema 變更、LLM-as-judge、answer faithfulness、citation quality scoring、production alerting / incident workflow、production indexing worker、完整 layout understanding、table reconstruction、human correction workflow、production OCR accuracy tuning 或 production async OCR worker 已完成。
+目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.40.0 已完成 Phase 40 JD evidence hardening release sync：Embedding / SFT research evidence、inference hardware benchmark evidence（KV cache / TOPS / provider skip reason）與 observability dashboard evidence（dashboard evidence / query examples）已整理成可驗證交付物；v0.39.0 的 K8s baseline manifests、opt-in Loki / Grafana local observability path、RAG / eval / worker JSONL trace logs 與 research-only synthetic data artifacts 仍保留為展示基礎。這不代表 production autonomous Agent、任意 SQL、shell、filesystem command、destructive tool、production approval workflow、production inference gateway、multi-GPU serving、production K8s autoscaling、multi-cluster deployment、managed secret integration、production training pipeline、model registry、OpenAI billing / secret vault、RAG ranking 變更、VLM parser schema 變更、LLM-as-judge、answer faithfulness、citation quality scoring、production alerting / incident workflow、production indexing worker、完整 layout understanding、table reconstruction、human correction workflow、production OCR accuracy tuning、production async OCR worker 或 production guarantee 已完成。
 
 ## 文件入口
 
