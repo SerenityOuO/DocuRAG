@@ -6,6 +6,8 @@
 
 - `retrieval-eval.json`：retrieval eval dataset，使用 `sample-data/documents/` 既有虛構 invoice、support contract、data processing addendum 與 incident playbook sample。
 - `built-in-rag-eval-zh-invoices.json`：後台「測試RAG」內建 dataset，使用 10 張 demo-safe synthetic 中文發票 fixture，供應商分布為 `NVDLA` 1、`GOOGLE` 1、`OpenAI` 1、`Intel` 3、`DocuRAG` 4；日期 / 金額皆不同且幣別皆為 TWD。
+- `golden-dataset-metadata.json`：Phase 41 golden dataset metadata manifest，為既有 eval cases 補上 case version、source document version、expected evidence mapping、expected answer outline 與 case tags，不改 runtime eval JSON schema。
+- `golden-dataset-changelog.md`：dataset changelog，記錄新增或調整 eval cases / metadata 的理由、demo-safe 邊界與 regression gate 影響。
 
 ## Data Safety
 
@@ -34,6 +36,21 @@
 - `notes`：補充 case 來源或預期 evidence。
 
 `built-in-rag-eval-zh-invoices.json` 使用相同 schema，但只服務 v0.29.0 後台 built-in benchmark。它不是 OCR eval、PDF layout eval、VLM parser accuracy eval、LLM-as-judge 或 answer faithfulness scoring。
+
+## Golden Dataset Versioning
+
+Phase 41 將此目錄視為 demo-safe RAG golden dataset。既有 runner 仍讀 `retrieval-eval.json` 與 `built-in-rag-eval-zh-invoices.json`；版本追蹤則放在 `golden-dataset-metadata.json`，避免為 metadata 破壞 runtime schema。
+
+Golden metadata 欄位：
+
+- `dataset_version`：資料集版本，用來比對 baseline vs current regression report。
+- `case_version`：單一 eval case version；query、expected evidence 或 tags 改變時必須更新。
+- `source_document_version`：case 依賴的 synthetic source document version。
+- `expected_evidence`：指向 runtime case 的 `expected_document_filenames`、`expected_chunk_hints` 與 `expected_terms`。
+- `expected_answer_outline`：用白話摘要此 case 應回答的事實範圍；它不是 LLM-as-judge label。
+- `case_tags`：分類標籤，用於 regression report 分群，例如 `invoice`、`contract`、`multi_evidence`、`cross_document_ambiguity`。
+
+新增或調整 cases 時，必須同步更新 `golden-dataset-changelog.md`，說明原因、case version、source document version、expected evidence 變化與是否影響 regression gate。
 
 ## Runner Usage
 

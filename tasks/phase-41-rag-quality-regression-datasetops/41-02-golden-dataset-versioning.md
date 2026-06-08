@@ -33,9 +33,16 @@
 
 ## Acceptance Criteria
 
-- [ ] Golden dataset metadata 可描述 case version、source document version、expected evidence 與 case tags。
-- [ ] Dataset changelog 說明新增或調整 eval cases 的理由。
-- [ ] 文件清楚標示資料為 demo-safe synthetic data。
+- [x] Golden dataset metadata 可描述 case version、source document version、expected evidence 與 case tags。
+- [x] Dataset changelog 說明新增或調整 eval cases 的理由。
+- [x] 文件清楚標示資料為 demo-safe synthetic data。
+
+## Completion Notes
+
+- 新增 `sample-data/eval/golden-dataset-metadata.json`，為既有 `retrieval-eval.json` 與 `built-in-rag-eval-zh-invoices.json` 補上 dataset / case version metadata。
+- 新增 `sample-data/eval/golden-dataset-changelog.md`，記錄 Phase 41 metadata 建立理由、demo-safe 邊界與未來 case 調整規則。
+- 更新 `sample-data/eval/README.md`、`docs/ROADMAP.md`、`README_DEV.md` 與 `TODO.md`。
+- 本 ticket 不 bump version，不新增 database schema、dataset upload API、frontend dataset editor、production labeling workflow、外部標註工具或 retrieval eval runner 策略計算變更。
 
 ## Validation
 

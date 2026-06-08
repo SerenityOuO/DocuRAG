@@ -658,7 +658,7 @@ Goal：把 RAG 評估從單次 benchmark 升級成可長期追蹤的 quality reg
 Tickets：
 
 - [x] `tasks/phase-41-rag-quality-regression-datasetops/41-01-rag-quality-regression-contract.md`
-- `tasks/phase-41-rag-quality-regression-datasetops/41-02-golden-dataset-versioning.md`
+- [x] `tasks/phase-41-rag-quality-regression-datasetops/41-02-golden-dataset-versioning.md`
 - `tasks/phase-41-rag-quality-regression-datasetops/41-03-retrieval-regression-ci-report.md`
 - `tasks/phase-41-rag-quality-regression-datasetops/41-04-chunking-indexing-ablation-report.md`
 - `tasks/phase-41-rag-quality-regression-datasetops/41-05-phase-41-release-sync.md`
@@ -667,6 +667,7 @@ Current Status：
 
 - `41-01` 已完成 Phase 41 RAG quality regression contract；文件固定 golden dataset、eval run、strategy snapshot、regression report、Hit Rate@K / MRR@K / Recall@K / latency / fallback count / failure count / trace metadata coverage 與 pass / warn / fail regression gate 邊界。
 - `41-01` 不 bump version、不新增 backend runtime、frontend UI、CI workflow、資料庫 schema、migration、LLM-as-judge 或 production eval dashboard。
+- `41-02` 已新增 `sample-data/eval/golden-dataset-metadata.json` 與 `golden-dataset-changelog.md`，為既有 demo-safe eval cases 補上 case version、source document version、expected evidence mapping、expected answer outline 與 case tags；runtime eval JSON schema 不變。
 
 Expected Outcome：
 

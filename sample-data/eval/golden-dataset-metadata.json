@@ -1,0 +1,288 @@
+{
+  "schema_version": "golden_dataset_metadata_v1",
+  "metadata_version": "phase41_golden_metadata_v1",
+  "demo_safe": true,
+  "description": "Version metadata for DocuRAG demo-safe RAG golden dataset fixtures. Runtime eval JSON files stay unchanged so existing runners can keep reading their current schema.",
+  "expected_evidence_fields": [
+    "expected_document_filenames",
+    "expected_chunk_hints",
+    "expected_terms"
+  ],
+  "datasets": [
+    {
+      "dataset_file": "retrieval-eval.json",
+      "dataset_id": "public_retrieval_eval",
+      "dataset_version": "retrieval_eval_v1.3",
+      "case_version_default": "retrieval_case_v1",
+      "source_document_versions": {
+        "mock-invoice-aurora.txt": "sample_doc_invoice_aurora_v2",
+        "mock-invoice-orion.txt": "sample_doc_invoice_orion_v1",
+        "mock-contract-support.txt": "sample_doc_support_contract_v2",
+        "mock-contract-harbor.txt": "sample_doc_harbor_dpa_v1",
+        "mock-support-playbook.txt": "sample_doc_incident_playbook_v1"
+      },
+      "case_metadata": [
+        {
+          "case_id": "invoice_due_date",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_invoice_aurora_v2"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Aurora invoice due date.",
+          "case_tags": ["invoice", "date", "payment"]
+        },
+        {
+          "case_id": "invoice_payment_terms",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_invoice_aurora_v2"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Aurora invoice payment terms and amount due.",
+          "case_tags": ["invoice", "payment", "amount"]
+        },
+        {
+          "case_id": "invoice_vendor_customer",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_invoice_aurora_v2"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Aurora invoice vendor and customer names.",
+          "case_tags": ["invoice", "party", "vendor", "customer"]
+        },
+        {
+          "case_id": "support_contract_renewal",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_support_contract_v2"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Support agreement renewal date.",
+          "case_tags": ["contract", "support", "date"]
+        },
+        {
+          "case_id": "support_contract_sla",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_support_contract_v2"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Critical incident first response target.",
+          "case_tags": ["contract", "support", "sla"]
+        },
+        {
+          "case_id": "support_contract_service_credit",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_support_contract_v2"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Uptime threshold and service credit.",
+          "case_tags": ["contract", "support", "credit", "sla"]
+        },
+        {
+          "case_id": "invoice_office_supplies_customer",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_invoice_aurora_v2"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Aurora invoice customer under lexical mismatch wording.",
+          "case_tags": ["invoice", "customer", "lexical_mismatch"]
+        },
+        {
+          "case_id": "invoice_payment_window_and_amount",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_invoice_aurora_v2"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Payment window and amount due.",
+          "case_tags": ["invoice", "payment", "amount", "multi_evidence"]
+        },
+        {
+          "case_id": "invoice_line_item_quantities",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_invoice_aurora_v2"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Invoice line item quantities.",
+          "case_tags": ["invoice", "line_item", "numeric_table_lookup", "multi_evidence"]
+        },
+        {
+          "case_id": "support_contract_effective_date",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_support_contract_v2"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Support agreement effective date.",
+          "case_tags": ["contract", "support", "date", "near_duplicate"]
+        },
+        {
+          "case_id": "support_customer_not_invoice_customer",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_support_contract_v2"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Support agreement customer, distinct from invoice customer.",
+          "case_tags": ["contract", "support", "customer", "cross_document_ambiguity"]
+        },
+        {
+          "case_id": "support_hours_and_response_target",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_support_contract_v2"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Support hours and critical response target.",
+          "case_tags": ["contract", "support", "sla", "numeric_table_lookup", "multi_evidence"]
+        },
+        {
+          "case_id": "orion_invoice_due_date",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_invoice_orion_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Orion invoice due date.",
+          "case_tags": ["invoice", "date", "payment"]
+        },
+        {
+          "case_id": "orion_invoice_tax_total",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_invoice_orion_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Orion invoice tax and amount due.",
+          "case_tags": ["invoice", "amount", "numeric_lookup", "multi_evidence"]
+        },
+        {
+          "case_id": "orion_invoice_seats_workshop",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_invoice_orion_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Orion invoice line item counts.",
+          "case_tags": ["invoice", "line_item", "numeric_table_lookup", "multi_evidence"]
+        },
+        {
+          "case_id": "harbor_contract_notice_confidentiality",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_harbor_dpa_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Harbor DPA notice and confidentiality period.",
+          "case_tags": ["contract", "date", "multi_evidence"]
+        },
+        {
+          "case_id": "harbor_data_export_acknowledgement",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_harbor_dpa_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Harbor data export acknowledgement target.",
+          "case_tags": ["contract", "support", "lexical_mismatch", "data_processing"]
+        },
+        {
+          "case_id": "incident_playbook_p1_escalation",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_incident_playbook_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "P1 response target and escalation channel.",
+          "case_tags": ["support", "incident", "numeric_lookup", "multi_evidence", "demo_safe_trace"]
+        },
+        {
+          "case_id": "incident_playbook_updates_report",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_incident_playbook_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "P1 customer update cadence and post-incident report timing.",
+          "case_tags": ["support", "incident", "numeric_lookup", "multi_evidence"]
+        },
+        {
+          "case_id": "cross_invoice_due_date_ambiguity",
+          "case_version": "retrieval_case_v1",
+          "source_document_version": ["sample_doc_invoice_aurora_v2", "sample_doc_invoice_orion_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Due dates for both Aurora and Orion invoices.",
+          "case_tags": ["invoice", "date", "cross_document_ambiguity", "multi_evidence"]
+        }
+      ]
+    },
+    {
+      "dataset_file": "built-in-rag-eval-zh-invoices.json",
+      "dataset_id": "built_in_zh_invoice_eval",
+      "dataset_version": "built_in_zh_invoice_eval_v1.0",
+      "case_version_default": "built_in_zh_invoice_case_v1",
+      "source_document_versions": {
+        "zh-invoice-nvdla-2026-001.txt": "zh_invoice_fixture_v1",
+        "zh-invoice-google-2026-001.txt": "zh_invoice_fixture_v1",
+        "zh-invoice-openai-2026-001.txt": "zh_invoice_fixture_v1",
+        "zh-invoice-intel-2026-001.txt": "zh_invoice_fixture_v1",
+        "zh-invoice-intel-2026-002.txt": "zh_invoice_fixture_v1",
+        "zh-invoice-intel-2026-003.txt": "zh_invoice_fixture_v1",
+        "zh-invoice-docurag-2026-001.txt": "zh_invoice_fixture_v1",
+        "zh-invoice-docurag-2026-002.txt": "zh_invoice_fixture_v1",
+        "zh-invoice-docurag-2026-003.txt": "zh_invoice_fixture_v1",
+        "zh-invoice-docurag-2026-004.txt": "zh_invoice_fixture_v1"
+      },
+      "case_metadata": [
+        {
+          "case_id": "built_in_zh_invoice_nvdla_001_total",
+          "case_version": "built_in_zh_invoice_case_v1",
+          "source_document_version": ["zh_invoice_fixture_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Chinese synthetic invoice total amount and due date.",
+          "case_tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:NVDLA"]
+        },
+        {
+          "case_id": "built_in_zh_invoice_google_001_total",
+          "case_version": "built_in_zh_invoice_case_v1",
+          "source_document_version": ["zh_invoice_fixture_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Chinese synthetic invoice total, tax and issue date.",
+          "case_tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:GOOGLE"]
+        },
+        {
+          "case_id": "built_in_zh_invoice_openai_001_due",
+          "case_version": "built_in_zh_invoice_case_v1",
+          "source_document_version": ["zh_invoice_fixture_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Chinese synthetic invoice due date and total amount.",
+          "case_tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:OpenAI"]
+        },
+        {
+          "case_id": "built_in_zh_invoice_intel_001_amount",
+          "case_version": "built_in_zh_invoice_case_v1",
+          "source_document_version": ["zh_invoice_fixture_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Chinese synthetic invoice vendor, issue date and total amount.",
+          "case_tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:Intel"]
+        },
+        {
+          "case_id": "built_in_zh_invoice_intel_002_due",
+          "case_version": "built_in_zh_invoice_case_v1",
+          "source_document_version": ["zh_invoice_fixture_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Chinese synthetic invoice due date, tax and total amount.",
+          "case_tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:Intel"]
+        },
+        {
+          "case_id": "built_in_zh_invoice_intel_003_date",
+          "case_version": "built_in_zh_invoice_case_v1",
+          "source_document_version": ["zh_invoice_fixture_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Chinese synthetic invoice issue date, due date and total amount.",
+          "case_tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:Intel"]
+        },
+        {
+          "case_id": "built_in_zh_invoice_docurag_001_total",
+          "case_version": "built_in_zh_invoice_case_v1",
+          "source_document_version": ["zh_invoice_fixture_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Chinese synthetic invoice total, tax and currency.",
+          "case_tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:DocuRAG"]
+        },
+        {
+          "case_id": "built_in_zh_invoice_docurag_002_due",
+          "case_version": "built_in_zh_invoice_case_v1",
+          "source_document_version": ["zh_invoice_fixture_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Chinese synthetic invoice due date and total amount.",
+          "case_tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:DocuRAG"]
+        },
+        {
+          "case_id": "built_in_zh_invoice_docurag_003_tax",
+          "case_version": "built_in_zh_invoice_case_v1",
+          "source_document_version": ["zh_invoice_fixture_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Chinese synthetic invoice tax, total and issue date.",
+          "case_tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:DocuRAG"]
+        },
+        {
+          "case_id": "built_in_zh_invoice_docurag_004_due",
+          "case_version": "built_in_zh_invoice_case_v1",
+          "source_document_version": ["zh_invoice_fixture_v1"],
+          "expected_evidence": "Use runtime case expected_document_filenames, expected_chunk_hints and expected_terms.",
+          "expected_answer_outline": "Chinese synthetic invoice due date and total amount.",
+          "case_tags": ["invoice", "zh_tw", "built_in_rag_eval", "vendor:DocuRAG"]
+        }
+      ]
+    }
+  ]
+}
