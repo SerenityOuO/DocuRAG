@@ -777,7 +777,7 @@ Tickets：
 - [x] `tasks/phase-44-document-intelligence-qa-human-review/44-02-field-confidence-and-evidence-view.md`
 - [x] `tasks/phase-44-document-intelligence-qa-human-review/44-03-human-correction-and-golden-labels.md`
 - [x] `tasks/phase-44-document-intelligence-qa-human-review/44-04-parser-field-accuracy-eval.md`
-- `tasks/phase-44-document-intelligence-qa-human-review/44-05-phase-44-release-sync.md`
+- [x] `tasks/phase-44-document-intelligence-qa-human-review/44-05-phase-44-release-sync.md`
 
 Expected Outcome：
 
@@ -809,6 +809,12 @@ Expected Outcome：
 - 已完成。新增 `scripts/parser-field-accuracy-smoke.ps1`，讀取 `parser-golden-labels.json` 與 `parser-field-results.json`，輸出 `parser_field_accuracy_report_v1`。
 - Report 會顯示 field accuracy、document accuracy、missing field count、wrong value count、evidence mismatch count、parser_source、fallback reason、confidence bucket 與 sample count；tracked demo report 放在 `sample-data/eval/parser-field-accuracy-report.json`。
 - Validation 已通過：parser field accuracy smoke，field accuracy `0.6`、sample count `5`、missing field / wrong value / evidence mismatch 各 `1`；Phase 44 keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: no；版本同步留到 `44-05`。本 ticket 不新增 RAG retrieval eval、LLM-as-judge、model training、production analytics dashboard 或 automatic parser correction。
+
+44-05 Phase 44 Release Sync Status：
+
+- 已完成 Phase 44 `v0.44.0` release sync；backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 ticket 已同步。
+- Phase 44 artifacts 已整理為 field confidence / evidence view、human correction / golden labels、parser field accuracy smoke 與 deterministic report；仍不代表 production annotation platform、layout analysis、table reconstruction、model training 或 production OCR accuracy tuning。
+- Validation 已通過：backend full test `270 passed, 1 warning`（pytest cache permission warning）、frontend build、parser field accuracy smoke（field accuracy `0.6`、sample count `5`、missing / wrong / evidence mismatch 各 `1`）、Phase 44 keyword `rg` 與 `git diff --check`。Browser validation 未重跑，因本 release sync 只同步 fallback version label 與文件，未新增或重排 UI surface。Release Impact：Version bump required: yes，Phase 44 is released as `v0.44.0`。
 
 ### Phase 45 - Production Readiness / Interview Portfolio Pack
 

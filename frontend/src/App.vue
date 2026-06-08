@@ -151,7 +151,7 @@ const suggestedQuestions = [
   "When is the renewal date?",
 ];
 
-const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.43.0"));
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.44.0"));
 
 const demoAuthRequired = computed(() => authMode.value === "demo" && authUser.value === null);
 const formalAuthRequired = computed(() => authMode.value === "formal" && authUser.value === null);
