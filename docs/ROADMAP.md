@@ -447,6 +447,15 @@ Expected Outcome：
 - 記錄 prompt tokens、completion tokens、generation latency、GPU memory / KV cache estimate。
 - 不把 vLLM 設為唯一 runtime，不新增多 GPU production serving。
 
+37-01 Inference Provider Ops Contract Status：
+
+- Completed Phase 37 inference provider ops contract in `docs/architecture.md` and `docs/api.md`.
+- Provider boundary covers `ollama`, `openai_compatible` and `vllm`; vLLM remains an OpenAI-compatible serving path, not the only runtime.
+- Metrics contract covers prompt tokens, completion tokens, total tokens, latency, throughput, finish reason, GPU memory estimate and KV cache estimate.
+- Fallback contract covers unavailable provider, timeout, malformed response, rate limit / overload and unsupported modality without changing RAG prompt, Agent planner, VLM parser schema, ranking or frontend streaming behavior.
+- Release Impact: Version bump required: no. Runtime implementation remains deferred to `37-02` / `37-03`; version sync remains deferred to `37-04`.
+- Validation: ticket `rg` and `git diff --check`.
+
 ### Phase 38 - Agent Runtime Hardening
 
 Target version：`v0.38.0`

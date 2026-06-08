@@ -218,10 +218,17 @@ Phase 36 `v0.36.0` - Eval dashboard / rerank analysis：
 - Release Impact：Version bump required: yes。Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release；仍不包含 LLM-as-judge、answer faithfulness、citation quality scoring 或 production monitoring trend。
 
 Phase 37 `v0.37.0` - Inference Ops / vLLM serving：
-- [ ] `tasks/phase-37-inference-ops-vllm/37-01-inference-provider-ops-contract.md`
+- [x] `tasks/phase-37-inference-ops-vllm/37-01-inference-provider-ops-contract.md`: 完成 inference provider ops contract；不 bump version、不新增 runtime。
 - [ ] `tasks/phase-37-inference-ops-vllm/37-02-openai-compatible-client-boundary.md`
 - [ ] `tasks/phase-37-inference-ops-vllm/37-03-vllm-local-serving-and-benchmark-docs.md`
 - [ ] `tasks/phase-37-inference-ops-vllm/37-04-inference-ops-release-sync.md`
+
+37-01 Inference Provider Ops Contract：
+- 已完成。`docs/architecture.md` 已定義 Phase 37 inference provider router、Ollama / OpenAI-compatible / vLLM provider boundary、metrics boundary 與 fallback boundary。
+- `docs/api.md` 已補上 provider trace metadata、prompt / completion tokens、latency、throughput、GPU memory estimate、KV cache estimate、timeout、malformed response 與 unavailable handling contract。
+- 本 ticket 是 Markdown-only contract，不新增 OpenAI-compatible client runtime、vLLM server、dependency、Docker runtime、multi-GPU serving、autoscaling、K8s deployment、production inference gateway、RAG prompt 變更、Agent planner 變更或 VLM parser 行為變更。
+- Validation 已通過：`rg -n "inference|vLLM|OpenAI-compatible|Ollama|KV cache|GPU memory|Phase 37" docs README_DEV.md TODO.md tasks/phase-37-inference-ops-vllm` 與 `git diff --check`。
+- Release Impact：Version bump required: no。這是 Phase 37 contract ticket，版本同步留到 `37-04`。
 
 Phase 38 `v0.38.0` - Agent runtime hardening：
 - [ ] `tasks/phase-38-agent-runtime-hardening/38-01-agent-runtime-permission-contract.md`

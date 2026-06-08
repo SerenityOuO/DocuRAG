@@ -243,6 +243,66 @@ Allowed strategies are `keyword`, `vector`, `vector_rerank`, `hybrid` and `hybri
 
 When embedding, Qdrant or reranker runtime is unavailable, vector-backed strategies are represented with explicit failure / fallback rows instead of crashing the whole strategy comparison. This API does not change the default retrieval provider, does not tune the rerank model, and is not LLM-as-judge, answer faithfulness scoring, citation quality scoring or production monitoring trend storage.
 
+## Phase 37 Inference Provider Ops Contract
+
+`37-01` is a Markdown-only contract ticket. It defines how future LLM / VLM inference providers should report selection, latency, token usage and fallback state before any OpenAI-compatible client or vLLM server is added. Existing Ollama behavior remains the default demo path until a later runtime ticket explicitly changes it.
+
+### Provider Boundary
+
+| Provider label | HTTP shape | Intended use | Boundary |
+|---|---|---|---|
+| `ollama` | Ollama `/api/generate` and embedding endpoints | Current local demo LLM / VLM path and fallback baseline. | Must remain available as a local fallback path; no production SLA claim. |
+| `openai_compatible` | OpenAI-compatible chat / responses-style endpoint, configured by base URL and model. | Future adapter for hosted or local compatible servers. | Requires explicit env selection and must not require a production secret for local validation. |
+| `vllm` | OpenAI-compatible endpoint served by vLLM. | Future local serving / benchmark path. | `37-01` does not start vLLM, add Docker runtime, or make vLLM the only provider. |
+
+Provider selection must be explicit in trace metadata:
+
+```json
+{
+  "inference_provider": "ollama",
+  "inference_endpoint_kind": "ollama_generate",
+  "inference_model": "qwen3.5:4b",
+  "provider_fallback_chain": ["ollama"],
+  "provider_status": "ok"
+}
+```
+
+Future runtime tickets may expose `DOCURAG_LLM_PROVIDER=ollama|openai_compatible|vllm` and matching VLM settings, but this contract does not add those runtime branches. Existing `DOCURAG_LLM_PROVIDER` and `DOCURAG_VLM_PROVIDER` behavior remains unchanged unless a later ticket implements it.
+
+### Metrics Contract
+
+Every provider response should normalize inference metrics into trace metadata when the provider supplies or can estimate them:
+
+| Field | Meaning |
+|---|---|
+| `prompt_tokens` | Input token count reported by provider or estimator. |
+| `completion_tokens` | Generated token count reported by provider or estimator. |
+| `total_tokens` | Prompt + completion token total. |
+| `latency_ms` | Wall-clock request latency. |
+| `tokens_per_second` | Completion throughput when completion token count is known. |
+| `finish_reason` | Provider stop reason such as `stop`, `length`, `timeout` or `error`. |
+| `gpu_memory_estimate_mb` | Optional local serving estimate, not a measured production value unless explicitly measured by a later benchmark ticket. |
+| `kv_cache_estimate_mb` | Optional KV cache estimate based on model, context length, batch size and dtype. |
+| `provider_request_id` | Provider request id when available; must not include API keys or secrets. |
+
+Metrics may be `null` when unavailable, but missing metrics must not be silently presented as zero. UI and smoke reports should distinguish measured values from estimates.
+
+### Fallback And Failure Contract
+
+| Condition | Required behavior |
+|---|---|
+| Provider disabled or unavailable | Preserve the existing fallback path and set `provider_status=unavailable` with a clear `fallback_reason`. |
+| Timeout | Stop waiting at the configured timeout, set `finish_reason=timeout`, and fall back without corrupting saved OCR, parser, RAG or Agent data. |
+| Malformed response | Set `provider_status=malformed_response`, keep the raw provider payload out of user-facing UI unless explicitly requested, and fall back to the previous safe path. |
+| Rate limited or overloaded | Record `provider_status=rate_limited` or `overloaded`; retry only when a later ticket defines retry policy. |
+| Unsupported modality | VLM parser must fall back to existing deterministic parser behavior; RAG generation must fall back to retrieved chunks / deterministic answer path. |
+
+Fallback metadata belongs in response trace metadata and persisted run metadata where that feature already persists traces. It must not alter permission checks, project filtering, Agent tool allowlists, parser schema or retrieval ranking.
+
+### Validation Boundary
+
+`37-01` only validates documentation coverage. It does not add an endpoint, SDK dependency, vLLM server, GPU benchmark script, paid API key handling, streaming API or production inference gateway.
+
 ## Phase 29 Built-in RAG Eval Contract
 
 `POST /eval/rag/built-in` wraps the existing retrieval eval runner for the backend admin surface. It is intentionally narrow:

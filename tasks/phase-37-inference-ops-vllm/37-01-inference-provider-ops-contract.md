@@ -15,7 +15,7 @@
 
 - 不新增 OpenAI-compatible client runtime 或 vLLM server。
 - 不新增 multi-GPU serving、autoscaling、K8s deployment 或 production inference gateway。
-- 不修改 RAG prompt 主體、Agent planner 或 VLM parser behavior。
+- 不更改 RAG prompt、Agent planner 或 VLM parser behavior。
 
 ## Release Impact
 
@@ -34,12 +34,18 @@
 
 ## Acceptance Criteria
 
-- [ ] 文件定義 Ollama / OpenAI-compatible / vLLM provider boundary。
-- [ ] Metrics contract 包含 token、latency、GPU memory 與 KV cache estimate。
-- [ ] Provider fallback 與 timeout policy 清楚。
-- [ ] 明確標示本 ticket 不新增 vLLM runtime。
+- [x] 文件定義 Ollama / OpenAI-compatible / vLLM provider boundary。
+- [x] Metrics contract 包含 token、latency、GPU memory 與 KV cache estimate。
+- [x] Provider fallback 與 timeout policy 清楚。
+- [x] 明確標示本 ticket 不新增 vLLM runtime。
 
 ## Validation
 
 - `rg -n "inference|vLLM|OpenAI-compatible|Ollama|KV cache|GPU memory|Phase 37" docs README_DEV.md TODO.md tasks/phase-37-inference-ops-vllm`
 - `git diff --check`
+
+## Completion Notes
+
+- `docs/architecture.md` 已新增 Phase 37 inference provider router、provider boundary、metrics boundary 與 fallback boundary。
+- `docs/api.md` 已新增 provider trace metadata、token / latency / throughput / GPU memory / KV cache metrics，以及 unavailable / timeout / malformed response contract。
+- 本 ticket 只定義 contract，不新增 OpenAI-compatible client、vLLM server、dependency、Docker runtime、K8s、production gateway、RAG prompt change、Agent planner change 或 VLM parser behavior change。

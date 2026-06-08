@@ -536,6 +536,50 @@ Boundary rules:
 - The first UI surface should remain a diagnostic tool for Admin / Analyst; Viewer access to eval results requires a later ticket.
 - LLM-as-judge, answer faithfulness, citation quality scoring, OCR eval and VLM parser accuracy eval remain out of scope.
 
+## Phase 37 Inference Provider Ops Contract
+
+`37-01` defines the inference provider boundary for future LLMOps-facing work. It does not add a new OpenAI-compatible client, does not start vLLM, does not add a deployment file and does not change the current Ollama-first demo path.
+
+Target architecture:
+
+```text
+RAG generation / VLM parser / future Agent planner
+    |
+    |-- inference provider router
+          |
+          |-- ollama adapter
+          |-- openai_compatible adapter
+          |-- vllm adapter using OpenAI-compatible HTTP shape
+    |
+    |-- normalized inference result
+          |
+          |-- output text / structured payload
+          |-- token metrics
+          |-- latency / throughput metrics
+          |-- fallback and malformed-response metadata
+```
+
+Provider boundary:
+
+| Provider | Role | Required fallback behavior |
+|---|---|---|
+| `ollama` | Current local demo provider for generation and VLM parser spike. | Remains local fallback when compatible endpoints are disabled or unavailable. |
+| `openai_compatible` | Future adapter for local or hosted compatible endpoints. | Must be explicitly enabled; unavailable / timeout / malformed response falls back to existing safe path. |
+| `vllm` | Future local serving path exposed through OpenAI-compatible API. | Must never become the only runtime; vLLM server setup is deferred to `37-03`. |
+
+Metrics boundary:
+
+- `prompt_tokens`, `completion_tokens`, `total_tokens`, `latency_ms`, `tokens_per_second`, `finish_reason`, `provider_request_id`.
+- Local serving estimates may include `gpu_memory_estimate_mb` and `kv_cache_estimate_mb`, but estimates must be labeled as estimates unless a later benchmark ticket measures them.
+- Metrics must be attached to existing trace metadata or report artifacts; missing metrics stay `null` / unavailable rather than being displayed as `0`.
+
+Fallback boundary:
+
+- Provider unavailable, timeout, malformed response, rate limit or unsupported modality must be represented as explicit `provider_status` and `fallback_reason`.
+- Fallback must not clear OCR results, parser fields, retrieved chunks, eval run results or Agent trace steps.
+- Provider routing must not bypass Auth / RBAC guards, project filters, Agent tool allowlists or retrieval source filters.
+- `37-01` does not change RAG prompt text, Agent planner behavior, VLM parser schema, ranking algorithm, rerank provider or frontend streaming behavior.
+
 ## Near-Term Runtime Boundary
 
 目前 runtime 邊界如下：
