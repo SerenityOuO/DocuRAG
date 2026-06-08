@@ -534,11 +534,12 @@ Phase 41 `v0.41.0` - RAG quality regression / DatasetOps：
 - Validation 已通過：backend full test、frontend build、retrieval regression report smoke、Phase 41 keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: yes，Phase 41 已完成 `v0.41.0` RAG quality regression / DatasetOps release；不新增 LLM-as-judge、production eval dashboard、DB eval history、排程任務或外部 monitoring。
 
 Phase 42 `v0.42.0` - Inference gateway / capacity planning：
-- [ ] `tasks/phase-42-inference-gateway-capacity-planning/42-01-inference-gateway-contract.md`
+- [x] `tasks/phase-42-inference-gateway-capacity-planning/42-01-inference-gateway-contract.md`: 完成 Phase 42 inference gateway contract；文件固定 Ollama / vLLM / OpenAI-compatible / disabled provider domain、routing / fallback / timeout / token usage / latency metadata、provider health / circuit breaker 邊界與 capacity planning report 邊界。不 bump version。
 - [ ] `tasks/phase-42-inference-gateway-capacity-planning/42-02-provider-routing-and-fallback.md`
 - [ ] `tasks/phase-42-inference-gateway-capacity-planning/42-03-streaming-timeout-guardrails.md`
 - [ ] `tasks/phase-42-inference-gateway-capacity-planning/42-04-capacity-planning-report.md`
 - [ ] `tasks/phase-42-inference-gateway-capacity-planning/42-05-phase-42-release-sync.md`
+- Validation 已通過：Phase 42 keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: no，版本同步留到 `42-05`；本 ticket 不新增 provider runtime、streaming API、OpenAI SDK、vLLM server、Docker service、production autoscaling、多 GPU serving、paid API key 或 SLA。
 
 Phase 43 `v0.43.0` - AgentOps governance / secure tool runtime：
 - [ ] `tasks/phase-43-agentops-governance-secure-runtime/43-01-agent-governance-contract.md`

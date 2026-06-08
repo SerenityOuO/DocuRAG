@@ -33,11 +33,17 @@
 
 ## Acceptance Criteria
 
-- [ ] 文件定義 Ollama / vLLM / OpenAI-compatible provider gateway 邊界。
-- [ ] 文件列出 routing、fallback、timeout、token usage 與 latency metadata。
-- [ ] 文件明確說明 Phase 42 不承諾 production autoscaling。
+- [x] 文件定義 Ollama / vLLM / OpenAI-compatible provider gateway 邊界。
+- [x] 文件列出 routing、fallback、timeout、token usage 與 latency metadata。
+- [x] 文件明確說明 Phase 42 不承諾 production autoscaling。
 
 ## Validation
 
 - `rg -n "Phase 42|inference gateway|Ollama|vLLM|OpenAI-compatible|routing|fallback|tokens/sec|circuit breaker" docs README_DEV.md TODO.md tasks/phase-42-inference-gateway-capacity-planning`
 - `git diff --check`
+
+## Completion Notes
+
+- `docs/architecture.md` 已補上 Phase 42 inference gateway / capacity planning contract，固定 Ollama / OpenAI-compatible / vLLM / disabled provider domain、routing / fallback metadata、retry / provider health / circuit breaker 文件邊界與 capacity planning report 邊界。
+- `docs/api.md` 已補上 API-facing metadata shape，列出 selected provider、attempted providers、fallback target、provider status、model、token usage、latency、tokens/sec、timeout、fallback reason、skip reason 與 circuit breaker state。
+- `README_DEV.md`、`TODO.md` 與 `docs/ROADMAP.md` 已同步 `42-01` 狀態與 validation；本 ticket 不 bump version，也不新增 provider runtime、streaming API、OpenAI SDK、vLLM server、Docker service、production autoscaling、多 GPU serving、paid API key 或 SLA。

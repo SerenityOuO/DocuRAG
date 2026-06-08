@@ -662,6 +662,33 @@ Fallback boundary:
 - Provider routing must not bypass Auth / RBAC guards, project filters, Agent tool allowlists or retrieval source filters.
 - `37-01` does not change RAG prompt text, Agent planner behavior, VLM parser schema, ranking algorithm, rerank provider or frontend streaming behavior.
 
+## Phase 42 Inference Gateway / Capacity Planning Contract
+
+`42-01` is a Markdown-only contract ticket. It turns the existing Ollama, OpenAI-compatible and vLLM documentation from Phase 37 into an inference gateway boundary, but does not add provider runtime, streaming API, OpenAI SDK, vLLM server, Docker service or production autoscaling.
+
+Gateway provider domain:
+
+| Provider domain | Runtime meaning | Required boundary |
+|---|---|---|
+| `ollama` | Current local LLM / VLM / embedding provider and fallback path. | Remains the demo-safe local baseline; Phase 42 does not change prompts, parser behavior or embedding behavior. |
+| `openai_compatible` | Existing explicit LLM generation adapter using an OpenAI-compatible chat endpoint. | Requires explicit env selection and must record unavailable / timeout / malformed response fallback. |
+| `vllm` | Optional local serving target exposed through the OpenAI-compatible HTTP shape. | Treated as local serving / benchmark evidence, not as the only runtime or a production serving guarantee. |
+| `disabled` | Intentional no-provider / unavailable state for validation or fallback. | Must produce explicit skip / fallback metadata instead of pretending a provider succeeded. |
+
+Routing and fallback metadata should be consistent across RAG generation, VLM parser traces, future Agent planner attempts and capacity reports when those paths already expose metadata:
+
+- Provider selection: `selected_provider`, `attempted_providers`, `fallback_target`, `provider_status`, `skip_reason`.
+- Request / response metadata: `model`, `provider`, `prompt_tokens`, `completion_tokens`, `total_tokens`, `latency_ms`, `tokens_per_second` / `tokens/sec`, `timeout_seconds`, `fallback_reason`.
+- Routing policy: prefer explicit configured provider, preserve Ollama / deterministic safe fallback, and record the full attempted provider chain.
+- Retry policy: no automatic retry loop is added in `42-01`; later runtime tickets must bound retries by attempt count, timeout budget and idempotency expectations.
+- Provider health and circuit breaker boundary: docs may define health states such as `healthy`, `degraded`, `unavailable` and circuit breaker states such as `closed`, `open`, `half_open`, but `42-01` does not implement a circuit breaker service.
+
+Capacity planning report boundary:
+
+- Report artifacts may compare latency p50 / p95, tokens/sec, context length, concurrency, VRAM estimate, KV cache estimate, TOPS / NPU interpretation, bottleneck notes and provider skip reason.
+- Capacity numbers must separate measured local results from estimates. Unknown values stay `null`, `not_measured` or `skipped`; they must not be shown as zero.
+- Capacity planning is evidence for interview and local ops reasoning. It is not production autoscaling, multi GPU serving, SLA, paid API key management, secret vault, model registry or cloud capacity guarantee.
+
 ## Phase 39 Deployment / Observability / Fine-tuning Research Contract
 
 `39-01` is a Markdown-only contract for deployment and MLOps-facing evidence. It defines what later Phase 39 tickets may add, but does not add manifests, runtime services, notebooks, dependencies or version changes by itself.

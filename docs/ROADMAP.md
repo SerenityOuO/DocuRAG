@@ -688,11 +688,16 @@ Goal：把 Ollama / vLLM / OpenAI-compatible endpoint 整理成可說清楚 rout
 
 Tickets：
 
-- `tasks/phase-42-inference-gateway-capacity-planning/42-01-inference-gateway-contract.md`
+- [x] `tasks/phase-42-inference-gateway-capacity-planning/42-01-inference-gateway-contract.md`
 - `tasks/phase-42-inference-gateway-capacity-planning/42-02-provider-routing-and-fallback.md`
 - `tasks/phase-42-inference-gateway-capacity-planning/42-03-streaming-timeout-guardrails.md`
 - `tasks/phase-42-inference-gateway-capacity-planning/42-04-capacity-planning-report.md`
 - `tasks/phase-42-inference-gateway-capacity-planning/42-05-phase-42-release-sync.md`
+
+Current Status：
+
+- `42-01` 已完成 inference gateway contract；文件固定 Ollama / vLLM / OpenAI-compatible / disabled provider domain、routing / fallback / timeout / token usage / latency metadata、provider health / circuit breaker 邊界，以及 capacity planning report 邊界。
+- `42-01` 不 bump version、不新增 provider runtime、streaming API、OpenAI SDK、vLLM server、Docker service、production autoscaling、多 GPU serving、paid API key 或 SLA。
 
 Expected Outcome：
 

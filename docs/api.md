@@ -319,6 +319,59 @@ Fallback metadata belongs in response trace metadata and persisted run metadata 
 - `scripts/inference-benchmark-smoke.ps1` writes measured latency and token fields only when the endpoint responds; KV cache and GPU memory fields remain estimates.
 - `37-03` does not change RAG prompts, VLM parser prompts, Agent planner behavior or retrieval ranking.
 
+## Phase 42 Inference Gateway / Capacity Planning Contract
+
+`42-01` defines the API-facing metadata contract for an inference gateway. It does not add a new API endpoint, streaming response, OpenAI SDK dependency, provider runtime, vLLM server, Docker service, load balancer, production autoscaling or SLA.
+
+### Gateway Provider Domains
+
+| Domain | Existing / future use | Required API boundary |
+|---|---|---|
+| `ollama` | Local LLM / VLM / embedding baseline. | Keep as safe fallback and record timeout / unavailable state when it fails. |
+| `openai_compatible` | Explicit chat-completions compatible LLM endpoint from Phase 37. | Record selected model, endpoint kind, token usage, latency and fallback reason. |
+| `vllm` | Optional local OpenAI-compatible serving target. | Expose as serving / benchmark evidence only; no production serving guarantee. |
+| `disabled` | Intentional disabled provider or validation path. | Return or persist skip reason / fallback metadata instead of success-like metrics. |
+
+### Routing Metadata Shape
+
+When a response or report already exposes inference trace metadata, Phase 42 expects these fields to stay consistent:
+
+```json
+{
+  "inference_gateway": {
+    "selected_provider": "openai_compatible",
+    "attempted_providers": ["openai_compatible", "ollama"],
+    "fallback_target": "ollama",
+    "provider_status": "timeout",
+    "provider_health": "degraded",
+    "circuit_breaker_state": "open",
+    "model": "qwen3.5:4b",
+    "prompt_tokens": 256,
+    "completion_tokens": 128,
+    "total_tokens": 384,
+    "latency_ms": 1450,
+    "tokens_per_second": 88.2,
+    "tokens/sec": 88.2,
+    "timeout_seconds": 30,
+    "fallback_reason": "provider_timeout",
+    "skip_reason": null
+  }
+}
+```
+
+Fields may be `null` or omitted only when the provider cannot supply them and the report clearly marks them unavailable. Token usage and latency metadata must not be fabricated.
+
+### Routing, Retry And Circuit Breaker Boundary
+
+- Routing policy should prefer the explicitly configured provider, then fall back to the existing safe path without changing RAG ranking, VLM parser schema, Agent planner behavior or permission guards.
+- Fallback metadata should distinguish `provider_disabled`, `provider_unavailable`, `provider_timeout`, `malformed_response`, `rate_limited`, `overloaded` and `unsupported_modality`.
+- Retry policy is documented only in `42-01`. Later runtime tickets must bound retry count, timeout budget and idempotency before adding retry behavior.
+- Provider health and circuit breaker fields are documentation contracts in `42-01`; no production circuit breaker service is implemented by this ticket.
+
+### Capacity Planning Boundary
+
+Capacity planning reports may include latency p50 / p95, tokens/sec, VRAM, KV cache estimate, context length, concurrency, TOPS / NPU interpretation, bottleneck notes, fallback policy and provider skip reason. They must separate measured values from estimates and must not claim production autoscaling, multi GPU serving, paid API readiness, secret vault, model registry or SLA.
+
 ## Phase 29 Built-in RAG Eval Contract
 
 `POST /eval/rag/built-in` wraps the existing retrieval eval runner for the backend admin surface. It is intentionally narrow:
