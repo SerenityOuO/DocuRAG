@@ -691,7 +691,7 @@ Tickets：
 - [x] `tasks/phase-42-inference-gateway-capacity-planning/42-01-inference-gateway-contract.md`
 - [x] `tasks/phase-42-inference-gateway-capacity-planning/42-02-provider-routing-and-fallback.md`
 - [x] `tasks/phase-42-inference-gateway-capacity-planning/42-03-streaming-timeout-guardrails.md`
-- `tasks/phase-42-inference-gateway-capacity-planning/42-04-capacity-planning-report.md`
+- [x] `tasks/phase-42-inference-gateway-capacity-planning/42-04-capacity-planning-report.md`
 - `tasks/phase-42-inference-gateway-capacity-planning/42-05-phase-42-release-sync.md`
 
 Current Status：
@@ -702,6 +702,8 @@ Current Status：
 - `42-02` 不 bump version、不啟動 vLLM server、不新增大型模型下載、paid API key、production secret、load balancing、多 tenant quota、production circuit breaker service 或 autoscaling。
 - `42-03` 已完成 streaming timeout guardrails runtime slice；RAG generation trace 會記錄 timeout、max tokens / num_predict、streaming mode、truncated reason 與 generation latency，provider timeout 時 fallback 到 retrieved chunks。
 - `42-03` 不 bump version、不新增 SSE / WebSocket frontend streaming UI、queue-based inference scheduler、多使用者 quota、production rate limiter、預設模型變更或外部 inference dependency。
+- `42-04` 已完成 `docs/inference-capacity-planning-report.md`，整理 workload profile、capacity table、latency p50 / p95、tokens/sec / throughput、VRAM、KV cache estimate、TOPS / NPU、fallback policy、skip reason 與 provider / hardware selection table。
+- `42-04` 不 bump version、不要求真實 NPU / TOPS profiler、不下載大型模型、不啟動長時間 benchmark、不承諾 production throughput，也不新增 production metrics service 或 autoscaling controller。
 
 Expected Outcome：
 

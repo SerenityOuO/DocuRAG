@@ -372,6 +372,8 @@ Fields may be `null` or omitted only when the provider cannot supply them and th
 
 Capacity planning reports may include latency p50 / p95, tokens/sec, VRAM, KV cache estimate, context length, concurrency, TOPS / NPU interpretation, bottleneck notes, fallback policy and provider skip reason. They must separate measured values from estimates and must not claim production autoscaling, multi GPU serving, paid API readiness, secret vault, model registry or SLA.
 
+`42-04` adds `docs/inference-capacity-planning-report.md` as the current report artifact. It includes workload profiles for chat query, RAG answer generation, VLM parser request, embedding indexing and rerank request, plus a capacity table and provider / hardware selection table. Unmeasured values stay `pending`, `estimate`, `not_measured` or `skipped`.
+
 ### 42-02 Runtime Metadata Notes
 
 `42-02` adds provider selected / fallback reason metadata to existing traces only:

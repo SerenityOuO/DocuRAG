@@ -688,6 +688,7 @@ Capacity planning report boundary:
 - Report artifacts may compare latency p50 / p95, tokens/sec, context length, concurrency, VRAM estimate, KV cache estimate, TOPS / NPU interpretation, bottleneck notes and provider skip reason.
 - Capacity numbers must separate measured local results from estimates. Unknown values stay `null`, `not_measured` or `skipped`; they must not be shown as zero.
 - Capacity planning is evidence for interview and local ops reasoning. It is not production autoscaling, multi GPU serving, SLA, paid API key management, secret vault, model registry or cloud capacity guarantee.
+- `42-04` records this artifact in `docs/inference-capacity-planning-report.md`; it links Phase 40 hardware evidence, the existing inference benchmark smoke script and Phase 42 gateway provider decisions without running a new long benchmark.
 
 `42-02` runtime metadata notes:
 
