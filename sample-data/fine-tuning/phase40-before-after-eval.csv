@@ -1,0 +1,7 @@
+stage,track,dataset_version,sample_count,Hit Rate@K,MRR@K,Recall@K,parser field accuracy,data_source,skip reason,notes
+before_current_runtime,sft_schema_extraction,phase39-research-v1,3,not_applicable,not_applicable,not_applicable,not_run,synthetic_public_demo,training_not_run_research_only,Current evidence is a schema extraction data format sample only.
+after_candidate_sft,sft_schema_extraction,phase40-evidence-template,3,not_applicable,not_applicable,not_applicable,pending,synthetic_public_demo,training_not_run_research_only,Fill parser field accuracy only after an explicit local SFT experiment.
+before_current_runtime,embedding_tuning,phase39-research-v1,3,not_run,not_run,not_run,not_applicable,synthetic_public_demo,embedding_runtime_not_run,Current evidence has positive and negative pairs but no embedding tuning run.
+after_candidate_embedding,embedding_tuning,phase40-evidence-template,3,pending,pending,pending,not_applicable,synthetic_public_demo,training_not_run_research_only,Fill Hit Rate@K MRR@K and Recall@K after an explicit local embedding experiment.
+before_current_runtime,reranker_tuning,phase39-research-v1,3,not_run,not_run,not_run,not_applicable,synthetic_public_demo,reranker_runtime_not_run,Current evidence has pairwise chosen rejected samples but no reranker tuning run.
+after_candidate_reranker,reranker_tuning,phase40-evidence-template,3,pending,pending,pending,not_applicable,synthetic_public_demo,training_not_run_research_only,Fill retrieval and pairwise ranking metrics after an explicit local reranker experiment.

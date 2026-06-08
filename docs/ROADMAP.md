@@ -586,7 +586,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 Phase 40 planning。後續 evidence tickets 尚未實作，不 bump version、不新增 runtime，也不宣稱 Phase 40 已完成。
+- 已完成 Phase 40 planning 與 `40-02` Embedding / SFT experiment evidence。`40-03`、`40-04` 與 `40-05` 尚未實作，不 bump version、不新增 runtime，也不宣稱 Phase 40 已完成。
 
 ### Phase 40 - JD Evidence Hardening
 
@@ -607,6 +607,12 @@ Expected Outcome：
 - Inference hardware benchmark 有 latency、tokens/sec、VRAM、KV cache estimate、TOPS / NPU 評估方式與 provider fallback / skip reason。
 - Observability evidence 有 Loki / Grafana 或 OpenSearch dashboard / query examples，覆蓋 API log、worker log、RAG trace、latency 與 eval metrics。
 - `v0.40.0` release sync 時，README / README_DEV 明確說明這是 JD evidence hardening，不是 production training、production inference autoscaling 或 production alerting。
+
+40-02 Embedding SFT Experiment Evidence Status：
+- 已完成 Phase 40 research-only experiment evidence。`fine-tuning/phase40-experiment-evidence.md` 現在整理 SFT JSONL、embedding positive / negative pairs、reranker pairwise samples、invoice / contract / report synthetic data coverage、before / after eval table、Hit Rate@K / MRR@K / Recall@K / parser field accuracy、skip reason 與 privacy / leakage / overfit risk notes。
+- 新增 `sample-data/fine-tuning/phase40-before-after-eval.csv` 作為可重跑實驗後填寫的 tiny before / after template；目前明確標示 `training_not_run_research_only`、`embedding_runtime_not_run` 與 `reranker_runtime_not_run`，不宣稱已完成 training result。
+- Release Impact：Version bump required: no。版本同步留到 `40-05`；不下載大型模型、不執行 training、不新增 dependency、不接 production runtime，也不改 OCR、parser、RAG、Agent、embedding 或 reranker behavior。
+- Validation：ticket `rg` 與 `git diff --check` 通過。
 
 Phase 40 Guardrails：
 

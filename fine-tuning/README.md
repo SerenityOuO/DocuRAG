@@ -10,6 +10,8 @@ This folder is a research-only Phase 39 artifact pack. It defines how DocuRAG co
 | embedding tuning | Prepare query/document positive and negative pairs for retrieval tuning. | `sample-data/fine-tuning/embedding-positive-negative-pairs.jsonl` |
 | reranker tuning | Prepare pairwise chosen/rejected examples for reranker tuning. | `sample-data/fine-tuning/reranker-pairwise-sample.jsonl` |
 | Evaluation | Track retrieval and parser outcomes without running model training. | `sample-data/fine-tuning/evaluation-template.csv` |
+| Phase 40 evidence report | Summarize interview-ready SFT, embedding tuning, reranker tuning, before / after eval table and risk notes. | `fine-tuning/phase40-experiment-evidence.md` |
+| Phase 40 before / after table | Preserve sample count, Hit Rate@K, MRR@K, Recall@K, parser field accuracy and skip reason rows. | `sample-data/fine-tuning/phase40-before-after-eval.csv` |
 
 ## Synthetic Data Plan
 

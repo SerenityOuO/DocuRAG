@@ -39,16 +39,29 @@
 
 ## Acceptance Criteria
 
-- [ ] 有一份可閱讀的 Embedding / SFT / synthetic data experiment report 或 notebook skeleton。
-- [ ] Report 清楚說明資料格式、實驗流程、evaluation method 與風險。
-- [ ] 至少包含 invoice / contract / report 其中兩類 synthetic data examples。
-- [ ] Report 包含 SFT JSONL、embedding positive / negative pair 與 reranker training pair 範例。
-- [ ] Before / after eval table 包含 Hit Rate@K、MRR@K、Recall@K、parser field accuracy、sample count 與 skip reason。
-- [ ] 文件說明如何避免 synthetic data overfit、label leakage 與 production document privacy 風險。
-- [ ] 文件明確標示 research-only，不接 production runtime。
-- [ ] Validation 不需要下載大型模型或執行長時間 training。
+- [x] 有一份可閱讀的 Embedding / SFT / synthetic data experiment report 或 notebook skeleton。
+- [x] Report 清楚說明資料格式、實驗流程、evaluation method 與風險。
+- [x] 至少包含 invoice / contract / report 其中兩類 synthetic data examples。
+- [x] Report 包含 SFT JSONL、embedding positive / negative pair 與 reranker training pair 範例。
+- [x] Before / after eval table 包含 Hit Rate@K、MRR@K、Recall@K、parser field accuracy、sample count 與 skip reason。
+- [x] 文件說明如何避免 synthetic data overfit、label leakage 與 production document privacy 風險。
+- [x] 文件明確標示 research-only，不接 production runtime。
+- [x] Validation 不需要下載大型模型或執行長時間 training。
 
 ## Validation
 
 - `rg -n "SFT|synthetic data|embedding tuning|reranker tuning|positive|negative|JSONL|research-only|field accuracy|Hit Rate|MRR|Recall|skip reason|overfit|privacy" docs fine-tuning sample-data README_DEV.md TODO.md tasks/phase-40-interview-evidence-hardening`
 - `git diff --check`
+
+## Status
+
+- Completed. Added `fine-tuning/phase40-experiment-evidence.md` and `sample-data/fine-tuning/phase40-before-after-eval.csv`.
+- Updated fine-tuning README / dataset card, README_DEV, TODO and ROADMAP.
+- The report links SFT JSONL, embedding positive / negative pairs, reranker pairwise samples, invoice / contract / report synthetic data coverage, before / after eval fields, Hit Rate@K, MRR@K, Recall@K, parser field accuracy, sample count, skip reason, privacy, label leakage, overfit and research-only runtime boundaries.
+- Release Impact: Version bump required: no. Version sync remains deferred to `40-05`.
+
+## Validation Result
+
+- Passed: ticket `rg`.
+- Passed: `git diff --check`.
+- No model download, no long-running training, no dependency, no backend / frontend runtime change and no production runtime connection were added.

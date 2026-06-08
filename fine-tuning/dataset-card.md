@@ -16,6 +16,7 @@
 | embedding tuning pairs | `sample-data/fine-tuning/embedding-positive-negative-pairs.jsonl` | invoice, contract, report |
 | reranker tuning pairs | `sample-data/fine-tuning/reranker-pairwise-sample.jsonl` | invoice, contract, report |
 | Evaluation template | `sample-data/fine-tuning/evaluation-template.csv` | SFT / retrieval / reranker reporting |
+| Phase 40 before / after eval table | `sample-data/fine-tuning/phase40-before-after-eval.csv` | SFT / embedding / reranker before-after evidence |
 
 All current records are small fictional samples designed to document format and evaluation expectations. They are not a statistically meaningful training dataset.
 
@@ -50,3 +51,5 @@ All current records are small fictional samples designed to document format and 
 ## Release Boundary
 
 This dataset card does not create a production training pipeline. It does not add dependencies, model artifacts, scheduled jobs, registry uploads, deployment automation or runtime provider changes.
+
+Phase 40 evidence is summarized in `fine-tuning/phase40-experiment-evidence.md`. It remains research-only and only records SFT / embedding tuning / reranker tuning experiment design, skip reason and before / after evaluation fields.
