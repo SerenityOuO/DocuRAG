@@ -134,7 +134,7 @@ const suggestedQuestions = [
   "When is the renewal date?",
 ];
 
-const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.37.0"));
+const currentVersionLabel = computed(() => (health.value?.version ? `v${health.value.version}` : "v0.38.0"));
 
 const demoAuthRequired = computed(() => authMode.value === "demo" && authUser.value === null);
 const formalAuthRequired = computed(() => authMode.value === "formal" && authUser.value === null);
@@ -2299,7 +2299,7 @@ onMounted(async () => {
           <summary>
             <div>
               <h2>Agent 執行紀錄</h2>
-              <p>Admin / Analyst 可在這裡查看確定性工具流程、觀察結果與引用來源。</p>
+              <p>Admin / Analyst 可在這裡查看受控工具流程、權限 trace、觀察結果與引用來源。</p>
             </div>
             <span class="status-pill" :class="documentStatusTone(agentRun?.status ?? 'pending')">
               {{ statusLabel(agentRun?.status ?? "pending") }}
@@ -2340,7 +2340,7 @@ onMounted(async () => {
 
             <p v-if="agentError" class="error">{{ agentError }}</p>
             <p v-if="!agentRun" class="muted compact-note">
-              Agent 只會使用 Phase 25 已允許的唯讀工具，不會執行任意外部操作。
+              Agent 只會使用 Phase 38 已受權限檢查的唯讀工具，不會執行任意外部操作。
             </p>
 
             <section v-if="agentRun" class="agent-result" aria-label="Agent 執行結果">

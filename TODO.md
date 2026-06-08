@@ -257,7 +257,7 @@ Phase 38 `v0.38.0` - Agent runtime hardening：
 - [x] `tasks/phase-38-agent-runtime-hardening/38-01-agent-runtime-permission-contract.md`: 定義 Agent planner provider boundary、deterministic fallback、tool permission tiers、project access guard、human confirmation requirement、trace fields 與 forbidden tool boundary；文件 ticket，不 bump version、不新增 runtime。
 - [x] `tasks/phase-38-agent-runtime-hardening/38-02-llm-planner-provider-boundary.md`: 新增 `DOCURAG_AGENT_PLANNER_PROVIDER=llm_planner` runtime boundary、LLM plan JSON validation、timeout / invalid plan deterministic fallback 與 planner audit trace；不 bump version、不新增任意工具執行。
 - [x] `tasks/phase-38-agent-runtime-hardening/38-03-tool-permission-guards-and-trace.md`: 為既有 Agent tools 補上 `read-only` tier / permission requirement、執行前 role / project / side-effect guard、permission trace metadata 與 frontend trace 顯示；不 bump version、不新增 destructive tool。
-- [ ] `tasks/phase-38-agent-runtime-hardening/38-04-agent-runtime-release-sync.md`
+- [x] `tasks/phase-38-agent-runtime-hardening/38-04-agent-runtime-release-sync.md`: 完成 `v0.38.0` Agent runtime hardening release sync，更新 backend / frontend / Docker Compose / health test version 與 README / README_DEV / backend README / frontend README / TODO / ROADMAP；保留 Agent 只執行受控 read-only allowlisted tools，不允許 arbitrary SQL、shell、filesystem 或 destructive tools。
 
 38-01 Agent Runtime Permission Contract Status：
 
@@ -281,6 +281,14 @@ Phase 38 `v0.38.0` - Agent runtime hardening：
 - Agent trace 與 tool call trace metadata 已包含 `permission_decision`、`permission_reason`、`tool_tier`、`required_roles`、`project_access`、`side_effect_policy`、`human_confirmation_required` 與 `human_confirmation_status`；frontend Agent trace 會顯示 permission decision、阻擋工具、tool tier 與 side-effect policy。
 - Validation 已通過：focused Agent tests `17 passed`（1 pytest cache warning）；backend full test `255 passed`（1 pytest cache warning）；frontend build；Chrome GUI Browser check desktop / mobile（Agent trace permission fields rendered，無 horizontal overflow）；ticket `rg`；`git diff --check`（僅 Windows LF/CRLF 提示）。
 - Release Impact：Version bump required: no。此 ticket 是 Phase 38 runtime slice，版本同步留到 `38-04`。
+
+38-04 Agent Runtime Phase 38 Release Sync：
+
+- 已完成。backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 ticket 已同步到 `0.38.0` / `v0.38.0`。
+- Phase 38 已形成可展示 release：受控 `llm_planner` provider boundary、deterministic fallback、read-only tool permission guard、Viewer forbidden path 與 Agent trace permission fields 均已納入驗證。
+- Release boundary 保持明確：Agent 仍不允許 arbitrary autonomous execution、任意 SQL、shell、filesystem command、destructive tools、external browser control、production approval workflow 或 production audit dashboard。
+- Validation 已通過：backend full test `255 passed, 1 warning`（pytest cache warning）、frontend build、Agent runtime smoke（health `0.38.0`、planner fallback `llm_planner_timeout`、Viewer 403、permission trace OK）、Browser Agent trace desktop / mobile（permission fields rendered，無 horizontal overflow）、ticket `rg` 與 `git diff --check`（僅 Windows LF/CRLF 提示）。
+- Release Impact：Version bump required: yes。Phase 38 已完成 `v0.38.0` Agent runtime hardening release。
 
 Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 - [ ] `tasks/phase-39-deployment-observability-finetuning/39-01-deployment-observability-research-contract.md`

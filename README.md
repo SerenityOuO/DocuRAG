@@ -23,6 +23,7 @@ DocuRAG 是技術探索導向的 AI 文件知識庫專案，將文件上傳、OC
 - Ollama 回答延遲 guardrails
 - 內建 RAG 測試
 - Agent tool-use trace
+- Agent planner fallback / tool permission trace
 - Admin / Analyst / Viewer role-gated surface
 - Redis + NATS worker demo smoke
 - Scanned PDF OCR baseline smoke
@@ -128,6 +129,12 @@ Smoke test：
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1
 ```
 
+Agent runtime smoke：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\agent-runtime-smoke.ps1
+```
+
 Worker demo smoke：
 
 ```powershell
@@ -150,7 +157,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 
 ## 目前邊界
 
-目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.37.0 已完成 inference ops / vLLM serving demonstration：OpenAI-compatible provider 可明確啟用，vLLM local / Docker path 有本機啟動文件與 benchmark smoke，可記錄 latency、tokens、throughput、KV cache / GPU memory estimate 或 vLLM unavailable skip reason。這不代表 production inference gateway、multi-GPU serving、K8s autoscaling、model registry、OpenAI billing / secret vault、RAG ranking 變更、VLM parser schema 變更、Agent planner、LLM-as-judge、answer faithfulness、citation quality scoring、production monitoring trend、production indexing worker、完整 layout understanding、table reconstruction、human correction workflow、production OCR accuracy tuning、production async OCR worker、K8s hardening 或 production autonomous Agent 已完成。
+目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.38.0 已完成 Agent runtime hardening：`llm_planner` 只能產生受 schema 驗證的安全計畫，失敗會 fallback 到 deterministic planner；既有 Agent tools 只允許 read-only allowlist，並在 trace 顯示 permission decision、tool tier、side-effect policy 與 fallback reason。這不代表 production autonomous Agent、任意 SQL、shell、filesystem command、destructive tool、production approval workflow、production inference gateway、multi-GPU serving、K8s autoscaling、model registry、OpenAI billing / secret vault、RAG ranking 變更、VLM parser schema 變更、LLM-as-judge、answer faithfulness、citation quality scoring、production monitoring trend、production indexing worker、完整 layout understanding、table reconstruction、human correction workflow、production OCR accuracy tuning、production async OCR worker 或 K8s hardening 已完成。
 
 ## 文件入口
 

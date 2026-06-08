@@ -39,16 +39,22 @@
 
 ## Acceptance Criteria
 
-- [ ] `/health` 回傳 `0.38.0`。
-- [ ] Agent smoke 驗證 planner fallback、tool permission guard 與 trace。
-- [ ] README / README_DEV 說明 Agent runtime hardening 與 forbidden tool boundary。
-- [ ] TODO / ROADMAP 記錄 Phase 38 validation。
+- [x] `/health` 回傳 `0.38.0`。
+- [x] Agent smoke 驗證 planner fallback、tool permission guard 與 trace。
+- [x] README / README_DEV 說明 Agent runtime hardening 與 forbidden tool boundary。
+- [x] TODO / ROADMAP 記錄 Phase 38 validation。
+
+## Status
+
+- Completed `v0.38.0` release sync across backend package / app version, frontend package / lock / fallback version, frontend fallback version, health test, Docker Compose `DOCURAG_VERSION`, `.env.example`, README, README_DEV, backend README, frontend README, TODO, ROADMAP and this ticket.
+- Added `scripts/agent-runtime-smoke.ps1` for Agent runtime validation. It checks planner fallback when requested, read-only tool permission trace, Viewer forbidden behavior in demo auth mode, and saved run lookup trace preservation.
+- Release boundary remains explicit: Phase 38 still does not allow arbitrary autonomous execution, arbitrary SQL, shell, filesystem command, destructive tools, external browser control, production approval workflow or production audit dashboard.
 
 ## Validation
 
-- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
-- `npm.cmd run build`
-- Agent runtime smoke script。
-- Browser 檢查 Agent trace desktop / mobile。
-- `rg -n "v0.38.0|Phase 38|Agent|LLM planner|tool permission|destructive|fallback" README.md README_DEV.md backend/README.md frontend/README.md docs/ROADMAP.md TODO.md backend frontend scripts tasks/phase-38-agent-runtime-hardening`
-- `git diff --check`
+- Passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` (`255 passed, 1 warning`; pytest cache warning only).
+- Passed: `npm.cmd run build`.
+- Passed: Agent runtime smoke script（health `0.38.0`、planner fallback `llm_planner_timeout`、Viewer 403、permission trace OK）。
+- Passed: Browser Agent trace desktop / mobile（permission fields rendered，無 horizontal overflow）。
+- Passed: `rg -n "v0.38.0|Phase 38|Agent|LLM planner|tool permission|destructive|fallback" README.md README_DEV.md backend/README.md frontend/README.md docs/ROADMAP.md TODO.md backend frontend scripts tasks/phase-38-agent-runtime-hardening`
+- Passed: `git diff --check`（僅 Windows LF/CRLF 提示）。
