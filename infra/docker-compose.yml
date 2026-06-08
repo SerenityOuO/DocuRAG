@@ -10,7 +10,7 @@ services:
         DOCURAG_INSTALL_NATS: ${DOCURAG_INSTALL_NATS:-false}
     environment:
       DOCURAG_APP_NAME: DocuRAG AgentOps Backend
-      DOCURAG_VERSION: 0.35.0
+      DOCURAG_VERSION: 0.36.0
       DOCURAG_ENVIRONMENT: docker
       DOCURAG_DATA_DIR: /app/data
       DOCURAG_OCR_PROVIDER: ${DOCURAG_OCR_PROVIDER:-paddleocr}

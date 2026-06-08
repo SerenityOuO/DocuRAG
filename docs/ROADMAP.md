@@ -1,6 +1,6 @@
 # Roadmap
 
-本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、v0.31.0 PostgreSQL / Schema / Repository Foundation release、v0.32.0 Formal Auth / RBAC / Tenant Boundary release、v0.33.0 Redis + NATS Worker Pipeline release、v0.34.0 Production OCR / Scanned PDF Pipeline release、v0.35.0 RAG Indexing Quality Hardening release、Phase 36-39 enterprise completion roadmap、Phase 40 interview evidence hardening roadmap，以及 Phase 41-45 JD completion / portfolio roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
+本 roadmap 記錄 Phase 00 到 v0.17.0 retrieval trace UI / eval visibility 的已交付切片，追蹤 v0.18.0 hybrid rerank planning backlog，並新增 v0.19.0 hybrid rerank runtime、v0.20.0 interview MVP packaging、v0.21.0 real GPU OCR interview demo path、v0.22.0 RAG query hardening、v0.23.0 Viewer Chat / Admin Ingestion role split release、v0.24.0 VLM / Parser Minimal MVP、v0.25.0 Agent Tool-use Minimal MVP、v0.26.0 Real VLM Parser Provider Spike release、v0.27.0 Aggressive Demo Defaults release、v0.27.1 OCR / VLM Evidence Alignment patch、v0.28.0 Document Sources / Demo Auth Mode release、v0.29.0 Built-in RAG Eval Admin Surface release、v0.31.0 PostgreSQL / Schema / Repository Foundation release、v0.32.0 Formal Auth / RBAC / Tenant Boundary release、v0.33.0 Redis + NATS Worker Pipeline release、v0.34.0 Production OCR / Scanned PDF Pipeline release、v0.35.0 RAG Indexing Quality Hardening release、v0.36.0 Eval Dashboard / Rerank Analysis release、Phase 37-39 enterprise completion roadmap、Phase 40 interview evidence hardening roadmap，以及 Phase 41-45 JD completion / portfolio roadmap。後續每個 Phase 都必須對應明確版本號，避免 README / TODO / ROADMAP 出現 release 狀態脫節。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 
@@ -23,7 +23,7 @@ Acceptance：
 - 所有 Phase 00 文件存在。
 - README 說明專案目標、MVP 範圍與開發方向。
 - AGENTS 說明小 ticket 開發流程。
-- TODO 包含 Phase 00 到 v0.35.0 RAG Indexing Quality Hardening checklist。
+- TODO 包含 Phase 00 到 v0.36.0 Eval Dashboard / Rerank Analysis checklist。
 
 ## Phase 01 - Backend Bootstrap
 
@@ -145,7 +145,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 Phase 31 `v0.31.0` release sync、Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync、Phase 33 `v0.33.0` Redis + NATS Worker Pipeline release sync、Phase 34 `v0.34.0` Production OCR / Scanned PDF Pipeline release sync 與 Phase 35 `v0.35.0` RAG Indexing Quality Hardening release sync，並已建立 Phase 36 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04`、Phase 33 `33-01` 到 `33-04`、Phase 34 `34-01` 到 `34-04` 與 Phase 35 `35-01` 到 `35-04` 均已完成；不宣稱 Phase 36 到 Phase 39 已整體完成。
+- 已完成 Phase 31 `v0.31.0` release sync、Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync、Phase 33 `v0.33.0` Redis + NATS Worker Pipeline release sync、Phase 34 `v0.34.0` Production OCR / Scanned PDF Pipeline release sync、Phase 35 `v0.35.0` RAG Indexing Quality Hardening release sync 與 Phase 36 `v0.36.0` Eval Dashboard / Rerank Analysis release sync，並已建立 Phase 37 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04`、Phase 33 `33-01` 到 `33-04`、Phase 34 `34-01` 到 `34-04`、Phase 35 `35-01` 到 `35-04` 與 Phase 36 `36-01` 到 `36-04` 均已完成；不宣稱 Phase 37 到 Phase 39 已整體完成。
 
 ### Phase 31 - PostgreSQL / Schema / Repository Foundation
 
@@ -419,6 +419,13 @@ Expected Outcome：
 - Runtime unavailable 時 vector-backed strategy 會保留 fallback cases 與 fallback reasons，不把 fallback 結果當成完整成功。
 - Release Impact：Version bump required: no。這是 Phase 36 runtime slice，版本同步留到 `36-04`；不新增 LLM-as-judge、answer faithfulness、citation quality scoring、production monitoring trend，也不更換 default retrieval provider 或 rerank model。
 - Validation：targeted backend tests `8 passed, 26 deselected`；eval dashboard smoke `7 passed, 27 deselected`；backend full test `246 passed`；frontend build；Edge headless desktop / mobile screenshot check；ticket `rg` 與 `git diff --check`。in-app Browser 控制工具仍因 Node REPL sandbox `spawn setup refresh` 錯誤不可用，已改用 Edge headless 截圖檢查。
+
+36-04 Eval Dashboard Phase 36 Release Sync Status：
+
+- Completed `v0.36.0` release sync across backend package / app version, frontend package / lock / fallback version, health test, Docker Compose `DOCURAG_VERSION`, `.env.example`, README, README_DEV, backend README, frontend README, TODO, ROADMAP and the ticket.
+- Eval dashboard smoke covers eval dataset setup, strategy comparison, failure / fallback cases and rerank analysis visibility.
+- Release boundary remains explicit: this is an eval dashboard / rerank analysis release, not LLM-as-judge, answer faithfulness, citation quality scoring or production monitoring trend.
+- Validation passed: backend full tests `246 passed`; frontend build; `scripts/eval-dashboard-smoke.ps1` (`7 passed, 27 deselected`); Chrome GUI DevTools desktop / mobile screenshot check; ticket `rg` and `git diff --check`.
 
 ### Phase 37 - Inference Ops / vLLM Serving
 

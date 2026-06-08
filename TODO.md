@@ -187,7 +187,7 @@ Phase 36 `v0.36.0` - Eval dashboard / rerank analysis：
 - [x] `tasks/phase-36-eval-dashboard-rerank-analysis/36-01-eval-dashboard-contract.md`: 完成 eval dashboard / rerank analysis contract；不 bump version。
 - [x] `tasks/phase-36-eval-dashboard-rerank-analysis/36-02-eval-dataset-management.md`: 完成 eval dataset / eval item CRUD API、repository persistence、frontend management surface 與 permission boundary；不 bump version。
 - [x] `tasks/phase-36-eval-dashboard-rerank-analysis/36-03-strategy-comparison-and-rerank-analysis.md`: 完成 strategy comparison eval run API、result persistence、frontend comparison panel 與 rerank analysis visibility；不 bump version。
-- [ ] `tasks/phase-36-eval-dashboard-rerank-analysis/36-04-eval-dashboard-release-sync.md`
+- [x] `tasks/phase-36-eval-dashboard-rerank-analysis/36-04-eval-dashboard-release-sync.md`: 完成 `v0.36.0` release sync，補上 eval dashboard smoke、版本同步與文件同步。
 
 36-01 Eval Dashboard Contract：
 - 已完成。`docs/api.md` 已定義 future eval dataset、eval item、eval run、strategy comparison、failure / fallback cases 與 rerank analysis API / UI contract。
@@ -211,6 +211,12 @@ Phase 36 `v0.36.0` - Eval dashboard / rerank analysis：
 - Validation 通過：targeted backend tests `8 passed, 26 deselected`；eval dashboard smoke `7 passed, 27 deselected`；backend full test `246 passed`；frontend build；Edge headless desktop / mobile screenshot check；ticket `rg`；`git diff --check`。pytest cache warning 與 Edge registry usage stats warning 為本機工具環境提示。
 - Release Impact：Version bump required: no。版本同步留到 `36-04`；本 ticket 不新增 LLM-as-judge、answer faithfulness、citation quality scoring、production monitoring trend，也不更換 default retrieval provider 或 rerank model。
 
+36-04 Eval Dashboard Phase 36 Release Sync：
+- 已完成。backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 ticket 已同步到 `0.36.0`。
+- `scripts/eval-dashboard-smoke.ps1` 覆蓋 eval dataset、strategy comparison、failure / fallback cases 與 rerank analysis path。
+- Validation 已通過：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`（`246 passed`，1 pytest cache warning）、`npm.cmd run build`、`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\eval-dashboard-smoke.ps1`（`7 passed, 27 deselected`，1 pytest cache warning）、Chrome GUI DevTools desktop / mobile screenshot check、ticket `rg` 與 `git diff --check`。
+- Release Impact：Version bump required: yes。Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release；仍不包含 LLM-as-judge、answer faithfulness、citation quality scoring 或 production monitoring trend。
+
 Phase 37 `v0.37.0` - Inference Ops / vLLM serving：
 - [ ] `tasks/phase-37-inference-ops-vllm/37-01-inference-provider-ops-contract.md`
 - [ ] `tasks/phase-37-inference-ops-vllm/37-02-openai-compatible-client-boundary.md`
@@ -232,7 +238,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync。除 Phase 31、Phase 32、Phase 33、Phase 34、Phase 35 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync，Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release sync。除 Phase 31、Phase 32、Phase 33、Phase 34、Phase 35、Phase 36 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
