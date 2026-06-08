@@ -1334,6 +1334,8 @@ Field metadata rules:
 - `review_status` uses `unreviewed`, `needs_review`, `confirmed`, `corrected` or `rejected`.
 - `correction_version` starts at `0` for the original parser result and increments only when a human correction artifact changes a field.
 
+`44-02` runtime note: current `POST /documents/{document_id}/parse` and `GET /documents/{document_id}/fields` already expose `confidence`, `source_text`, `source_page`, `source_bbox`, `parser_source` and `fallback_reason` on each `ExtractedField`. The frontend now renders those fields as evidence metadata for Admin / Analyst users. This does not change the API response schema, OCR provider behavior or parser ranking.
+
 ### Human Correction and Golden Labels
 
 Human correction artifacts should be project-scoped and demo-safe. A correction records the original parser value, corrected value, review status, correction version, reviewer note and evidence reference. It must not silently overwrite the original parser output used for trace comparison.

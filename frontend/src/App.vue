@@ -32,6 +32,7 @@ import {
   type AuthUser,
   type BuiltInRagEvalCaseResult,
   type BuiltInRagEvalResponse,
+  type BoundingBox,
   type DocumentMetadata,
   type DocumentFields,
   type EvalDataset,
@@ -439,12 +440,17 @@ const agentMessageLabels: Record<string, string> = {
 
 const fallbackReasonLabels: Record<string, string> = {
   document_not_found: "找不到文件",
+  evidence_unavailable: "沒有可用 evidence",
+  evidence_unmatched: "欄位值未對回 OCR evidence",
+  field_not_found: "欄位未找到",
+  missing_fields: "欄位不完整",
   no_retrieved_chunks: "沒有找到可引用片段",
   parser_result_missing: "缺少欄位解析結果",
   summary_failed: "欄位彙整失敗",
   tool_error: "工具執行錯誤",
   tool_failed: "工具執行失敗",
   unsupported_task: "不支援的任務",
+  unsupported_file: "檔案格式不支援 VLM，已使用備援解析",
   tool_permission_forbidden: "工具權限不足",
 };
 
@@ -946,11 +952,67 @@ function parserFieldDisplay(result: ParserResult, fieldName: InvoiceFieldKey): s
   return formatFieldValue(result.fields[fieldName]);
 }
 
-function fieldMeta(field: ExtractedField): string {
-  const confidence = field.confidence === null ? "信心值 n/a" : `信心值 ${Math.round(field.confidence * 100)}%`;
-  const source = field.source_text ? `來源：${field.source_text}` : field.fallback_reason ? `原因：${fallbackReasonLabel(field.fallback_reason) || field.fallback_reason}` : "來源未提供";
+function fieldConfidence(field: ExtractedField): string {
+  return field.confidence === null ? "信心值 n/a" : `信心值 ${Math.round(field.confidence * 100)}%`;
+}
 
-  return `${confidence}; ${source}`;
+function fieldEvidenceStatus(field: ExtractedField): string {
+  if (field.fallback_reason === "evidence_unmatched") {
+    return "evidence unmatched";
+  }
+
+  if (field.fallback_reason === "evidence_unavailable") {
+    return "evidence unavailable";
+  }
+
+  if (field.source_text || field.source_page !== null || field.source_bbox) {
+    return "evidence linked";
+  }
+
+  if (field.fallback_reason) {
+    return "fallback";
+  }
+
+  return "evidence missing";
+}
+
+function fieldEvidenceTone(field: ExtractedField): string {
+  if (field.fallback_reason === "evidence_unmatched" || field.fallback_reason === "evidence_unavailable") {
+    return "evidence-warning";
+  }
+
+  if (field.source_text || field.source_page !== null || field.source_bbox) {
+    return "evidence-linked";
+  }
+
+  return "evidence-neutral";
+}
+
+function fieldSourceText(field: ExtractedField): string {
+  if (field.source_text) {
+    return field.source_text;
+  }
+
+  if (field.fallback_reason) {
+    return fallbackReasonLabel(field.fallback_reason) || field.fallback_reason;
+  }
+
+  return "來源未提供";
+}
+
+function fieldSourceLocation(field: ExtractedField): string {
+  const page = field.source_page === null ? "page n/a" : `page ${field.source_page}`;
+  const bbox = formatBoundingBox(field.source_bbox);
+  return bbox ? `${page}; ${bbox}` : page;
+}
+
+function formatBoundingBox(bbox: BoundingBox | null): string {
+  if (!bbox) {
+    return "";
+  }
+
+  const values = [bbox.x_min, bbox.y_min, bbox.x_max, bbox.y_max].map((value) => Math.round(value));
+  return `bbox ${values.join(", ")}`;
 }
 
 function agentStepTitle(title: string): string {
@@ -1834,7 +1896,26 @@ onMounted(async () => {
                     <div v-for="field in invoiceFieldLabels" :key="field[0]" class="field-cell">
                       <span>{{ field[1] }}</span>
                       <strong>{{ parserFieldDisplay(document.parser_result, field[0]) }}</strong>
-                      <small>{{ fieldMeta(document.parser_result.fields[field[0]]) }}</small>
+                      <div class="field-evidence-row">
+                        <span class="field-confidence">{{ fieldConfidence(document.parser_result.fields[field[0]]) }}</span>
+                        <span class="field-evidence-pill" :class="fieldEvidenceTone(document.parser_result.fields[field[0]])">
+                          {{ fieldEvidenceStatus(document.parser_result.fields[field[0]]) }}
+                        </span>
+                      </div>
+                      <dl class="field-evidence-list">
+                        <div>
+                          <dt>來源</dt>
+                          <dd>{{ fieldSourceText(document.parser_result.fields[field[0]]) }}</dd>
+                        </div>
+                        <div>
+                          <dt>位置</dt>
+                          <dd>{{ fieldSourceLocation(document.parser_result.fields[field[0]]) }}</dd>
+                        </div>
+                        <div v-if="document.parser_result.fields[field[0]].fallback_reason">
+                          <dt>原因</dt>
+                          <dd>{{ fallbackReasonLabel(document.parser_result.fields[field[0]].fallback_reason) }}</dd>
+                        </div>
+                      </dl>
                     </div>
                   </div>
                   <p v-if="missingFieldLabels(document.parser_result).length" class="muted compact-note">

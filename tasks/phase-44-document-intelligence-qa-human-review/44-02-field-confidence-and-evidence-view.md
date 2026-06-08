@@ -34,9 +34,9 @@
 
 ## Acceptance Criteria
 
-- [ ] Admin / Analyst 可看到欄位 confidence 與 evidence metadata。
-- [ ] Evidence unavailable / unmatched 狀態清楚可見。
-- [ ] Browser validation 確認 desktop / mobile 無 horizontal overflow。
+- [x] Admin / Analyst 可看到欄位 confidence 與 evidence metadata。
+- [x] Evidence unavailable / unmatched 狀態清楚可見。
+- [x] Browser validation 確認 desktop / mobile 無 horizontal overflow。
 
 ## Validation
 
@@ -45,3 +45,10 @@
 - Browser validation。
 - `rg -n "confidence|source_text|source_page|source_bbox|evidence_unmatched|evidence_unavailable" backend frontend docs README_DEV.md TODO.md tasks/phase-44-document-intelligence-qa-human-review`
 - `git diff --check`
+
+## Completion Notes
+
+- 已在 Admin / Analyst structured fields surface 顯示 field confidence、evidence linked / unmatched / unavailable、source text、source page、source bbox、parser source 與 fallback reason。
+- Evidence unavailable / unmatched 狀態以明確 label 呈現；source text 與 bbox 會換行，headless Chrome desktop / mobile browser validation 確認無 horizontal overflow。
+- 本 ticket 未改 backend API，因此未跑 backend tests；不新增人工修正寫入、golden labels、parser accuracy eval、新 OCR / VLM provider、parser ranking 變更或 full document image annotation UI。
+- Validation 已通過：frontend build、headless Chrome desktop / mobile browser evidence surface、Phase 44 keyword `rg` 與 `git diff --check`。

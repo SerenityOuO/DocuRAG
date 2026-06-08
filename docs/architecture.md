@@ -390,6 +390,12 @@ Human correction / golden labels boundary：
 - Golden labels 至少保留 `document_id`、`field_name`、`expected_value`、可選 normalized value、evidence source、source page / bbox、correction version、label version 與 created timestamp。
 - Phase 44 不新增 production labeling UI、正式 reviewer RBAC、外部 labeling vendor、batch annotation workflow、layout analysis、table reconstruction 或 production OCR tuning。
 
+44-02 field confidence / evidence view runtime notes：
+
+- Admin / Analyst ingestion surface 會把既有 parser result 的 confidence、source_text、source_page、source_bbox、parser_source 與 fallback reason 顯示成可掃描 evidence metadata。
+- `evidence_unmatched` 與 `evidence_unavailable` 以明確狀態呈現，讓 demo reviewer 能區分「值存在但未對回 OCR evidence」與「沒有可用 evidence」。
+- Viewer Chat 仍是 read-only 查詢主線，不顯示 Document Intelligence QA surface；本 runtime slice 不新增人工修正寫入、golden labels、parser accuracy eval、OCR / VLM provider 或 full document image annotation UI。
+
 ## Phase 26 VLM Parser Provider Boundary
 
 Phase 26 的目標是把 parser default 切成 VLM-first demo path：`vlm_invoice` 先從既有 upload metadata 解析 demo-safe image input，再呼叫可設定的 local VLM provider；provider unavailable、timeout、unsupported file、invalid response、missing fields 或 confidence too low 時，才 fallback 到 `deterministic_invoice`。v0.27.1 起 VLM request 也帶 compact OCR context，VLM 欄位結果會嘗試對回 OCR line / bbox。這不改 Phase 25 Agent planner / tool allowlist；Agent 仍只透過 `get_document_fields` 讀取保存後的 parser result。

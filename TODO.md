@@ -558,11 +558,12 @@ Phase 43 `v0.43.0` - AgentOps governance / secure tool runtime：
 
 Phase 44 `v0.44.0` - Document Intelligence QA / human review loop：
 - [x] `tasks/phase-44-document-intelligence-qa-human-review/44-01-document-intelligence-qa-contract.md`: 完成 Phase 44 Document Intelligence QA contract；文件固定 field confidence、evidence source、source page / bbox、review status、correction version、human correction、golden labels 與 parser field accuracy 指標邊界。不 bump version。
-- [ ] `tasks/phase-44-document-intelligence-qa-human-review/44-02-field-confidence-and-evidence-view.md`
+- [x] `tasks/phase-44-document-intelligence-qa-human-review/44-02-field-confidence-and-evidence-view.md`: Admin / Analyst structured fields surface 會顯示 field confidence、evidence linked / unmatched / unavailable、source text、source page、source bbox、parser source 與 fallback reason。不 bump version。
 - [ ] `tasks/phase-44-document-intelligence-qa-human-review/44-03-human-correction-and-golden-labels.md`
 - [ ] `tasks/phase-44-document-intelligence-qa-human-review/44-04-parser-field-accuracy-eval.md`
 - [ ] `tasks/phase-44-document-intelligence-qa-human-review/44-05-phase-44-release-sync.md`
 - `44-01` validation 已通過：Phase 44 keyword `rg` 與 `git diff --check`。本 ticket 不新增 full annotation platform、production workflow、多人審核權限、外部 labeling tool、layout analysis、table reconstruction、deskew deep tuning、production OCR accuracy tuning，也不修改 parser / OCR default behavior。
+- `44-02` validation 已通過：frontend build、headless Chrome desktop / mobile browser evidence surface、Phase 44 keyword `rg` 與 `git diff --check`。本 ticket 未改 backend API，因此未跑 backend tests；不新增人工修正寫入、golden labels、parser accuracy eval、新 OCR / VLM provider、parser ranking 變更或 full document image annotation UI。
 
 Phase 45 `v0.45.0` - Production readiness / interview portfolio pack：
 - [ ] `tasks/phase-45-production-readiness-portfolio-pack/45-01-jd-evidence-matrix.md`
