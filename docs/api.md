@@ -1336,6 +1336,87 @@ Field metadata rules:
 
 `44-02` runtime note: current `POST /documents/{document_id}/parse` and `GET /documents/{document_id}/fields` already expose `confidence`, `source_text`, `source_page`, `source_bbox`, `parser_source` and `fallback_reason` on each `ExtractedField`. The frontend now renders those fields as evidence metadata for Admin / Analyst users. This does not change the API response schema, OCR provider behavior or parser ranking.
 
+`44-03` runtime note: human correction is saved as append-only document metadata in `field_corrections`. The original parser result remains unchanged for trace comparison; golden labels export uses the latest correction per document field.
+
+### Human Correction API
+
+`GET /documents/{document_id}/corrections`
+
+- Requires read access to the document.
+- Returns all saved corrections sorted by field name and version.
+
+`POST /documents/{document_id}/corrections`
+
+- Requires ingestion write permission; Admin / Analyst may save corrections, Viewer receives `403`.
+- Accepts one or more field corrections and appends a new version for each field.
+- Does not delete, overwrite or mutate the original parser output.
+
+Request:
+
+```json
+{
+  "reviewer": "QA Analyst",
+  "corrections": [
+    {
+      "field_name": "invoice_number",
+      "corrected_value": "AUR-2026-053",
+      "reason": "manual review"
+    }
+  ]
+}
+```
+
+Response:
+
+```json
+{
+  "document_id": "document-123",
+  "corrections": [
+    {
+      "correction_id": "correction-abc123",
+      "document_id": "document-123",
+      "field_name": "invoice_number",
+      "corrected_value": "AUR-2026-053",
+      "reviewer": "QA Analyst",
+      "reason": "manual review",
+      "version": 2,
+      "source_parser_value": "AUR-2026-051",
+      "created_at": "2026-06-08T00:00:00Z",
+      "updated_at": "2026-06-08T00:00:00Z"
+    }
+  ]
+}
+```
+
+`GET /documents/golden-labels`
+
+- Requires read access and applies project filtering when Auth / RBAC is enabled.
+- Returns latest corrected value per document field for parser field accuracy eval.
+- Does not write to model training data, production parser prompt, external labeling tools or production databases.
+
+Response:
+
+```json
+{
+  "schema_version": "parser_golden_labels_v1",
+  "exported_at": "2026-06-08T00:00:00Z",
+  "labels": [
+    {
+      "document_id": "document-123",
+      "filename": "mock-invoice-aurora.txt",
+      "project_id": null,
+      "field_name": "invoice_number",
+      "corrected_value": "AUR-2026-053",
+      "reviewer": "QA Analyst",
+      "reason": "manual review",
+      "version": 2,
+      "source_parser_value": "AUR-2026-051",
+      "updated_at": "2026-06-08T00:00:00Z"
+    }
+  ]
+}
+```
+
 ### Human Correction and Golden Labels
 
 Human correction artifacts should be project-scoped and demo-safe. A correction records the original parser value, corrected value, review status, correction version, reviewer note and evidence reference. It must not silently overwrite the original parser output used for trace comparison.

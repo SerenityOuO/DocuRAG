@@ -8,6 +8,7 @@ import {
   createEvalItem,
   deleteEvalDataset,
   deleteEvalItem,
+  exportGoldenLabels,
   getEvalRunItems,
   getHealth,
   getMe,
@@ -24,6 +25,7 @@ import {
   runEvalStrategyComparison,
   runMockOcr,
   runSelectedOcr,
+  saveDocumentCorrections,
   updateEvalDataset,
   updateEvalItem,
   uploadDocument,
@@ -43,6 +45,8 @@ import {
   type EvalRunResponse,
   type EvalStrategy,
   type ExtractedField,
+  type FieldCorrection,
+  type GoldenLabelsResponse,
   type HealthResponse,
   type ParserResult,
   type RagQueryResponse,
@@ -53,6 +57,10 @@ import {
 type RequestState = "idle" | "loading" | "success" | "error";
 type AuthRequestState = RequestState | "checking";
 type ViewMode = "viewer" | "admin";
+type CorrectionDraft = {
+  value: string;
+  reason: string;
+};
 
 type SourceSummary = {
   filename: string;
@@ -92,6 +100,14 @@ const uploadError = ref("");
 const uploadMessage = ref("");
 const parseStates = ref<Record<string, RequestState>>({});
 const parseErrors = ref<Record<string, string>>({});
+const correctionDrafts = ref<Record<string, Record<string, CorrectionDraft>>>({});
+const correctionStates = ref<Record<string, RequestState>>({});
+const correctionErrors = ref<Record<string, string>>({});
+const correctionMessages = ref<Record<string, string>>({});
+const goldenLabelsState = ref<RequestState>("idle");
+const goldenLabelsExport = ref<GoldenLabelsResponse | null>(null);
+const goldenLabelsError = ref("");
+const goldenLabelsMessage = ref("");
 const agentState = ref<RequestState>("idle");
 const agentRun = ref<AgentRun | null>(null);
 const agentTask = ref("整理這份 invoice 欄位，並補充付款期限來源。");
@@ -1006,6 +1022,116 @@ function fieldSourceLocation(field: ExtractedField): string {
   return bbox ? `${page}; ${bbox}` : page;
 }
 
+function inputEventValue(event: Event): string {
+  return (event.target as HTMLInputElement | HTMLTextAreaElement).value;
+}
+
+function correctionStateKey(documentId: string, fieldName: string): string {
+  return `${documentId}:${fieldName}`;
+}
+
+function correctionDraft(documentId: string, fieldName: string): CorrectionDraft {
+  return correctionDrafts.value[documentId]?.[fieldName] ?? { value: "", reason: "" };
+}
+
+function correctionDraftValue(documentId: string, fieldName: string): string {
+  return correctionDraft(documentId, fieldName).value;
+}
+
+function correctionDraftReason(documentId: string, fieldName: string): string {
+  return correctionDraft(documentId, fieldName).reason;
+}
+
+function updateCorrectionDraft(
+  documentId: string,
+  fieldName: string,
+  nextDraft: CorrectionDraft,
+): void {
+  correctionDrafts.value = {
+    ...correctionDrafts.value,
+    [documentId]: {
+      ...(correctionDrafts.value[documentId] ?? {}),
+      [fieldName]: nextDraft,
+    },
+  };
+}
+
+function updateCorrectionDraftValue(documentId: string, fieldName: string, value: string): void {
+  updateCorrectionDraft(documentId, fieldName, {
+    ...correctionDraft(documentId, fieldName),
+    value,
+  });
+}
+
+function updateCorrectionDraftReason(documentId: string, fieldName: string, reason: string): void {
+  updateCorrectionDraft(documentId, fieldName, {
+    ...correctionDraft(documentId, fieldName),
+    reason,
+  });
+}
+
+function latestFieldCorrection(document: DocumentMetadata, fieldName: string): FieldCorrection | null {
+  const corrections = (document.field_corrections ?? []).filter(
+    (correction) => correction.field_name === fieldName,
+  );
+
+  if (corrections.length === 0) {
+    return null;
+  }
+
+  return [...corrections].sort((left, right) => right.version - left.version)[0];
+}
+
+function formatCorrectionValue(value: FieldCorrection["corrected_value"]): string {
+  if (value === null || value === undefined || value === "") {
+    return "missing";
+  }
+
+  return String(value);
+}
+
+function normaliseCorrectionValue(
+  document: DocumentMetadata,
+  fieldName: InvoiceFieldKey,
+  rawValue: string,
+): string | number | boolean | null {
+  const text = rawValue.trim();
+  if (!text) {
+    return null;
+  }
+
+  const parserValue = document.parser_result?.fields[fieldName].value;
+  if (typeof parserValue === "number") {
+    const numericValue = Number(text.replace(/,/g, ""));
+    if (Number.isFinite(numericValue)) {
+      return numericValue;
+    }
+  }
+
+  if (typeof parserValue === "boolean") {
+    const normalized = text.toLowerCase();
+    if (["true", "yes", "1"].includes(normalized)) {
+      return true;
+    }
+    if (["false", "no", "0"].includes(normalized)) {
+      return false;
+    }
+  }
+
+  return text;
+}
+
+function updateDocumentCorrections(documentId: string, corrections: FieldCorrection[]): void {
+  documents.value = documents.value.map((document) =>
+    document.document_id === documentId
+      ? {
+          ...document,
+          field_corrections: corrections,
+        }
+      : document,
+  );
+}
+
 function formatBoundingBox(bbox: BoundingBox | null): string {
   if (!bbox) {
     return "";
@@ -1489,6 +1615,96 @@ async function submitFieldParse(document: DocumentMetadata): Promise<void> {
   }
 }
 
+async function submitFieldCorrection(document: DocumentMetadata, fieldName: InvoiceFieldKey): Promise<void> {
+  if (!canUseIngestion.value) {
+    return;
+  }
+
+  const key = correctionStateKey(document.document_id, fieldName);
+  const value = correctionDraftValue(document.document_id, fieldName).trim();
+  const reason = correctionDraftReason(document.document_id, fieldName).trim();
+
+  if (!value) {
+    correctionErrors.value = {
+      ...correctionErrors.value,
+      [key]: "請輸入 corrected value。",
+    };
+    return;
+  }
+
+  correctionStates.value = {
+    ...correctionStates.value,
+    [key]: "loading",
+  };
+  correctionErrors.value = {
+    ...correctionErrors.value,
+    [key]: "",
+  };
+  correctionMessages.value = {
+    ...correctionMessages.value,
+    [key]: "",
+  };
+
+  try {
+    const response = await saveDocumentCorrections(document.document_id, [
+      {
+        field_name: fieldName,
+        corrected_value: normaliseCorrectionValue(document, fieldName, value),
+        reason: reason || null,
+      },
+    ]);
+    updateDocumentCorrections(document.document_id, response.corrections);
+    updateCorrectionDraft(document.document_id, fieldName, { value: "", reason: "" });
+
+    const savedCorrection = latestFieldCorrection(
+      {
+        ...document,
+        field_corrections: response.corrections,
+      },
+      fieldName,
+    );
+    correctionMessages.value = {
+      ...correctionMessages.value,
+      [key]: savedCorrection
+        ? `golden labels 已保存，${fieldName} v${savedCorrection.version} 可供 field accuracy 評估使用。`
+        : "golden labels 已保存。",
+    };
+    correctionStates.value = {
+      ...correctionStates.value,
+      [key]: "success",
+    };
+  } catch (error) {
+    correctionErrors.value = {
+      ...correctionErrors.value,
+      [key]: error instanceof Error ? error.message : "human correction 保存失敗。",
+    };
+    correctionStates.value = {
+      ...correctionStates.value,
+      [key]: "error",
+    };
+  }
+}
+
+async function submitGoldenLabelsExport(): Promise<void> {
+  if (!canUseIngestion.value) {
+    return;
+  }
+
+  goldenLabelsState.value = "loading";
+  goldenLabelsError.value = "";
+  goldenLabelsMessage.value = "";
+
+  try {
+    goldenLabelsExport.value = await exportGoldenLabels();
+    goldenLabelsMessage.value = `已匯出 ${goldenLabelsExport.value.labels.length} 筆 golden labels，可供 44-04 field accuracy 評估使用。`;
+    goldenLabelsState.value = "success";
+  } catch (error) {
+    goldenLabelsExport.value = null;
+    goldenLabelsError.value = error instanceof Error ? error.message : "golden labels 匯出失敗。";
+    goldenLabelsState.value = "error";
+  }
+}
+
 async function submitAgentRun(): Promise<void> {
   if (!canUseIngestion.value) {
     agentError.value = "Viewer 角色不能執行 Agent write 操作。";
@@ -1825,12 +2041,25 @@ onMounted(async () => {
           </summary>
 
           <div class="collapsible-body">
-            <div class="status-toolbar">
+            <div class="status-toolbar golden-label-actions">
+              <button
+                type="button"
+                class="button compact-button"
+                :disabled="!canUseIngestion || goldenLabelsState === 'loading'"
+                @click="submitGoldenLabelsExport"
+              >
+                {{ goldenLabelsState === "loading" ? "匯出中..." : "匯出 golden labels" }}
+              </button>
+              <span v-if="goldenLabelsExport" class="status-pill status-success">
+                {{ goldenLabelsExport.labels.length }} labels
+              </span>
               <button type="button" class="button secondary-button compact-button" @click="refreshDocuments">
                 重新整理
               </button>
             </div>
 
+            <p v-if="goldenLabelsMessage" class="success-message">{{ goldenLabelsMessage }}</p>
+            <p v-if="goldenLabelsError" class="error">{{ goldenLabelsError }}</p>
             <p v-if="documentsError" class="error">{{ documentsError }}</p>
             <p v-if="documentsState === 'loading'" class="muted">讀取文件狀態中...</p>
             <p v-else-if="latestDocuments.length === 0" class="muted">目前沒有後台文件紀錄。</p>
@@ -1916,6 +2145,53 @@ onMounted(async () => {
                           <dd>{{ fallbackReasonLabel(document.parser_result.fields[field[0]].fallback_reason) }}</dd>
                         </div>
                       </dl>
+                      <p v-if="latestFieldCorrection(document, field[0])" class="field-correction-latest">
+                        <strong>golden label v{{ latestFieldCorrection(document, field[0])?.version }}</strong>
+                        <span>{{ formatCorrectionValue(latestFieldCorrection(document, field[0])?.corrected_value ?? null) }}</span>
+                        <small>reviewer: {{ latestFieldCorrection(document, field[0])?.reviewer }}</small>
+                      </p>
+                      <div v-if="canUseIngestion" class="field-correction-form">
+                        <label>
+                          <span>corrected value</span>
+                          <input
+                            type="text"
+                            :value="correctionDraftValue(document.document_id, field[0])"
+                            @input="updateCorrectionDraftValue(document.document_id, field[0], inputEventValue($event))"
+                          />
+                        </label>
+                        <label>
+                          <span>reviewer reason</span>
+                          <textarea
+                            rows="2"
+                            :value="correctionDraftReason(document.document_id, field[0])"
+                            @input="updateCorrectionDraftReason(document.document_id, field[0], inputEventValue($event))"
+                          ></textarea>
+                        </label>
+                        <button
+                          type="button"
+                          class="button compact-button"
+                          :disabled="correctionStates[correctionStateKey(document.document_id, field[0])] === 'loading'"
+                          @click="submitFieldCorrection(document, field[0])"
+                        >
+                          {{
+                            correctionStates[correctionStateKey(document.document_id, field[0])] === "loading"
+                              ? "保存中..."
+                              : "保存 golden label"
+                          }}
+                        </button>
+                        <p
+                          v-if="correctionMessages[correctionStateKey(document.document_id, field[0])]"
+                          class="field-correction-message"
+                        >
+                          {{ correctionMessages[correctionStateKey(document.document_id, field[0])] }}
+                        </p>
+                        <p
+                          v-if="correctionErrors[correctionStateKey(document.document_id, field[0])]"
+                          class="error compact-note"
+                        >
+                          {{ correctionErrors[correctionStateKey(document.document_id, field[0])] }}
+                        </p>
+                      </div>
                     </div>
                   </div>
                   <p v-if="missingFieldLabels(document.parser_result).length" class="muted compact-note">

@@ -720,6 +720,73 @@ td {
   overflow-wrap: anywhere;
 }
 
+.golden-label-actions {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.field-correction-latest {
+  border-left: 3px solid #0f766e;
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding-left: 9px;
+}
+
+.field-correction-latest strong,
+.field-correction-latest span {
+  color: #172033;
+  overflow-wrap: anywhere;
+}
+
+.field-correction-latest small {
+  color: #64748b;
+}
+
+.field-correction-form {
+  border-top: 1px solid #e5edf4;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding-top: 9px;
+}
+
+.field-correction-form label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.field-correction-form input,
+.field-correction-form textarea {
+  background: #ffffff;
+  border: 1px solid #c4d0df;
+  border-radius: 8px;
+  color: #172033;
+  min-height: 38px;
+  min-width: 0;
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.field-correction-form textarea {
+  resize: vertical;
+}
+
+.field-correction-form .button {
+  justify-self: start;
+}
+
+.field-correction-message {
+  color: #166534;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .fields-summary-failed {
   background: #fff7f7;
   border-color: #fecaca;

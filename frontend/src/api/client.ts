@@ -43,6 +43,7 @@ export type UploadResponse = {
   processing: DocumentProcessingStatus;
   ocr: OcrResult;
   parser_result: ParserResult | null;
+  field_corrections: FieldCorrection[];
   chunks: DocumentChunk[];
   processing_jobs: ProcessingJob[];
   latest_job: ProcessingJob | null;
@@ -122,6 +123,49 @@ export type ExtractedField = {
   source_bbox: BoundingBox | null;
   parser_source: string;
   fallback_reason: string | null;
+};
+
+export type FieldCorrection = {
+  correction_id: string;
+  document_id: string;
+  field_name: string;
+  corrected_value: string | number | boolean | null;
+  reviewer: string;
+  reason: string | null;
+  version: number;
+  source_parser_value: string | number | boolean | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FieldCorrectionRequest = {
+  field_name: string;
+  corrected_value: string | number | boolean | null;
+  reason?: string | null;
+};
+
+export type FieldCorrectionResponse = {
+  document_id: string;
+  corrections: FieldCorrection[];
+};
+
+export type GoldenLabel = {
+  document_id: string;
+  filename: string;
+  project_id: string | null;
+  field_name: string;
+  corrected_value: string | number | boolean | null;
+  reviewer: string;
+  reason: string | null;
+  version: number;
+  source_parser_value: string | number | boolean | null;
+  updated_at: string;
+};
+
+export type GoldenLabelsResponse = {
+  schema_version: "parser_golden_labels_v1";
+  exported_at: string;
+  labels: GoldenLabel[];
 };
 
 export type InvoiceLineItem = {
@@ -576,6 +620,29 @@ export async function getDocumentFields(documentId: string): Promise<ParserResul
     headers: authHeaders(),
   });
   return readJson<ParserResult>(response);
+}
+
+export async function saveDocumentCorrections(
+  documentId: string,
+  corrections: FieldCorrectionRequest[],
+): Promise<FieldCorrectionResponse> {
+  const response = await fetch(`${API_BASE_URL}/documents/${documentId}/corrections`, {
+    method: "POST",
+    headers: jsonHeaders(),
+    body: JSON.stringify({
+      corrections,
+    }),
+  });
+
+  return readJson<FieldCorrectionResponse>(response);
+}
+
+export async function exportGoldenLabels(): Promise<GoldenLabelsResponse> {
+  const response = await fetch(`${API_BASE_URL}/documents/golden-labels`, {
+    headers: authHeaders(),
+  });
+
+  return readJson<GoldenLabelsResponse>(response);
 }
 
 export async function indexDocumentVector(documentId: string): Promise<VectorIndexingResponse> {

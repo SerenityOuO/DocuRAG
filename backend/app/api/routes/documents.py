@@ -18,6 +18,9 @@ from app.schemas.documents import (
     DocumentDetailResponse,
     DocumentListResponse,
     DocumentUploadResponse,
+    FieldCorrectionBatchRequest,
+    FieldCorrectionResponse,
+    GoldenLabelsResponse,
     OcrStatus,
     OcrResultResponse,
     VectorIndexingRequest,
@@ -200,6 +203,15 @@ async def list_documents(
     )
 
 
+@router.get("/golden-labels", response_model=GoldenLabelsResponse)
+async def export_document_golden_labels(
+    storage: DocumentStorageDep,
+    auth_user: AuthenticatedUserDep,
+) -> GoldenLabelsResponse:
+    project_ids = auth_user.project_ids if auth_user is not None else None
+    return storage.export_golden_labels(project_ids)
+
+
 @router.post("/index/vector/reindex", response_model=VectorProjectReindexResponse)
 async def reindex_project_vector(
     storage: DocumentStorageDep,
@@ -348,6 +360,42 @@ async def get_document_fields(
     parser_result = storage.get_parser_result(document_id)
 
     return parser_result
+
+
+@router.get("/{document_id}/corrections", response_model=FieldCorrectionResponse)
+async def get_document_corrections(
+    document_id: str,
+    storage: DocumentStorageDep,
+    auth_user: AuthenticatedUserDep,
+) -> FieldCorrectionResponse:
+    _get_accessible_document(storage, document_id, auth_user)
+    corrections = storage.get_field_corrections(document_id)
+
+    if corrections is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    return FieldCorrectionResponse(document_id=document_id, corrections=corrections)
+
+
+@router.post("/{document_id}/corrections", response_model=FieldCorrectionResponse)
+async def save_document_corrections(
+    document_id: str,
+    request: FieldCorrectionBatchRequest,
+    storage: DocumentStorageDep,
+    auth_user: IngestionUserDep,
+) -> FieldCorrectionResponse:
+    _get_accessible_document(storage, document_id, auth_user)
+    reviewer = auth_user.username if auth_user is not None else request.reviewer or "local_demo_reviewer"
+
+    try:
+        corrections = storage.save_field_corrections(document_id, request, reviewer=reviewer)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    if corrections is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    return FieldCorrectionResponse(document_id=document_id, corrections=corrections)
 
 
 @router.post("/{document_id}/index/vector", response_model=VectorIndexingResponse)

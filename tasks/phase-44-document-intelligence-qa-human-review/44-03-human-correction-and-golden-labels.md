@@ -35,9 +35,9 @@
 
 ## Acceptance Criteria
 
-- [ ] Analyst / Admin 可保存 demo-safe corrected fields 或 golden label artifact。
-- [ ] Viewer 無法修改 correction。
-- [ ] Golden labels 包含 field name、corrected value、source document 與 version metadata。
+- [x] Analyst / Admin 可保存 demo-safe corrected fields 或 golden label artifact。
+- [x] Viewer 無法修改 correction。
+- [x] Golden labels 包含 field name、corrected value、source document 與 version metadata。
 
 ## Validation
 
@@ -46,3 +46,10 @@
 - Correction / golden label smoke。
 - `rg -n "human correction|corrected value|golden labels|reviewer|version|field accuracy" backend frontend docs sample-data README_DEV.md TODO.md tasks/phase-44-document-intelligence-qa-human-review`
 - `git diff --check`
+
+## Completion Notes
+
+- Backend 新增 append-only correction metadata 與 correction / golden labels API；Admin / Analyst 可寫，Viewer 會被 role guard 擋下。
+- Frontend structured fields surface 可保存 corrected value / reviewer reason，並可匯出 latest golden labels artifact。
+- 新增 `sample-data/eval/parser-golden-labels.json` 作為 demo-safe golden labels artifact，供 `44-04` parser field accuracy eval 使用。
+- Validation 已通過：focused backend correction / golden label tests、frontend build、correction / golden label smoke、Phase 44 keyword `rg` 與 `git diff --check`。

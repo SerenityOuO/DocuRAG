@@ -149,6 +149,95 @@ def test_upload_document_returns_uploaded_metadata(client: TestClient) -> None:
     assert body["processing_jobs"][0]["job_type"] == "upload"
 
 
+def test_document_corrections_export_latest_golden_labels(client: TestClient) -> None:
+    upload_response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "invoice.txt",
+                b"Invoice number: AUR-2026-051\nTotal amount: USD 1,248.50",
+                "text/plain",
+            )
+        },
+    )
+    document_id = upload_response.json()["document_id"]
+
+    first_response = client.post(
+        f"/documents/{document_id}/corrections",
+        json={
+            "reviewer": "QA Analyst",
+            "corrections": [
+                {
+                    "field_name": "invoice_number",
+                    "corrected_value": "AUR-2026-052",
+                    "reason": "manual review",
+                }
+            ],
+        },
+    )
+    second_response = client.post(
+        f"/documents/{document_id}/corrections",
+        json={
+            "reviewer": "QA Analyst",
+            "corrections": [
+                {
+                    "field_name": "invoice_number",
+                    "corrected_value": "AUR-2026-053",
+                    "reason": "second pass",
+                },
+                {
+                    "field_name": "total_amount",
+                    "corrected_value": 1248.5,
+                    "reason": "amount verified",
+                },
+            ],
+        },
+    )
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 200
+    corrections = second_response.json()["corrections"]
+    assert [correction["version"] for correction in corrections if correction["field_name"] == "invoice_number"] == [
+        1,
+        2,
+    ]
+    assert corrections[-1]["reviewer"] == "QA Analyst"
+
+    export_response = client.get("/documents/golden-labels")
+
+    assert export_response.status_code == 200
+    body = export_response.json()
+    assert body["schema_version"] == "parser_golden_labels_v1"
+    labels = body["labels"]
+    assert labels == [
+        {
+            **labels[0],
+            "document_id": document_id,
+            "filename": "invoice.txt",
+            "field_name": "invoice_number",
+            "corrected_value": "AUR-2026-053",
+            "reviewer": "QA Analyst",
+            "reason": "second pass",
+            "version": 2,
+        },
+        {
+            **labels[1],
+            "document_id": document_id,
+            "filename": "invoice.txt",
+            "field_name": "total_amount",
+            "corrected_value": 1248.5,
+            "reviewer": "QA Analyst",
+            "reason": "amount verified",
+            "version": 1,
+        },
+    ]
+
+    detail_response = client.get(f"/documents/{document_id}")
+
+    assert detail_response.status_code == 200
+    assert len(detail_response.json()["field_corrections"]) == 3
+
+
 def test_upload_document_saves_file_and_metadata(client: TestClient, tmp_path: Path) -> None:
     content = b"sample document"
 

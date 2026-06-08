@@ -396,6 +396,13 @@ Human correction / golden labels boundary：
 - `evidence_unmatched` 與 `evidence_unavailable` 以明確狀態呈現，讓 demo reviewer 能區分「值存在但未對回 OCR evidence」與「沒有可用 evidence」。
 - Viewer Chat 仍是 read-only 查詢主線，不顯示 Document Intelligence QA surface；本 runtime slice 不新增人工修正寫入、golden labels、parser accuracy eval、OCR / VLM provider 或 full document image annotation UI。
 
+44-03 human correction / golden labels runtime notes：
+
+- Field correction 以 append-only metadata 保存在 document record 的 `field_corrections`；每筆 correction 保存 `field_name`、`corrected_value`、`reviewer`、`reason`、`version`、`source_parser_value`、`created_at` 與 `updated_at`。
+- 同一 document field 每次保存都新增版本，不覆寫原始 `parser_result`，因此後續 parser field accuracy eval 可比較 parser output 與 corrected value。
+- Admin / Analyst 可透過 frontend structured fields surface 或 `POST /documents/{document_id}/corrections` 保存 correction；Viewer 仍被 ingestion write guard 擋下。
+- `GET /documents/golden-labels` 只匯出每個 document field 最新版本的 golden labels，並套用 project access filtering。這是 demo-safe eval artifact，不是 production annotation workflow、multi-review conflict resolution、external labeling service、model training writeback、production parser prompt writeback 或 destructive edit / delete flow。
+
 ## Phase 26 VLM Parser Provider Boundary
 
 Phase 26 的目標是把 parser default 切成 VLM-first demo path：`vlm_invoice` 先從既有 upload metadata 解析 demo-safe image input，再呼叫可設定的 local VLM provider；provider unavailable、timeout、unsupported file、invalid response、missing fields 或 confidence too low 時，才 fallback 到 `deterministic_invoice`。v0.27.1 起 VLM request 也帶 compact OCR context，VLM 欄位結果會嘗試對回 OCR line / bbox。這不改 Phase 25 Agent planner / tool allowlist；Agent 仍只透過 `get_document_fields` 讀取保存後的 parser result。

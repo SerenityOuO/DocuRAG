@@ -148,6 +148,54 @@ class ParserResult(BaseModel):
     trace_metadata: dict[str, str] = Field(default_factory=dict)
 
 
+class FieldCorrectionRequest(BaseModel):
+    field_name: str = Field(..., min_length=1)
+    corrected_value: FieldValue | None = None
+    reason: str | None = None
+
+
+class FieldCorrectionBatchRequest(BaseModel):
+    corrections: list[FieldCorrectionRequest] = Field(..., min_length=1)
+    reviewer: str | None = None
+
+
+class FieldCorrection(BaseModel):
+    correction_id: str = Field(..., min_length=1)
+    document_id: str = Field(..., min_length=1)
+    field_name: str = Field(..., min_length=1)
+    corrected_value: FieldValue | None = None
+    reviewer: str = Field(..., min_length=1)
+    reason: str | None = None
+    version: int = Field(..., ge=1)
+    source_parser_value: FieldValue | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class FieldCorrectionResponse(BaseModel):
+    document_id: str = Field(..., min_length=1)
+    corrections: list[FieldCorrection]
+
+
+class GoldenLabel(BaseModel):
+    document_id: str = Field(..., min_length=1)
+    filename: str = Field(..., min_length=1)
+    project_id: str | None = None
+    field_name: str = Field(..., min_length=1)
+    corrected_value: FieldValue | None = None
+    reviewer: str = Field(..., min_length=1)
+    reason: str | None = None
+    version: int = Field(..., ge=1)
+    source_parser_value: FieldValue | None = None
+    updated_at: datetime
+
+
+class GoldenLabelsResponse(BaseModel):
+    schema_version: Literal["parser_golden_labels_v1"] = "parser_golden_labels_v1"
+    exported_at: datetime
+    labels: list[GoldenLabel]
+
+
 class DocumentChunk(BaseModel):
     chunk_id: str = Field(..., min_length=1)
     document_id: str = Field(..., min_length=1)
@@ -206,6 +254,7 @@ class DocumentMetadata(BaseModel):
     processing: ProcessingStatus = Field(default_factory=ProcessingStatus)
     ocr: OcrResult = Field(default_factory=OcrResult)
     parser_result: ParserResult | None = None
+    field_corrections: list[FieldCorrection] = Field(default_factory=list)
     chunks: list[DocumentChunk] = Field(default_factory=list)
     page_images: list[PdfPageImage] = Field(default_factory=list)
     processing_jobs: list[ProcessingJob] = Field(default_factory=list)

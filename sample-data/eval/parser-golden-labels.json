@@ -1,0 +1,43 @@
+{
+  "schema_version": "parser_golden_labels_v1",
+  "description": "Demo-safe parser field golden labels exported from Phase 44 human correction flow.",
+  "exported_at": "2026-06-08T00:00:00Z",
+  "labels": [
+    {
+      "document_id": "sample-aurora-invoice",
+      "filename": "mock-invoice-aurora.txt",
+      "project_id": null,
+      "field_name": "invoice_number",
+      "corrected_value": "AUR-2026-051",
+      "reviewer": "demo_analyst",
+      "reason": "verified invoice number from synthetic invoice sample",
+      "version": 1,
+      "source_parser_value": "AUR-2026-051",
+      "updated_at": "2026-06-08T00:00:00Z"
+    },
+    {
+      "document_id": "sample-aurora-invoice",
+      "filename": "mock-invoice-aurora.txt",
+      "project_id": null,
+      "field_name": "total_amount",
+      "corrected_value": 1248.5,
+      "reviewer": "demo_analyst",
+      "reason": "normalized amount from synthetic invoice sample",
+      "version": 1,
+      "source_parser_value": 1248.5,
+      "updated_at": "2026-06-08T00:00:00Z"
+    },
+    {
+      "document_id": "sample-aurora-invoice",
+      "filename": "mock-invoice-aurora.txt",
+      "project_id": null,
+      "field_name": "currency",
+      "corrected_value": "USD",
+      "reviewer": "demo_analyst",
+      "reason": "verified currency from synthetic invoice sample",
+      "version": 1,
+      "source_parser_value": "USD",
+      "updated_at": "2026-06-08T00:00:00Z"
+    }
+  ]
+}

@@ -11,6 +11,7 @@
 - `chunking-indexing-ablation-template.json`：Phase 41 chunking / indexing ablation artifact template，列出 fixed-size、semantic、parent-child、Qdrant payload index、stale vector cleanup 與 reindex 的比較欄位；未實測 row 必須標成 `pending_hypothesis` 或 `not_supported`。
 - `agent-replay-sample.json`：Phase 43 Agent replay artifact，保存 read-only Agent run 的 policy snapshot、tool calls、observations、citations、fallback reason 與 final answer source。
 - `agent-replay-report.json`：Phase 43 Agent replay smoke 產生的 deterministic eval report，包含 tool correctness、permission compliance、evidence coverage、fallback reason 與 groundedness notes。
+- `parser-golden-labels.json`：Phase 44 human correction / golden labels artifact，保存 field name、corrected value、source document、reviewer、reason、version 與 timestamp，供後續 parser field accuracy eval 使用；不是 model training dataset 或 production annotation export。
 
 ## Data Safety
 

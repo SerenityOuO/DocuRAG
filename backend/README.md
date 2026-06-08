@@ -203,6 +203,12 @@ Phase 26 VLM parser provider spike：
 - Agent contract 不變；`get_document_fields` 只讀保存後的 parser result，不直接呼叫 VLM，也不新增 tool allowlist。
 - 這不是 production VLM parser、PDF rendering、多頁 parser pipeline、table reconstruction、人工修正 workflow、worker、DB schema 或 deployment 設定。
 
+Phase 44 Human Correction / Golden Labels：
+
+- `POST /documents/{document_id}/corrections` 會以 append-only metadata 保存 corrected value、reviewer、reason、version、timestamp 與 source parser value；Admin / Analyst 可寫，Viewer 會被 ingestion role guard 擋下。
+- `GET /documents/{document_id}/corrections` 可讀取同文件的 correction history；`GET /documents/golden-labels` 會匯出每個 document field 最新版本的 golden labels，供後續 parser field accuracy eval 使用。
+- 原始 `parser_result` 不會被 correction 覆寫；這不是 production annotation workflow、multi-review、conflict resolution、external labeling service、model training writeback、production parser prompt writeback 或 destructive edit / delete flow。
+
 Phase 07 provider decision：
 
 - 07-01 選定 `PaddleOCR` 作為第一個 real OCR spike provider。

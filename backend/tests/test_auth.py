@@ -114,13 +114,43 @@ def test_viewer_role_cannot_use_ingestion_apis(tmp_path: Path) -> None:
     mock_ocr_forbidden = client.post(f"/documents/{document_id}/ocr/mock", headers=viewer_headers)
     ocr_forbidden = client.post(f"/documents/{document_id}/ocr", headers=viewer_headers)
     parse_forbidden = client.post(f"/documents/{document_id}/parse", headers=viewer_headers)
+    correction_allowed = client.post(
+        f"/documents/{document_id}/corrections",
+        headers=admin_headers,
+        json={
+            "corrections": [
+                {
+                    "field_name": "invoice_number",
+                    "corrected_value": "AUR-2026-052",
+                    "reason": "admin review",
+                }
+            ]
+        },
+    )
+    correction_forbidden = client.post(
+        f"/documents/{document_id}/corrections",
+        headers=viewer_headers,
+        json={
+            "corrections": [
+                {
+                    "field_name": "invoice_number",
+                    "corrected_value": "AUR-2026-053",
+                    "reason": "viewer edit",
+                }
+            ]
+        },
+    )
     index_forbidden = client.post(f"/documents/{document_id}/index/vector", headers=viewer_headers)
+
+    assert correction_allowed.status_code == 200
+    assert correction_allowed.json()["corrections"][0]["reviewer"] == "admin"
 
     for response in [
         upload_forbidden,
         mock_ocr_forbidden,
         ocr_forbidden,
         parse_forbidden,
+        correction_forbidden,
         index_forbidden,
     ]:
         assert response.status_code == 403

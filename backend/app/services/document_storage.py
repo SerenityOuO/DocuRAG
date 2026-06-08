@@ -13,6 +13,11 @@ from app.schemas.documents import (
     DocumentChunk,
     DocumentMetadata,
     DocumentStatus,
+    FieldCorrection,
+    FieldCorrectionBatchRequest,
+    FieldValue,
+    GoldenLabel,
+    GoldenLabelsResponse,
     OcrResult,
     OcrStatus,
     OcrTextLine,
@@ -734,6 +739,100 @@ class DocumentStorage:
 
         return None
 
+    def get_field_corrections(self, document_id: str) -> list[FieldCorrection] | None:
+        document = self.get_document(document_id)
+        if document is None:
+            return None
+
+        return sorted(
+            document.field_corrections,
+            key=lambda correction: (correction.field_name, correction.version),
+        )
+
+    def save_field_corrections(
+        self,
+        document_id: str,
+        request: FieldCorrectionBatchRequest,
+        reviewer: str,
+    ) -> list[FieldCorrection] | None:
+        documents = self._read_documents()
+
+        for index, document in enumerate(documents):
+            if document.document_id != document_id:
+                continue
+
+            now = datetime.now(UTC)
+            reviewer_name = self._required_text(reviewer, "Reviewer")
+            corrections = list(document.field_corrections)
+
+            for correction_request in request.corrections:
+                field_name = self._required_text(correction_request.field_name, "Field name")
+                version = (
+                    max(
+                        (
+                            saved_correction.version
+                            for saved_correction in corrections
+                            if saved_correction.field_name == field_name
+                        ),
+                        default=0,
+                    )
+                    + 1
+                )
+                corrections.append(
+                    FieldCorrection(
+                        correction_id=f"correction-{uuid4().hex[:12]}",
+                        document_id=document.document_id,
+                        field_name=field_name,
+                        corrected_value=self._clean_corrected_value(correction_request.corrected_value),
+                        reviewer=reviewer_name,
+                        reason=self._optional_text(correction_request.reason),
+                        version=version,
+                        source_parser_value=self._source_parser_value(document, field_name),
+                        created_at=now,
+                        updated_at=now,
+                    )
+                )
+
+            document.field_corrections = corrections
+            documents[index] = document
+            self._write_documents(documents)
+            return self.get_field_corrections(document_id)
+
+        return None
+
+    def export_golden_labels(self, project_ids: frozenset[str] | None = None) -> GoldenLabelsResponse:
+        labels: list[GoldenLabel] = []
+        for document in self._read_documents():
+            if not self._project_visible(document.project_id, project_ids):
+                continue
+
+            latest_by_field: dict[str, FieldCorrection] = {}
+            for correction in document.field_corrections:
+                saved_correction = latest_by_field.get(correction.field_name)
+                if saved_correction is None or correction.version > saved_correction.version:
+                    latest_by_field[correction.field_name] = correction
+
+            for correction in sorted(latest_by_field.values(), key=lambda item: item.field_name):
+                labels.append(
+                    GoldenLabel(
+                        document_id=document.document_id,
+                        filename=document.filename,
+                        project_id=document.project_id,
+                        field_name=correction.field_name,
+                        corrected_value=correction.corrected_value,
+                        reviewer=correction.reviewer,
+                        reason=correction.reason,
+                        version=correction.version,
+                        source_parser_value=correction.source_parser_value,
+                        updated_at=correction.updated_at,
+                    )
+                )
+
+        return GoldenLabelsResponse(
+            exported_at=datetime.now(UTC),
+            labels=sorted(labels, key=lambda label: (label.document_id, label.field_name)),
+        )
+
     def _ensure_storage(self) -> None:
         self.upload_dir.mkdir(parents=True, exist_ok=True)
 
@@ -773,6 +872,24 @@ class DocumentStorage:
 
         text = value.strip()
         return text or None
+
+    def _clean_corrected_value(self, value: FieldValue | None) -> FieldValue | None:
+        if isinstance(value, str):
+            text = value.strip()
+            return text or None
+
+        return value
+
+    def _source_parser_value(self, document: DocumentMetadata, field_name: str) -> FieldValue | None:
+        if document.parser_result is None:
+            return None
+
+        fields = document.parser_result.fields
+        if not hasattr(fields, field_name):
+            return None
+
+        field = getattr(fields, field_name)
+        return getattr(field, "value", None)
 
     def _clean_required_list(self, values: list[str], label: str) -> list[str]:
         cleaned = self._clean_optional_list(values)
