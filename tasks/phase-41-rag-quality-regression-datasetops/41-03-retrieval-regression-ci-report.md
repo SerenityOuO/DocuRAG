@@ -34,9 +34,16 @@
 
 ## Acceptance Criteria
 
-- [ ] Regression report 可比較 baseline 與 current retrieval metrics。
-- [ ] Report 包含 dataset version、strategy、provider availability 與 skip reason。
-- [ ] 文件說明 local / CI 使用方式與 threshold 解讀。
+- [x] Regression report 可比較 baseline 與 current retrieval metrics。
+- [x] Report 包含 dataset version、strategy、provider availability 與 skip reason。
+- [x] 文件說明 local / CI 使用方式與 threshold 解讀。
+
+## Completion Notes
+
+- 新增 `scripts/retrieval-regression-report.ps1`，預設執行 CI-safe keyword regression report，不要求 Qdrant、Ollama、FastEmbed 或 GPU runtime。
+- 新增 `sample-data/eval/retrieval-regression-baseline.json`，固定 Phase 41 keyword baseline metrics、provider availability、skip reason 與 threshold。
+- 更新 `sample-data/eval/README.md`、`docs/ROADMAP.md`、`README_DEV.md` 與 `TODO.md`。
+- 本 ticket 不 bump version，不新增 production monitoring、DB eval history、排程任務、外部 dashboard，也不把 optional runtime unavailable 視為硬失敗。
 
 ## Validation
 

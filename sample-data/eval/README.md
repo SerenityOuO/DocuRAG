@@ -64,6 +64,22 @@ Baseline eval 不依賴 Ollama embedding、Qdrant 或 FastEmbed runtime。Option
 
 `hybrid_rerank` candidate metadata 會刻意分開 score source：`keyword_score` / `vector_score` 是 branch score，`merged_score` / `merged_rank` 是 hybrid merge 後的分數與排名，`rerank_score` / `rerank_rank` 是 reranker 結果，`final_score_source` 說明最後排序使用的是 rerank 或 fallback 分數。缺少 optional metadata 時，report 應顯示 `metadata unavailable` 或明確 fallback state，而不是把缺值當成錯誤。
 
+## Regression Report
+
+Phase 41 新增 `retrieval-regression-baseline.json` 與 `scripts/retrieval-regression-report.ps1`。預設 regression report 只跑 keyword baseline，適合本機或 CI 手動重跑：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-regression-report.ps1
+```
+
+Report 會輸出 baseline vs current 的 Hit Rate@K、MRR@K、Recall@K、latency、fallback count、failure count 與 trace metadata count 差異，並保留 dataset version、strategy、provider availability 與 skip reason。預設不啟動 Qdrant、Ollama、FastEmbed 或 GPU runtime；optional provider 在 report 中會標為 `skipped`，skip reason 需清楚說明。
+
+Threshold 解讀：
+
+- `pass`：Hit Rate@K、MRR@K、Recall@K 與 failure count 未超出 baseline threshold。
+- `warn`：latency、fallback count 或 trace metadata coverage 有變化，需要人工檢查。
+- `fail`：核心 retrieval metric 掉超過 threshold，或 failure count 增加，後續 release candidate 應暫停並分析 regression report。
+
 ## Summary Output
 
 Eval result JSON 的 `summary` 會輸出：

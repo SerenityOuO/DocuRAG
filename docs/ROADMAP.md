@@ -668,6 +668,7 @@ Current Status：
 - `41-01` 已完成 Phase 41 RAG quality regression contract；文件固定 golden dataset、eval run、strategy snapshot、regression report、Hit Rate@K / MRR@K / Recall@K / latency / fallback count / failure count / trace metadata coverage 與 pass / warn / fail regression gate 邊界。
 - `41-01` 不 bump version、不新增 backend runtime、frontend UI、CI workflow、資料庫 schema、migration、LLM-as-judge 或 production eval dashboard。
 - `41-02` 已新增 `sample-data/eval/golden-dataset-metadata.json` 與 `golden-dataset-changelog.md`，為既有 demo-safe eval cases 補上 case version、source document version、expected evidence mapping、expected answer outline 與 case tags；runtime eval JSON schema 不變。
+- `41-03` 已新增 CI-safe retrieval regression report script 與 baseline artifact，預設只跑 keyword strategy，輸出 baseline vs current metrics、dataset version、provider availability、skip reason 與 threshold / regression gate 解讀。
 
 Expected Outcome：
 
