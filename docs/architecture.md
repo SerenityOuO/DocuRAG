@@ -670,6 +670,17 @@ Observability path:
 - RAG trace logs should include retrieval provider, top K, fallback state, citation count, visible project / document scope and latency. They should not log raw document text, full prompt bodies, bearer tokens or secrets by default.
 - Eval metrics logs should include dataset id, run id, strategy, Hit Rate@K, MRR@K, Recall@K, latency, failure count and fallback count.
 
+`39-03` adds an opt-in JSONL observability exporter and local Loki / Grafana query path:
+
+- `DOCURAG_OBSERVABILITY_LOG_PATH` controls JSONL export. If it is empty, observability export is disabled. If the file cannot be written, the app logs a warning and keeps serving requests.
+- Every event uses `schema_version=docurag_observability_v1` and keeps `trace_id`, `request_id`, `organization_id`, `project_id`, `actor_user_id`, `document_id`, `strategy`, `provider`, `latency_ms`, `status` and `error_code`.
+- `api_request` events cover route, method, status code and request latency for p95 latency and error-rate queries.
+- `rag_trace` events cover `top_k`, citation / retrieved chunk counts, fallback count / reasons, retrieval latency, rerank latency, generation latency, query cache status and rate-limit status. They intentionally do not include raw query text, document text or prompt bodies.
+- `eval_metrics` events cover run / dataset identifiers, strategy, Hit Rate@K, MRR@K, Recall@K, average latency, failure count, fallback count and trace metadata count.
+- `worker_log` events cover task lifecycle status, task type, topic, idempotency key, attempt, failure reason and error code.
+- `infra/observability/` documents the Loki + Grafana opt-in path, Promtail JSON labels and LogQL examples for API p95 latency, API error rate, worker task failures, retrieval / rerank / generation latency, fallback count, Hit Rate and MRR.
+- The Docker Compose `observability` profile adds Loki, Promtail and Grafana only when explicitly enabled; it is not required for the baseline backend / frontend demo.
+
 Fine-tuning / synthetic data / embedding tuning research scope:
 
 - Phase 39 may define a research-only SFT / synthetic data / embedding tuning plan using demo-safe sample data and generated examples.

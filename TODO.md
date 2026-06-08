@@ -293,7 +293,7 @@ Phase 38 `v0.38.0` - Agent runtime hardening：
 Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 - [x] `tasks/phase-39-deployment-observability-finetuning/39-01-deployment-observability-research-contract.md`: 定義 Phase 39 K8s baseline、Loki + Grafana observability path、API / worker / RAG / eval trace logging boundary，以及 fine-tuning / synthetic data / embedding tuning research-only scope；文件 ticket，不 bump version、不新增 runtime。
 - [x] `tasks/phase-39-deployment-observability-finetuning/39-02-k8s-manifest-baseline.md`: 新增 `infra/k8s/` baseline manifests，包含 API、frontend、worker placeholder、Qdrant、Redis、NATS、ConfigMap、Secret template、probes、resources、rollout / rollback docs 與 optional HPA template；不 bump version。
-- [ ] `tasks/phase-39-deployment-observability-finetuning/39-03-observability-stack-and-rag-trace-logs.md`
+- [x] `tasks/phase-39-deployment-observability-finetuning/39-03-observability-stack-and-rag-trace-logs.md`: 新增 opt-in JSONL observability exporter、API / RAG / eval / worker events、Loki + Grafana local profile、Promtail config、LogQL query docs 與 observability smoke；不 bump version。
 - [ ] `tasks/phase-39-deployment-observability-finetuning/39-04-finetuning-synthetic-data-research-track.md`
 - [ ] `tasks/phase-39-deployment-observability-finetuning/39-05-phase-39-release-sync.md`
 
@@ -312,6 +312,15 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 - 文件已補充 local YAML lint、cluster dry-run、rollout / rollback、config checksum、readiness gate、failed rollout triage 與 boundary。
 - Validation 已通過：offline YAML lint（15 個 K8s YAML documents，均有 `apiVersion` / `kind` / `metadata.name`）、ticket `rg` 與 `git diff --check` / `git diff --cached --check`。`kubectl apply --dry-run=client --validate=false -f .\infra\k8s` 已嘗試，但本機無 Kubernetes API context，kubectl v1.34.1 在 API discovery 階段連 `localhost:8080` 失敗。
 - Release Impact：Version bump required: no。此 ticket 是 deployment artifact baseline，sample image tag 維持目前 `0.38.0`，版本同步留到 `39-05`。
+
+39-03 Observability Stack and RAG Trace Logs Status：
+
+- 已完成。新增 `DOCURAG_OBSERVABILITY_LOG_PATH` opt-in JSONL exporter；未設定或寫入失敗時 app 不 hard fail。
+- API request middleware 會匯出 route、method、status code、request_id、trace_id 與 latency；`/rag/query` 匯出 RAG trace 摘要，不記 raw query、document text、prompt body、token 或 secret。
+- Eval endpoints 匯出 Hit Rate@K、MRR@K、average latency、failure count、fallback count 與 trace metadata count；worker task store 匯出 queued / running / succeeded / failed lifecycle。
+- `infra/observability/` 已新增 Loki / Promtail / Grafana opt-in path、JSON label config 與 LogQL query examples，覆蓋 API p95 latency、error rate、worker failures、retrieval / rerank / generation latency、fallback count、Hit Rate 與 MRR。
+- Validation 已通過：backend full test `260 passed, 1 warning`（pytest cache permission warning）、observability smoke `5 passed, 1 warning`、`docker-compose -f .\infra\docker-compose.yml --profile observability config`（通過但本機 Docker config 權限 warning）、ticket `rg` 與 `git diff --check`。
+- Release Impact：Version bump required: no。此 ticket 是 Phase 39 observability runtime / docs slice，版本同步留到 `39-05`。
 
 Phase 31-39 guardrails：
 

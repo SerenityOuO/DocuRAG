@@ -1,0 +1,37 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docurag-jsonl
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: docurag-jsonl
+          service: docurag
+          __path__: /var/log/docurag/*.jsonl
+    pipeline_stages:
+      - json:
+          expressions:
+            event_type: event_type
+            event_name: event_name
+            status: status
+            route: route
+            strategy: strategy
+            provider: provider
+            error_code: error_code
+      - labels:
+          event_type:
+          event_name:
+          status:
+          route:
+          strategy:
+          provider:
+          error_code:

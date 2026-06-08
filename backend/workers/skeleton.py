@@ -75,8 +75,9 @@ class WorkerSkeleton:
 async def run_smoke(data_dir: Path) -> WorkerTaskRecord:
     if data_dir.exists():
         shutil.rmtree(data_dir)
-    task_store = TaskStatusStore(data_dir)
-    runtime = await create_nats_runtime(Settings(data_dir=data_dir, nats_url="memory://"))
+    settings = Settings(data_dir=data_dir, nats_url="memory://")
+    task_store = TaskStatusStore(data_dir, settings=settings)
+    runtime = await create_nats_runtime(settings)
     worker = WorkerSkeleton(task_store)
     await worker.subscribe(runtime)
     task, publish_result = await worker.enqueue_task(

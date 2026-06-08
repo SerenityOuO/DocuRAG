@@ -28,6 +28,7 @@ services:
       DOCURAG_QDRANT_URL: ${DOCURAG_QDRANT_URL:-http://qdrant:6333}
       DOCURAG_REDIS_URL: ${DOCURAG_REDIS_URL:-}
       DOCURAG_NATS_URL: ${DOCURAG_NATS_URL:-}
+      DOCURAG_OBSERVABILITY_LOG_PATH: ${DOCURAG_OBSERVABILITY_LOG_PATH:-}
     volumes:
       - ../data:/app/data
     ports:
@@ -56,6 +57,40 @@ services:
     ports:
       - "4222:4222"
       - "8222:8222"
+
+  loki:
+    image: grafana/loki:latest
+    profiles:
+      - observability
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./observability/loki-config.yml:/etc/loki/local-config.yaml:ro
+
+  promtail:
+    image: grafana/promtail:latest
+    profiles:
+      - observability
+    command: ["-config.file=/etc/promtail/config.yml"]
+    volumes:
+      - ./observability/promtail-config.yml:/etc/promtail/config.yml:ro
+      - ../data/observability:/var/log/docurag:ro
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:latest
+    profiles:
+      - observability
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ADMIN_PASSWORD: ${DOCURAG_GRAFANA_ADMIN_PASSWORD:-docurag-local}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - loki
 
 volumes:
   qdrant_storage:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.api.routes.auth import (
     RequestAuthContext,
@@ -38,6 +38,7 @@ from app.services.evaluation import (
     run_strategy_comparison_eval,
 )
 from app.services.document_storage import DocumentStorage
+from app.services.observability import emit_observability_event
 
 
 router = APIRouter(prefix="/eval", tags=["eval"])
@@ -53,7 +54,8 @@ DocumentStorageDep = Annotated[DocumentStorage, Depends(get_document_storage)]
 
 @router.post("/rag/built-in", response_model=BuiltInRagEvalResponse)
 async def run_built_in_rag_eval_endpoint(
-    _auth_user: IngestionUserDep,
+    http_request: Request,
+    auth_user: IngestionUserDep,
 ) -> BuiltInRagEvalResponse:
     run = run_built_in_rag_eval(get_settings())
     failed_cases = [
@@ -67,7 +69,7 @@ async def run_built_in_rag_eval_endpoint(
         if result_fallback_reasons(result)
     ]
 
-    return BuiltInRagEvalResponse(
+    response = BuiltInRagEvalResponse(
         run_id=run.run_id,
         created_at=run.created_at,
         strategy="hybrid_rerank",
@@ -86,6 +88,17 @@ async def run_built_in_rag_eval_endpoint(
         failed_cases=failed_cases,
         fallback_cases=fallback_cases,
     )
+    _emit_eval_metrics(
+        http_request=http_request,
+        auth_user=auth_user,
+        run_id=run.run_id,
+        dataset_id=None,
+        dataset_name=BUILT_IN_RAG_EVAL_DATASET_NAME,
+        strategy="hybrid_rerank",
+        summary=response.summary.model_dump(),
+        environment=run.environment,
+    )
+    return response
 
 
 @router.get("/datasets", response_model=EvalDatasetListResponse)
@@ -233,6 +246,7 @@ async def delete_eval_item(
 
 @router.post("/runs", response_model=EvalRunResponse)
 async def run_eval_strategy_comparison(
+    http_request: Request,
     request: EvalRunCreateRequest,
     storage: DocumentStorageDep,
     auth_user: IngestionUserDep,
@@ -252,6 +266,17 @@ async def run_eval_strategy_comparison(
         raise _unprocessable(str(exc)) from exc
 
     storage.save_eval_run(run)
+    for summary in run["strategy_summaries"]:
+        _emit_eval_metrics(
+            http_request=http_request,
+            auth_user=auth_user,
+            run_id=str(run["run_id"]),
+            dataset_id=str(run["dataset_id"]),
+            dataset_name=str(run["dataset_name"]),
+            strategy=str(summary["strategy"]),
+            summary=summary,
+            environment=summary.get("environment") if isinstance(summary.get("environment"), dict) else {},
+        )
     return EvalRunResponse.model_validate(run)
 
 
@@ -332,4 +357,44 @@ def _unprocessable(message: str) -> HTTPException:
             "status": "invalid_input",
             "error": message,
         },
+    )
+
+
+def _emit_eval_metrics(
+    *,
+    http_request: Request,
+    auth_user: RequestAuthContext | None,
+    run_id: str,
+    dataset_id: str | None,
+    dataset_name: str,
+    strategy: str,
+    summary: dict[str, object],
+    environment: dict[str, object],
+) -> None:
+    emit_observability_event(
+        get_settings(),
+        "eval_metrics",
+        "eval.run",
+        trace_id=getattr(http_request.state, "trace_id", None),
+        request_id=getattr(http_request.state, "request_id", None),
+        organization_id=auth_user.organization_id if auth_user is not None else None,
+        project_id=auth_user.active_project_id if auth_user is not None else None,
+        actor_user_id=auth_user.username if auth_user is not None else None,
+        document_id=None,
+        strategy=strategy,
+        provider=str(environment.get("retrieval_provider") or strategy),
+        latency_ms=summary.get("average_latency_ms"),
+        status="completed",
+        error_code=None,
+        run_id=run_id,
+        dataset_id=dataset_id,
+        dataset_name=dataset_name,
+        case_count=summary.get("case_count"),
+        hit_rate_at_k=summary.get("hit_rate_at_k"),
+        mrr_at_k=summary.get("mrr_at_k"),
+        recall_at_k=summary.get("recall_at_k"),
+        average_latency_ms=summary.get("average_latency_ms"),
+        failure_count=summary.get("failure_count"),
+        fallback_count=summary.get("fallback_count"),
+        trace_metadata_count=summary.get("trace_metadata_count"),
     )

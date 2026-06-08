@@ -77,6 +77,7 @@ class Settings(BaseSettings):
     nats_url: str | None = None
     nats_timeout_seconds: float = 1.0
     nats_task_max_attempts: int = 3
+    observability_log_path: Path | None = None
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

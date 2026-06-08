@@ -3,7 +3,9 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
+from app.core.config import Settings
 from app.schemas.tasks import WorkerTaskRecord, WorkerTaskStatus, WorkerTaskType
+from app.services.observability import emit_observability_event
 
 
 TOPIC_TASK_TYPES = {
@@ -15,9 +17,10 @@ TOPIC_TASK_TYPES = {
 
 
 class TaskStatusStore:
-    def __init__(self, data_dir: Path) -> None:
+    def __init__(self, data_dir: Path, settings: Settings | None = None) -> None:
         self.data_dir = data_dir
         self.task_path = data_dir / "worker_tasks.json"
+        self.settings = settings
 
     def list_tasks(self, project_ids: frozenset[str] | None = None) -> list[WorkerTaskRecord]:
         tasks = sorted(self._read_tasks(), key=lambda task: task.created_at, reverse=True)
@@ -66,6 +69,7 @@ class TaskStatusStore:
         tasks = self._read_tasks()
         tasks.append(task)
         self._write_tasks(tasks)
+        self._emit_worker_event(task)
         return task
 
     def update_task(
@@ -107,9 +111,39 @@ class TaskStatusStore:
             updated_task = task.model_copy(update=update)
             tasks[index] = updated_task
             self._write_tasks(tasks)
+            self._emit_worker_event(updated_task)
             return updated_task
 
         return None
+
+    def _emit_worker_event(self, task: WorkerTaskRecord) -> None:
+        if self.settings is None:
+            return
+
+        emit_observability_event(
+            self.settings,
+            "worker_log",
+            "worker.task",
+            trace_id=task.trace_metadata.get("trace_id"),
+            request_id=task.trace_metadata.get("request_id"),
+            organization_id=task.organization_id,
+            project_id=task.project_id,
+            actor_user_id=task.trace_metadata.get("actor_user_id"),
+            document_id=task.document_id,
+            strategy=task.task_type.value,
+            provider="nats",
+            latency_ms=_task_latency_ms(task),
+            status=task.status.value,
+            error_code=task.error_code,
+            task_id=task.task_id,
+            task_type=task.task_type.value,
+            topic=task.topic,
+            eval_run_id=task.eval_run_id,
+            idempotency_key=task.idempotency_key,
+            attempt=task.attempt,
+            max_attempts=task.max_attempts,
+            failure_reason=task.failure_reason,
+        )
 
     def _read_tasks(self) -> list[WorkerTaskRecord]:
         if not self.task_path.exists():
@@ -152,3 +186,9 @@ def _optional_string(value: object) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _task_latency_ms(task: WorkerTaskRecord) -> float | None:
+    end_time = task.finished_at or task.updated_at
+    start_time = task.started_at or task.created_at
+    return round((end_time - start_time).total_seconds() * 1000, 2)

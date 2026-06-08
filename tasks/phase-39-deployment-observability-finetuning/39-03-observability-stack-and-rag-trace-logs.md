@@ -39,12 +39,12 @@
 
 ## Acceptance Criteria
 
-- [ ] API / worker / RAG / eval log schema 有明確文件。
-- [ ] Local observability path 可用 smoke 或 docs 驗證。
-- [ ] RAG trace 與 eval metrics 可以被集中查詢或匯出。
-- [ ] Query examples 覆蓋 API p95 latency、error rate、worker failures、RAG latency、fallback count、Hit Rate 與 MRR。
-- [ ] Observability stack 以 opt-in profile / docs path 啟用，不是 baseline 必要服務。
-- [ ] Observability stack unavailable 時 app 不 hard fail。
+- [x] API / worker / RAG / eval log schema 有明確文件。
+- [x] Local observability path 可用 smoke 或 docs 驗證。
+- [x] RAG trace 與 eval metrics 可以被集中查詢或匯出。
+- [x] Query examples 覆蓋 API p95 latency、error rate、worker failures、RAG latency、fallback count、Hit Rate 與 MRR。
+- [x] Observability stack 以 opt-in profile / docs path 啟用，不是 baseline 必要服務。
+- [x] Observability stack unavailable 時 app 不 hard fail。
 
 ## Validation
 
@@ -52,3 +52,20 @@
 - Observability smoke / query validation。
 - `rg -n "Loki|Grafana|OpenSearch|RAG trace|eval metrics|latency|p95|error rate|fallback count|Hit Rate|MRR|trace_id|request_id|log schema|opt-in" backend infra docs scripts README_DEV.md TODO.md tasks/phase-39-deployment-observability-finetuning`
 - `git diff --check`
+
+## Status
+
+- Completed. Added `DOCURAG_OBSERVABILITY_LOG_PATH` as an opt-in JSONL exporter setting.
+- Added `api_request`, `rag_trace`, `eval_metrics` and `worker_log` events using shared `docurag_observability_v1` fields.
+- Added local Loki + Grafana / Promtail path under `infra/observability/` and the `observability` Docker Compose profile.
+- Added LogQL query examples for API p95 latency, error rate, worker task failures, retrieval / rerank / generation latency, fallback count, Hit Rate and MRR.
+- Added `scripts/observability-smoke.ps1` and focused backend tests.
+- Release Impact: Version bump required: no. Version sync remains deferred to `39-05`.
+
+## Validation Result
+
+- Passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1` (`260 passed, 1 warning`; pytest cache permission warning only).
+- Passed: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\observability-smoke.ps1` (`5 passed, 1 warning`; pytest cache permission warning only).
+- Passed: `docker-compose -f .\infra\docker-compose.yml --profile observability config`; Docker emitted a local config permission warning for `C:\Users\USER\.docker\config.json`, but Compose config parsing completed successfully.
+- Passed: ticket `rg`.
+- Passed: `git diff --check`.

@@ -12,7 +12,8 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
 def get_task_status_store() -> TaskStatusStore:
-    return TaskStatusStore(get_settings().data_dir)
+    settings = get_settings()
+    return TaskStatusStore(settings.data_dir, settings=settings)
 
 
 TaskStatusStoreDep = Annotated[TaskStatusStore, Depends(get_task_status_store)]
