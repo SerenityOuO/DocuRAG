@@ -529,7 +529,7 @@ Phase 41 `v0.41.0` - RAG quality regression / DatasetOps：
 - [x] `tasks/phase-41-rag-quality-regression-datasetops/41-01-rag-quality-regression-contract.md`: 完成 Phase 41 RAG quality regression contract；固定 golden dataset、eval run、strategy snapshot、regression report、Hit Rate@K / MRR@K / Recall@K / latency / fallback count / failure count / trace metadata coverage 與 pass / warn / fail regression gate。文件 ticket，不 bump version。
 - [x] `tasks/phase-41-rag-quality-regression-datasetops/41-02-golden-dataset-versioning.md`: 新增 golden dataset metadata manifest 與 dataset changelog，為既有 demo-safe eval cases 補上 case version、source document version、expected evidence mapping、expected answer outline 與 case tags；runtime eval JSON schema 不變，不 bump version。
 - [x] `tasks/phase-41-rag-quality-regression-datasetops/41-03-retrieval-regression-ci-report.md`: 新增 CI-safe retrieval regression report script 與 baseline artifact，預設跑 keyword strategy，比較 baseline vs current Hit Rate@K / MRR@K / Recall@K / latency / fallback summary，並輸出 dataset version、provider availability、skip reason 與 threshold gate；不 bump version。
-- [ ] `tasks/phase-41-rag-quality-regression-datasetops/41-04-chunking-indexing-ablation-report.md`
+- [x] `tasks/phase-41-rag-quality-regression-datasetops/41-04-chunking-indexing-ablation-report.md`: 新增 chunking / indexing ablation report 與 sample artifact template，說明 fixed-size、semantic、parent-child、Qdrant payload filter / payload index、stale vector cleanup 與 reindex 的比較方式；欄位連回 Hit Rate@K / MRR@K / Recall@K / latency / fallback，並明確標示 keyword baseline 是實測，其餘策略為待測假設或 runtime 尚不支援。不 bump version。
 - [ ] `tasks/phase-41-rag-quality-regression-datasetops/41-05-phase-41-release-sync.md`
 
 Phase 42 `v0.42.0` - Inference gateway / capacity planning：

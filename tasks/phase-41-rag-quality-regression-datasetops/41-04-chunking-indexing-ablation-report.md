@@ -33,11 +33,17 @@
 
 ## Acceptance Criteria
 
-- [ ] Ablation report 說明至少兩種 chunking / indexing policy 的比較方式。
-- [ ] Report 包含 Hit Rate@K、MRR@K、Recall@K、latency 與 fallback 欄位。
-- [ ] 文件說明哪些結果是實測、哪些只是待測假設。
+- [x] Ablation report 說明至少兩種 chunking / indexing policy 的比較方式。
+- [x] Report 包含 Hit Rate@K、MRR@K、Recall@K、latency 與 fallback 欄位。
+- [x] 文件說明哪些結果是實測、哪些只是待測假設。
 
 ## Validation
 
 - `rg -n "ablation|chunking|fixed-size|semantic|parent-child|payload index|stale vector|reindex" docs sample-data README_DEV.md TODO.md tasks/phase-41-rag-quality-regression-datasetops`
 - `git diff --check`
+
+## Completion Notes
+
+- 新增 `docs/chunking-indexing-ablation-report.md`，把 fixed-size、semantic、parent-child、Qdrant payload filter / payload index、stale vector cleanup 與 reindex 連回 Phase 35 / Phase 36 / Phase 41 eval metrics。
+- 新增 `sample-data/eval/chunking-indexing-ablation-template.json`，固定 ablation artifact 欄位與 `measured` / `pending_hypothesis` / `not_supported` evidence status。
+- 目前只把 Phase 41 keyword regression baseline 標成實測；fixed-size、semantic、parent-child 與 indexing policy rows 都不宣稱勝率。

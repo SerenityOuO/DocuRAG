@@ -8,6 +8,7 @@
 - `built-in-rag-eval-zh-invoices.json`：後台「測試RAG」內建 dataset，使用 10 張 demo-safe synthetic 中文發票 fixture，供應商分布為 `NVDLA` 1、`GOOGLE` 1、`OpenAI` 1、`Intel` 3、`DocuRAG` 4；日期 / 金額皆不同且幣別皆為 TWD。
 - `golden-dataset-metadata.json`：Phase 41 golden dataset metadata manifest，為既有 eval cases 補上 case version、source document version、expected evidence mapping、expected answer outline 與 case tags，不改 runtime eval JSON schema。
 - `golden-dataset-changelog.md`：dataset changelog，記錄新增或調整 eval cases / metadata 的理由、demo-safe 邊界與 regression gate 影響。
+- `chunking-indexing-ablation-template.json`：Phase 41 chunking / indexing ablation artifact template，列出 fixed-size、semantic、parent-child、Qdrant payload index、stale vector cleanup 與 reindex 的比較欄位；未實測 row 必須標成 `pending_hypothesis` 或 `not_supported`。
 
 ## Data Safety
 
@@ -79,6 +80,12 @@ Threshold 解讀：
 - `pass`：Hit Rate@K、MRR@K、Recall@K 與 failure count 未超出 baseline threshold。
 - `warn`：latency、fallback count 或 trace metadata coverage 有變化，需要人工檢查。
 - `fail`：核心 retrieval metric 掉超過 threshold，或 failure count 增加，後續 release candidate 應暫停並分析 regression report。
+
+## Chunking / Indexing Ablation
+
+`docs/chunking-indexing-ablation-report.md` 與 `chunking-indexing-ablation-template.json` 定義 Phase 41 ablation report 欄位。它會把 Phase 35 的 fixed-size / semantic chunking、Qdrant payload filter、payload index、stale vector cleanup 與 reindex，連回 Phase 36 / Phase 41 的 Hit Rate@K、MRR@K、Recall@K、latency、failure count、fallback count 與 trace metadata coverage。
+
+目前只有 keyword baseline 屬於 `measured`。fixed-size、semantic、parent-child 與 indexing policy rows 尚未完成受控實測，因此只能作為待測假設或 runtime 不支援的 comparison template；不得把這些 row 寫成策略勝率。
 
 ## Summary Output
 

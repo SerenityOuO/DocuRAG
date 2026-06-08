@@ -1,0 +1,154 @@
+{
+  "artifact_schema_version": "chunking_indexing_ablation_template_v1",
+  "artifact_id": "phase41_chunking_indexing_ablation_template",
+  "dataset": {
+    "dataset_file": "retrieval-eval.json",
+    "dataset_id": "public_retrieval_eval",
+    "dataset_version": "retrieval_eval_v1.3",
+    "metadata_manifest": "golden-dataset-metadata.json"
+  },
+  "metrics_fields": [
+    "hit_rate_at_k",
+    "mrr_at_k",
+    "recall_at_k",
+    "average_latency_ms",
+    "failure_count",
+    "fallback_count",
+    "trace_metadata_count"
+  ],
+  "evidence_status_values": [
+    "measured",
+    "pending_hypothesis",
+    "not_supported"
+  ],
+  "measured_reference": {
+    "source": "retrieval-regression-baseline.json",
+    "strategy": "keyword",
+    "evidence_status": "measured",
+    "metrics": {
+      "hit_rate_at_k": 0.7,
+      "mrr_at_k": 0.475,
+      "recall_at_k": 0.625,
+      "average_latency_ms": 0.35,
+      "failure_count": 0,
+      "fallback_count": 0,
+      "trace_metadata_count": 62
+    }
+  },
+  "policy_rows": [
+    {
+      "policy_id": "fixed-size-vector-indexing",
+      "policy_type": "chunking",
+      "chunking_strategy": "fixed_size",
+      "chunking_version": "v1",
+      "retrieval_strategy": "vector_or_hybrid_explicit_opt_in",
+      "comparison_target": "semantic-vector-indexing",
+      "evidence_status": "pending_hypothesis",
+      "metrics": null,
+      "required_observation_fields": [
+        "chunk_count",
+        "average_chunk_chars",
+        "hit_rate_at_k",
+        "mrr_at_k",
+        "recall_at_k",
+        "average_latency_ms",
+        "failure_count",
+        "fallback_count",
+        "trace_metadata_count"
+      ],
+      "hypothesis": "fixed-size chunking should be treated as the deterministic baseline; no win is claimed until measured against the same dataset and provider snapshot."
+    },
+    {
+      "policy_id": "semantic-vector-indexing",
+      "policy_type": "chunking",
+      "chunking_strategy": "semantic",
+      "chunking_version": "v1",
+      "retrieval_strategy": "vector_or_hybrid_explicit_opt_in",
+      "comparison_target": "fixed-size-vector-indexing",
+      "evidence_status": "pending_hypothesis",
+      "metrics": null,
+      "required_observation_fields": [
+        "chunk_count",
+        "average_chunk_chars",
+        "chunking_fallback_count",
+        "chunking_fallback_reason",
+        "hit_rate_at_k",
+        "mrr_at_k",
+        "recall_at_k",
+        "average_latency_ms",
+        "failure_count",
+        "fallback_count",
+        "trace_metadata_count"
+      ],
+      "hypothesis": "semantic chunking may help sectioned documents but may fall back to fixed-size when boundaries are unavailable; no strategy win is claimed without measured metrics."
+    },
+    {
+      "policy_id": "parent-child-indexing",
+      "policy_type": "chunking",
+      "chunking_strategy": "parent_child",
+      "chunking_version": "future",
+      "retrieval_strategy": "not_supported_in_current_runtime",
+      "comparison_target": "fixed-size-vector-indexing",
+      "evidence_status": "not_supported",
+      "metrics": null,
+      "required_observation_fields": [
+        "parent_chunk_id",
+        "child_chunk_id",
+        "parent_child_trace_coverage",
+        "hit_rate_at_k",
+        "mrr_at_k",
+        "recall_at_k",
+        "average_latency_ms",
+        "failure_count",
+        "fallback_count"
+      ],
+      "hypothesis": "parent-child indexing remains a future contract row until a later ticket adds runtime support."
+    },
+    {
+      "policy_id": "qdrant-payload-filter-indexed",
+      "policy_type": "indexing",
+      "indexing_policy": "tenant_project_document_source_filter_with_payload_index",
+      "retrieval_strategy": "vector_or_hybrid_explicit_opt_in",
+      "comparison_target": "same_strategy_without_filter_or_missing_index_control",
+      "evidence_status": "pending_hypothesis",
+      "metrics": null,
+      "required_observation_fields": [
+        "payload_index_status",
+        "payload_index_fields",
+        "filter_scope",
+        "hit_rate_at_k",
+        "mrr_at_k",
+        "recall_at_k",
+        "average_latency_ms",
+        "failure_count",
+        "fallback_count",
+        "trace_metadata_count"
+      ],
+      "hypothesis": "payload filter and payload index should improve scoped correctness and predictable latency; production tuning is outside this artifact."
+    },
+    {
+      "policy_id": "stale-vector-cleanup-reindex",
+      "policy_type": "indexing",
+      "indexing_policy": "cleanup_stale_true_with_reindex_status",
+      "retrieval_strategy": "vector_or_hybrid_explicit_opt_in",
+      "comparison_target": "same_document_before_cleanup",
+      "evidence_status": "pending_hypothesis",
+      "metrics": null,
+      "required_observation_fields": [
+        "index_run_id",
+        "stale_vector_count",
+        "stale_cleanup_status",
+        "reindex_status",
+        "hit_rate_at_k",
+        "mrr_at_k",
+        "recall_at_k",
+        "average_latency_ms",
+        "failure_count",
+        "fallback_count",
+        "trace_metadata_count"
+      ],
+      "hypothesis": "stale vector cleanup and reindex should reduce outdated evidence leakage; no quality gain is claimed until stale evidence is measured before and after cleanup."
+    }
+  ],
+  "claims_boundary": "Only rows with evidence_status=measured can be described as measured results. pending_hypothesis rows are comparison templates, not strategy wins."
+}

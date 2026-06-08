@@ -659,8 +659,8 @@ Tickets：
 
 - [x] `tasks/phase-41-rag-quality-regression-datasetops/41-01-rag-quality-regression-contract.md`
 - [x] `tasks/phase-41-rag-quality-regression-datasetops/41-02-golden-dataset-versioning.md`
-- `tasks/phase-41-rag-quality-regression-datasetops/41-03-retrieval-regression-ci-report.md`
-- `tasks/phase-41-rag-quality-regression-datasetops/41-04-chunking-indexing-ablation-report.md`
+- [x] `tasks/phase-41-rag-quality-regression-datasetops/41-03-retrieval-regression-ci-report.md`
+- [x] `tasks/phase-41-rag-quality-regression-datasetops/41-04-chunking-indexing-ablation-report.md`
 - `tasks/phase-41-rag-quality-regression-datasetops/41-05-phase-41-release-sync.md`
 
 Current Status：
@@ -669,6 +669,7 @@ Current Status：
 - `41-01` 不 bump version、不新增 backend runtime、frontend UI、CI workflow、資料庫 schema、migration、LLM-as-judge 或 production eval dashboard。
 - `41-02` 已新增 `sample-data/eval/golden-dataset-metadata.json` 與 `golden-dataset-changelog.md`，為既有 demo-safe eval cases 補上 case version、source document version、expected evidence mapping、expected answer outline 與 case tags；runtime eval JSON schema 不變。
 - `41-03` 已新增 CI-safe retrieval regression report script 與 baseline artifact，預設只跑 keyword strategy，輸出 baseline vs current metrics、dataset version、provider availability、skip reason 與 threshold / regression gate 解讀。
+- `41-04` 已新增 chunking / indexing ablation report 與 sample artifact template，將 fixed-size、semantic、parent-child、Qdrant payload filter / payload index、stale vector cleanup 與 reindex 比較欄位連回 Phase 35 / Phase 36 / Phase 41 metrics；目前只把 keyword baseline 標成實測，其餘 row 保持待測假設或 runtime 尚不支援。
 
 Expected Outcome：
 
