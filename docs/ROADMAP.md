@@ -689,7 +689,7 @@ Goal：把 Ollama / vLLM / OpenAI-compatible endpoint 整理成可說清楚 rout
 Tickets：
 
 - [x] `tasks/phase-42-inference-gateway-capacity-planning/42-01-inference-gateway-contract.md`
-- `tasks/phase-42-inference-gateway-capacity-planning/42-02-provider-routing-and-fallback.md`
+- [x] `tasks/phase-42-inference-gateway-capacity-planning/42-02-provider-routing-and-fallback.md`
 - `tasks/phase-42-inference-gateway-capacity-planning/42-03-streaming-timeout-guardrails.md`
 - `tasks/phase-42-inference-gateway-capacity-planning/42-04-capacity-planning-report.md`
 - `tasks/phase-42-inference-gateway-capacity-planning/42-05-phase-42-release-sync.md`
@@ -698,6 +698,8 @@ Current Status：
 
 - `42-01` 已完成 inference gateway contract；文件固定 Ollama / vLLM / OpenAI-compatible / disabled provider domain、routing / fallback / timeout / token usage / latency metadata、provider health / circuit breaker 邊界，以及 capacity planning report 邊界。
 - `42-01` 不 bump version、不新增 provider runtime、streaming API、OpenAI SDK、vLLM server、Docker service、production autoscaling、多 GPU serving、paid API key 或 SLA。
+- `42-02` 已完成 provider routing / fallback metadata runtime slice；LLM、VLM parser、vector / embedding retrieval 與 rerank trace 會記錄 provider selected、provider status、fallback target 與 fallback reason，provider unavailable / timeout 時仍保留既有 demo fallback。
+- `42-02` 不 bump version、不啟動 vLLM server、不新增大型模型下載、paid API key、production secret、load balancing、多 tenant quota、production circuit breaker service 或 autoscaling。
 
 Expected Outcome：
 

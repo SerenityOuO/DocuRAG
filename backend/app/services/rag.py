@@ -28,6 +28,15 @@ QUERY_ALIASES = {
 }
 
 
+def _provider_failure_status(error: str) -> str:
+    normalized = error.lower()
+    if "timed out" in normalized or "timeout" in normalized:
+        return "timeout"
+    if "disabled" in normalized or "unsupported" in normalized:
+        return "disabled"
+    return "unavailable"
+
+
 class RagProvider(Protocol):
     name: str
 
@@ -228,6 +237,9 @@ class KeywordRagProvider:
         fields = {
             "llm_generation_status": "completed",
             "llm_provider": self.llm_provider.name if self.llm_provider is not None else "unknown",
+            "llm_provider_selected": self.llm_provider.name if self.llm_provider is not None else "unknown",
+            "llm_provider_status": "completed",
+            "llm_fallback_target": "",
             "llm_model": generation.model,
             "llm_prompt_source": "retrieved_chunks",
             "llm_prompt_chunk_count": str(chunk_count),
@@ -272,9 +284,13 @@ class KeywordRagProvider:
     def _llm_failure_trace_metadata(self, error: str) -> dict[str, str]:
         provider_name = self.llm_provider.name if self.llm_provider is not None else "unknown"
         model = getattr(self.llm_provider, "model", None)
+        provider_status = _provider_failure_status(error)
         fields = {
             "llm_generation_status": "failed",
             "llm_provider": provider_name,
+            "llm_provider_selected": provider_name,
+            "llm_provider_status": provider_status,
+            "llm_fallback_target": "retrieved_chunks",
             "llm_fallback_reason": "provider_error",
             "llm_error": error[:500],
         }
@@ -382,6 +398,9 @@ class VectorRagProvider:
                 **{str(key): str(value) for key, value in metadata.items()},
                 "retrieval_provider": "vector",
                 "vector_retrieval_status": "completed",
+                "vector_provider_selected": self.embedding_provider.name,
+                "vector_provider_status": "completed",
+                "vector_fallback_target": "",
                 "vector_store": "qdrant",
                 "qdrant_collection": self.vector_store.collection_name,
                 "embedding_provider": self.embedding_provider.name,
@@ -399,9 +418,14 @@ class VectorRagProvider:
         error: str,
     ) -> RagQueryResponse:
         response = self.keyword_provider.query(query, top_k, documents)
+        provider_status = _provider_failure_status(error)
         fallback_metadata = {
             "retrieval_provider": "keyword",
             "vector_retrieval_status": "failed",
+            "vector_provider_selected": self.embedding_provider.name,
+            "vector_provider_status": provider_status,
+            "vector_fallback_target": "keyword",
+            "vector_fallback_reason": error[:500],
             "vector_store": "qdrant",
             "qdrant_collection": self.vector_store.collection_name,
             "embedding_provider": self.embedding_provider.name,

@@ -291,6 +291,9 @@ def test_keyword_rag_provider_sends_chinese_alias_match_to_llm() -> None:
     assert "付款期限是什麼？" in llm_provider.prompt
     assert "Payment terms: Net 15" in llm_provider.prompt
     assert response.citations[0].trace_metadata["llm_generation_status"] == "completed"
+    assert response.citations[0].trace_metadata["llm_provider_selected"] == "ollama"
+    assert response.citations[0].trace_metadata["llm_provider_status"] == "completed"
+    assert response.citations[0].trace_metadata["llm_fallback_target"] == ""
 
 
 def test_keyword_rag_provider_scores_sorts_and_limits_results() -> None:
@@ -427,6 +430,9 @@ def test_keyword_rag_provider_uses_llm_generation_with_retrieved_chunks() -> Non
         "provider": "ocr_paddleocr",
         "llm_generation_status": "completed",
         "llm_provider": "ollama",
+        "llm_provider_selected": "ollama",
+        "llm_provider_status": "completed",
+        "llm_fallback_target": "",
         "llm_model": "qwen3.5:4b",
         "llm_prompt_source": "retrieved_chunks",
         "llm_prompt_chunk_count": "1",
@@ -479,6 +485,9 @@ def test_keyword_rag_provider_falls_back_when_llm_returns_empty_answer() -> None
     assert "model returned an empty answer" in response.answer
     assert response.citations[0].trace_metadata["llm_generation_status"] == "failed"
     assert response.citations[0].trace_metadata["llm_provider"] == "ollama"
+    assert response.citations[0].trace_metadata["llm_provider_selected"] == "ollama"
+    assert response.citations[0].trace_metadata["llm_provider_status"] == "unavailable"
+    assert response.citations[0].trace_metadata["llm_fallback_target"] == "retrieved_chunks"
     assert response.citations[0].trace_metadata["llm_model"] == "qwen3.5:4b"
     assert response.citations[0].trace_metadata["llm_error"] == "model returned an empty answer"
 
@@ -903,6 +912,10 @@ def test_vector_rag_provider_falls_back_to_keyword_when_embedding_fails() -> Non
     assert "Vector retrieval unavailable; fallback to keyword retrieval" in response.answer
     assert response.citations[0].trace_metadata["retrieval_provider"] == "keyword"
     assert response.citations[0].trace_metadata["vector_retrieval_status"] == "failed"
+    assert response.citations[0].trace_metadata["vector_provider_selected"] == "ollama"
+    assert response.citations[0].trace_metadata["vector_provider_status"] == "unavailable"
+    assert response.citations[0].trace_metadata["vector_fallback_target"] == "keyword"
+    assert response.citations[0].trace_metadata["vector_fallback_reason"] == "Cannot connect to Ollama"
     assert response.citations[0].trace_metadata["vector_retrieval_error"] == "Cannot connect to Ollama"
     assert response.retrieved_chunks[0].metadata["retrieval_provider"] == "keyword"
 

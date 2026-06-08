@@ -106,6 +106,9 @@ def test_rerank_service_falls_back_when_provider_is_disabled() -> None:
     assert result.chunks[0].metadata["vector_score"] == "0.500000"
     assert result.chunks[0].metadata["rerank_enabled"] == "false"
     assert result.chunks[0].metadata["rerank_status"] == "disabled"
+    assert result.chunks[0].metadata["rerank_provider_selected"] == "disabled"
+    assert result.chunks[0].metadata["rerank_provider_status"] == "disabled"
+    assert result.chunks[0].metadata["rerank_fallback_target"] == "original_candidates"
     assert "DOCURAG_RERANK_PROVIDER=fastembed" in result.chunks[0].metadata["rerank_fallback_reason"]
 
 
@@ -120,6 +123,9 @@ def test_rerank_service_falls_back_on_provider_error() -> None:
     assert result.fallback_reason == "model unavailable"
     assert result.chunks[0].chunk_id == "chunk-001"
     assert result.chunks[0].metadata["rerank_status"] == "failed"
+    assert result.chunks[0].metadata["rerank_provider_selected"] == "fastembed"
+    assert result.chunks[0].metadata["rerank_provider_status"] == "failed"
+    assert result.chunks[0].metadata["rerank_fallback_target"] == "original_candidates"
     assert result.chunks[0].metadata["rerank_fallback_reason"] == "model unavailable"
 
 
@@ -135,6 +141,7 @@ def test_rerank_service_falls_back_on_timeout() -> None:
     assert result.fallback_reason is not None
     assert "timed out" in result.fallback_reason
     assert result.chunks[0].metadata["rerank_status"] == "failed"
+    assert result.chunks[0].metadata["rerank_provider_status"] == "timeout"
 
 
 def test_rerank_service_falls_back_on_malformed_score_count() -> None:

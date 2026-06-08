@@ -33,9 +33,9 @@
 
 ## Acceptance Criteria
 
-- [ ] Provider routing 可清楚記錄 selected provider 與 fallback reason。
-- [ ] Optional provider unavailable 時 demo API 仍可回到既有 fallback。
-- [ ] Backend tests 覆蓋 success / unavailable / timeout 或 skip path。
+- [x] Provider routing 可清楚記錄 selected provider 與 fallback reason。
+- [x] Optional provider unavailable 時 demo API 仍可回到既有 fallback。
+- [x] Backend tests 覆蓋 success / unavailable / timeout 或 skip path。
 
 ## Validation
 
@@ -43,3 +43,10 @@
 - Backend full test script。
 - `rg -n "provider selected|provider_unavailable|fallback reason|timeout|vLLM|OpenAI-compatible" backend docs README_DEV.md TODO.md tasks/phase-42-inference-gateway-capacity-planning`
 - `git diff --check`
+
+## Completion Notes
+
+- LLM generation trace 已新增 `llm_provider_selected`、`llm_provider_status` 與 `llm_fallback_target`，失敗時保留既有 retrieved chunks fallback。
+- VLM-first parser trace 已新增 `vlm_provider_selected`、`vlm_provider_status` 與 `vlm_fallback_target`，provider unavailable / timeout / invalid response 等情況仍 fallback 到 deterministic parser。
+- Vector / embedding retrieval 與 rerank trace 已新增 provider selected / status / fallback target metadata，provider unavailable / timeout / disabled 時仍 fallback 到 keyword retrieval 或 original candidates。
+- README_DEV、TODO、ROADMAP、docs/api.md 與 docs/architecture.md 已同步。Version bump required: no；版本同步留到 `42-05`。

@@ -199,6 +199,7 @@ class RerankService:
                 raise RerankProviderError("Rerank provider returned a non-numeric score.")
 
     def _fallback(self, candidates: list[RetrievedChunk], status: str, reason: str) -> RerankResult:
+        provider_status = "timeout" if "timed out" in reason.lower() or "timeout" in reason.lower() else status
         fallback_chunks = [
             chunk.model_copy(
                 update={
@@ -207,6 +208,9 @@ class RerankService:
                         "rerank_enabled": "false",
                         "rerank_status": status,
                         "rerank_provider": self.provider.name,
+                        "rerank_provider_selected": self.provider.name,
+                        "rerank_provider_status": provider_status,
+                        "rerank_fallback_target": "original_candidates",
                         "rerank_model": str(self.provider.model or ""),
                         "rerank_fallback_reason": reason[:500],
                     }
@@ -244,6 +248,9 @@ class RerankService:
                     "rerank_enabled": "true",
                     "rerank_status": "completed",
                     "rerank_provider": self.provider.name,
+                    "rerank_provider_selected": self.provider.name,
+                    "rerank_provider_status": "completed",
+                    "rerank_fallback_target": "",
                     "rerank_model": str(self.provider.model or ""),
                     "rerank_input_candidate_count": str(input_candidate_count),
                     "rerank_top_k": str(self.top_k),

@@ -689,6 +689,13 @@ Capacity planning report boundary:
 - Capacity numbers must separate measured local results from estimates. Unknown values stay `null`, `not_measured` or `skipped`; they must not be shown as zero.
 - Capacity planning is evidence for interview and local ops reasoning. It is not production autoscaling, multi GPU serving, SLA, paid API key management, secret vault, model registry or cloud capacity guarantee.
 
+`42-02` runtime metadata notes:
+
+- RAG LLM generation success now records `llm_provider_selected`, `llm_provider_status=completed` and `llm_fallback_target=""`; failure keeps the retrieved chunks fallback and records `llm_provider_status=timeout|unavailable|disabled` plus `llm_fallback_target=retrieved_chunks`.
+- VLM-first parser trace records `vlm_provider_selected`, `vlm_provider_status` and `vlm_fallback_target=deterministic_invoice` when provider_unavailable, timeout, invalid response, missing fields or low confidence falls back.
+- Vector retrieval records `vector_provider_selected`, `vector_provider_status` and `vector_fallback_target=keyword` when embedding or Qdrant is unavailable; rerank records `rerank_provider_selected`, `rerank_provider_status` and `rerank_fallback_target=original_candidates` when disabled, timeout or failed.
+- This is metadata glue only. It does not change provider defaults, start vLLM, add load balancing, add production circuit breaker runtime or make optional providers mandatory.
+
 ## Phase 39 Deployment / Observability / Fine-tuning Research Contract
 
 `39-01` is a Markdown-only contract for deployment and MLOps-facing evidence. It defines what later Phase 39 tickets may add, but does not add manifests, runtime services, notebooks, dependencies or version changes by itself.

@@ -41,6 +41,17 @@ class VlmProviderError(Exception):
         self.fallback_reason = fallback_reason
 
 
+def _vlm_provider_status(fallback_reason: str | None) -> str:
+    if fallback_reason is None:
+        return "completed"
+    normalized = fallback_reason.lower()
+    if "timeout" in normalized:
+        return "timeout"
+    if "unavailable" in normalized or "disabled" in normalized:
+        return "unavailable"
+    return "failed"
+
+
 class DisabledVlmProvider:
     provider_name = "disabled"
     model_name = "disabled"
@@ -439,6 +450,9 @@ class VlmInvoiceParser:
         metadata = {
             "parser_route": "vlm_first",
             "vlm_provider": getattr(self.provider, "provider_name", "unknown"),
+            "vlm_provider_selected": getattr(self.provider, "provider_name", "unknown"),
+            "vlm_provider_status": _vlm_provider_status(fallback_reason),
+            "vlm_fallback_target": "deterministic_invoice" if fallback_reason else "",
             "vlm_model": getattr(self.provider, "model_name", "unknown"),
             "source_input_type": "image" if descriptor.mime_type else "unavailable",
             "source_input": descriptor.input_source,

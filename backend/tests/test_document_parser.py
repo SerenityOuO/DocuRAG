@@ -159,6 +159,9 @@ def test_vlm_invoice_parser_returns_vlm_parser_result(tmp_path: Path) -> None:
     assert result.fields.line_items[0].description.value == "Printer paper"
     assert result.trace_metadata["parser_route"] == "vlm_first"
     assert result.trace_metadata["fallback_chain"] == "vlm_invoice"
+    assert result.trace_metadata["vlm_provider_selected"] == "fake"
+    assert result.trace_metadata["vlm_provider_status"] == "completed"
+    assert result.trace_metadata["vlm_fallback_target"] == ""
     assert result.trace_metadata["confidence_summary"] == "0.8200"
     assert result.trace_metadata["source_input_type"] == "image"
 
@@ -343,6 +346,9 @@ def test_vlm_invoice_parser_falls_back_when_provider_is_unavailable(tmp_path: Pa
     assert result.trace_metadata["parser_route"] == "vlm_first"
     assert result.trace_metadata["fallback_chain"] == "vlm_invoice -> deterministic_invoice"
     assert result.trace_metadata["fallback_reason"] == "vlm_provider_unavailable"
+    assert result.trace_metadata["vlm_provider_selected"] == "fake"
+    assert result.trace_metadata["vlm_provider_status"] == "unavailable"
+    assert result.trace_metadata["vlm_fallback_target"] == "deterministic_invoice"
 
 
 def test_vlm_invoice_parser_falls_back_on_timeout_or_provider_failure(tmp_path: Path) -> None:
@@ -354,6 +360,7 @@ def test_vlm_invoice_parser_falls_back_on_timeout_or_provider_failure(tmp_path: 
     assert result.status == ParserStatus.PARSED
     assert result.parser_source == "deterministic_invoice"
     assert result.trace_metadata["fallback_reason"] == "vlm_timeout"
+    assert result.trace_metadata["vlm_provider_status"] == "timeout"
 
 
 def test_vlm_invoice_parser_falls_back_on_invalid_json_shape(tmp_path: Path) -> None:

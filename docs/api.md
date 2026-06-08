@@ -372,6 +372,19 @@ Fields may be `null` or omitted only when the provider cannot supply them and th
 
 Capacity planning reports may include latency p50 / p95, tokens/sec, VRAM, KV cache estimate, context length, concurrency, TOPS / NPU interpretation, bottleneck notes, fallback policy and provider skip reason. They must separate measured values from estimates and must not claim production autoscaling, multi GPU serving, paid API readiness, secret vault, model registry or SLA.
 
+### 42-02 Runtime Metadata Notes
+
+`42-02` adds provider selected / fallback reason metadata to existing traces only:
+
+| Path | Success metadata | Fallback metadata |
+|---|---|---|
+| LLM generation | `llm_provider_selected`, `llm_provider_status=completed`, `llm_fallback_target=""` | `llm_provider_status=timeout|unavailable|disabled`, `llm_fallback_target=retrieved_chunks`, existing `llm_fallback_reason`. |
+| VLM parser | `vlm_provider_selected`, `vlm_provider_status=completed`, `vlm_fallback_target=""` | `vlm_provider_status=timeout|unavailable|failed`, `vlm_fallback_target=deterministic_invoice`, existing `fallback_reason` such as `vlm_provider_unavailable`. |
+| Vector / embedding retrieval | `vector_provider_selected`, `vector_provider_status=completed`, `vector_fallback_target=""` | `vector_provider_status=timeout|unavailable|disabled`, `vector_fallback_target=keyword`, `vector_fallback_reason`. |
+| Rerank | `rerank_provider_selected`, `rerank_provider_status=completed`, `rerank_fallback_target=""` | `rerank_provider_status=timeout|failed|disabled`, `rerank_fallback_target=original_candidates`, existing `rerank_fallback_reason`. |
+
+The response shape remains backward-compatible because `42-02` only appends metadata fields to existing trace dictionaries.
+
 ## Phase 29 Built-in RAG Eval Contract
 
 `POST /eval/rag/built-in` wraps the existing retrieval eval runner for the backend admin surface. It is intentionally narrow:
