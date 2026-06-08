@@ -37,9 +37,9 @@
 
 ## Acceptance Criteria
 
-- [ ] Backend / frontend / Docker Compose / health test version 同步到 `0.42.0`。
-- [ ] README / README_DEV 清楚說明 Phase 42 的 inference ops 證據與邊界。
-- [ ] Provider routing、timeout guardrails 與 capacity planning report 都有 validation 紀錄。
+- [x] Backend / frontend / Docker Compose / health test version 同步到 `0.42.0`。
+- [x] README / README_DEV 清楚說明 Phase 42 的 inference ops 證據與邊界。
+- [x] Provider routing、timeout guardrails 與 capacity planning report 都有 validation 紀錄。
 
 ## Validation
 
@@ -48,3 +48,11 @@
 - Inference gateway smoke 或 skip-safe validation。
 - Phase 42 keyword `rg` validation。
 - `git diff --check`
+
+## Completion Notes
+
+- Backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example` 與 demo smoke expected version 已同步到 `0.42.0`。
+- README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 ticket 已同步 Phase 42 release status。
+- Phase 42 release artifacts：inference gateway contract、provider routing / fallback metadata、streaming timeout guardrails、capacity planning report。
+- Validation recorded: backend full test、frontend build、inference benchmark smoke skipped report、Phase 42 keyword `rg`、`git diff --check`。
+- Release Impact: Version bump required: yes；Phase 42 released as `v0.42.0`。

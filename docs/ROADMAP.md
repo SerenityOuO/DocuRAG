@@ -639,7 +639,7 @@ Phase 40 Guardrails：
 - `40-02` 不下載大型模型、不執行長時間 training、不把 fine-tuned model 接到 production runtime。
 - `40-03` 不宣稱沒有實測的 TOPS / NPU 數據；可以提供評估方式與 benchmark template。
 - `40-04` 不新增 production alerting、SLO、incident workflow 或 APM vendor integration。
-- `41-05` 已完成 release sync，backend / frontend / health / Docker Compose version 已同步到 `v0.41.0`；Phase 42 仍需逐張 ticket 執行。
+- `42-05` 已完成 release sync，backend / frontend / health / Docker Compose version 已同步到 `v0.42.0`；Phase 43 仍需逐張 ticket 執行。
 
 ## Phase 41-45 JD Completion / Portfolio Roadmap
 
@@ -692,7 +692,7 @@ Tickets：
 - [x] `tasks/phase-42-inference-gateway-capacity-planning/42-02-provider-routing-and-fallback.md`
 - [x] `tasks/phase-42-inference-gateway-capacity-planning/42-03-streaming-timeout-guardrails.md`
 - [x] `tasks/phase-42-inference-gateway-capacity-planning/42-04-capacity-planning-report.md`
-- `tasks/phase-42-inference-gateway-capacity-planning/42-05-phase-42-release-sync.md`
+- [x] `tasks/phase-42-inference-gateway-capacity-planning/42-05-phase-42-release-sync.md`
 
 Current Status：
 
@@ -704,6 +704,8 @@ Current Status：
 - `42-03` 不 bump version、不新增 SSE / WebSocket frontend streaming UI、queue-based inference scheduler、多使用者 quota、production rate limiter、預設模型變更或外部 inference dependency。
 - `42-04` 已完成 `docs/inference-capacity-planning-report.md`，整理 workload profile、capacity table、latency p50 / p95、tokens/sec / throughput、VRAM、KV cache estimate、TOPS / NPU、fallback policy、skip reason 與 provider / hardware selection table。
 - `42-04` 不 bump version、不要求真實 NPU / TOPS profiler、不下載大型模型、不啟動長時間 benchmark、不承諾 production throughput，也不新增 production metrics service 或 autoscaling controller。
+- `42-05` 已完成 Phase 42 `v0.42.0` release sync；backend package / app version、frontend package / lock / fallback version、frontend fallback label、health test、Docker Compose `DOCURAG_VERSION`、`.env.example`、demo smoke expected version、README、README_DEV、backend README、frontend README、TODO、ROADMAP 與 ticket 已同步。
+- Validation passed: backend full test；frontend build；inference benchmark smoke skipped report；Phase 42 keyword `rg`；`git diff --check`。Release Impact：Version bump required: yes，Phase 42 is released as `v0.42.0`；不新增 production autoscaling、多 GPU serving、paid API key、production secret、SLA、production metrics service 或 autoscaling controller。
 
 Expected Outcome：
 

@@ -339,7 +339,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync，Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release sync，Phase 37 已完成 `v0.37.0` inference ops / vLLM serving release sync，Phase 38 已完成 `v0.38.0` Agent runtime hardening release sync，Phase 39 已完成 `v0.39.0` deployment / observability / fine-tuning track release sync，Phase 40 已完成 `v0.40.0` JD evidence hardening release sync，Phase 41 已完成 `v0.41.0` RAG quality regression / DatasetOps release sync。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync，Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release sync，Phase 37 已完成 `v0.37.0` inference ops / vLLM serving release sync，Phase 38 已完成 `v0.38.0` Agent runtime hardening release sync，Phase 39 已完成 `v0.39.0` deployment / observability / fine-tuning track release sync，Phase 40 已完成 `v0.40.0` JD evidence hardening release sync，Phase 41 已完成 `v0.41.0` RAG quality regression / DatasetOps release sync，Phase 42 已完成 `v0.42.0` inference gateway / capacity planning release sync。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
@@ -521,7 +521,7 @@ Phase 40 guardrails：
 - `40-02` 可以補 SFT / embedding tuning / synthetic data report 或 notebook skeleton，但不得下載大型模型或執行長時間 training。
 - `40-03` 可以補 inference benchmark report、KV cache / TOPS / NPU 評估方式與 script/template，但不得宣稱沒有實測的硬體結果。
 - `40-04` 可以補 observability dashboard / query examples / demo-safe screenshots，但不得宣稱 production alerting 或 incident workflow 已完成。
-- `41-05` 已完成 release sync，backend / frontend / health / Docker Compose version 已同步到 `v0.41.0`；Phase 42 仍需另依 ticket-first 流程執行。
+- `42-05` 已完成 release sync，backend / frontend / health / Docker Compose version 已同步到 `v0.42.0`；Phase 43 仍需另依 ticket-first 流程執行。
 
 ## Phase 41-45 JD Completion Roadmap
 
@@ -538,8 +538,8 @@ Phase 42 `v0.42.0` - Inference gateway / capacity planning：
 - [x] `tasks/phase-42-inference-gateway-capacity-planning/42-02-provider-routing-and-fallback.md`: 補齊 demo-safe provider selected / fallback reason metadata；LLM、VLM parser、vector / embedding retrieval 與 rerank failure 會標示 provider status、fallback target 與既有 fallback reason，optional provider unavailable / timeout 時仍回到既有 fallback。不 bump version。
 - [x] `tasks/phase-42-inference-gateway-capacity-planning/42-03-streaming-timeout-guardrails.md`: 補齊 RAG generation timeout、max tokens / num_predict、streaming mode、truncated reason 與 generation latency trace；provider timeout 仍 fallback 到 retrieved chunks。不 bump version。
 - [x] `tasks/phase-42-inference-gateway-capacity-planning/42-04-capacity-planning-report.md`: 新增 inference capacity planning report，整理 workload profile、capacity table、latency p50 / p95、tokens/sec / throughput、VRAM、KV cache estimate、TOPS / NPU、fallback policy、skip reason 與模型 / 硬體選型。不 bump version。
-- [ ] `tasks/phase-42-inference-gateway-capacity-planning/42-05-phase-42-release-sync.md`
-- Validation 已通過：Phase 42 keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: no，版本同步留到 `42-05`；本 ticket 不新增 provider runtime、streaming API、OpenAI SDK、vLLM server、Docker service、production autoscaling、多 GPU serving、paid API key 或 SLA。
+- [x] `tasks/phase-42-inference-gateway-capacity-planning/42-05-phase-42-release-sync.md`: 完成 `v0.42.0` release sync，更新 backend / frontend / Docker Compose / `.env.example` / health test / demo smoke expected version，並同步 README / README_DEV / backend README / frontend README / TODO / ROADMAP；整理 provider routing、timeout guardrails 與 capacity planning report validation。
+- Validation 已通過：backend full test、frontend build、inference benchmark smoke skipped report、Phase 42 keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: yes，Phase 42 已完成 `v0.42.0` inference gateway / capacity planning release；不新增 production autoscaling、多 GPU serving、paid API key、production secret、SLA、production metrics service 或 autoscaling controller。
 - `42-02` validation 已通過：focused backend tests `47 passed`；backend full test script；Phase 42 runtime keyword `rg`；`git diff --check`。本 ticket 不啟動 vLLM server、不新增大型模型下載、不新增 paid API key / production secret、不把 vLLM 或 OpenAI-compatible endpoint 設為唯一 runtime，也不新增 load balancing、多 tenant quota、production circuit breaker service 或 autoscaling。
 - `42-03` validation 已通過：focused backend tests `41 passed`；backend full test script；Phase 42 guardrail keyword `rg`；`git diff --check`。本 ticket 不新增完整 SSE / WebSocket frontend streaming UI、不新增 queue-based inference scheduler、多使用者 quota、production rate limiter、不更換預設模型或新增外部 inference dependency。
 - `42-04` validation 已通過：Phase 42 capacity docs `rg` 與 `git diff --check`。本 ticket 不要求真實 NPU 硬體或 TOPS profiler、不下載大型模型、不啟動長時間 benchmark、不承諾 production throughput，也不新增 production metrics service 或 autoscaling controller。
