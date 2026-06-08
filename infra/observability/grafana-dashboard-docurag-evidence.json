@@ -1,0 +1,249 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "expr": "quantile_over_time(0.95, {service=\"docurag\", event_type=\"api_request\"} | json | unwrap latency_ms [5m])",
+          "refId": "A"
+        }
+      ],
+      "title": "API latency p95",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "sum(rate({service=\"docurag\", event_type=\"api_request\", status!=\"ok\"}[5m])) / sum(rate({service=\"docurag\", event_type=\"api_request\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "title": "API error rate",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "sum by (task_type, error_code) (count_over_time({service=\"docurag\", event_type=\"worker_log\", status=\"failed\"}[15m]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Worker task failures",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 8
+      },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "quantile_over_time(0.95, {service=\"docurag\", event_type=\"rag_trace\"} | json | unwrap retrieval_latency_ms [5m])",
+          "refId": "A"
+        }
+      ],
+      "title": "RAG retrieval latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 8
+      },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "quantile_over_time(0.95, {service=\"docurag\", event_type=\"rag_trace\"} | json | unwrap rerank_latency_ms [5m])",
+          "refId": "A"
+        }
+      ],
+      "title": "RAG rerank latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 8
+      },
+      "id": 6,
+      "targets": [
+        {
+          "expr": "quantile_over_time(0.95, {service=\"docurag\", event_type=\"rag_trace\"} | json | unwrap generation_latency_ms [5m])",
+          "refId": "A"
+        }
+      ],
+      "title": "RAG generation latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 16
+      },
+      "id": 7,
+      "targets": [
+        {
+          "expr": "sum_over_time({service=\"docurag\", event_type=~\"rag_trace|eval_metrics\"} | json | unwrap fallback_count [15m])",
+          "refId": "A"
+        }
+      ],
+      "title": "Fallback count",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 16
+      },
+      "id": 8,
+      "targets": [
+        {
+          "expr": "avg_over_time({service=\"docurag\", event_type=\"eval_metrics\"} | json | unwrap hit_rate_at_k [30m])",
+          "refId": "A"
+        }
+      ],
+      "title": "Eval Hit Rate",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 16
+      },
+      "id": 9,
+      "targets": [
+        {
+          "expr": "avg_over_time({service=\"docurag\", event_type=\"eval_metrics\"} | json | unwrap mrr_at_k [30m])",
+          "refId": "A"
+        }
+      ],
+      "title": "Eval MRR",
+      "type": "stat"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "docurag",
+    "observability evidence",
+    "phase-40"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "DocuRAG Phase 40 Observability Evidence",
+  "uid": "docurag-phase40-observability",
+  "version": 1,
+  "weekStart": ""
+}

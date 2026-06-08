@@ -586,7 +586,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 Phase 40 planning、`40-02` Embedding / SFT experiment evidence 與 `40-03` inference hardware benchmark evidence。`40-04` 與 `40-05` 尚未實作，不 bump version、不新增 runtime，也不宣稱 Phase 40 已完成。
+- 已完成 Phase 40 planning、`40-02` Embedding / SFT experiment evidence、`40-03` inference hardware benchmark evidence 與 `40-04` observability dashboard evidence。`40-05` 尚未實作，不 bump version、不新增 runtime，也不宣稱 Phase 40 已完成。
 
 ### Phase 40 - JD Evidence Hardening
 
@@ -619,6 +619,13 @@ Expected Outcome：
 - Report 明確說明 TOPS 不是 tokens/sec，NPU 需要真實 runtime / profiler 才能宣稱實測結果；目前只提供 local benchmark evidence template 與 skip-safe rows。
 - Release Impact：Version bump required: no。版本同步留到 `40-05`；不新增 production inference gateway、multi-GPU serving、autoscaling、model registry、NPU profiler、default provider change、RAG prompt change、Agent planner change、VLM parser change 或 OCR pipeline change。
 - Validation：ticket `rg` 與 `git diff --check` 通過。
+
+40-04 Observability Dashboard Evidence Status：
+- 已完成 Phase 40 observability dashboard evidence。`docs/observability-dashboard-evidence.md` 現在整理 Loki / Grafana / OpenSearch evidence path、dashboard / query examples、API log、worker log、RAG trace、retrieval latency、rerank latency、generation latency、eval metrics 與 fallback / unavailable behavior。
+- 新增 `infra/observability/grafana-dashboard-docurag-evidence.json` 作為 demo-safe Grafana dashboard JSON skeleton，panel 覆蓋 API latency p95、API error rate、worker task failures、RAG retrieval / rerank / generation latency、fallback count、Hit Rate 與 MRR。
+- Log schema mapping 明列 trace_id、request_id、organization_id、project_id、document_id、strategy、provider、latency_ms、status 與 error_code；不記 raw document text、prompt、bearer token 或 production identifiers。
+- Release Impact：Version bump required: no。版本同步留到 `40-05`；不新增 production alerting、SLO、incident workflow、distributed tracing 或 APM vendor integration，也不改 RAG ranking、Agent planner、OCR / parser behavior 或 worker runtime。
+- Validation：ticket `rg`、Grafana dashboard JSON parse 與 `git diff --check` 通過。
 
 Phase 40 Guardrails：
 

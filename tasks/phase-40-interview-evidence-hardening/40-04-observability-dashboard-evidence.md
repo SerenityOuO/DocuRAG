@@ -38,16 +38,25 @@
 
 ## Acceptance Criteria
 
-- [ ] 有一份 observability evidence docs，包含 dashboard / query examples。
-- [ ] Evidence 覆蓋 API log、worker log、RAG trace、latency 與 eval metrics。
-- [ ] Query examples 覆蓋 API latency p95、error rate、worker task failures、retrieval / rerank / generation latency、fallback count、Hit Rate 與 MRR。
-- [ ] Dashboard evidence 至少包含 Grafana dashboard JSON skeleton、panel spec、OpenSearch saved query 或 demo-safe screenshot 其中一種。
-- [ ] Log schema mapping 包含 trace_id、request_id、project_id、strategy、provider、latency_ms、status 與 error_code。
-- [ ] 若有截圖或 query result，必須是 demo-safe 且可在 README_DEV 找到說明。
-- [ ] 文件明確標示這是 observability evidence，不是 production alerting stack。
-- [ ] App 在 observability stack unavailable 時仍有 fallback / skip 說明。
+- [x] 有一份 observability evidence docs，包含 dashboard / query examples。
+- [x] Evidence 覆蓋 API log、worker log、RAG trace、latency 與 eval metrics。
+- [x] Query examples 覆蓋 API latency p95、error rate、worker task failures、retrieval / rerank / generation latency、fallback count、Hit Rate 與 MRR。
+- [x] Dashboard evidence 至少包含 Grafana dashboard JSON skeleton、panel spec、OpenSearch saved query 或 demo-safe screenshot 其中一種。
+- [x] Log schema mapping 包含 trace_id、request_id、project_id、strategy、provider、latency_ms、status 與 error_code。
+- [x] 若有截圖或 query result，必須是 demo-safe 且可在 README_DEV 找到說明。
+- [x] 文件明確標示這是 observability evidence，不是 production alerting stack。
+- [x] App 在 observability stack unavailable 時仍有 fallback / skip 說明。
 
 ## Validation
 
 - `rg -n "observability evidence|Loki|Grafana|OpenSearch|dashboard|query example|RAG trace|eval metrics|latency|p95|error rate|fallback count|Hit Rate|MRR|trace_id|request_id|error_code" docs infra outputs README_DEV.md TODO.md tasks/phase-40-interview-evidence-hardening`
 - `git diff --check`
+
+## Status
+
+- Completed. Added `docs/observability-dashboard-evidence.md`.
+- Added `infra/observability/grafana-dashboard-docurag-evidence.json` as a demo-safe Grafana dashboard JSON skeleton.
+- Updated `infra/observability/README.md`, `README_DEV.md`, `TODO.md` and `docs/ROADMAP.md`.
+- Evidence covers API log, worker log, RAG trace, eval metrics, API latency p95, API error rate, worker task failures, retrieval / rerank / generation latency, fallback count, Hit Rate, MRR and log schema mapping.
+- Release Impact: Version bump required: no. Version sync remains deferred to `40-05`.
+- Validation passed: ticket `rg`, Grafana dashboard JSON parse and `git diff --check`.

@@ -114,3 +114,12 @@ avg_over_time({service="docurag", event_type="eval_metrics"} | json | unwrap mrr
 ```
 
 OpenSearch can read the same JSONL schema, but Phase 39 keeps Loki + Grafana as the default local path.
+
+## Phase 40 Dashboard Evidence
+
+Phase 40 adds interview evidence docs and a demo-safe Grafana dashboard skeleton:
+
+- `docs/observability-dashboard-evidence.md`
+- `infra/observability/grafana-dashboard-docurag-evidence.json`
+
+The skeleton covers API latency p95, API error rate, worker task failures, RAG retrieval latency, RAG rerank latency, RAG generation latency, fallback count, Hit Rate and MRR. It is importable local evidence only; it is not production alerting, SLO, incident workflow, distributed tracing or APM vendor integration.

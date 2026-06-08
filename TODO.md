@@ -339,7 +339,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync，Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release sync，Phase 37 已完成 `v0.37.0` inference ops / vLLM serving release sync，Phase 38 已完成 `v0.38.0` Agent runtime hardening release sync，Phase 39 已完成 `v0.39.0` deployment / observability / fine-tuning track release sync。Phase 40 planning、`40-02` Embedding / SFT experiment evidence 與 `40-03` inference hardware benchmark evidence 已完成，`40-04` 與 `40-05` 尚未實作。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync，Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release sync，Phase 37 已完成 `v0.37.0` inference ops / vLLM serving release sync，Phase 38 已完成 `v0.38.0` Agent runtime hardening release sync，Phase 39 已完成 `v0.39.0` deployment / observability / fine-tuning track release sync。Phase 40 planning、`40-02` Embedding / SFT experiment evidence、`40-03` inference hardware benchmark evidence 與 `40-04` observability dashboard evidence 已完成，`40-05` 尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。
@@ -488,7 +488,7 @@ Phase 31-39 guardrails：
 Phase 40 `v0.40.0` - JD evidence hardening：
 - [x] `tasks/phase-40-interview-evidence-hardening/40-02-embedding-sft-experiment-evidence.md`: 補齊 research-only Embedding / SFT experiment evidence report、before / after eval table、synthetic data coverage、skip reason 與 risk notes；不 bump version、不新增 runtime。
 - [x] `tasks/phase-40-interview-evidence-hardening/40-03-inference-hardware-benchmark-evidence.md`: 補齊 inference hardware benchmark evidence report，整理 vLLM / Ollama / OpenAI-compatible matrix、KV cache、TOPS / NPU、VRAM、tokens/sec、latency 與 skip reason；不 bump version、不新增 runtime。
-- [ ] `tasks/phase-40-interview-evidence-hardening/40-04-observability-dashboard-evidence.md`
+- [x] `tasks/phase-40-interview-evidence-hardening/40-04-observability-dashboard-evidence.md`: 補齊 observability dashboard evidence docs、Loki / Grafana query examples、Grafana dashboard JSON skeleton、log schema mapping 與 fallback / unavailable 說明；不 bump version、不新增 production alerting。
 - [ ] `tasks/phase-40-interview-evidence-hardening/40-05-phase-40-release-sync.md`
 
 40-02 Embedding SFT Experiment Evidence Status：
@@ -502,6 +502,12 @@ Phase 40 `v0.40.0` - JD evidence hardening：
 - Metrics table 保留 p50 / p95 latency、time to first token、tokens/sec、prompt tokens、completion tokens、VRAM peak、KV cache estimated bytes、provider fallback 與 skip reason；沒有實測資料時明確標示 pending / skipped，不偽造 capacity 結論。
 - Validation 已通過：ticket `rg` 與 `git diff --check`。
 - Release Impact：Version bump required: no。版本同步留到 `40-05`；本 ticket 不啟動 vLLM、不新增 NPU profiler、不宣稱 production capacity guarantee，也不改 default provider、RAG prompt、Agent planner、VLM parser 或 OCR pipeline。
+
+40-04 Observability Dashboard Evidence Status：
+- 已完成 Phase 40 observability dashboard evidence。新增 `docs/observability-dashboard-evidence.md` 與 `infra/observability/grafana-dashboard-docurag-evidence.json`，並在 `infra/observability/README.md` 補上 dashboard skeleton 入口。
+- Evidence 覆蓋 API log、worker log、RAG trace、retrieval latency、rerank latency、generation latency、eval metrics、API latency p95、API error rate、worker task failures、fallback count、Hit Rate、MRR 與 log schema mapping。
+- Validation 已通過：ticket `rg`、Grafana dashboard JSON parse 與 `git diff --check`。
+- Release Impact：Version bump required: no。版本同步留到 `40-05`；本 ticket 不新增 production alerting、SLO、incident workflow、distributed tracing 或 APM vendor integration，也不改 RAG ranking、Agent planner、OCR / parser behavior 或 worker runtime。
 
 Phase 40 guardrails：
 
