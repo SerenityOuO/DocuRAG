@@ -1,0 +1,59 @@
+{
+  "schema_version": "parser_field_results_v1",
+  "description": "Demo-safe parser output fixture for Phase 44 parser field accuracy evaluation.",
+  "parser_results": [
+    {
+      "document_id": "sample-aurora-invoice",
+      "filename": "mock-invoice-aurora.txt",
+      "parser_source": "deterministic_invoice",
+      "fallback_reason": "",
+      "fields": {
+        "vendor_name": {
+          "value": "Aurora Office Supplies",
+          "confidence": 0.76,
+          "source_text": "Vendor: Aurora Office Supplies Demo LLC",
+          "source_page": 1,
+          "source_bbox": null,
+          "parser_source": "deterministic_invoice",
+          "fallback_reason": ""
+        },
+        "invoice_number": {
+          "value": "AUR-2026-051",
+          "confidence": 0.97,
+          "source_text": "Invoice No: AUR-2026-051",
+          "source_page": 1,
+          "source_bbox": null,
+          "parser_source": "deterministic_invoice",
+          "fallback_reason": ""
+        },
+        "issue_date": {
+          "value": null,
+          "confidence": null,
+          "source_text": null,
+          "source_page": null,
+          "source_bbox": null,
+          "parser_source": "deterministic_invoice",
+          "fallback_reason": "missing_field"
+        },
+        "total_amount": {
+          "value": "1,248.50",
+          "confidence": 0.88,
+          "source_text": "Total: USD 1,248.50",
+          "source_page": 1,
+          "source_bbox": null,
+          "parser_source": "deterministic_invoice",
+          "fallback_reason": ""
+        },
+        "currency": {
+          "value": "USD",
+          "confidence": 0.62,
+          "source_text": "Currency: USD",
+          "source_page": 2,
+          "source_bbox": null,
+          "parser_source": "deterministic_invoice",
+          "fallback_reason": "evidence_unmatched"
+        }
+      }
+    }
+  ]
+}

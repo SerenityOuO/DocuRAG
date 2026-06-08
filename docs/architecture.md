@@ -403,6 +403,12 @@ Human correction / golden labels boundary：
 - Admin / Analyst 可透過 frontend structured fields surface 或 `POST /documents/{document_id}/corrections` 保存 correction；Viewer 仍被 ingestion write guard 擋下。
 - `GET /documents/golden-labels` 只匯出每個 document field 最新版本的 golden labels，並套用 project access filtering。這是 demo-safe eval artifact，不是 production annotation workflow、multi-review conflict resolution、external labeling service、model training writeback、production parser prompt writeback 或 destructive edit / delete flow。
 
+44-04 parser field accuracy eval artifact notes：
+
+- `scripts/parser-field-accuracy-smoke.ps1` 讀取 `parser-golden-labels.json` 與 `parser-field-results.json`，輸出 `parser_field_accuracy_report_v1`。
+- Report 保留 field accuracy、document accuracy、missing field count、wrong value count、evidence mismatch count、parser_source、fallback reason、confidence bucket 與 sample count。
+- Parser field accuracy 只評估 structured fields 對 human golden labels 的符合程度；它不是 RAG retrieval eval、LLM-as-judge、answer faithfulness、model training、production analytics dashboard 或 automatic parser correction。
+
 ## Phase 26 VLM Parser Provider Boundary
 
 Phase 26 的目標是把 parser default 切成 VLM-first demo path：`vlm_invoice` 先從既有 upload metadata 解析 demo-safe image input，再呼叫可設定的 local VLM provider；provider unavailable、timeout、unsupported file、invalid response、missing fields 或 confidence too low 時，才 fallback 到 `deterministic_invoice`。v0.27.1 起 VLM request 也帶 compact OCR context，VLM 欄位結果會嘗試對回 OCR line / bbox。這不改 Phase 25 Agent planner / tool allowlist；Agent 仍只透過 `get_document_fields` 讀取保存後的 parser result。

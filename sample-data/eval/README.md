@@ -12,6 +12,8 @@
 - `agent-replay-sample.json`：Phase 43 Agent replay artifact，保存 read-only Agent run 的 policy snapshot、tool calls、observations、citations、fallback reason 與 final answer source。
 - `agent-replay-report.json`：Phase 43 Agent replay smoke 產生的 deterministic eval report，包含 tool correctness、permission compliance、evidence coverage、fallback reason 與 groundedness notes。
 - `parser-golden-labels.json`：Phase 44 human correction / golden labels artifact，保存 field name、corrected value、source document、reviewer、reason、version 與 timestamp，供後續 parser field accuracy eval 使用；不是 model training dataset 或 production annotation export。
+- `parser-field-results.json`：Phase 44 parser field accuracy eval 的 demo-safe parser output fixture，保留 parser value、confidence、parser_source、fallback reason 與 evidence metadata。
+- `parser-field-accuracy-report.json`：Phase 44 parser field accuracy smoke 產生的 deterministic report，輸出 field accuracy、document accuracy、missing field、wrong value、evidence mismatch、confidence bucket 與 parser_source 摘要。
 
 ## Data Safety
 
@@ -83,6 +85,22 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\agent-replay-smoke
 ```
 
 這不是 production autonomous Agent eval platform、LLM-as-judge、production audit storage 或外部副作用 replay。`permission compliance` 只檢查 artifact 中的 policy snapshot 沒有 destructive / prohibited / approval bypass 狀態；它不替代 runtime RBAC guard。
+
+## Parser Field Accuracy Eval
+
+Phase 44 的 parser field accuracy eval 只量化結構化欄位抽取品質。它讀取 `parser-golden-labels.json` 與 `parser-field-results.json`，比較 human golden labels 與 parser output，輸出 exact match、normalized match、missing field、wrong value、evidence mismatch、confidence bucket 與 parser_source 摘要。
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\parser-field-accuracy-smoke.ps1
+```
+
+若要重生 tracked demo report：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\parser-field-accuracy-smoke.ps1 -ReportPath .\sample-data\eval\parser-field-accuracy-report.json
+```
+
+Parser field accuracy 不等於 RAG retrieval eval。此 smoke 不查 Qdrant、不跑 rerank、不評估 answer faithfulness、不使用 LLM-as-judge，也不把 human correction 寫回 model training 或 production parser prompt。
 
 ## Regression Report
 

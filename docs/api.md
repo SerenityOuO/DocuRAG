@@ -1450,6 +1450,14 @@ Parser field accuracy eval should compare parser output to golden labels and rep
 | `wrong_value_count` | Parser output exists but does not match the golden label. |
 | `evidence_mismatch_count` | Parser value may match, but evidence source / page / bbox does not match expected evidence. |
 
+`44-04` adds a demo-safe parser field accuracy smoke artifact. The script reads `sample-data/eval/parser-golden-labels.json` and `sample-data/eval/parser-field-results.json`, then writes a `parser_field_accuracy_report_v1` report with:
+
+- `field_accuracy` and `document_accuracy`.
+- `missing_field_count`, `wrong_value_count` and `evidence_mismatch_count`.
+- `parser_source_counts`, `confidence_bucket_counts`, `fallback_reason_counts` and per-field comparison rows.
+
+The tracked sample report is `sample-data/eval/parser-field-accuracy-report.json`. It is parser / VLM field eval only; it does not call RAG retrieval, Qdrant, rerank, LLM-as-judge, model training or automatic parser correction.
+
 This contract does not implement layout analysis, table reconstruction, deskew deep tuning, production OCR accuracy tuning, RAG ranking changes, Agent behavior changes or inference provider changes.
 
 ## Phase 26 VLM Parser Provider Contract Draft

@@ -7,12 +7,36 @@
       "document_id": "sample-aurora-invoice",
       "filename": "mock-invoice-aurora.txt",
       "project_id": null,
+      "field_name": "vendor_name",
+      "corrected_value": "Aurora Office Supplies Demo LLC",
+      "reviewer": "demo_analyst",
+      "reason": "verified full vendor legal name from synthetic invoice sample",
+      "version": 1,
+      "source_parser_value": "Aurora Office Supplies",
+      "updated_at": "2026-06-08T00:00:00Z"
+    },
+    {
+      "document_id": "sample-aurora-invoice",
+      "filename": "mock-invoice-aurora.txt",
+      "project_id": null,
       "field_name": "invoice_number",
       "corrected_value": "AUR-2026-051",
       "reviewer": "demo_analyst",
       "reason": "verified invoice number from synthetic invoice sample",
       "version": 1,
       "source_parser_value": "AUR-2026-051",
+      "updated_at": "2026-06-08T00:00:00Z"
+    },
+    {
+      "document_id": "sample-aurora-invoice",
+      "filename": "mock-invoice-aurora.txt",
+      "project_id": null,
+      "field_name": "issue_date",
+      "corrected_value": "2026-05-31",
+      "reviewer": "demo_analyst",
+      "reason": "verified issue date from synthetic invoice sample",
+      "version": 1,
+      "source_parser_value": null,
       "updated_at": "2026-06-08T00:00:00Z"
     },
     {

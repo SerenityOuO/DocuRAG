@@ -35,9 +35,9 @@
 
 ## Acceptance Criteria
 
-- [ ] Parser field accuracy eval 可輸出 field accuracy、missing field、wrong value 與 evidence mismatch。
-- [ ] Report 包含 parser_source、fallback reason、confidence bucket 與 sample count。
-- [ ] 文件清楚說明 parser eval 不等於 RAG retrieval eval。
+- [x] Parser field accuracy eval 可輸出 field accuracy、missing field、wrong value 與 evidence mismatch。
+- [x] Report 包含 parser_source、fallback reason、confidence bucket 與 sample count。
+- [x] 文件清楚說明 parser eval 不等於 RAG retrieval eval。
 
 ## Validation
 
@@ -45,3 +45,10 @@
 - Backend tests if runtime changes。
 - `rg -n "parser field accuracy|missing field|wrong value|evidence mismatch|confidence bucket|parser_source" backend scripts sample-data docs README_DEV.md TODO.md tasks/phase-44-document-intelligence-qa-human-review`
 - `git diff --check`
+
+## Completion Notes
+
+- 新增 `scripts/parser-field-accuracy-smoke.ps1`，可讀取 golden labels 與 parser result fixture 並輸出 `parser_field_accuracy_report_v1`。
+- 新增 `sample-data/eval/parser-field-results.json` 與 `sample-data/eval/parser-field-accuracy-report.json`；tracked report 可用同一支 smoke script 重生。
+- Report 目前展示 field accuracy `0.6`、sample count `5`、missing field / wrong value / evidence mismatch 各 `1`，並保留 parser_source、fallback reason 與 confidence bucket。
+- Validation 已通過：parser field accuracy smoke、Phase 44 keyword `rg` 與 `git diff --check`。本 ticket 未改 backend runtime，因此未跑 backend tests。

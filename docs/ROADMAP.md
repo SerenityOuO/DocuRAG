@@ -776,7 +776,7 @@ Tickets：
 - [x] `tasks/phase-44-document-intelligence-qa-human-review/44-01-document-intelligence-qa-contract.md`
 - [x] `tasks/phase-44-document-intelligence-qa-human-review/44-02-field-confidence-and-evidence-view.md`
 - [x] `tasks/phase-44-document-intelligence-qa-human-review/44-03-human-correction-and-golden-labels.md`
-- `tasks/phase-44-document-intelligence-qa-human-review/44-04-parser-field-accuracy-eval.md`
+- [x] `tasks/phase-44-document-intelligence-qa-human-review/44-04-parser-field-accuracy-eval.md`
 - `tasks/phase-44-document-intelligence-qa-human-review/44-05-phase-44-release-sync.md`
 
 Expected Outcome：
@@ -803,6 +803,12 @@ Expected Outcome：
 - 已完成。Backend 新增 append-only field correction metadata，保存 field name、corrected value、reviewer、reason、version、timestamp 與 source parser value；同欄位每次保存都遞增 version，不覆寫原始 parser result。
 - Admin / Analyst 可在 structured fields surface 保存 corrected value，Viewer 仍不能呼叫 correction write API；`GET /documents/golden-labels` 會匯出 project-scoped latest golden labels，供 `44-04` parser field accuracy eval 使用。
 - Validation 已通過：focused correction / golden label backend tests、frontend build、correction / golden label smoke、Phase 44 keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: no；版本同步留到 `44-05`。本 ticket 不新增 production annotation workflow、multi-review、conflict resolution、external labeling service、model training writeback、production parser prompt writeback 或 destructive edit / delete flow。
+
+44-04 Parser Field Accuracy Eval Status：
+
+- 已完成。新增 `scripts/parser-field-accuracy-smoke.ps1`，讀取 `parser-golden-labels.json` 與 `parser-field-results.json`，輸出 `parser_field_accuracy_report_v1`。
+- Report 會顯示 field accuracy、document accuracy、missing field count、wrong value count、evidence mismatch count、parser_source、fallback reason、confidence bucket 與 sample count；tracked demo report 放在 `sample-data/eval/parser-field-accuracy-report.json`。
+- Validation 已通過：parser field accuracy smoke，field accuracy `0.6`、sample count `5`、missing field / wrong value / evidence mismatch 各 `1`；Phase 44 keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: no；版本同步留到 `44-05`。本 ticket 不新增 RAG retrieval eval、LLM-as-judge、model training、production analytics dashboard 或 automatic parser correction。
 
 ### Phase 45 - Production Readiness / Interview Portfolio Pack
 

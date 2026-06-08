@@ -1,0 +1,119 @@
+﻿{
+    "schema_version":  "parser_field_accuracy_report_v1",
+    "evaluation_mode":  "deterministic_parser_vs_human_golden_labels",
+    "dataset":  {
+                    "golden_labels_path":  "sample-data/eval/parser-golden-labels.json",
+                    "parser_results_path":  "sample-data/eval/parser-field-results.json",
+                    "label_count":  5,
+                    "document_count":  1
+                },
+    "summary":  {
+                    "field_accuracy":  0.6,
+                    "document_accuracy":  0,
+                    "sample_count":  5,
+                    "document_count":  1,
+                    "matched_field_count":  3,
+                    "exact_match_count":  2,
+                    "normalized_match_count":  1,
+                    "missing_field_count":  1,
+                    "wrong_value_count":  1,
+                    "evidence_mismatch_count":  1
+                },
+    "parser_source_counts":  {
+                                 "deterministic_invoice":  5
+                             },
+    "confidence_bucket_counts":  {
+                                     "high":  2,
+                                     "medium":  2,
+                                     "unknown":  1
+                                 },
+    "fallback_reason_counts":  {
+                                   "evidence_unmatched":  1,
+                                   "missing_field":  1,
+                                   "none":  3
+                               },
+    "field_results":  [
+                          {
+                              "document_id":  "sample-aurora-invoice",
+                              "filename":  "mock-invoice-aurora.txt",
+                              "field_name":  "vendor_name",
+                              "expected_value":  "Aurora Office Supplies Demo LLC",
+                              "parser_value":  "Aurora Office Supplies",
+                              "comparison_result":  "wrong_value",
+                              "expected_normalized":  "aurora office supplies demo llc",
+                              "parser_normalized":  "aurora office supplies",
+                              "parser_source":  "deterministic_invoice",
+                              "fallback_reason":  "",
+                              "confidence":  0.76,
+                              "confidence_bucket":  "medium",
+                              "evidence_status":  "available",
+                              "correction_version":  1
+                          },
+                          {
+                              "document_id":  "sample-aurora-invoice",
+                              "filename":  "mock-invoice-aurora.txt",
+                              "field_name":  "invoice_number",
+                              "expected_value":  "AUR-2026-051",
+                              "parser_value":  "AUR-2026-051",
+                              "comparison_result":  "exact_match",
+                              "expected_normalized":  "aur-2026-051",
+                              "parser_normalized":  "aur-2026-051",
+                              "parser_source":  "deterministic_invoice",
+                              "fallback_reason":  "",
+                              "confidence":  0.97,
+                              "confidence_bucket":  "high",
+                              "evidence_status":  "available",
+                              "correction_version":  1
+                          },
+                          {
+                              "document_id":  "sample-aurora-invoice",
+                              "filename":  "mock-invoice-aurora.txt",
+                              "field_name":  "issue_date",
+                              "expected_value":  "2026-05-31",
+                              "parser_value":  null,
+                              "comparison_result":  "missing_field",
+                              "expected_normalized":  "2026-05-31",
+                              "parser_normalized":  "",
+                              "parser_source":  "deterministic_invoice",
+                              "fallback_reason":  "missing_field",
+                              "confidence":  null,
+                              "confidence_bucket":  "unknown",
+                              "evidence_status":  "available",
+                              "correction_version":  1
+                          },
+                          {
+                              "document_id":  "sample-aurora-invoice",
+                              "filename":  "mock-invoice-aurora.txt",
+                              "field_name":  "total_amount",
+                              "expected_value":  1248.5,
+                              "parser_value":  "1,248.50",
+                              "comparison_result":  "normalized_match",
+                              "expected_normalized":  "1248.5",
+                              "parser_normalized":  "1248.5",
+                              "parser_source":  "deterministic_invoice",
+                              "fallback_reason":  "",
+                              "confidence":  0.88,
+                              "confidence_bucket":  "high",
+                              "evidence_status":  "available",
+                              "correction_version":  1
+                          },
+                          {
+                              "document_id":  "sample-aurora-invoice",
+                              "filename":  "mock-invoice-aurora.txt",
+                              "field_name":  "currency",
+                              "expected_value":  "USD",
+                              "parser_value":  "USD",
+                              "comparison_result":  "exact_match",
+                              "expected_normalized":  "usd",
+                              "parser_normalized":  "usd",
+                              "parser_source":  "deterministic_invoice",
+                              "fallback_reason":  "evidence_unmatched",
+                              "confidence":  0.62,
+                              "confidence_bucket":  "medium",
+                              "evidence_status":  "evidence_unmatched",
+                              "correction_version":  1
+                          }
+                      ],
+    "boundary":  "Parser field accuracy compares structured parser output to human golden labels. It is not RAG retrieval eval, LLM-as-judge, model training, production analytics dashboard or automatic parser correction.",
+    "local_usage":  "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\parser-field-accuracy-smoke.ps1"
+}
