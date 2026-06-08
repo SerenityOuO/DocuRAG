@@ -826,7 +826,7 @@ Tickets：
 
 - [x] `tasks/phase-45-production-readiness-portfolio-pack/45-01-jd-evidence-matrix.md`
 - [x] `tasks/phase-45-production-readiness-portfolio-pack/45-02-system-design-walkthrough.md`
-- `tasks/phase-45-production-readiness-portfolio-pack/45-03-demo-scenario-pack.md`
+- [x] `tasks/phase-45-production-readiness-portfolio-pack/45-03-demo-scenario-pack.md`
 - `tasks/phase-45-production-readiness-portfolio-pack/45-04-risk-boundary-and-tradeoff-report.md`
 - `tasks/phase-45-production-readiness-portfolio-pack/45-05-phase-45-final-release-sync.md`
 
@@ -856,6 +856,12 @@ Phase 41-45 Validation Direction：
 - 已完成。新增 `docs/system-design-walkthrough.md`，可用 10 分鐘說明 Viewer Chat、Admin Ingestion、OCR / VLM parser、RAG indexing / eval、AgentOps、Redis / NATS、PostgreSQL、inference gateway 與 observability 的角色。
 - 文件包含白板式資料流、failure / fallback 解讀，以及 local JSON vs PostgreSQL、sync API vs worker、demo-safe vs production-ready 等主要 tradeoffs。
 - Validation 已通過：system design keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: no；版本同步留到 `45-05`。本 ticket 不新增架構圖生成工具、runtime、infra config 或 deployment service。
+
+45-03 Demo Scenario Pack Status：
+
+- 已完成。新增 `docs/demo-scenario-pack.md`，把 final interview demo 拆成 RAG quality、Document Intelligence QA、AgentOps governance 三條主線，並補 Inference Gateway / capacity planning、Observability evidence、K8s / deployment boundary optional path。
+- 每條 path 都列出前置條件、操作步驟、預期畫面 / 輸出與 fallback 解讀，讓 unavailable optional runtime 可以被正確說成 skip-safe / fallback，而不是 demo failure 或 production success。
+- Validation 已通過：demo scenario keyword `rg` 與 `git diff --check`。Release Impact：Version bump required: no；版本同步留到 `45-05`。本 ticket 不新增 demo runtime、sample secrets、外部服務帳號、paid API、optional runtime requirement 或影片媒體。
 
 ## v0.2.0 Demo UI Milestone
 

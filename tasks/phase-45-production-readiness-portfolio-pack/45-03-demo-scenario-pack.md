@@ -32,9 +32,15 @@
 
 ## Acceptance Criteria
 
-- [ ] Demo pack 至少包含 RAG quality、Document Intelligence QA 與 AgentOps governance 三條主線。
-- [ ] 每條主線包含前置條件、操作步驟、預期結果與 fallback 解讀。
-- [ ] Optional inference / observability / K8s path 不要求 production runtime。
+- [x] Demo pack 至少包含 RAG quality、Document Intelligence QA 與 AgentOps governance 三條主線。
+- [x] 每條主線包含前置條件、操作步驟、預期結果與 fallback 解讀。
+- [x] Optional inference / observability / K8s path 不要求 production runtime。
+
+## Completion Notes
+
+- 新增 `docs/demo-scenario-pack.md`，整理 RAG quality、Document Intelligence QA、AgentOps governance 三條主線。
+- 補充 Inference Gateway / capacity planning、Observability evidence、K8s / deployment boundary optional path，並明確標示 optional runtime unavailable 是 skip-safe / fallback，不是錯誤。
+- 未新增 demo runtime、sample secrets、外部服務帳號、paid API、optional runtime requirement、影片媒體或 version bump。
 
 ## Validation
 
