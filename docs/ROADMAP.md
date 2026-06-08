@@ -145,7 +145,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 Phase 31 `v0.31.0` release sync、Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync、Phase 33 `v0.33.0` Redis + NATS Worker Pipeline release sync、Phase 34 `v0.34.0` Production OCR / Scanned PDF Pipeline release sync、Phase 35 `v0.35.0` RAG Indexing Quality Hardening release sync、Phase 36 `v0.36.0` Eval Dashboard / Rerank Analysis release sync 與 Phase 37 `v0.37.0` Inference Ops / vLLM Serving release sync，並已建立 Phase 38 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04`、Phase 33 `33-01` 到 `33-04`、Phase 34 `34-01` 到 `34-04`、Phase 35 `35-01` 到 `35-04`、Phase 36 `36-01` 到 `36-04` 與 Phase 37 `37-01` 到 `37-04` 均已完成；不宣稱 Phase 38 到 Phase 39 已整體完成。
+- 已完成 Phase 31 `v0.31.0` release sync、Phase 32 `v0.32.0` Formal Auth / RBAC / Tenant Boundary release sync、Phase 33 `v0.33.0` Redis + NATS Worker Pipeline release sync、Phase 34 `v0.34.0` Production OCR / Scanned PDF Pipeline release sync、Phase 35 `v0.35.0` RAG Indexing Quality Hardening release sync、Phase 36 `v0.36.0` Eval Dashboard / Rerank Analysis release sync 與 Phase 37 `v0.37.0` Inference Ops / vLLM Serving release sync，並已建立 Phase 38 到 Phase 39 的 future ticket backlog。`31-02` PostgreSQL boundary / migration policy、`31-03` DB schema contract、`31-04` repository adapter / migration path、`31-05` release sync、`32-01` 到 `32-04`、Phase 33 `33-01` 到 `33-04`、Phase 34 `34-01` 到 `34-04`、Phase 35 `35-01` 到 `35-04`、Phase 36 `36-01` 到 `36-04`、Phase 37 `37-01` 到 `37-04` 與 Phase 38 `38-01` contract 均已完成；不宣稱 Phase 38 runtime 或 Phase 39 已整體完成。
 
 ### Phase 31 - PostgreSQL / Schema / Repository Foundation
 
@@ -501,6 +501,14 @@ Expected Outcome：
 - Tool 分成 read-only、write、admin、destructive tiers；每個 tier 都有 permission guard。
 - Agent trace 顯示 planning、tool selection、observation、reflection / fallback 與 final answer。
 - 不允許任意 SQL、shell、filesystem command 或無權限 destructive tool。
+
+Status：
+
+- `38-01` 已完成 Agent runtime permission contract。文件已定義 `deterministic` always-available fallback、future `llm_planner` provider boundary、timeout / invalid plan / unsafe tool selection fallback，以及 plan schema validation 失敗時不得執行 tool。
+- Tool tiers 已固定為 `read-only`、`write`、`admin`、`destructive`，permission guard 必須檢查 role、project access、tool allowlist、tool tier、input schema、target resource project 與 human confirmation state。
+- Trace contract 已包含 `planner_provider`、`plan_steps`、`tool_tier`、`permission_decision`、`observation_summary`、`reflection`、`fallback_reason` 與 `final_answer_source`；trace 不得保存 secret、raw bearer token、API key 或 private credential。
+- Forbidden boundary 已明確禁止任意 SQL、shell、filesystem command、arbitrary network tool、delete、drop table、destructive reindex、credential mutation、production database mutation 或任何 destructive tool。
+- Release Impact：Version bump required: no。`38-01` 是 contract 文件，不新增 LLM planner runtime、tool execution code、Auth / RBAC schema、RAG ranking、OCR 或 parser behavior。
 
 ### Phase 39 - Deployment / Observability / Fine-tuning Track
 

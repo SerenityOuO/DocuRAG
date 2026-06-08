@@ -20,7 +20,7 @@ Admin / Analyst Ingestion Surface
     |-- Phase 24 parser result: OCR text -> structured fields
     |-- Phase 26 / 27 parser route: image input + OCR context -> vlm_invoice -> deterministic fallback
     |-- Phase 29 built-in RAG eval: fixed hybrid_rerank Chinese invoice benchmark
-    |-- Phase 25 Agent contract: deterministic plan -> allowlisted tools -> trace
+    |-- Phase 25 / 38 Agent contract: deterministic fallback -> permission-guarded tools -> trace
     |
 FastAPI Backend
     |
@@ -247,6 +247,44 @@ Agent guardrails：
 - 不新增 PostgreSQL、Redis、NATS、worker、async queue、Auth、RBAC、role guard、project permission 或 multi-user isolation。
 - 不修改 parser extraction、OCR provider、RAG ranking、eval runner、Qdrant indexing 或 default Viewer Chat path。
 - Agent trace surface 不宣稱 production Agent dashboard 或正式權限系統。
+
+## Phase 38 Agent Runtime Permission Contract
+
+`38-01` 固定 Agent runtime hardening 的 planner、tool permission、fallback 與 trace contract。這是文件合約，不新增 LLM planner runtime、不新增 tool execution code，也不改 Auth / RBAC schema、RAG ranking、OCR 或 parser behavior。
+
+Planner boundary：
+
+- `deterministic` planner 是 always-available fallback，也是目前可執行的安全基準。LLM planner 未啟用、timeout、回傳 invalid plan、選到未允許工具、缺少必要 evidence 或 plan schema validation 失敗時，都必須回到 deterministic fallback 或回傳明確 failed state。
+- Future `llm_planner` 只能作為明確啟用的 provider boundary。它的輸出必須是結構化 plan，只能從 request role / project context 與 allowed tools 中選擇步驟，不得自行發明工具、參數或跨 project 讀寫。
+- Planner timeout、invalid JSON / invalid schema、unsafe tool selection、missing required input、citation / observation 不足時，都必須記錄 `planner_fallback_reason`，並且不得執行任何未通過 permission guard 的 tool。
+
+Tool tiers：
+
+| Tier | Allowed boundary | Permission requirement |
+|---|---|---|
+| `read-only` | 只讀目前使用者可存取 project 內的文件、parser fields、retrieval evidence、eval result 或既有 Agent run。 | 需要有效 role 與 project access；不需要 human confirmation。 |
+| `write` | 只能建立或更新 project-scoped、可回溯、非 destructive 的應用資料。Phase 38 後續 runtime ticket 若要開放，必須逐項 allowlist。 | 需要 Analyst / Admin、project access 與 explicit permission guard；需要 human confirmation。 |
+| `admin` | 只限 project / organization 管理型動作，必須可 audit。Phase 38 `38-01` 不新增此類 runtime。 | 需要 Admin、project access、audit trace 與 human confirmation。 |
+| `destructive` | 刪除、drop、reindex destructive mode、不可逆資料改動、外部 side effect、任意 SQL、shell、filesystem command、network tool 或 secret / credential 變更。 | Phase 38 contract 視為 prohibited；後續若要新增，必須另有 ticket、明確 rollback / approval policy 與更嚴格 validation。 |
+
+Permission guard rules：
+
+- Tool selection 前與 tool execution 前都必須檢查 role、project access、tool allowlist、tool tier、input schema 與 target resource project。
+- Viewer 只能走 read-only 查詢與 trace lookup；Analyst / Admin 才可能在後續 ticket 被允許 write / admin tool。任何跨 project、unknown tool、unknown tier、schema 外參數或不符合 role 的 tool request 都必須被拒絕。
+- Human confirmation requirement 是 trace contract 的一部分：read-only 可為 `not_required`；future write / admin 必須是 `required` 且在 confirmed 前不得 execution；destructive 在 Phase 38 `38-01` 中一律 unavailable。
+- Permission guard 不得被 LLM planner、provider fallback、manual override 或 smoke script 繞過。
+
+Trace contract：
+
+- Plan trace 必須包含 `planner_provider`、`planner_status`、`planner_latency_ms`、`planner_fallback_reason`、`plan_id`、`plan_steps` 與 `plan_validation_status`。
+- Tool selection trace 必須包含 `tool_name`、`tool_tier`、`permission_decision`、`required_role`、`project_id`、`project_access`、`human_confirmation_required` 與 `human_confirmation_status`。
+- Observation / reflection trace 必須包含 `observation_summary`、`citations`、`reflection`、`fallback_reason`、`final_answer_source` 與 final answer status。
+- Trace 不得記錄 production secret、raw bearer token、API key、private credential 或未遮罩的敏感設定。
+
+Forbidden boundary：
+
+- Phase 38 contract 明確禁止任意 SQL、shell command、filesystem command、arbitrary network tool、delete、drop table、destructive reindex、credential mutation、production database mutation 或任何 destructive tool。
+- `38-01` 不修改既有 Agent run API 行為；後續 `38-02` / `38-03` 若實作 runtime，必須先符合本 contract。
 
 ## Phase 26 VLM Parser Provider Boundary
 

@@ -973,6 +973,49 @@ Status contract：
 - Query-only document question runs execute `search_documents` and return retrieved-chunk answer text with citations.
 - Failed parser lookup, search miss or invalid document remains a saved `AgentRun` with failed / fallback plan steps.
 
+## Phase 38 Agent Runtime Permission Contract
+
+`38-01` is a contract-only ticket. It defines the future Agent planner, tool permission, fallback and trace boundary without adding LLM planner runtime, new tool execution code, Auth / RBAC schema changes, RAG ranking changes, OCR changes or parser behavior changes.
+
+### Planner Provider Boundary
+
+| Planner provider | Runtime boundary | Fallback behavior |
+|---|---|---|
+| `deterministic` | Always available safe baseline. It may only produce the existing fixed Agent plan shape and read-only tool sequence. | Used when LLM planner is disabled, unavailable, timed out, invalid or unsafe. |
+| `llm_planner` | Future opt-in provider. Input is limited to task text, role / project context, allowed tool list and safe schema hints. Output must be a validated structured plan. | On timeout, malformed response, invalid schema, unsafe tool, missing required input or missing evidence, do not execute the plan; fallback to deterministic or return a clear failed state. |
+
+Planner trace must expose `planner_provider`, `planner_status`, `planner_latency_ms`, `plan_validation_status`, `planner_fallback_reason`, `plan_id` and `plan_steps`. Unknown providers, unknown tools and schema-extra parameters are rejected before tool execution.
+
+### Tool Permission Tiers
+
+| Tier | Description | Confirmation policy |
+|---|---|---|
+| `read-only` | Reads existing accessible project data such as documents, fields, retrieval evidence, eval results or Agent runs. | No human confirmation if role and project access pass. |
+| `write` | Future project-scoped, non-destructive data creation or update. It must be allowlisted by a runtime ticket before use. | Requires Analyst / Admin, project access and human confirmation. |
+| `admin` | Future project / organization administration action with audit trace. `38-01` does not add runtime support. | Requires Admin, project access, audit trace and human confirmation. |
+| `destructive` | Delete, drop, destructive reindex, irreversible mutation, arbitrary SQL, shell, filesystem command, arbitrary network tool, external side effect or credential mutation. | Prohibited in Phase 38 unless a later ticket explicitly adds stricter approval and rollback policy. |
+
+Permission guard rules：
+
+- Check role, project access, tool allowlist, tool tier, input schema and target resource project before tool selection and again before tool execution.
+- Viewer is read-only only. Analyst / Admin can be considered for future write / admin tools only when a later ticket explicitly allowlists the tool.
+- Reject cross-project access, unknown tools, unknown tiers, schema-extra parameters, unsafe planner output and unconfirmed write / admin requests.
+- Human confirmation fields must be present in trace: `human_confirmation_required` and `human_confirmation_status`. `read-only` may use `not_required`; future write / admin tools must use `required` until confirmed; destructive remains unavailable.
+
+### Trace Fields
+
+Future Agent trace hardening must include：
+
+- Plan: `planner_provider`, `planner_status`, `planner_latency_ms`, `plan_validation_status`, `planner_fallback_reason`, `plan_id`, `plan_steps`.
+- Tool selection: `tool_name`, `tool_tier`, `permission_decision`, `required_role`, `project_id`, `project_access`, `human_confirmation_required`, `human_confirmation_status`.
+- Observation and fallback: `observation_summary`, `citations`, `reflection`, `fallback_reason`, `final_answer_source`, final answer status.
+
+Trace must not store production secrets, raw bearer tokens, API keys, private credentials or unmasked sensitive provider settings.
+
+### Forbidden Tools
+
+Phase 38 explicitly forbids arbitrary SQL, shell command, filesystem command, arbitrary network tool, delete, drop table, destructive reindex, credential mutation, production database mutation and any destructive tool. `38-01` only documents the boundary; `38-02` / `38-03` must conform to it before adding runtime behavior.
+
 ## Phase 26 VLM Parser Provider Contract Draft
 
 Phase 26 將 parser default 切成 VLM-first provider spike：`POST /documents/{document_id}/parse` 預設先嘗試 `vlm_invoice`，只有 VLM provider unavailable、timeout、unsupported file、invalid JSON、missing required fields 或 confidence too low 時，才 fallback 到 Phase 24 的 `deterministic_invoice`。這個 default-on 只代表 demo parser path 預設 VLM-first，不代表 production VLM parser、OpenAI SDK、streaming、function calling、PDF rendering、多頁 parser pipeline、worker、DB、RBAC 或 autonomous Agent。

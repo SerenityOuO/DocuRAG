@@ -254,10 +254,17 @@ Phase 37 `v0.37.0` - Inference Ops / vLLM serving：
 - Release Impact：Version bump required: yes。Phase 37 已完成 `v0.37.0` inference ops / vLLM serving demonstration release。
 
 Phase 38 `v0.38.0` - Agent runtime hardening：
-- [ ] `tasks/phase-38-agent-runtime-hardening/38-01-agent-runtime-permission-contract.md`
+- [x] `tasks/phase-38-agent-runtime-hardening/38-01-agent-runtime-permission-contract.md`: 定義 Agent planner provider boundary、deterministic fallback、tool permission tiers、project access guard、human confirmation requirement、trace fields 與 forbidden tool boundary；文件 ticket，不 bump version、不新增 runtime。
 - [ ] `tasks/phase-38-agent-runtime-hardening/38-02-llm-planner-provider-boundary.md`
 - [ ] `tasks/phase-38-agent-runtime-hardening/38-03-tool-permission-guards-and-trace.md`
 - [ ] `tasks/phase-38-agent-runtime-hardening/38-04-agent-runtime-release-sync.md`
+
+38-01 Agent Runtime Permission Contract Status：
+
+- 已完成。`docs/architecture.md` 與 `docs/api.md` 已固定 Phase 38 planner boundary：`deterministic` 是 always-available fallback，future `llm_planner` 只能輸出 validated structured plan；timeout、invalid plan、unsafe tool selection、missing evidence 或 schema validation failure 都不得執行 unsafe tool。
+- Tool tiers 已定義為 `read-only`、`write`、`admin`、`destructive`；permission guard 必須檢查 role、project access、tool allowlist、tool tier、input schema、target resource project 與 human confirmation state。
+- Trace contract 已包含 plan、tool selection、permission decision、observation、reflection / fallback 與 final answer；文件也明確禁止任意 SQL、shell、filesystem command、arbitrary network tool、delete、drop table、destructive reindex、credential mutation 或 production database mutation。
+- Release Impact：Version bump required: no。此 ticket 是 Phase 38 contract 文件，不改 backend / frontend runtime。
 
 Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 - [ ] `tasks/phase-39-deployment-observability-finetuning/39-01-deployment-observability-research-contract.md`
