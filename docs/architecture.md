@@ -688,6 +688,13 @@ Fine-tuning / synthetic data / embedding tuning research scope:
 - Research artifacts must not run long training jobs, download large models, change the default runtime model, upload private data, require paid services or claim production model improvement.
 - Main OCR, parser, RAG, Agent, Auth / RBAC and inference provider defaults remain unchanged by `39-01`.
 
+`39-04` adds the first research-only artifact pack:
+
+- `fine-tuning/` documents the synthetic data plan, dataset card, notebook skeleton, SFT format, embedding tuning pairs, reranker tuning pairs and evaluation template.
+- `sample-data/fine-tuning/` contains small JSONL / CSV examples for invoice, contract and report schema extraction research.
+- Evaluation reporting keeps Hit Rate@K, MRR@K, Recall@K, parser field accuracy, sample count, data source and skip reason visible.
+- The artifact pack stays disconnected from production runtime and does not add training jobs, dependencies, model downloads, registry upload, deployment automation or provider defaults.
+
 Out of scope for `39-01`:
 
 - No K8s manifests, Helm chart, Docker image change, deployment config runtime or CI deployment workflow.

@@ -294,7 +294,7 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 - [x] `tasks/phase-39-deployment-observability-finetuning/39-01-deployment-observability-research-contract.md`: 定義 Phase 39 K8s baseline、Loki + Grafana observability path、API / worker / RAG / eval trace logging boundary，以及 fine-tuning / synthetic data / embedding tuning research-only scope；文件 ticket，不 bump version、不新增 runtime。
 - [x] `tasks/phase-39-deployment-observability-finetuning/39-02-k8s-manifest-baseline.md`: 新增 `infra/k8s/` baseline manifests，包含 API、frontend、worker placeholder、Qdrant、Redis、NATS、ConfigMap、Secret template、probes、resources、rollout / rollback docs 與 optional HPA template；不 bump version。
 - [x] `tasks/phase-39-deployment-observability-finetuning/39-03-observability-stack-and-rag-trace-logs.md`: 新增 opt-in JSONL observability exporter、API / RAG / eval / worker events、Loki + Grafana local profile、Promtail config、LogQL query docs 與 observability smoke；不 bump version。
-- [ ] `tasks/phase-39-deployment-observability-finetuning/39-04-finetuning-synthetic-data-research-track.md`
+- [x] `tasks/phase-39-deployment-observability-finetuning/39-04-finetuning-synthetic-data-research-track.md`: 新增 research-only fine-tuning / synthetic data artifact pack，包含 dataset card、notebook skeleton、SFT JSONL、embedding positive / negative pairs、reranker pairwise samples 與 evaluation template；不 bump version。
 - [ ] `tasks/phase-39-deployment-observability-finetuning/39-05-phase-39-release-sync.md`
 
 39-01 Deployment Observability Research Contract Status：
@@ -322,9 +322,17 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 - Validation 已通過：backend full test `260 passed, 1 warning`（pytest cache permission warning）、observability smoke `5 passed, 1 warning`、`docker-compose -f .\infra\docker-compose.yml --profile observability config`（通過但本機 Docker config 權限 warning）、ticket `rg` 與 `git diff --check`。
 - Release Impact：Version bump required: no。此 ticket 是 Phase 39 observability runtime / docs slice，版本同步留到 `39-05`。
 
+39-04 Fine Tuning Synthetic Data Research Track Status：
+
+- 已完成。`fine-tuning/` 已新增 research-only artifact pack，包含 synthetic data plan、dataset card、notebook skeleton、evaluation template、privacy / leakage / overfit 風險與 mitigation。
+- `sample-data/fine-tuning/` 已新增 SFT schema extraction JSONL、embedding positive / negative pairs、reranker pairwise samples 與 evaluation CSV，覆蓋 invoice、contract、report examples。
+- Evaluation template 明確保留 Hit Rate@K、MRR@K、Recall@K、parser field accuracy、sample count、data source 與 skip reason。
+- Validation 已通過：ticket `rg`、JSONL parse sanity check 與 `git diff --check`。
+- Release Impact：Version bump required: no。此 ticket 是 Phase 39 research artifact slice，不執行 training、不下載大型模型、不新增 dependency、不接 production runtime；版本同步留到 `39-05`。
+
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync，Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release sync，Phase 37 已完成 `v0.37.0` inference ops / vLLM serving release sync，Phase 38 已完成 `v0.38.0` Agent runtime hardening release sync。除已完成票與 Phase 40 planning 票外，Phase 39 後續 tickets 目前仍是 future backlog，尚未實作。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync，Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release sync，Phase 37 已完成 `v0.37.0` inference ops / vLLM serving release sync，Phase 38 已完成 `v0.38.0` Agent runtime hardening release sync。Phase 39 目前只剩 `39-05` release sync 未完成；Phase 40 planning 票已完成，後續 evidence tickets 尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。

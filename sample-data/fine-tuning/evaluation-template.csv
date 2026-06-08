@@ -1,0 +1,4 @@
+track,dataset_version,sample_count,Hit Rate@K,MRR@K,Recall@K,parser_field_accuracy,data_source,skip_reason,notes
+sft_schema_extraction,phase39-research-v1,3,not_applicable,not_applicable,not_applicable,not_run,synthetic_public_demo,training_not_run_research_only,Use this row shape after a future local SFT experiment.
+embedding_tuning,phase39-research-v1,3,not_run,not_run,not_run,not_applicable,synthetic_public_demo,embedding_runtime_not_run,Report retrieval metrics only after an explicit local experiment.
+reranker_tuning,phase39-research-v1,3,not_run,not_run,not_run,not_applicable,synthetic_public_demo,reranker_runtime_not_run,Report pairwise and retrieval metrics only after an explicit local experiment.

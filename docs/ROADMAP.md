@@ -558,6 +558,8 @@ Status：
 - Release Impact：Version bump required: no。`39-02` 是 deployment artifact baseline，sample image tag 仍維持目前 `0.38.0`，版本同步留到 `39-05`。
 - `39-03` 已完成 Phase 39 observability baseline。Backend 現在可透過 `DOCURAG_OBSERVABILITY_LOG_PATH` opt-in 匯出 API request、RAG trace、eval metrics 與 worker task lifecycle JSONL events；`infra/observability/` 提供 Loki + Grafana / Promtail local path 與 LogQL query examples，覆蓋 API p95 latency、error rate、worker failures、RAG latency、fallback count、Hit Rate 與 MRR。
 - Release Impact：Version bump required: no。`39-03` 是 observability runtime / docs slice，版本同步留到 `39-05`；不新增 production alerting、SLO、distributed tracing、APM vendor integration、long-term storage 或 incident workflow。
+- `39-04` 已完成 Phase 39 fine-tuning / synthetic data research artifact。`fine-tuning/` 現在包含 research-only dataset card、notebook skeleton、synthetic data plan、evaluation template 與風險邊界；`sample-data/fine-tuning/` 提供 SFT JSONL、embedding positive / negative pairs、reranker pairwise samples 與 evaluation CSV，覆蓋 invoice、contract、report examples。
+- Release Impact：Version bump required: no。`39-04` 只新增 research artifacts，不執行 training、不下載大型模型、不新增 dependency、不接 production runtime；版本同步留到 `39-05`。
 
 Phase 31-39 Validation Direction：
 
@@ -568,7 +570,7 @@ Phase 31-39 Validation Direction：
 Out of Scope：
 
 - 本 roadmap planning ticket 不新增任何 runtime 或 dependency。
-- 不建立 DB schema、Redis / NATS service、worker、K8s manifest、vLLM server 或 fine-tuning notebook。
+- `31-01` roadmap planning ticket 當時不建立 DB schema、Redis / NATS service、worker、K8s manifest、vLLM server 或 fine-tuning notebook；後續已完成 artifacts 以各自 ticket scope 與狀態為準。
 - 不將 Phase 31 到 Phase 39 寫入 `README.md` 的 release status；公開入口仍維持目前 MVP 邊界。
 
 ## Phase 40 Interview Evidence Hardening
