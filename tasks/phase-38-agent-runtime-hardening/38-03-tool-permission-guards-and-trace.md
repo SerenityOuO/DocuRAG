@@ -34,10 +34,10 @@
 
 ## Acceptance Criteria
 
-- [ ] Agent tools 有明確 tier 與 permission requirements。
-- [ ] Viewer / Analyst / Admin 對 tool execution 的差異由 backend 強制執行。
-- [ ] Frontend trace 顯示 permission decision 與 fallback reason。
-- [ ] Tests 覆蓋 forbidden tool、allowed tool、invalid plan 與 fallback。
+- [x] Agent tools 有明確 tier 與 permission requirements。
+- [x] Viewer / Analyst / Admin 對 tool execution 的差異由 backend 強制執行。
+- [x] Frontend trace 顯示 permission decision 與 fallback reason。
+- [x] Tests 覆蓋 forbidden tool、allowed tool、invalid plan 與 fallback。
 
 ## Validation
 
@@ -46,3 +46,11 @@
 - Browser 檢查 Agent trace desktop / mobile。
 - `rg -n "tool tier|permission decision|Agent trace|forbidden|fallback|destructive" backend frontend docs TODO.md tasks/phase-38-agent-runtime-hardening`
 - `git diff --check`
+
+## Status
+
+- 已完成。
+- Agent tools 已標記 `read-only` tier、permission requirement、required roles、side-effect policy 與 human confirmation trace metadata。
+- Agent run 在 tool execution 前檢查 role、project context、tool tier 與 side-effect policy；Viewer role 會被 backend guard 擋下，Analyst / Admin 與本地 disabled auth path 只會執行既有 allowlisted read-only tools。
+- Frontend Agent trace 顯示 permission decision、阻擋工具、tool tier、side-effect policy 與 fallback reason。
+- Validation 已通過：focused Agent tests `17 passed`（1 pytest cache warning）、backend full test `255 passed`（1 pytest cache warning）、frontend build、Chrome GUI Browser check desktop / mobile、ticket `rg` 與 `git diff --check`（僅 Windows LF/CRLF 提示）。

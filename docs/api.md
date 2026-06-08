@@ -1054,6 +1054,26 @@ Invalid plan handling：
 
 Agent run trace now includes planner audit metadata such as `planner_provider`, `planner_attempted_provider`, `planner_status`, `plan_validation_status`, `planned_tools`, optional `planner_fallback_reason`, `planner_latency_ms`, `planner_model`, token counts and provider request id when available. It still does not add arbitrary tool execution, arbitrary SQL, shell, filesystem access, network tools, destructive tools, RAG retrieval provider changes or parser provider changes.
 
+### 38-03 Tool Permission Guards and Trace
+
+`38-03` adds runtime permission guards for the existing Agent tools. The runtime still only exposes the three Phase 25 allowlisted tools:
+
+| Tool | Tool tier | Required roles | Side-effect policy | Human confirmation |
+|---|---|---|---|---|
+| `get_document_fields` | `read-only` | `admin`, `analyst` | `no_side_effects` | `not_required` |
+| `search_documents` | `read-only` | `admin`, `analyst` | `no_side_effects` | `not_required` |
+| `summarize_invoice_fields` | `read-only` | `admin`, `analyst` | `no_side_effects` | `not_required` |
+
+Before tool execution, Agent run evaluates role, project context, tool tier and side-effect policy. Viewer cannot execute Agent run tools through the backend guard; Analyst / Admin and local disabled-auth runs may execute only the existing allowlisted read-only tools. Project access remains enforced by the Phase 32 API boundary and is recorded as `checked` when a formal active project is present.
+
+Agent run trace now includes:
+
+- Run-level permission fields: `permission_decision`, `permission_reason`, `permission_checked_tool_count`, `permission_decisions`, `permission_denied_tool`, `permission_fallback_reason`, `tool_tiers`, `side_effect_policy`, `human_confirmation_required`, `human_confirmation_status` and `project_access`.
+- Tool-call trace metadata: `tool_tier`, `required_roles`, `permission_requirement`, `permission_decision`, `permission_reason`, `project_access`, `side_effect_policy`, `human_confirmation_required`, `human_confirmation_status` and `destructive`.
+- Frontend Agent trace shows plan, tool call, permission decision, observation, fallback reason and final answer.
+
+Forbidden role or unsafe tool selection fails before tool execution and saves a failed Agent run with `fallback_reason=tool_permission_forbidden` or deterministic planner fallback. This runtime slice still does not add destructive tool execution, arbitrary SQL, shell, filesystem command, external browser/tool access, Auth / RBAC schema changes, RAG ranking changes or parser behavior changes.
+
 ## Phase 26 VLM Parser Provider Contract Draft
 
 Phase 26 將 parser default 切成 VLM-first provider spike：`POST /documents/{document_id}/parse` 預設先嘗試 `vlm_invoice`，只有 VLM provider unavailable、timeout、unsupported file、invalid JSON、missing required fields 或 confidence too low 時，才 fallback 到 Phase 24 的 `deterministic_invoice`。這個 default-on 只代表 demo parser path 預設 VLM-first，不代表 production VLM parser、OpenAI SDK、streaming、function calling、PDF rendering、多頁 parser pipeline、worker、DB、RBAC 或 autonomous Agent。

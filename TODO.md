@@ -256,7 +256,7 @@ Phase 37 `v0.37.0` - Inference Ops / vLLM serving：
 Phase 38 `v0.38.0` - Agent runtime hardening：
 - [x] `tasks/phase-38-agent-runtime-hardening/38-01-agent-runtime-permission-contract.md`: 定義 Agent planner provider boundary、deterministic fallback、tool permission tiers、project access guard、human confirmation requirement、trace fields 與 forbidden tool boundary；文件 ticket，不 bump version、不新增 runtime。
 - [x] `tasks/phase-38-agent-runtime-hardening/38-02-llm-planner-provider-boundary.md`: 新增 `DOCURAG_AGENT_PLANNER_PROVIDER=llm_planner` runtime boundary、LLM plan JSON validation、timeout / invalid plan deterministic fallback 與 planner audit trace；不 bump version、不新增任意工具執行。
-- [ ] `tasks/phase-38-agent-runtime-hardening/38-03-tool-permission-guards-and-trace.md`
+- [x] `tasks/phase-38-agent-runtime-hardening/38-03-tool-permission-guards-and-trace.md`: 為既有 Agent tools 補上 `read-only` tier / permission requirement、執行前 role / project / side-effect guard、permission trace metadata 與 frontend trace 顯示；不 bump version、不新增 destructive tool。
 - [ ] `tasks/phase-38-agent-runtime-hardening/38-04-agent-runtime-release-sync.md`
 
 38-01 Agent Runtime Permission Contract Status：
@@ -272,6 +272,14 @@ Phase 38 `v0.38.0` - Agent runtime hardening：
 - LLM plan validation 只接受 `invoice_summary`、`document_question`、`unsupported_task` 與既有 allowlisted tools；unknown tool、unsafe route、missing `document_id` / query、invalid JSON / schema 都會在 tool execution 前 fallback。
 - Agent trace 已記錄 `planner_provider`、`planner_attempted_provider`、`planner_status`、`plan_validation_status`、`planned_tools`、`planner_fallback_reason`、latency、model / token metadata 與 role / project metadata。
 - Validation 已通過：focused Agent tests `9 passed`；backend full test `254 passed`（1 pytest cache warning）；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+- Release Impact：Version bump required: no。此 ticket 是 Phase 38 runtime slice，版本同步留到 `38-04`。
+
+38-03 Tool Permission Guards and Trace Status：
+
+- 已完成。既有 Agent tools 已標記 `read-only` tool tier、`agent_run_tool_execution` permission requirement、`admin,analyst` required roles、`no_side_effects` side-effect policy 與 human confirmation `not_required` trace metadata。
+- Agent run 在 tool execution 前會檢查 role、project context、tool tier 與 side-effect policy；Viewer role 會在 backend guard 被擋下，Analyst / Admin 或本地 disabled auth path 只會執行既有 allowlisted read-only tools。
+- Agent trace 與 tool call trace metadata 已包含 `permission_decision`、`permission_reason`、`tool_tier`、`required_roles`、`project_access`、`side_effect_policy`、`human_confirmation_required` 與 `human_confirmation_status`；frontend Agent trace 會顯示 permission decision、阻擋工具、tool tier 與 side-effect policy。
+- Validation 已通過：focused Agent tests `17 passed`（1 pytest cache warning）；backend full test `255 passed`（1 pytest cache warning）；frontend build；Chrome GUI Browser check desktop / mobile（Agent trace permission fields rendered，無 horizontal overflow）；ticket `rg`；`git diff --check`（僅 Windows LF/CRLF 提示）。
 - Release Impact：Version bump required: no。此 ticket 是 Phase 38 runtime slice，版本同步留到 `38-04`。
 
 Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：

@@ -19,7 +19,11 @@ from app.services.agent_planner import (
     DeterministicAgentPlanner,
     agent_plan_trace,
 )
-from app.services.agent_tools import AgentToolService
+from app.services.agent_tools import (
+    AgentToolPermissionDecision,
+    AgentToolService,
+    evaluate_agent_tool_permission,
+)
 from app.services.document_storage import DocumentStorage
 
 
@@ -67,6 +71,18 @@ class AgentService:
             AgentPlannerContext(role=role, project_id=project_id),
         )
         route = agent_plan.route
+        permission_decisions = [
+            evaluate_agent_tool_permission(tool_name, role=role, project_id=project_id)
+            for tool_name in agent_plan.tool_names
+        ]
+        permission_metadata_by_tool = {
+            decision.tool_name: decision.trace_metadata()
+            for decision in permission_decisions
+        }
+        forbidden_decision = next(
+            (decision for decision in permission_decisions if not decision.allowed),
+            None,
+        )
         final_answer = AgentFinalAnswer(
             status=AgentRunStatus.FAILED,
             fallback_reason="unsupported_task",
@@ -76,12 +92,23 @@ class AgentService:
             ),
         )
 
-        if route == "invoice_summary":
+        if forbidden_decision is not None:
+            final_answer = _permission_denied_answer(forbidden_decision)
+            plan_steps.append(_permission_denied_step(forbidden_decision))
+        elif route == "invoice_summary":
             route = "invoice_summary"
-            final_answer, citations = self._run_invoice_summary(request, tool_calls)
+            final_answer, citations = self._run_invoice_summary(
+                request,
+                tool_calls,
+                permission_metadata_by_tool,
+            )
         elif route == "document_question":
             route = "document_question"
-            final_answer, citations = self._run_document_question(request, tool_calls)
+            final_answer, citations = self._run_document_question(
+                request,
+                tool_calls,
+                permission_metadata_by_tool,
+            )
         else:
             plan_steps.append(
                 AgentStep(
@@ -118,6 +145,7 @@ class AgentService:
                 "allowed_tools": "get_document_fields,search_documents,summarize_invoice_fields",
                 "tool_count": str(len(tool_calls)),
                 "fallback_count": str(fallback_count),
+                **_permission_trace(permission_decisions),
                 **agent_plan_trace(agent_plan),
                 **({"role": role} if role else {}),
                 **({"project_id": project_id} if project_id else {}),
@@ -132,11 +160,12 @@ class AgentService:
         self,
         request: AgentRunRequest,
         tool_calls: list[AgentToolCall],
+        permission_metadata_by_tool: dict[AgentToolName, dict[str, str]],
     ) -> tuple[AgentFinalAnswer, list[RagCitation]]:
         assert request.document_id is not None
 
         fields_call = self.tool_service.get_document_fields(request.document_id)
-        tool_calls.append(fields_call)
+        _record_tool_call(tool_calls, fields_call, permission_metadata_by_tool)
         parser_result = self.storage.get_parser_result(request.document_id)
 
         if fields_call.status == AgentToolStatus.FAILED or parser_result is None:
@@ -165,11 +194,11 @@ class AgentService:
             top_k=request.top_k,
             document_id=request.document_id,
         )
-        tool_calls.append(search_call)
+        _record_tool_call(tool_calls, search_call, permission_metadata_by_tool)
 
         search_citations = search_call.citations if search_call.status == AgentToolStatus.COMPLETED else []
         summary_call = self.tool_service.summarize_invoice_fields(parser_result, citations=search_citations)
-        tool_calls.append(summary_call)
+        _record_tool_call(tool_calls, summary_call, permission_metadata_by_tool)
 
         citations = summary_call.citations or search_citations
         fallback_reason = search_call.observation.fallback_reason or summary_call.observation.fallback_reason
@@ -197,11 +226,12 @@ class AgentService:
         self,
         request: AgentRunRequest,
         tool_calls: list[AgentToolCall],
+        permission_metadata_by_tool: dict[AgentToolName, dict[str, str]],
     ) -> tuple[AgentFinalAnswer, list[RagCitation]]:
         assert request.query is not None
 
         search_call = self.tool_service.search_documents(request.query, top_k=request.top_k)
-        tool_calls.append(search_call)
+        _record_tool_call(tool_calls, search_call, permission_metadata_by_tool)
 
         if search_call.status == AgentToolStatus.FAILED:
             return (
@@ -239,6 +269,88 @@ def _step_from_tool_call(tool_call: AgentToolCall, order: int) -> AgentStep:
         observation_summary=tool_call.observation.message,
         fallback_reason=tool_call.observation.fallback_reason,
     )
+
+
+def _permission_denied_step(decision: AgentToolPermissionDecision) -> AgentStep:
+    return AgentStep(
+        step_id="step-001",
+        order=1,
+        title=TOOL_TITLES[decision.tool_name],
+        tool_name=decision.tool_name,
+        status=AgentRunStatus.FAILED,
+        input_summary=(
+            f"role={decision.role or 'auth_disabled'}; "
+            f"tool_tier={decision.policy.tier}; "
+            f"required_roles={','.join(decision.policy.required_roles)}"
+        ),
+        observation_summary="Tool execution was blocked by permission guard.",
+        fallback_reason=decision.reason,
+    )
+
+
+def _permission_denied_answer(decision: AgentToolPermissionDecision) -> AgentFinalAnswer:
+    required_roles = ", ".join(decision.policy.required_roles)
+    return AgentFinalAnswer(
+        status=AgentRunStatus.FAILED,
+        fallback_reason=decision.reason,
+        text=(
+            f"Agent run blocked before tool execution: {decision.tool_name} requires "
+            f"{required_roles}. Permission decision: {decision.decision}."
+        ),
+    )
+
+
+def _record_tool_call(
+    tool_calls: list[AgentToolCall],
+    tool_call: AgentToolCall,
+    permission_metadata_by_tool: dict[AgentToolName, dict[str, str]],
+) -> None:
+    permission_metadata = permission_metadata_by_tool.get(tool_call.tool_name)
+    if permission_metadata:
+        tool_call.trace_metadata = {
+            **tool_call.trace_metadata,
+            **permission_metadata,
+        }
+    tool_calls.append(tool_call)
+
+
+def _permission_trace(decisions: list[AgentToolPermissionDecision]) -> dict[str, str]:
+    if not decisions:
+        return {
+            "permission_decision": "not_required",
+            "permission_reason": "no_planned_tools",
+            "permission_checked_tool_count": "0",
+        }
+
+    forbidden_decision = next((decision for decision in decisions if not decision.allowed), None)
+    decision = "forbidden" if forbidden_decision is not None else "allowed"
+    reason = forbidden_decision.reason if forbidden_decision is not None else "all_planned_tools_allowed"
+    trace = {
+        "permission_decision": decision,
+        "permission_reason": reason,
+        "permission_checked_tool_count": str(len(decisions)),
+        "permission_decisions": ",".join(
+            f"{permission.tool_name}:{permission.decision}"
+            for permission in decisions
+        ),
+        "tool_tiers": ",".join(sorted({permission.policy.tier for permission in decisions})),
+        "side_effect_policy": ",".join(
+            sorted({permission.policy.side_effect_policy for permission in decisions})
+        ),
+        "human_confirmation_required": ",".join(
+            sorted({permission.policy.human_confirmation_required for permission in decisions})
+        ),
+        "human_confirmation_status": ",".join(
+            sorted({permission.policy.human_confirmation_status for permission in decisions})
+        ),
+        "project_access": ",".join(sorted({permission.project_access for permission in decisions})),
+    }
+
+    if forbidden_decision is not None:
+        trace["permission_denied_tool"] = forbidden_decision.tool_name
+        trace["permission_fallback_reason"] = forbidden_decision.reason
+
+    return trace
 
 
 def _completed_answer(

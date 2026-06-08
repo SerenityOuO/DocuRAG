@@ -412,6 +412,15 @@ const stepTitleLabels: Record<string, string> = {
 const traceValueLabels: Record<string, string> = {
   deterministic: "確定性規劃器",
   allowlisted_read_only: "唯讀 allowlist 工具",
+  tiered_read_only_guarded: "分級唯讀工具檢查",
+  allowed: "允許",
+  forbidden: "禁止",
+  "read-only": "唯讀",
+  no_side_effects: "不修改資料",
+  not_required: "不需要",
+  auth_disabled_or_local: "本地未啟用權限模式",
+  role_allowed: "角色允許",
+  tool_permission_forbidden: "工具權限不足",
 };
 
 const agentMessageLabels: Record<string, string> = {
@@ -425,6 +434,7 @@ const agentMessageLabels: Record<string, string> = {
   "Cannot summarize invoice fields before parser result is available.": "欄位解析結果尚不可用，無法彙整發票欄位。",
   "Invoice fields were summarized with deterministic formatting.": "已用確定性格式彙整發票欄位。",
   "No document_id or query was provided for the demo-safe planner.": "尚未提供文件或查詢內容，demo-safe 規劃器無法執行。",
+  "Tool execution was blocked by permission guard.": "工具執行已被權限檢查阻擋。",
 };
 
 const fallbackReasonLabels: Record<string, string> = {
@@ -435,6 +445,7 @@ const fallbackReasonLabels: Record<string, string> = {
   tool_error: "工具執行錯誤",
   tool_failed: "工具執行失敗",
   unsupported_task: "不支援的任務",
+  tool_permission_forbidden: "工具權限不足",
 };
 
 const agentFieldLabels: Record<string, string> = {
@@ -2347,6 +2358,14 @@ onMounted(async () => {
                   <dd>{{ agentTraceValue(agentRun.trace.tool_policy) }}</dd>
                 </div>
                 <div>
+                  <dt>權限判斷</dt>
+                  <dd>{{ agentTraceValue(agentRun.trace.permission_decision) }}</dd>
+                </div>
+                <div v-if="agentRun.trace.permission_denied_tool">
+                  <dt>阻擋工具</dt>
+                  <dd>{{ toolLabel(agentRun.trace.permission_denied_tool) }}</dd>
+                </div>
+                <div>
                   <dt>備援次數</dt>
                   <dd>{{ agentRun.trace.fallback_count }}</dd>
                 </div>
@@ -2383,6 +2402,18 @@ onMounted(async () => {
                       <div>
                         <dt>觀察結果</dt>
                         <dd>{{ agentMessage(toolCall.observation.message) }}</dd>
+                      </div>
+                      <div v-if="toolCall.trace_metadata.tool_tier">
+                        <dt>工具分級</dt>
+                        <dd>{{ agentTraceValue(toolCall.trace_metadata.tool_tier) }}</dd>
+                      </div>
+                      <div v-if="toolCall.trace_metadata.permission_decision">
+                        <dt>權限判斷</dt>
+                        <dd>{{ agentTraceValue(toolCall.trace_metadata.permission_decision) }}</dd>
+                      </div>
+                      <div v-if="toolCall.trace_metadata.side_effect_policy">
+                        <dt>副作用政策</dt>
+                        <dd>{{ agentTraceValue(toolCall.trace_metadata.side_effect_policy) }}</dd>
                       </div>
                       <div v-if="toolCall.output_summary">
                         <dt>輸出摘要</dt>

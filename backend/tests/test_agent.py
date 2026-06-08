@@ -8,7 +8,10 @@ from app.api.routes.agent import get_document_storage as get_agent_storage
 from app.api.routes.documents import get_document_storage as get_documents_storage
 from app.api.routes.rag import get_rag_provider
 from app.main import app
+from app.schemas.agent import AgentRunRequest
+from app.services.agent import AgentService
 from app.services.agent_planner import LlmAgentPlanner
+from app.services.agent_tools import AgentToolService
 from app.services.document_storage import DocumentStorage
 from app.services.llm import LlmGeneration, LlmHealth, LlmProviderError
 from app.services.rag import KeywordRagProvider
@@ -118,8 +121,17 @@ def test_agent_run_returns_plan_tool_calls_answer_and_citations(client: TestClie
     assert body["citations"][0]["source_type"] == "text_upload"
     assert body["trace"]["planner"] == "deterministic"
     assert body["trace"]["tool_policy"] == "allowlisted_read_only"
+    assert body["trace"]["permission_decision"] == "allowed"
+    assert body["trace"]["permission_checked_tool_count"] == "3"
     assert body["trace"]["tool_count"] == "3"
     assert body["trace"]["fallback_count"] == "2"
+    for tool_call in body["tool_calls"]:
+        metadata = tool_call["trace_metadata"]
+        assert metadata["tool_tier"] == "read-only"
+        assert metadata["permission_decision"] == "allowed"
+        assert metadata["required_roles"] == "admin,analyst"
+        assert metadata["side_effect_policy"] == "no_side_effects"
+        assert metadata["human_confirmation_required"] == "not_required"
     assert body["tool_calls"][0]["observation"]["fallback_reason"] == "unsupported_file"
     assert body["tool_calls"][2]["observation"]["fallback_reason"] == "unsupported_file"
 
@@ -215,6 +227,7 @@ def test_agent_run_falls_back_without_executing_invalid_llm_plan(client: TestCli
     assert body["trace"]["planner"] == "deterministic"
     assert body["trace"]["planner_status"] == "fallback"
     assert body["trace"]["plan_validation_status"] == "invalid"
+    assert body["trace"]["permission_decision"] == "allowed"
     assert body["trace"]["planner_fallback_reason"].startswith("llm_planner_invalid_plan")
     assert [tool_call["tool_name"] for tool_call in body["tool_calls"]] == [
         "get_document_fields",
@@ -222,6 +235,30 @@ def test_agent_run_falls_back_without_executing_invalid_llm_plan(client: TestCli
         "summarize_invoice_fields",
     ]
     assert "delete_project" not in {tool_call["tool_name"] for tool_call in body["tool_calls"]}
+
+
+def test_agent_run_blocks_forbidden_tool_execution_for_viewer_role(tmp_path: Path) -> None:
+    storage = DocumentStorage(tmp_path / "data")
+    service = AgentService(
+        storage,
+        AgentToolService(storage, rag_provider=KeywordRagProvider()),
+    )
+
+    result = service.run(
+        AgentRunRequest(task="ask documents", query="payment terms"),
+        project_id="project-a",
+        role="viewer",
+    )
+
+    assert result.status == "failed"
+    assert result.tool_calls == []
+    assert result.final_answer.fallback_reason == "tool_permission_forbidden"
+    assert result.plan_steps[0].tool_name == "search_documents"
+    assert result.plan_steps[0].fallback_reason == "tool_permission_forbidden"
+    assert result.trace["permission_decision"] == "forbidden"
+    assert result.trace["permission_denied_tool"] == "search_documents"
+    assert result.trace["permission_fallback_reason"] == "tool_permission_forbidden"
+    assert result.trace["role"] == "viewer"
 
 
 def test_agent_run_lookup_returns_saved_run(client: TestClient) -> None:

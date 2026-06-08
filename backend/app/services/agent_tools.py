@@ -1,4 +1,7 @@
-from app.schemas.agent import AgentToolCall, AgentToolObservation, AgentToolStatus
+from dataclasses import dataclass
+from typing import Literal
+
+from app.schemas.agent import AgentToolCall, AgentToolName, AgentToolObservation, AgentToolStatus
 from app.schemas.documents import DocumentFields, ExtractedField, ParserResult, ParserStatus
 from app.schemas.rag import RagCitation
 from app.services.document_storage import DocumentStorage
@@ -14,6 +17,125 @@ INVOICE_FIELD_NAMES = [
     "tax_amount",
     "currency",
 ]
+
+ToolTier = Literal["read-only", "write", "admin", "destructive"]
+
+
+@dataclass(frozen=True)
+class AgentToolPolicy:
+    tool_name: AgentToolName
+    tier: ToolTier
+    required_roles: tuple[str, ...]
+    permission_requirement: str
+    side_effect_policy: str
+    human_confirmation_required: str = "not_required"
+    human_confirmation_status: str = "not_required"
+    project_access_required: bool = True
+
+
+@dataclass(frozen=True)
+class AgentToolPermissionDecision:
+    tool_name: AgentToolName
+    policy: AgentToolPolicy
+    decision: Literal["allowed", "forbidden"]
+    reason: str
+    role: str | None
+    project_id: str | None
+    project_access: str
+
+    @property
+    def allowed(self) -> bool:
+        return self.decision == "allowed"
+
+    def trace_metadata(self) -> dict[str, str]:
+        return {
+            **tool_policy_metadata(self.policy),
+            "permission_decision": self.decision,
+            "permission_reason": self.reason,
+            "role": self.role or "auth_disabled",
+            "project_id": self.project_id or "not_applicable",
+            "project_access": self.project_access,
+        }
+
+
+AGENT_TOOL_POLICIES: dict[AgentToolName, AgentToolPolicy] = {
+    "get_document_fields": AgentToolPolicy(
+        tool_name="get_document_fields",
+        tier="read-only",
+        required_roles=("admin", "analyst"),
+        permission_requirement="agent_run_tool_execution",
+        side_effect_policy="no_side_effects",
+    ),
+    "search_documents": AgentToolPolicy(
+        tool_name="search_documents",
+        tier="read-only",
+        required_roles=("admin", "analyst"),
+        permission_requirement="agent_run_tool_execution",
+        side_effect_policy="no_side_effects",
+    ),
+    "summarize_invoice_fields": AgentToolPolicy(
+        tool_name="summarize_invoice_fields",
+        tier="read-only",
+        required_roles=("admin", "analyst"),
+        permission_requirement="agent_run_tool_execution",
+        side_effect_policy="no_side_effects",
+    ),
+}
+
+
+def evaluate_agent_tool_permission(
+    tool_name: AgentToolName,
+    *,
+    role: str | None,
+    project_id: str | None,
+) -> AgentToolPermissionDecision:
+    policy = AGENT_TOOL_POLICIES[tool_name]
+    project_access = "checked" if project_id else "not_required"
+
+    if policy.tier == "destructive":
+        return AgentToolPermissionDecision(
+            tool_name=tool_name,
+            policy=policy,
+            decision="forbidden",
+            reason="destructive_tool_prohibited",
+            role=role,
+            project_id=project_id,
+            project_access=project_access,
+        )
+
+    if role is not None and role not in policy.required_roles:
+        return AgentToolPermissionDecision(
+            tool_name=tool_name,
+            policy=policy,
+            decision="forbidden",
+            reason="tool_permission_forbidden",
+            role=role,
+            project_id=project_id,
+            project_access=project_access,
+        )
+
+    reason = "role_allowed" if role else "auth_disabled_or_local"
+    return AgentToolPermissionDecision(
+        tool_name=tool_name,
+        policy=policy,
+        decision="allowed",
+        reason=reason,
+        role=role,
+        project_id=project_id,
+        project_access=project_access,
+    )
+
+
+def tool_policy_metadata(policy: AgentToolPolicy) -> dict[str, str]:
+    return {
+        "tool_tier": policy.tier,
+        "required_roles": ",".join(policy.required_roles),
+        "permission_requirement": policy.permission_requirement,
+        "side_effect_policy": policy.side_effect_policy,
+        "human_confirmation_required": policy.human_confirmation_required,
+        "human_confirmation_status": policy.human_confirmation_status,
+        "destructive": "true" if policy.tier == "destructive" else "false",
+    }
 
 
 class AgentToolService:
@@ -224,17 +346,19 @@ class AgentToolService:
             },
         )
 
-    def _trace_metadata(self, tool_name: str, tool_source: str) -> dict[str, str]:
+    def _trace_metadata(self, tool_name: AgentToolName, tool_source: str) -> dict[str, str]:
+        policy = AGENT_TOOL_POLICIES[tool_name]
         return {
             "tool_name": tool_name,
             "tool_source": tool_source,
             "allowlisted": "true",
             "read_only": "true",
+            **tool_policy_metadata(policy),
         }
 
     def _failed_tool_call(
         self,
-        tool_name: str,
+        tool_name: AgentToolName,
         input_summary: str,
         message: str,
         fallback_reason: str,
@@ -242,7 +366,7 @@ class AgentToolService:
         error_message: str | None = None,
     ) -> AgentToolCall:
         return AgentToolCall(
-            tool_name=tool_name,  # type: ignore[arg-type]
+            tool_name=tool_name,
             status=AgentToolStatus.FAILED,
             input_summary=input_summary,
             output_summary=message,

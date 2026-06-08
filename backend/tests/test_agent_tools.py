@@ -93,6 +93,11 @@ def test_get_document_fields_returns_saved_parser_result(tmp_path: Path) -> None
     assert result.observation.missing_fields == []
     assert result.trace_metadata["allowlisted"] == "true"
     assert result.trace_metadata["read_only"] == "true"
+    assert result.trace_metadata["tool_tier"] == "read-only"
+    assert result.trace_metadata["required_roles"] == "admin,analyst"
+    assert result.trace_metadata["permission_requirement"] == "agent_run_tool_execution"
+    assert result.trace_metadata["side_effect_policy"] == "no_side_effects"
+    assert result.trace_metadata["human_confirmation_required"] == "not_required"
     assert result.trace_metadata["tool_source"] == "local_metadata"
 
 

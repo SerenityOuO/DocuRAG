@@ -514,6 +514,11 @@ Status：
 - Agent trace 現在保存 planner source、attempted provider、validation result、planned tools、fallback reason、latency、model / token metadata，以及 role / project metadata；不新增任意 SQL、shell、filesystem、network 或 destructive tool execution。
 - `38-02` validation 已通過：focused Agent tests `9 passed`；backend full test `254 passed`（1 pytest cache warning）；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
 - Release Impact：Version bump required: no。`38-02` 是 Phase 38 runtime ticket，版本同步留到 `38-04`。
+- `38-03` 已完成 tool permission guards and trace。既有 Agent tools 標記 `read-only` tier、`agent_run_tool_execution` permission requirement、Admin / Analyst required roles、project access trace、`no_side_effects` side-effect policy 與 human confirmation `not_required`。
+- Agent run 在 tool execution 前會檢查 role、project context、tool tier 與 side-effect policy；Viewer role 被 backend guard 擋下，Analyst / Admin 與本地 disabled auth path 只會執行既有 allowlisted read-only tools。
+- Frontend Agent trace 現在顯示 permission decision、阻擋工具、tool tier、side-effect policy 與 fallback reason；invalid LLM plan fallback 仍回到 deterministic safe tools，不執行 unsafe tool。
+- `38-03` validation 已通過：focused Agent tests `17 passed`、backend full test `255 passed`（1 pytest cache warning）、frontend build、Chrome GUI Browser check desktop / mobile、ticket `rg` 與 `git diff --check`。
+- Release Impact：Version bump required: no。`38-03` 是 Phase 38 runtime ticket，版本同步留到 `38-04`。
 
 ### Phase 39 - Deployment / Observability / Fine-tuning Track
 
