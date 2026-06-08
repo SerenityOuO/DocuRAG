@@ -291,15 +291,22 @@ Phase 38 `v0.38.0` - Agent runtime hardening：
 - Release Impact：Version bump required: yes。Phase 38 已完成 `v0.38.0` Agent runtime hardening release。
 
 Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
-- [ ] `tasks/phase-39-deployment-observability-finetuning/39-01-deployment-observability-research-contract.md`
+- [x] `tasks/phase-39-deployment-observability-finetuning/39-01-deployment-observability-research-contract.md`: 定義 Phase 39 K8s baseline、Loki + Grafana observability path、API / worker / RAG / eval trace logging boundary，以及 fine-tuning / synthetic data / embedding tuning research-only scope；文件 ticket，不 bump version、不新增 runtime。
 - [ ] `tasks/phase-39-deployment-observability-finetuning/39-02-k8s-manifest-baseline.md`
 - [ ] `tasks/phase-39-deployment-observability-finetuning/39-03-observability-stack-and-rag-trace-logs.md`
 - [ ] `tasks/phase-39-deployment-observability-finetuning/39-04-finetuning-synthetic-data-research-track.md`
 - [ ] `tasks/phase-39-deployment-observability-finetuning/39-05-phase-39-release-sync.md`
 
+39-01 Deployment Observability Research Contract Status：
+
+- 已完成。`docs/architecture.md` 已定義 Phase 39 deployment / observability / fine-tuning research contract，將 K8s baseline 限定為 Deployment、Service、ConfigMap / Secret template、health probes 與 resource request examples。
+- Observability path 已選定 Loki + Grafana；OpenSearch 保留為替代路線。Log / trace scope 包含 API log、worker log、RAG trace 與 eval metrics，並明確避免預設記錄 raw document text、prompt body、bearer token 或 secret。
+- Fine-tuning / synthetic data / embedding tuning 僅作 research track，可產生 dataset card、experiment report 或 notebook skeleton；不執行長時間 training、不下載大型模型、不改 main runtime default。
+- Release Impact：Version bump required: no。此 ticket 是 Phase 39 contract 文件，不新增 K8s manifest、observability runtime、notebook、dependency、backend / frontend runtime 或版本更新。
+
 Phase 31-39 guardrails：
 
-- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync，Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release sync。除 Phase 31、Phase 32、Phase 33、Phase 34、Phase 35、Phase 36 已完成票與 Phase 40 planning 票外，以上 tickets 目前仍是 future backlog，尚未實作。
+- Phase 31 已完成 `v0.31.0` release sync，Phase 32 已完成 `v0.32.0` release sync，Phase 33 已完成 `v0.33.0` Redis + NATS worker demo milestone release sync，Phase 34 已完成 `v0.34.0` scanned PDF OCR baseline release sync，Phase 35 已完成 `v0.35.0` RAG indexing quality release sync，Phase 36 已完成 `v0.36.0` eval dashboard / rerank analysis release sync，Phase 37 已完成 `v0.37.0` inference ops / vLLM serving release sync，Phase 38 已完成 `v0.38.0` Agent runtime hardening release sync。除已完成票與 Phase 40 planning 票外，Phase 39 後續 tickets 目前仍是 future backlog，尚未實作。
 - 每個 Phase 仍必須依序先做 contract / migration / validation，再做 runtime 與 release sync。
 - 不得在 Phase 31 提前實作 Redis、NATS、vLLM、K8s 或 fine-tuning；也不得在規劃 ticket 中新增外部依賴或 schema。
 - Phase 完成且形成 release 時，才可同步 bump backend / frontend / health / Docker Compose version。

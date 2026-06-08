@@ -546,9 +546,14 @@ Tickets：
 Expected Outcome：
 
 - 提供 basic K8s manifests、ConfigMap / Secret template、health probes 與 resource request examples。
-- 補上 Loki / Grafana 或 OpenSearch observability path，集中 API log、worker log、RAG trace 與 eval metrics。
+- 補上 Loki / Grafana observability path，集中 API log、worker log、RAG trace 與 eval metrics；OpenSearch 保留為替代路線，不作預設。
 - 建立 SFT / synthetic data / embedding tuning 的實驗文件或 notebook skeleton，明確標示不是 production training pipeline。
 - 不新增 enterprise SSO、multi-cluster deployment 或完整 autoscaling。
+
+Status：
+
+- `39-01` 已完成 Phase 39 deployment / observability / fine-tuning research contract。文件已定義 K8s baseline scope、Loki + Grafana observability path、API / worker / RAG / eval trace logging boundary，以及 fine-tuning / synthetic data / embedding tuning 的 research-only scope。
+- Release Impact：Version bump required: no。`39-01` 是 Markdown-only contract，不新增 K8s manifest、observability runtime、notebook、dependency、backend / frontend runtime 或 version bump。
 
 Phase 31-39 Validation Direction：
 

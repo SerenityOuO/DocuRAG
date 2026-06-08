@@ -626,6 +626,54 @@ Fallback boundary:
 - Provider routing must not bypass Auth / RBAC guards, project filters, Agent tool allowlists or retrieval source filters.
 - `37-01` does not change RAG prompt text, Agent planner behavior, VLM parser schema, ranking algorithm, rerank provider or frontend streaming behavior.
 
+## Phase 39 Deployment / Observability / Fine-tuning Research Contract
+
+`39-01` is a Markdown-only contract for deployment and MLOps-facing evidence. It defines what later Phase 39 tickets may add, but does not add manifests, runtime services, notebooks, dependencies or version changes by itself.
+
+Phase 39 keeps the project honest: it can show deployment shape, traceable logs and research artifacts, but it must not imply production autoscaling, multi-cluster operations or a production training pipeline.
+
+Execution order:
+
+1. `39-01` defines the contract and boundaries.
+2. `39-02` may add basic K8s manifests and configuration templates.
+3. `39-03` may add observability examples and RAG trace log guidance.
+4. `39-04` may add research-only fine-tuning / synthetic data artifacts.
+5. `39-05` performs release sync if the Phase forms `v0.39.0`.
+
+K8s baseline scope:
+
+| Artifact | Required content | Boundary |
+|---|---|---|
+| Deployment | Backend container, frontend static service shape, env wiring examples. | No production rollout strategy, autoscaling policy or multi-cluster deployment. |
+| Service | Cluster-internal service examples for backend / frontend. | No cloud load balancer, ingress controller or certificate automation unless a later ticket scopes it. |
+| ConfigMap | Non-secret app config examples such as environment, provider selection and API base URL. | Must not contain production secrets or API keys. |
+| Secret template | Placeholder keys only, for local documentation and shape validation. | Must not include real secret values, external account credentials or production database URLs. |
+| Health probes | Backend `/health` readiness / liveness examples. | Probe examples must not claim production SLOs. |
+| Resource requests | Conservative CPU / memory examples for local / demo workloads. | Not capacity planning for production traffic or GPU scheduling. |
+
+Observability path:
+
+- Phase 39 selects Loki + Grafana as the default local observability path because it matches log aggregation and dashboard evidence with minimal operational weight.
+- OpenSearch remains an alternative search-oriented log path, but is not the default track unless a later ticket explicitly changes it.
+- API logs should include request id, route, status code, latency, auth mode / role, project id when present and provider fallback metadata.
+- Worker logs should include `task_id`, task type, lifecycle status, attempt, trace id, idempotency key and failure reason.
+- RAG trace logs should include retrieval provider, top K, fallback state, citation count, visible project / document scope and latency. They should not log raw document text, full prompt bodies, bearer tokens or secrets by default.
+- Eval metrics logs should include dataset id, run id, strategy, Hit Rate@K, MRR@K, Recall@K, latency, failure count and fallback count.
+
+Fine-tuning / synthetic data / embedding tuning research scope:
+
+- Phase 39 may define a research-only SFT / synthetic data / embedding tuning plan using demo-safe sample data and generated examples.
+- Research artifacts may include dataset card, prompt template notes, experiment report format, evaluation metric plan or notebook skeleton in a later scoped ticket.
+- Research artifacts must not run long training jobs, download large models, change the default runtime model, upload private data, require paid services or claim production model improvement.
+- Main OCR, parser, RAG, Agent, Auth / RBAC and inference provider defaults remain unchanged by `39-01`.
+
+Out of scope for `39-01`:
+
+- No K8s manifests, Helm chart, Docker image change, deployment config runtime or CI deployment workflow.
+- No Loki, Grafana, OpenSearch, Prometheus or collector service.
+- No production autoscaling, HPA, multi-cluster topology, ingress, cert-manager, service mesh or incident workflow.
+- No production training pipeline, fine-tuning notebook, model registry, model artifact, external account, API key or paid-service credential.
+
 ## Near-Term Runtime Boundary
 
 目前 runtime 邊界如下：
@@ -733,7 +781,7 @@ Completed in `32-03`: endpoint permission guards and cross-project filtering enf
 - Production NATS event bus、durable JetStream consumer、async OCR / parser / indexing / eval worker execution；`33-03` 只完成 NATS helper、worker skeleton 與 task status slice。
 - Production autonomous Agent、LLM planner、arbitrary tool runtime 或 destructive tool execution。
 - vLLM / OpenAI-compatible serving。
-- K8s manifests and deployment hardening。
+- K8s manifests、deployment hardening、observability runtime、fine-tuning pipeline。`39-01` 只定義 Phase 39 research / deployment / observability contract。
 
 ## Design Rules
 
