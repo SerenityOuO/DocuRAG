@@ -33,6 +33,7 @@ DocuRAG 是技術探索導向的 AI 文件知識庫專案，將文件上傳、OC
 - Inference ops / vLLM benchmark smoke
 - Inference gateway / capacity planning report
 - JD evidence hardening pack (Embedding / SFT, inference hardware, observability dashboard evidence)
+- Final interview portfolio pack (JD matrix, system walkthrough, demo scenarios, risk boundaries)
 
 ## 需求
 
@@ -166,7 +167,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 
 ## 目前邊界
 
-目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.44.0 已完成 Phase 44 Document Intelligence QA / human review loop release sync：field confidence / evidence view、human correction / golden labels 與 parser field accuracy eval 已整理成可驗證的文件理解可信度證據；v0.43.0 的 AgentOps 治理證據、v0.42.0 的推論維運證據、v0.41.0 的品質回歸證據與 v0.40.0 的 JD evidence pack 仍保留為展示基礎。這不代表 production annotation platform、production human review workflow、完整 layout understanding、table reconstruction、model training、production OCR accuracy tuning、production autonomous Agent、任意 SQL、shell、filesystem command、destructive tool、external side-effect tool、production approval workflow、production audit storage、production inference gateway、multi-GPU serving、production K8s autoscaling、multi-cluster deployment、managed secret integration、production training pipeline、model registry、OpenAI billing / secret vault、RAG ranking 變更、VLM parser schema 變更、LLM-as-judge、answer faithfulness、citation quality scoring、production eval platform、production alerting / incident workflow、production indexing worker、production async OCR worker 或 production guarantee 已完成。
+目前是技術探索用 MVP，不宣稱已完成 production 系統。v0.45.0 已完成 final interview portfolio pack：JD evidence matrix、system design walkthrough、demo scenario pack 與 risk / tradeoff report 已整理成可面試展示、可被追問、可快速驗證的入口；v0.44.0 的 Document Intelligence QA、v0.43.0 的 AgentOps 治理證據、v0.42.0 的推論維運證據、v0.41.0 的品質回歸證據與 v0.40.0 的 JD evidence pack 仍保留為展示基礎。這不代表 production annotation platform、production human review workflow、完整 layout understanding、table reconstruction、model training、production OCR accuracy tuning、production autonomous Agent、任意 SQL、shell、filesystem command、destructive tool、external side-effect tool、production approval workflow、production audit storage、production inference gateway、multi-GPU serving、production K8s autoscaling、multi-cluster deployment、managed secret integration、production training pipeline、model registry、OpenAI billing / secret vault、RAG ranking 變更、VLM parser schema 變更、LLM-as-judge、answer faithfulness、citation quality scoring、production eval platform、production alerting / incident workflow、production indexing worker、production async OCR worker 或 production guarantee 已完成。
 
 ## 文件入口
 
@@ -176,5 +177,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\retrieval-eval-smo
 - [docs/ROADMAP.md](./docs/ROADMAP.md)：phase / milestone 路線圖。
 - [docs/demo-script.md](./docs/demo-script.md)：本機操作流程筆記。
 - [docs/api.md](./docs/api.md)：API contract 補充。
+- [docs/jd-evidence-matrix.md](./docs/jd-evidence-matrix.md)：JD 關鍵能力對照表。
+- [docs/system-design-walkthrough.md](./docs/system-design-walkthrough.md)：10 分鐘系統設計 walkthrough。
+- [docs/demo-scenario-pack.md](./docs/demo-scenario-pack.md)：分情境面試 demo 路線。
+- [docs/risk-boundary-and-tradeoff-report.md](./docs/risk-boundary-and-tradeoff-report.md)：風險邊界與取捨報告。
 - [docs/inference-capacity-planning-report.md](./docs/inference-capacity-planning-report.md)：Phase 42 推論容量規劃與硬體選型報告。
 - [tasks/](./tasks/)：ticket-first 開發任務票。

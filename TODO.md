@@ -573,11 +573,12 @@ Phase 45 `v0.45.0` - Production readiness / interview portfolio pack：
 - [x] `tasks/phase-45-production-readiness-portfolio-pack/45-02-system-design-walkthrough.md`: 新增 `docs/system-design-walkthrough.md`，提供 10 分鐘 talk track、白板式資料流、failure / fallback 解讀與主要 tradeoffs。不 bump version。
 - [x] `tasks/phase-45-production-readiness-portfolio-pack/45-03-demo-scenario-pack.md`: 新增 `docs/demo-scenario-pack.md`，整理 RAG quality、Document Intelligence QA、AgentOps governance 三條主線，以及 Inference Gateway / Observability / K8s optional path。不 bump version。
 - [x] `tasks/phase-45-production-readiness-portfolio-pack/45-04-risk-boundary-and-tradeoff-report.md`: 新增 `docs/risk-boundary-and-tradeoff-report.md`，整理 data isolation、DB migration、worker durability、observability、latency、OCR / VLM accuracy 與 Agent safety 的 mitigation、缺口與下一步。不 bump version。
-- [ ] `tasks/phase-45-production-readiness-portfolio-pack/45-05-phase-45-final-release-sync.md`
+- [x] `tasks/phase-45-production-readiness-portfolio-pack/45-05-phase-45-final-release-sync.md`: 完成 `v0.45.0` final release sync，更新 backend / frontend / Docker Compose / `.env.example` / health test / demo smoke expected version，並同步 README / README_DEV / backend README / frontend README / TODO / ROADMAP。
 - `45-01` validation 已通過：JD evidence keyword `rg` 與 `git diff --check`。本 ticket 不新增 runtime、dependency、測試程式、截圖、demo media 或 version bump，也不把 future backlog 寫成 completed。
 - `45-02` validation 已通過：system design keyword `rg` 與 `git diff --check`。本 ticket 不新增架構圖生成工具、runtime、infra config、deployment service 或 public README 長篇 release log，也不把 future backlog 寫成 completed。
 - `45-03` validation 已通過：demo scenario keyword `rg` 與 `git diff --check`。本 ticket 不新增 demo runtime、sample secrets、外部服務帳號、paid API、optional runtime requirement、影片媒體或 version bump。
 - `45-04` validation 已通過：risk boundary keyword `rg` 與 `git diff --check`。本 ticket 不新增 runtime safety control、production incident workflow、SLO、pager、external vendor integration、功能行為變更或 version bump，也不把 future hardening 寫成已完成。
+- `45-05` validation 已通過：backend full test、frontend build、demo smoke、Phase 45 evidence `rg` 與 `git diff --check`。Release Impact：Version bump required: yes，Phase 45 已完成 `v0.45.0` final interview portfolio pack release；不新增 runtime feature、外部服務、production deployment、模型訓練、paid API、production guarantee 或 JD 100% 完成宣稱。
 
 Phase 41-45 guardrails：
 
@@ -587,7 +588,7 @@ Phase 41-45 guardrails：
 - Phase 43 聚焦 Agent tool permission、approval state、audit / replay evidence，不允許任意 SQL、shell、filesystem command 或 destructive tool。
 - Phase 44 聚焦 OCR / VLM 欄位可信度、人工作業修正與 parser field accuracy eval，不新增 full annotation platform 或 model training。
 - Phase 45 聚焦 JD evidence matrix、system design walkthrough、demo scenario pack 與 risk / tradeoff report，不新增新的 production runtime。
-- 每個 Phase 完成 release sync ticket 前，不更新 backend / frontend / health / Docker Compose version。
+- Phase 45 已完成 `v0.45.0` release sync；後續若有新需求，必須先新增有效 ticket，不得自行發明下一個 Phase。
 
 ## Phase 00 - Bootstrap Documents and Tickets
 

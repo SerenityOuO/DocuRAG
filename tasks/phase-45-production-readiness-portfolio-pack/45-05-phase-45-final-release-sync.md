@@ -38,10 +38,10 @@
 
 ## Acceptance Criteria
 
-- [ ] Backend / frontend / Docker Compose / health test version 同步到 `0.45.0`。
-- [ ] README 精簡呈現 final portfolio value，不塞入長篇 release log。
-- [ ] README_DEV 與 docs 完整整理 JD evidence matrix、system design walkthrough、demo scenario pack 與 risk report。
-- [ ] 文件清楚區分 completed、demo-safe、research-only 與 future backlog。
+- [x] Backend / frontend / Docker Compose / health test version 同步到 `0.45.0`。
+- [x] README 精簡呈現 final portfolio value，不塞入長篇 release log。
+- [x] README_DEV 與 docs 完整整理 JD evidence matrix、system design walkthrough、demo scenario pack 與 risk report。
+- [x] 文件清楚區分 completed、demo-safe、research-only 與 future backlog。
 
 ## Validation
 
@@ -50,3 +50,9 @@
 - Demo smoke。
 - Phase 45 evidence `rg` validation。
 - `git diff --check`
+
+## Completion Notes
+
+- 已完成 `v0.45.0` final release sync，版本同步涵蓋 backend package / app version、frontend package / lock / fallback version、health test、Docker Compose `DOCURAG_VERSION`、`.env.example` 與 demo smoke expected version。
+- Public `README.md` 保持精簡 portfolio entry；完整 Phase 41-45 evidence、demo path、risk boundary 與 release record 放在 README_DEV、backend README、frontend README、TODO 與 ROADMAP。
+- Validation 已通過：backend full test、frontend build、demo smoke、Phase 45 evidence keyword `rg` 與 `git diff --check`。
