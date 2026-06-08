@@ -453,7 +453,7 @@ Expected Outcome：
 - Provider boundary covers `ollama`, `openai_compatible` and `vllm`; vLLM remains an OpenAI-compatible serving path, not the only runtime.
 - Metrics contract covers prompt tokens, completion tokens, total tokens, latency, throughput, finish reason, GPU memory estimate and KV cache estimate.
 - Fallback contract covers unavailable provider, timeout, malformed response, rate limit / overload and unsupported modality without changing RAG prompt, Agent planner, VLM parser schema, ranking or frontend streaming behavior.
-- Release Impact: Version bump required: no. OpenAI-compatible runtime is handled by `37-02`; vLLM serving / benchmark docs remain deferred to `37-03`, and version sync remains deferred to `37-04`.
+- Release Impact: Version bump required: no. OpenAI-compatible runtime is handled by `37-02`; vLLM serving / benchmark docs are handled by `37-03`; version sync remains deferred to `37-04`.
 - Validation: ticket `rg` and `git diff --check`.
 
 37-02 OpenAI Compatible Client Boundary Status：
@@ -464,6 +464,15 @@ Expected Outcome：
 - Ollama remains the default local provider. This ticket does not add a vLLM server, OpenAI SDK dependency, VLM parser runtime change, Agent planner change, RAG prompt change, production API key vault or production inference gateway.
 - Release Impact: Version bump required: no. Version sync remains deferred to `37-04`.
 - Validation: focused backend tests `39 passed`; backend full test `251 passed` with 1 pytest cache warning; ticket `rg`; `git diff --check`.
+
+37-03 vLLM Local Serving and Benchmark Docs Status：
+
+- Added a local vLLM / Docker serving guide that uses the existing OpenAI-compatible `/v1/chat/completions` path and points backend env to `DOCURAG_LLM_PROVIDER=openai_compatible`.
+- Added `scripts/inference-benchmark-smoke.ps1` to record latency, prompt tokens, completion tokens, total tokens, derived throughput, KV cache estimate and GPU memory estimate, or a skipped report when vLLM is unavailable.
+- Documented hardware constraints for local GPU / Docker serving, plus fallback to Ollama or deterministic baseline.
+- The Docker Compose backend service now passes through LLM model, timeout and API key env values; this does not add a vLLM service or production inference serving.
+- Release Impact: Version bump required: no. Version sync remains deferred to `37-04`.
+- Validation: inference benchmark smoke; ticket `rg`; `git diff --check`.
 
 ### Phase 38 - Agent Runtime Hardening
 

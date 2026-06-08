@@ -245,7 +245,7 @@ When embedding, Qdrant or reranker runtime is unavailable, vector-backed strateg
 
 ## Phase 37 Inference Provider Ops Contract
 
-`37-01` was a Markdown-only contract ticket. It defines how LLM / VLM inference providers should report selection, latency, token usage and fallback state. `37-02` adds the first OpenAI-compatible LLM adapter for RAG generation while keeping Ollama as the default local fallback path. vLLM server setup remains deferred to `37-03`.
+`37-01` was a Markdown-only contract ticket. It defines how LLM / VLM inference providers should report selection, latency, token usage and fallback state. `37-02` adds the first OpenAI-compatible LLM adapter for RAG generation while keeping Ollama as the default local fallback path. `37-03` adds local vLLM serving docs and benchmark smoke for an OpenAI-compatible endpoint, but does not make vLLM the only runtime or claim production inference serving.
 
 ### Provider Boundary
 
@@ -253,7 +253,7 @@ When embedding, Qdrant or reranker runtime is unavailable, vector-backed strateg
 |---|---|---|---|
 | `ollama` | Ollama `/api/generate` and embedding endpoints | Current local demo LLM / VLM path and fallback baseline. | Must remain available as a local fallback path; no production SLA claim. |
 | `openai_compatible` | OpenAI-compatible chat endpoint, configured by base URL and model. | Implemented in `37-02` for RAG generation against hosted or local compatible servers. | Requires explicit env selection and must not require a production secret for local validation. |
-| `vllm` | OpenAI-compatible endpoint served by vLLM. | Future local serving / benchmark path. | `37-01` does not start vLLM, add Docker runtime, or make vLLM the only provider. |
+| `vllm` | OpenAI-compatible endpoint served by vLLM. | Optional local serving / benchmark path documented in `37-03`. | Uses the same `openai_compatible` backend adapter; no production SLA, model registry, autoscaling or multi-GPU serving claim. |
 
 Provider selection must be explicit in trace metadata:
 
@@ -301,7 +301,9 @@ Fallback metadata belongs in response trace metadata and persisted run metadata 
 
 ### Validation Boundary
 
-`37-02` validates the OpenAI-compatible LLM adapter with backend tests for success, timeout, malformed response and unavailable endpoint handling. It does not add an OpenAI SDK dependency, vLLM server, GPU benchmark script, paid API key handling, streaming API, VLM parser runtime change, Agent planner change or production inference gateway.
+`37-02` validates the OpenAI-compatible LLM adapter with backend tests for success, timeout, malformed response and unavailable endpoint handling. It does not add an OpenAI SDK dependency, paid API key handling, streaming API, VLM parser runtime change, Agent planner change or production inference gateway.
+
+`37-03` validates the local vLLM serving path with `scripts/inference-benchmark-smoke.ps1`. The smoke script calls an OpenAI-compatible `/v1/chat/completions` endpoint when available and writes latency, token, throughput, KV cache estimate and GPU memory estimate into a local JSON report. If the endpoint is unavailable, it writes `status=skipped`, `provider_status=unavailable`, skip reason and fallback guidance to Ollama or deterministic baseline.
 
 ### 37-02 Runtime Notes
 
@@ -309,6 +311,13 @@ Fallback metadata belongs in response trace metadata and persisted run metadata 
 - The adapter normalizes prompt tokens, completion tokens, total tokens, finish reason, provider request id, provider latency and tokens per second into the existing RAG trace metadata when the provider returns those fields.
 - Timeout, connection failure and malformed response raise provider errors; `/rag/query` keeps the existing provider fallback path and returns retrieved chunks with `llm_fallback_reason=provider_error`.
 - Ollama remains the default `DOCURAG_LLM_PROVIDER=ollama` path and is not removed.
+
+### 37-03 Local vLLM Notes
+
+- vLLM local serving uses the same `DOCURAG_LLM_PROVIDER=openai_compatible`, `DOCURAG_LLM_BASE_URL`, `DOCURAG_LLM_MODEL`, `DOCURAG_LLM_TIMEOUT_SECONDS` and optional `DOCURAG_LLM_API_KEY` settings.
+- `docs/LOCAL_DEV_SETUP.md` documents the vLLM Docker path and hardware constraints; Windows native vLLM startup is not assumed.
+- `scripts/inference-benchmark-smoke.ps1` writes measured latency and token fields only when the endpoint responds; KV cache and GPU memory fields remain estimates.
+- `37-03` does not change RAG prompts, VLM parser prompts, Agent planner behavior or retrieval ranking.
 
 ## Phase 29 Built-in RAG Eval Contract
 

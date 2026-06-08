@@ -228,6 +228,50 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo-smoke-test.ps1 -RunLlm
 ```
 
+## Phase 37 vLLM / OpenAI-Compatible Inference Benchmark
+
+Phase 37 的 vLLM path 是本機推論維運展示，不是 production inference serving。vLLM 透過 OpenAI-compatible `/v1` endpoint 接到既有 `openai_compatible` provider；Ollama 仍是 local demo default，vLLM 不可用時可回到 Ollama 或 `DOCURAG_LLM_PROVIDER=` deterministic baseline。
+
+官方參考：
+
+- vLLM Docker deployment：<https://docs.vllm.ai/en/latest/deployment/docker.html>
+- vLLM OpenAI-compatible server：<https://docs.vllm.ai/en/latest/serving/online_serving/openai_compatible_server/>
+
+本機限制：
+
+- 建議使用 Linux / WSL2 / Docker Desktop GPU path；不要假設 Windows native vLLM 可直接啟動。
+- 需要 NVIDIA driver、CUDA runtime 與 Docker GPU runtime 可用。
+- GPU memory / KV cache 受 model size、context length、batch size、dtype、layer count 與 hidden size 影響；目前 smoke script 只產出估算值，不宣稱是實測 VRAM。
+
+範例 vLLM Docker 啟動方式：
+
+```powershell
+docker run --runtime nvidia --gpus all -p 8000:8000 --ipc=host vllm/vllm-openai:latest --model Qwen/Qwen3-0.6B
+```
+
+backend 指向 vLLM OpenAI-compatible endpoint：
+
+```powershell
+$env:DOCURAG_LLM_PROVIDER="openai_compatible"
+$env:DOCURAG_LLM_BASE_URL="http://127.0.0.1:8000/v1"
+$env:DOCURAG_LLM_MODEL="Qwen/Qwen3-0.6B"
+$env:DOCURAG_LLM_API_KEY=""
+```
+
+benchmark smoke：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\inference-benchmark-smoke.ps1 -BaseUrl http://127.0.0.1:8000/v1 -Model Qwen/Qwen3-0.6B
+```
+
+輸出預設寫到：
+
+```text
+.tmp/inference-benchmark-smoke.json
+```
+
+成功時會記錄 `latency_ms`、`prompt_tokens`、`completion_tokens`、`total_tokens`、`throughput_tokens_per_second`、`kv_cache_estimate_mb` 與 `gpu_memory_estimate_mb`。如果 vLLM endpoint 未啟動，script 會以 `status=skipped` 寫入 skip reason 與 fallback target；若 CI 或手動驗證要把 unavailable 視為失敗，可加上 `-FailOnUnavailable`。
+
 ## v0.7 / v0.9.1 Real OCR Flow
 
 mock demo 不需要 PaddleOCR dependency，明確設定 `DOCURAG_OCR_PROVIDER=mock` 或直接呼叫 `/ocr/mock`：

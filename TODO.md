@@ -220,7 +220,7 @@ Phase 36 `v0.36.0` - Eval dashboard / rerank analysis：
 Phase 37 `v0.37.0` - Inference Ops / vLLM serving：
 - [x] `tasks/phase-37-inference-ops-vllm/37-01-inference-provider-ops-contract.md`: 完成 inference provider ops contract；不 bump version、不新增 runtime。
 - [x] `tasks/phase-37-inference-ops-vllm/37-02-openai-compatible-client-boundary.md`: 新增 OpenAI-compatible LLM client adapter，可透過 env 明確啟用；保留 Ollama default / fallback，不 bump version。
-- [ ] `tasks/phase-37-inference-ops-vllm/37-03-vllm-local-serving-and-benchmark-docs.md`
+- [x] `tasks/phase-37-inference-ops-vllm/37-03-vllm-local-serving-and-benchmark-docs.md`: 新增 vLLM local / Docker serving guide 與 inference benchmark smoke，記錄 latency、tokens、throughput、KV cache / GPU memory estimate；vLLM unavailable 時寫入 skipped report 與 Ollama / deterministic fallback，不 bump version。
 - [ ] `tasks/phase-37-inference-ops-vllm/37-04-inference-ops-release-sync.md`
 
 37-01 Inference Provider Ops Contract：
@@ -236,6 +236,14 @@ Phase 37 `v0.37.0` - Inference Ops / vLLM serving：
 - Ollama default / fallback 未移除；本 ticket 不新增 OpenAI SDK dependency、vLLM server、VLM parser runtime、Agent planner 變更、RAG prompt 變更、production API key vault 或 production inference gateway。
 - Validation 已通過：focused backend tests `39 passed`、backend full test `251 passed`（1 pytest cache warning）、ticket `rg` 與 `git diff --check`。
 - Release Impact：Version bump required: no。這是 Phase 37 runtime slice，版本同步留到 `37-04`。
+
+37-03 vLLM Local Serving and Benchmark Docs：
+
+- 已完成。`docs/LOCAL_DEV_SETUP.md` 補上 vLLM Docker / OpenAI-compatible `/v1` local serving guide，並說明 hardware constraints、Ollama fallback 與 deterministic baseline。
+- `scripts/inference-benchmark-smoke.ps1` 會呼叫 OpenAI-compatible `/chat/completions`，成功時記錄 latency、prompt tokens、completion tokens、total tokens、throughput、KV cache estimate 與 GPU memory estimate；endpoint unavailable 時寫入 `status=skipped` report。
+- `.env.example` 與 `infra/docker-compose.yml` 補上 local OpenAI-compatible / vLLM env pass-through，但不新增 vLLM service，不把 vLLM 設成唯一 runtime。
+- Validation 已通過：inference benchmark smoke、ticket `rg` 與 `git diff --check`。
+- Release Impact：Version bump required: no。這是 Phase 37 ops / docs / smoke ticket，版本同步留到 `37-04`。
 
 Phase 38 `v0.38.0` - Agent runtime hardening：
 - [ ] `tasks/phase-38-agent-runtime-hardening/38-01-agent-runtime-permission-contract.md`

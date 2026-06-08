@@ -565,7 +565,7 @@ Provider boundary:
 |---|---|---|
 | `ollama` | Current local demo provider for generation and VLM parser spike. | Remains local fallback when compatible endpoints are disabled or unavailable. |
 | `openai_compatible` | Implemented in `37-02` for RAG generation through `{base_url}/chat/completions`. | Must be explicitly enabled with `DOCURAG_LLM_PROVIDER=openai_compatible`; unavailable / timeout / malformed response falls back to existing safe path. |
-| `vllm` | Future local serving path exposed through OpenAI-compatible API. | Must never become the only runtime; vLLM server setup is deferred to `37-03`. |
+| `vllm` | Optional local serving path exposed through the same OpenAI-compatible `/v1` API. | Must never become the only runtime; `37-03` documents local / Docker serving and benchmark smoke only. |
 
 Metrics boundary:
 
@@ -573,6 +573,13 @@ Metrics boundary:
 - `37-02` maps compatible response `usage.prompt_tokens`, `usage.completion_tokens`, `usage.total_tokens`, `choices[0].finish_reason`, response `id`, measured provider latency and derived throughput into existing RAG citation trace metadata.
 - Local serving estimates may include `gpu_memory_estimate_mb` and `kv_cache_estimate_mb`, but estimates must be labeled as estimates unless a later benchmark ticket measures them.
 - Metrics must be attached to existing trace metadata or report artifacts; missing metrics stay `null` / unavailable rather than being displayed as `0`.
+
+`37-03` local serving / benchmark boundary:
+
+- vLLM local serving is documented as an optional Docker / GPU path using `vllm/vllm-openai` and the OpenAI-compatible `/v1/chat/completions` shape.
+- `scripts/inference-benchmark-smoke.ps1` records latency, prompt tokens, completion tokens, total tokens, derived throughput, KV cache estimate and GPU memory estimate when a compatible endpoint is reachable.
+- When vLLM is unavailable, the smoke script writes a skipped report with provider status and fallback guidance to Ollama or the deterministic baseline.
+- This does not add multi-GPU serving, production autoscaling, K8s deployment, model registry, prompt changes, ranking changes or a production inference gateway.
 
 Fallback boundary:
 
