@@ -1265,6 +1265,21 @@ Tool-call `trace_metadata` now includes:
 
 Run-level Agent trace now also includes `risk_tiers`, `risk_scores`, `approval_required` and `approval_state`. Viewer role requests are denied before tool execution with generic `tool_permission_forbidden` metadata. The response must not expose unauthorized target document ids, target project ids or cross-project resource details.
 
+### 43-03 Human Approval Risk Tier
+
+`43-03` adds the minimal fail-closed approval state behavior for future high-risk tool policies. The current allowlisted runtime tools remain read-only and `approval_state=not_required`; this ticket does not add a write/admin/destructive tool, production approval workflow or external approval API.
+
+If a future policy has `approval_required=true`, the tool must not execute unless `approval_state=approved`. Non-approved states are represented through the same trace metadata:
+
+| `approval_state` | `permission_decision` | `permission_reason` | Execution |
+|---|---|---|---|
+| `required` | `forbidden` | `approval_required` | Blocked before tool execution. |
+| `approved` | `allowed` after role/project/tool checks pass | `role_allowed` or local auth fallback reason | May execute only inside the current policy snapshot. |
+| `rejected` | `forbidden` | `approval_rejected` | Blocked before tool execution. |
+| `expired` | `forbidden` | `approval_expired` | Blocked before tool execution. |
+
+`approved` does not bypass RBAC, project access, tool tier, side-effect policy or destructive boundary checks. UI surfaces should display waiting or rejected states from `approval_required`, `approval_state`, `permission_decision`, `permission_reason`, `risk_tier` and `risk_score`; frontend code must not reinterpret a forbidden decision as executable.
+
 ### Forbidden Boundary
 
 Phase 43 keeps the same hard stop as Phase 38 for arbitrary SQL, shell command, filesystem command, arbitrary network tool, delete, drop table, destructive reindex, credential mutation, production database mutation and any unauthorized destructive tool. `43-01` documents this boundary only; later Phase 43 tickets must stay inside it.

@@ -34,9 +34,9 @@
 
 ## Acceptance Criteria
 
-- [ ] Risk tier 與 approval state 在文件、API 或 trace 中可驗證。
-- [ ] 高風險 tool call 不會靜默執行。
-- [ ] Validation 覆蓋 approval required / approved / rejected 或 skip-safe path。
+- [x] Risk tier 與 approval state 在文件、API 或 trace 中可驗證。
+- [x] 高風險 tool call 不會靜默執行。
+- [x] Validation 覆蓋 approval required / approved / rejected 或 skip-safe path。
 
 ## Validation
 
@@ -45,3 +45,10 @@
 - Agent approval smoke or trace validation。
 - `rg -n "approval|required|approved|rejected|expired|risk tier|human approval" backend frontend docs README_DEV.md TODO.md tasks/phase-43-agentops-governance-secure-runtime`
 - `git diff --check`
+
+## Completion Notes
+
+- `AgentToolPolicy.approval_state` 已固定為 `not_required`、`required`、`approved`、`rejected`、`expired`。
+- `approval_required=true` 且狀態不是 `approved` 時，permission evaluator 會 fail closed，並在 trace metadata 輸出 `approval_required`、`approval_rejected` 或 `approval_expired`。
+- `approved` 仍只代表 approval gate 通過；role、project access、tool tier、side-effect policy 與 destructive boundary 仍會先行檢查。
+- 目前 allowlisted Agent runtime tools 仍維持 read-only / `not_required`；本 ticket 沒有新增 UI、approval API、外部 workflow 或 destructive tool。

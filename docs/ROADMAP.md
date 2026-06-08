@@ -747,6 +747,12 @@ Expected Outcome：
 - Runtime trace 已補上 `risk_tier`、`risk_score`、`approval_required`、`approval_state`；run-level trace 會彙總 risk / approval 狀態，Viewer denied path 會在 tool execution 前留下 generic permission trace。
 - Validation 已通過：focused Agent tests `20 passed`；backend full test script `265 passed`（1 pytest cache warning）；Phase 43 permission keyword `rg`；`git diff --check`。Release Impact：Version bump required: no；版本同步留到 `43-05`。
 
+43-03 Human Approval Risk Tier Status：
+
+- 已完成。Permission evaluator 對 future high-risk policy 加上 human approval fail-closed gate：`approval_required=true` 且 `approval_state` 不是 `approved` 時，會在 tool execution 前拒絕。
+- Trace / API 文件已固定 `required`、`approved`、`rejected`、`expired` 的呈現方式；`approved` 仍不會繞過 role、project access、tool tier、side-effect policy 或 destructive boundary。
+- Validation 已通過：focused Agent approval tests `24 passed`；backend full test script `269 passed`（1 pytest cache warning）；Phase 43 approval keyword `rg`；`git diff --check`。Release Impact：Version bump required: no；版本同步留到 `43-05`。
+
 ### Phase 44 - Document Intelligence QA / Human Review Loop
 
 Target version：`v0.44.0`

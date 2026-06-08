@@ -16,7 +16,12 @@ from app.schemas.documents import (
     ParserStatus,
 )
 from app.schemas.rag import RagCitation
-from app.services.agent_tools import AgentToolService, evaluate_agent_tool_permission
+from app.services.agent_tools import (
+    AGENT_TOOL_POLICIES,
+    AgentToolPolicy,
+    AgentToolService,
+    evaluate_agent_tool_permission,
+)
 from app.services.document_storage import DocumentStorage
 
 
@@ -145,6 +150,55 @@ def test_tool_permission_blocks_viewer_with_generic_trace() -> None:
     assert metadata["approval_required"] == "false"
     assert "target_document_id" not in metadata
     assert "target_project_id" not in metadata
+
+
+@pytest.mark.parametrize(
+    ("approval_state", "expected_allowed", "expected_reason"),
+    [
+        ("required", False, "approval_required"),
+        ("approved", True, "role_allowed"),
+        ("rejected", False, "approval_rejected"),
+        ("expired", False, "approval_expired"),
+    ],
+)
+def test_high_risk_tool_policy_requires_approval_before_execution(
+    monkeypatch: pytest.MonkeyPatch,
+    approval_state: str,
+    expected_allowed: bool,
+    expected_reason: str,
+) -> None:
+    monkeypatch.setitem(
+        AGENT_TOOL_POLICIES,
+        "search_documents",
+        AgentToolPolicy(
+            tool_name="search_documents",
+            tier="write",
+            required_roles=("admin",),
+            permission_requirement="agent_write_tool_execution",
+            side_effect_policy="project_scoped_write",
+            risk_tier="high",
+            risk_score=70,
+            approval_required=True,
+            approval_state=approval_state,  # type: ignore[arg-type]
+            human_confirmation_required="required",
+            human_confirmation_status=approval_state,
+        ),
+    )
+
+    decision = evaluate_agent_tool_permission(
+        "search_documents",
+        role="admin",
+        project_id="project-a",
+    )
+    metadata = decision.trace_metadata()
+
+    assert decision.allowed is expected_allowed
+    assert metadata["permission_reason"] == expected_reason
+    assert metadata["tool_tier"] == "write"
+    assert metadata["risk_tier"] == "high"
+    assert metadata["risk_score"] == "70"
+    assert metadata["approval_required"] == "true"
+    assert metadata["approval_state"] == approval_state
 
 
 def test_get_document_fields_returns_failure_when_parser_result_is_missing(tmp_path: Path) -> None:

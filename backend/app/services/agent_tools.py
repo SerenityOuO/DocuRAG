@@ -20,6 +20,7 @@ INVOICE_FIELD_NAMES = [
 
 ToolTier = Literal["read-only", "write", "admin", "destructive"]
 RiskTier = Literal["low", "medium", "high", "prohibited"]
+ApprovalState = Literal["not_required", "required", "approved", "rejected", "expired"]
 
 
 @dataclass(frozen=True)
@@ -32,7 +33,7 @@ class AgentToolPolicy:
     risk_tier: RiskTier = "low"
     risk_score: int = 10
     approval_required: bool = False
-    approval_state: str = "not_required"
+    approval_state: ApprovalState = "not_required"
     human_confirmation_required: str = "not_required"
     human_confirmation_status: str = "not_required"
     project_access_required: bool = True
@@ -119,6 +120,17 @@ def evaluate_agent_tool_permission(
             project_access=project_access,
         )
 
+    if policy.approval_required and policy.approval_state != "approved":
+        return AgentToolPermissionDecision(
+            tool_name=tool_name,
+            policy=policy,
+            decision="forbidden",
+            reason=_approval_forbidden_reason(policy.approval_state),
+            role=role,
+            project_id=project_id,
+            project_access=project_access,
+        )
+
     reason = "role_allowed" if role else "auth_disabled_or_local"
     return AgentToolPermissionDecision(
         tool_name=tool_name,
@@ -129,6 +141,14 @@ def evaluate_agent_tool_permission(
         project_id=project_id,
         project_access=project_access,
     )
+
+
+def _approval_forbidden_reason(approval_state: ApprovalState) -> str:
+    if approval_state == "rejected":
+        return "approval_rejected"
+    if approval_state == "expired":
+        return "approval_expired"
+    return "approval_required"
 
 
 def tool_policy_metadata(policy: AgentToolPolicy) -> dict[str, str]:

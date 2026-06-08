@@ -340,6 +340,14 @@ Trace completeness boundary：
 - Viewer role 會在 tool execution 前被擋下，final answer / trace 只保留 generic `tool_permission_forbidden` 與 denied tool name；不暴露 cross-project target document 或 unauthorized resource details。
 - 本 runtime slice 不新增 write / admin / destructive tool，不新增任意 SQL、shell、filesystem command、external side-effect tool、production IAM、SSO、OAuth、MFA 或外部 approval service。
 
+43-03 Human approval / risk tier boundary：
+
+- Permission evaluator 會對 `approval_required=true` 且 `approval_state` 不是 `approved` 的 high-risk policy fail closed。`required` 對應 `approval_required`、`rejected` 對應 `approval_rejected`、`expired` 對應 `approval_expired`。
+- `approved` 只代表同一 policy snapshot 下可通過 approval gate，仍必須先通過 role、project access、tool tier 與 side-effect policy guard。
+- Runtime 目前沒有 write / admin / destructive allowlisted tool；測試以 monkeypatched policy 驗證 skip-safe path，確保 future high-risk tool 不會靜默執行。
+- API / trace 呈現等待 approval 或 rejected state 時，應使用 `permission_decision=forbidden`、`permission_reason=approval_required|approval_rejected|approval_expired`、`approval_required=true`、`approval_state=<state>` 與既有 `risk_tier` / `risk_score`。
+- Frontend 若後續 ticket 呈現 approval state，應只讀 trace metadata，不自行判斷或覆寫 permission decision；本 ticket 不新增 UI。
+
 ## Phase 26 VLM Parser Provider Boundary
 
 Phase 26 的目標是把 parser default 切成 VLM-first demo path：`vlm_invoice` 先從既有 upload metadata 解析 demo-safe image input，再呼叫可設定的 local VLM provider；provider unavailable、timeout、unsupported file、invalid response、missing fields 或 confidence too low 時，才 fallback 到 `deterministic_invoice`。v0.27.1 起 VLM request 也帶 compact OCR context，VLM 欄位結果會嘗試對回 OCR line / bbox。這不改 Phase 25 Agent planner / tool allowlist；Agent 仍只透過 `get_document_fields` 讀取保存後的 parser result。
