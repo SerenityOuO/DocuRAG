@@ -14,6 +14,7 @@ from app.core.config import get_settings
 from app.repositories.document_metadata import create_document_storage
 from app.schemas.agent import AgentRun, AgentRunRequest
 from app.services.agent import AgentService
+from app.services.agent_planner import AgentPlanner, create_agent_planner
 from app.services.agent_tools import AgentToolService
 from app.services.document_storage import DocumentStorage
 from app.services.rag import RagProvider
@@ -26,8 +27,13 @@ def get_document_storage() -> DocumentStorage:
     return create_document_storage(get_settings())
 
 
+def get_agent_planner() -> AgentPlanner:
+    return create_agent_planner(get_settings())
+
+
 DocumentStorageDep = Annotated[DocumentStorage, Depends(get_document_storage)]
 RagProviderDep = Annotated[RagProvider, Depends(get_rag_provider)]
+AgentPlannerDep = Annotated[AgentPlanner, Depends(get_agent_planner)]
 AuthenticatedUserDep = Annotated[RequestAuthContext | None, Depends(require_authenticated_user)]
 IngestionUserDep = Annotated[RequestAuthContext | None, Depends(require_ingestion_user)]
 
@@ -35,9 +41,10 @@ IngestionUserDep = Annotated[RequestAuthContext | None, Depends(require_ingestio
 def get_agent_service(
     storage: DocumentStorageDep,
     rag_provider: RagProviderDep,
+    planner: AgentPlannerDep,
 ) -> AgentService:
     tool_service = AgentToolService(storage, rag_provider=rag_provider)
-    return AgentService(storage, tool_service)
+    return AgentService(storage, tool_service, planner=planner)
 
 
 AgentServiceDep = Annotated[AgentService, Depends(get_agent_service)]
@@ -48,6 +55,7 @@ async def run_agent(
     request: AgentRunRequest,
     storage: DocumentStorageDep,
     rag_provider: RagProviderDep,
+    planner: AgentPlannerDep,
     auth_user: IngestionUserDep,
 ) -> AgentRun:
     if request.document_id and auth_user is not None and auth_user.project_ids is not None:
@@ -61,9 +69,10 @@ async def run_agent(
         rag_provider=rag_provider,
         project_ids=accessible_project_ids(auth_user),
     )
-    service = AgentService(storage, tool_service)
+    service = AgentService(storage, tool_service, planner=planner)
     project_id = auth_user.active_project_id if auth_user is not None and auth_user.auth_mode == "formal" else None
-    return service.run(request, project_id=project_id)
+    role = auth_user.role if auth_user is not None else None
+    return service.run(request, project_id=project_id, role=role)
 
 
 @router.get("/runs/{run_id}", response_model=AgentRun)

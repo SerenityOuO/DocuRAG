@@ -13,6 +13,12 @@ from app.schemas.agent import (
 )
 from app.schemas.documents import ParserStatus
 from app.schemas.rag import RagCitation
+from app.services.agent_planner import (
+    AgentPlanner,
+    AgentPlannerContext,
+    DeterministicAgentPlanner,
+    agent_plan_trace,
+)
 from app.services.agent_tools import AgentToolService
 from app.services.document_storage import DocumentStorage
 
@@ -40,16 +46,27 @@ class AgentService:
         self,
         storage: DocumentStorage,
         tool_service: AgentToolService,
+        planner: AgentPlanner | None = None,
     ) -> None:
         self.storage = storage
         self.tool_service = tool_service
+        self.planner = planner or DeterministicAgentPlanner()
 
-    def run(self, request: AgentRunRequest, project_id: str | None = None) -> AgentRun:
+    def run(
+        self,
+        request: AgentRunRequest,
+        project_id: str | None = None,
+        role: str | None = None,
+    ) -> AgentRun:
         created_at = _utc_now()
         tool_calls: list[AgentToolCall] = []
         plan_steps: list[AgentStep] = []
         citations: list[RagCitation] = []
-        route = "unsupported_task"
+        agent_plan = self.planner.plan(
+            request,
+            AgentPlannerContext(role=role, project_id=project_id),
+        )
+        route = agent_plan.route
         final_answer = AgentFinalAnswer(
             status=AgentRunStatus.FAILED,
             fallback_reason="unsupported_task",
@@ -59,10 +76,10 @@ class AgentService:
             ),
         )
 
-        if request.document_id:
+        if route == "invoice_summary":
             route = "invoice_summary"
             final_answer, citations = self._run_invoice_summary(request, tool_calls)
-        elif request.query:
+        elif route == "document_question":
             route = "document_question"
             final_answer, citations = self._run_document_question(request, tool_calls)
         else:
@@ -96,12 +113,13 @@ class AgentService:
             final_answer=final_answer,
             citations=citations,
             trace={
-                "planner": "deterministic",
                 "planner_route": route,
                 "tool_policy": "allowlisted_read_only",
                 "allowed_tools": "get_document_fields,search_documents,summarize_invoice_fields",
                 "tool_count": str(len(tool_calls)),
                 "fallback_count": str(fallback_count),
+                **agent_plan_trace(agent_plan),
+                **({"role": role} if role else {}),
                 **({"project_id": project_id} if project_id else {}),
             },
             created_at=created_at,

@@ -3,11 +3,14 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from app.api.routes.agent import get_agent_planner
 from app.api.routes.agent import get_document_storage as get_agent_storage
 from app.api.routes.documents import get_document_storage as get_documents_storage
 from app.api.routes.rag import get_rag_provider
 from app.main import app
+from app.services.agent_planner import LlmAgentPlanner
 from app.services.document_storage import DocumentStorage
+from app.services.llm import LlmGeneration, LlmHealth, LlmProviderError
 from app.services.rag import KeywordRagProvider
 
 
@@ -54,6 +57,33 @@ def _create_parsed_invoice(client: TestClient) -> str:
     return document_id
 
 
+class StubPlannerLlmProvider:
+    name = "stub_planner_llm"
+
+    def __init__(self, response_text: str | None = None, error: Exception | None = None) -> None:
+        self.response_text = response_text
+        self.error = error
+        self.prompt = ""
+        self.system = ""
+
+    def generate(self, prompt: str, system: str | None = None) -> LlmGeneration:
+        self.prompt = prompt
+        self.system = system or ""
+        if self.error is not None:
+            raise self.error
+        return LlmGeneration(
+            text=self.response_text or "",
+            model="stub-planner",
+            prompt_tokens=12,
+            completion_tokens=8,
+            total_tokens=20,
+            provider_latency_ms=1.5,
+        )
+
+    def check_health(self) -> LlmHealth:
+        return LlmHealth(provider=self.name, enabled=True, available=True, message="ok")
+
+
 def test_agent_run_returns_plan_tool_calls_answer_and_citations(client: TestClient) -> None:
     document_id = _create_parsed_invoice(client)
 
@@ -92,6 +122,106 @@ def test_agent_run_returns_plan_tool_calls_answer_and_citations(client: TestClie
     assert body["trace"]["fallback_count"] == "2"
     assert body["tool_calls"][0]["observation"]["fallback_reason"] == "unsupported_file"
     assert body["tool_calls"][2]["observation"]["fallback_reason"] == "unsupported_file"
+
+
+def test_agent_run_uses_llm_planner_when_enabled(client: TestClient) -> None:
+    planner_llm = StubPlannerLlmProvider(
+        response_text=(
+            '{"route":"invoice_summary","steps":['
+            '{"tool_name":"get_document_fields"},'
+            '{"tool_name":"search_documents"},'
+            '{"tool_name":"summarize_invoice_fields"}]}'
+        )
+    )
+    app.dependency_overrides[get_agent_planner] = lambda: LlmAgentPlanner(planner_llm)
+    document_id = _create_parsed_invoice(client)
+
+    response = client.post(
+        "/agent/run",
+        json={
+            "task": "整理這份 invoice 並補充付款期限來源",
+            "document_id": document_id,
+            "query": "payment terms",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "completed"
+    assert [tool_call["tool_name"] for tool_call in body["tool_calls"]] == [
+        "get_document_fields",
+        "search_documents",
+        "summarize_invoice_fields",
+    ]
+    assert body["trace"]["planner"] == "llm_planner"
+    assert body["trace"]["planner_attempted_provider"] == "llm_planner"
+    assert body["trace"]["planner_status"] == "completed"
+    assert body["trace"]["plan_validation_status"] == "valid"
+    assert body["trace"]["planned_tools"] == "get_document_fields,search_documents,summarize_invoice_fields"
+    assert body["trace"]["planner_model"] == "stub-planner"
+    assert '"allowed_tools"' in planner_llm.prompt
+
+
+def test_agent_run_falls_back_to_deterministic_planner_on_llm_timeout(client: TestClient) -> None:
+    planner_llm = StubPlannerLlmProvider(
+        error=LlmProviderError("OpenAI-compatible request timed out after 1.0s at http://planner.")
+    )
+    app.dependency_overrides[get_agent_planner] = lambda: LlmAgentPlanner(planner_llm)
+    document_id = _create_parsed_invoice(client)
+
+    response = client.post(
+        "/agent/run",
+        json={
+            "task": "summarize invoice fields",
+            "document_id": document_id,
+            "query": "payment terms",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "completed"
+    assert body["trace"]["planner"] == "deterministic"
+    assert body["trace"]["planner_attempted_provider"] == "llm_planner"
+    assert body["trace"]["planner_status"] == "fallback"
+    assert body["trace"]["plan_validation_status"] == "timeout"
+    assert body["trace"]["planner_fallback_reason"] == "llm_planner_timeout"
+    assert [tool_call["tool_name"] for tool_call in body["tool_calls"]] == [
+        "get_document_fields",
+        "search_documents",
+        "summarize_invoice_fields",
+    ]
+
+
+def test_agent_run_falls_back_without_executing_invalid_llm_plan(client: TestClient) -> None:
+    planner_llm = StubPlannerLlmProvider(
+        response_text='{"route":"invoice_summary","steps":[{"tool_name":"delete_project"}]}'
+    )
+    app.dependency_overrides[get_agent_planner] = lambda: LlmAgentPlanner(planner_llm)
+    document_id = _create_parsed_invoice(client)
+
+    response = client.post(
+        "/agent/run",
+        json={
+            "task": "summarize invoice fields",
+            "document_id": document_id,
+            "query": "payment terms",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "completed"
+    assert body["trace"]["planner"] == "deterministic"
+    assert body["trace"]["planner_status"] == "fallback"
+    assert body["trace"]["plan_validation_status"] == "invalid"
+    assert body["trace"]["planner_fallback_reason"].startswith("llm_planner_invalid_plan")
+    assert [tool_call["tool_name"] for tool_call in body["tool_calls"]] == [
+        "get_document_fields",
+        "search_documents",
+        "summarize_invoice_fields",
+    ]
+    assert "delete_project" not in {tool_call["tool_name"] for tool_call in body["tool_calls"]}
 
 
 def test_agent_run_lookup_returns_saved_run(client: TestClient) -> None:

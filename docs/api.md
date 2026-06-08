@@ -1016,6 +1016,44 @@ Trace must not store production secrets, raw bearer tokens, API keys, private cr
 
 Phase 38 explicitly forbids arbitrary SQL, shell command, filesystem command, arbitrary network tool, delete, drop table, destructive reindex, credential mutation, production database mutation and any destructive tool. `38-01` only documents the boundary; `38-02` / `38-03` must conform to it before adding runtime behavior.
 
+### 38-02 LLM Planner Runtime Boundary
+
+`38-02` adds the first controlled LLM planner provider boundary for the existing Agent API. The default remains deterministic. Set `DOCURAG_AGENT_PLANNER_PROVIDER=llm_planner` to let Agent planning call the existing `DOCURAG_LLM_PROVIDER` runtime and validate the returned plan before any tool execution.
+
+| Env | Default | Meaning |
+|---|---|---|
+| `DOCURAG_AGENT_PLANNER_PROVIDER` | `deterministic` | `deterministic`, empty, `disabled` or `none` keeps the safe deterministic planner. `llm_planner` / `llm` enables the LLM planner attempt with deterministic fallback. |
+
+LLM planner input is limited to task, optional `document_id`, optional query, `top_k`, role, project id and the allowed tool names. The expected response is JSON only:
+
+```json
+{
+  "route": "invoice_summary",
+  "steps": [
+    {"tool_name": "get_document_fields"},
+    {"tool_name": "search_documents"},
+    {"tool_name": "summarize_invoice_fields"}
+  ]
+}
+```
+
+Validated routes and tool sequences are strict：
+
+| Route | Required safe tool sequence |
+|---|---|
+| `invoice_summary` | `get_document_fields` -> `search_documents` -> `summarize_invoice_fields` |
+| `document_question` | `search_documents` |
+| `unsupported_task` | no tools |
+
+Invalid plan handling：
+
+- Unknown tool names, schema-extra tool choices, unsafe route / input mismatch, missing required `document_id` or missing query are rejected before tool execution.
+- LLM timeout or provider error records `planner_status=fallback`, `planner_attempted_provider=llm_planner`, `plan_validation_status=timeout|unavailable` and `planner_fallback_reason=llm_planner_timeout|llm_planner_unavailable`.
+- Invalid JSON, invalid schema or unsafe plan records `plan_validation_status=invalid` and `planner_fallback_reason=llm_planner_invalid_plan:...`.
+- Fallback uses the deterministic planner and only executes the existing allowlisted read-only tool flow.
+
+Agent run trace now includes planner audit metadata such as `planner_provider`, `planner_attempted_provider`, `planner_status`, `plan_validation_status`, `planned_tools`, optional `planner_fallback_reason`, `planner_latency_ms`, `planner_model`, token counts and provider request id when available. It still does not add arbitrary tool execution, arbitrary SQL, shell, filesystem access, network tools, destructive tools, RAG retrieval provider changes or parser provider changes.
+
 ## Phase 26 VLM Parser Provider Contract Draft
 
 Phase 26 將 parser default 切成 VLM-first provider spike：`POST /documents/{document_id}/parse` 預設先嘗試 `vlm_invoice`，只有 VLM provider unavailable、timeout、unsupported file、invalid JSON、missing required fields 或 confidence too low 時，才 fallback 到 Phase 24 的 `deterministic_invoice`。這個 default-on 只代表 demo parser path 預設 VLM-first，不代表 production VLM parser、OpenAI SDK、streaming、function calling、PDF rendering、多頁 parser pipeline、worker、DB、RBAC 或 autonomous Agent。

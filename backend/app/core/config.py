@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     llm_api_key: str | None = None
     llm_think: bool = False
     llm_num_predict: int = 512
+    agent_planner_provider: str | None = "deterministic"
     parser_source: str = "vlm_invoice"
     vlm_provider: str | None = "ollama"
     vlm_base_url: str = "http://127.0.0.1:11434"

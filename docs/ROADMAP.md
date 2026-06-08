@@ -509,6 +509,11 @@ Status：
 - Trace contract 已包含 `planner_provider`、`plan_steps`、`tool_tier`、`permission_decision`、`observation_summary`、`reflection`、`fallback_reason` 與 `final_answer_source`；trace 不得保存 secret、raw bearer token、API key 或 private credential。
 - Forbidden boundary 已明確禁止任意 SQL、shell、filesystem command、arbitrary network tool、delete、drop table、destructive reindex、credential mutation、production database mutation 或任何 destructive tool。
 - Release Impact：Version bump required: no。`38-01` 是 contract 文件，不新增 LLM planner runtime、tool execution code、Auth / RBAC schema、RAG ranking、OCR 或 parser behavior。
+- `38-02` 已完成 LLM planner provider boundary runtime slice。`DOCURAG_AGENT_PLANNER_PROVIDER` 預設 `deterministic`，只有明確設為 `llm_planner` / `llm` 時才會透過既有 `DOCURAG_LLM_PROVIDER` 嘗試產生 JSON plan。
+- LLM planner 輸出會先做 schema validation 與 safe route / safe tool sequence validation；timeout、provider unavailable、invalid JSON、unknown tool 或 unsafe route 都會在 tool execution 前回到 deterministic fallback。
+- Agent trace 現在保存 planner source、attempted provider、validation result、planned tools、fallback reason、latency、model / token metadata，以及 role / project metadata；不新增任意 SQL、shell、filesystem、network 或 destructive tool execution。
+- `38-02` validation 已通過：focused Agent tests `9 passed`；backend full test `254 passed`（1 pytest cache warning）；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+- Release Impact：Version bump required: no。`38-02` 是 Phase 38 runtime ticket，版本同步留到 `38-04`。
 
 ### Phase 39 - Deployment / Observability / Fine-tuning Track
 

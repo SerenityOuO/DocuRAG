@@ -35,13 +35,22 @@
 
 ## Acceptance Criteria
 
-- [ ] LLM planner 可透過 env 明確啟用，預設有 safe fallback。
-- [ ] Invalid plan 不會執行 tool，會回到 deterministic fallback 或 clear error。
-- [ ] Backend tests 覆蓋 LLM planner success / failure / fallback。
-- [ ] Trace metadata 記錄 planner source、fallback reason 與 plan validation result。
+- [x] LLM planner 可透過 env 明確啟用，預設有 safe fallback。
+- [x] Invalid plan 不會執行 tool，會回到 deterministic fallback 或 clear error。
+- [x] Backend tests 覆蓋 LLM planner success / failure / fallback。
+- [x] Trace metadata 記錄 planner source、fallback reason 與 plan validation result。
 
 ## Validation
 
-- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
-- `rg -n "LLM planner|deterministic planner|plan validation|fallback|Agent" backend docs TODO.md tasks/phase-38-agent-runtime-hardening`
-- `git diff --check`
+- [x] `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-backend.ps1`
+- [x] `rg -n "LLM planner|deterministic planner|plan validation|fallback|Agent" backend docs TODO.md tasks/phase-38-agent-runtime-hardening`
+- [x] `git diff --check`
+
+## Completion Notes
+
+- 新增 `backend/app/services/agent_planner.py`，提供 deterministic planner、LLM planner provider boundary、LLM JSON plan parsing / validation、timeout / unavailable / invalid plan fallback 與 planner audit trace metadata。
+- 新增 `DOCURAG_AGENT_PLANNER_PROVIDER` 設定；預設 `deterministic`，只有明確設為 `llm_planner` / `llm` 才會嘗試使用既有 `DOCURAG_LLM_PROVIDER` runtime 產生 plan。
+- AgentService 現在先取得 validated plan，再交給既有 allowlisted read-only tools 執行；invalid plan、unknown tool、unsafe route、missing required input 或 timeout 都會在 tool execution 前 fallback。
+- Backend tests 已補 LLM planner success、timeout fallback 與 invalid plan fallback，並確認 invalid plan 不會執行 destructive / unknown tool。
+- `docs/api.md`、`TODO.md`、`README_DEV.md` 與 `docs/ROADMAP.md` 已同步 38-02 狀態；本 ticket 不 bump version。
+- Validation 已通過：focused Agent tests `9 passed`；backend full test `254 passed`（1 pytest cache warning）；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。

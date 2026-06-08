@@ -255,7 +255,7 @@ Phase 37 `v0.37.0` - Inference Ops / vLLM serving：
 
 Phase 38 `v0.38.0` - Agent runtime hardening：
 - [x] `tasks/phase-38-agent-runtime-hardening/38-01-agent-runtime-permission-contract.md`: 定義 Agent planner provider boundary、deterministic fallback、tool permission tiers、project access guard、human confirmation requirement、trace fields 與 forbidden tool boundary；文件 ticket，不 bump version、不新增 runtime。
-- [ ] `tasks/phase-38-agent-runtime-hardening/38-02-llm-planner-provider-boundary.md`
+- [x] `tasks/phase-38-agent-runtime-hardening/38-02-llm-planner-provider-boundary.md`: 新增 `DOCURAG_AGENT_PLANNER_PROVIDER=llm_planner` runtime boundary、LLM plan JSON validation、timeout / invalid plan deterministic fallback 與 planner audit trace；不 bump version、不新增任意工具執行。
 - [ ] `tasks/phase-38-agent-runtime-hardening/38-03-tool-permission-guards-and-trace.md`
 - [ ] `tasks/phase-38-agent-runtime-hardening/38-04-agent-runtime-release-sync.md`
 
@@ -265,6 +265,14 @@ Phase 38 `v0.38.0` - Agent runtime hardening：
 - Tool tiers 已定義為 `read-only`、`write`、`admin`、`destructive`；permission guard 必須檢查 role、project access、tool allowlist、tool tier、input schema、target resource project 與 human confirmation state。
 - Trace contract 已包含 plan、tool selection、permission decision、observation、reflection / fallback 與 final answer；文件也明確禁止任意 SQL、shell、filesystem command、arbitrary network tool、delete、drop table、destructive reindex、credential mutation 或 production database mutation。
 - Release Impact：Version bump required: no。此 ticket 是 Phase 38 contract 文件，不改 backend / frontend runtime。
+
+38-02 LLM Planner Provider Boundary Status：
+
+- 已完成。`backend/app/services/agent_planner.py` 新增 deterministic planner 與 LLM planner provider boundary；`DOCURAG_AGENT_PLANNER_PROVIDER=deterministic` 保持預設安全路徑，`llm_planner` 才會透過既有 LLM provider 嘗試產生 JSON plan。
+- LLM plan validation 只接受 `invoice_summary`、`document_question`、`unsupported_task` 與既有 allowlisted tools；unknown tool、unsafe route、missing `document_id` / query、invalid JSON / schema 都會在 tool execution 前 fallback。
+- Agent trace 已記錄 `planner_provider`、`planner_attempted_provider`、`planner_status`、`plan_validation_status`、`planned_tools`、`planner_fallback_reason`、latency、model / token metadata 與 role / project metadata。
+- Validation 已通過：focused Agent tests `9 passed`；backend full test `254 passed`（1 pytest cache warning）；ticket `rg` 與 `git diff --check` 通過（僅 Windows LF/CRLF 提示）。
+- Release Impact：Version bump required: no。此 ticket 是 Phase 38 runtime slice，版本同步留到 `38-04`。
 
 Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 - [ ] `tasks/phase-39-deployment-observability-finetuning/39-01-deployment-observability-research-contract.md`
