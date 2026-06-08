@@ -651,6 +651,16 @@ K8s baseline scope:
 | Health probes | Backend `/health` readiness / liveness examples. | Probe examples must not claim production SLOs. |
 | Resource requests | Conservative CPU / memory examples for local / demo workloads. | Not capacity planning for production traffic or GPU scheduling. |
 
+`39-02` adds the baseline deployment artifacts under `infra/k8s/`:
+
+- `docurag-baseline.yaml` defines the `docurag` namespace, ConfigMap, Secret template, backend API, frontend, worker placeholder, Qdrant, Redis and NATS manifests.
+- `hpa-optional.yaml` is an optional API HPA shape only; it is not backed by production load testing or SLOs.
+- The Secret manifest is a template with placeholder values only. It must not contain production secrets, API keys, external account credentials or production database URLs.
+- Backend, frontend and worker images use the current `0.38.0` sample tag because Phase 39 release sync is deferred to `39-05`.
+- The worker manifest intentionally has no Service because the current worker skeleton does not expose inbound traffic. It remains a placeholder until a later ticket changes the worker runtime.
+- Qdrant, Redis and NATS use `emptyDir` demo storage in this baseline, so the manifests do not claim durable production persistence.
+- Local validation includes an offline YAML shape check. `kubectl apply --dry-run=client --validate=false` should be run when a Kubernetes context is available; on kubectl versions that still perform API discovery, it will fail before manifest validation if no cluster is configured.
+
 Observability path:
 
 - Phase 39 selects Loki + Grafana as the default local observability path because it matches log aggregation and dashboard evidence with minimal operational weight.

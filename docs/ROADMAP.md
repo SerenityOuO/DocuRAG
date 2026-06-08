@@ -554,6 +554,8 @@ Status：
 
 - `39-01` 已完成 Phase 39 deployment / observability / fine-tuning research contract。文件已定義 K8s baseline scope、Loki + Grafana observability path、API / worker / RAG / eval trace logging boundary，以及 fine-tuning / synthetic data / embedding tuning 的 research-only scope。
 - Release Impact：Version bump required: no。`39-01` 是 Markdown-only contract，不新增 K8s manifest、observability runtime、notebook、dependency、backend / frontend runtime 或 version bump。
+- `39-02` 已完成 Phase 39 K8s manifest baseline。`infra/k8s/` 已新增 backend API、frontend、worker placeholder、Qdrant、Redis、NATS、ConfigMap、Secret template、probe、resources 與 optional HPA template；文件補充 local lint、dry-run、rollout / rollback、config checksum、readiness gate 與 failed rollout triage。
+- Release Impact：Version bump required: no。`39-02` 是 deployment artifact baseline，sample image tag 仍維持目前 `0.38.0`，版本同步留到 `39-05`。
 
 Phase 31-39 Validation Direction：
 

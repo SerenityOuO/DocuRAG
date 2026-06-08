@@ -36,15 +36,30 @@
 
 ## Acceptance Criteria
 
-- [ ] K8s manifests 包含 API / frontend / worker / supporting services 的 baseline。
-- [ ] ConfigMap / Secret template 不包含真實 secret。
-- [ ] Readiness / liveness probes 與 resource requests 有文件說明。
-- [ ] Backend / frontend / worker manifests 有 image tag、env config、readinessProbe、livenessProbe、resources requests / limits。
-- [ ] 文件說明 local validation、dry-run、rollout / rollback 與 optional HPA boundary。
-- [ ] Validation 至少包含 manifest lint / dry-run 指令或替代檢查。
+- [x] K8s manifests 包含 API / frontend / worker / supporting services 的 baseline。
+- [x] ConfigMap / Secret template 不包含真實 secret。
+- [x] Readiness / liveness probes 與 resource requests 有文件說明。
+- [x] Backend / frontend / worker manifests 有 image tag、env config、readinessProbe、livenessProbe、resources requests / limits。
+- [x] 文件說明 local validation、dry-run、rollout / rollback 與 optional HPA boundary。
+- [x] Validation 至少包含 manifest lint / dry-run 指令或替代檢查。
 
 ## Validation
 
 - K8s manifest dry-run / lint command。
 - `rg -n "apiVersion|kind: Deployment|ConfigMap|Secret|readinessProbe|livenessProbe|resources|requests|limits|rollout|rollback|HPA|HorizontalPodAutoscaler" infra docs README_DEV.md TODO.md tasks/phase-39-deployment-observability-finetuning`
 - `git diff --check`
+
+## Status
+
+- Completed. Added `infra/k8s/docurag-baseline.yaml` for namespace, ConfigMap, Secret template, API, frontend, worker placeholder, Qdrant, Redis and NATS baseline manifests.
+- Added `infra/k8s/hpa-optional.yaml` as optional API HPA shape only; it does not claim production autoscaling or load-test coverage.
+- Added `infra/k8s/README.md` with local lint, cluster dry-run, rollout / rollback, config checksum, readiness gate, failed rollout triage and boundary notes.
+- Worker manifest has a deferred reason and no Service because the current worker skeleton does not expose inbound traffic.
+- Release Impact: Version bump required: no. Sample image tags remain `0.38.0`; Phase 39 version sync remains deferred to `39-05`.
+
+## Validation Result
+
+- Passed: offline YAML lint parsed 15 Kubernetes YAML documents and confirmed each document has `apiVersion`, `kind` and `metadata.name`.
+- Attempted: `kubectl apply --dry-run=client --validate=false -f .\infra\k8s`; local kubectl v1.34.1 failed before manifest validation because no Kubernetes API context was available and API discovery attempted `localhost:8080`.
+- Passed: ticket `rg`.
+- Passed: `git diff --check` and `git diff --cached --check`.

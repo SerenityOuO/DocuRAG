@@ -292,7 +292,7 @@ Phase 38 `v0.38.0` - Agent runtime hardening：
 
 Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 - [x] `tasks/phase-39-deployment-observability-finetuning/39-01-deployment-observability-research-contract.md`: 定義 Phase 39 K8s baseline、Loki + Grafana observability path、API / worker / RAG / eval trace logging boundary，以及 fine-tuning / synthetic data / embedding tuning research-only scope；文件 ticket，不 bump version、不新增 runtime。
-- [ ] `tasks/phase-39-deployment-observability-finetuning/39-02-k8s-manifest-baseline.md`
+- [x] `tasks/phase-39-deployment-observability-finetuning/39-02-k8s-manifest-baseline.md`: 新增 `infra/k8s/` baseline manifests，包含 API、frontend、worker placeholder、Qdrant、Redis、NATS、ConfigMap、Secret template、probes、resources、rollout / rollback docs 與 optional HPA template；不 bump version。
 - [ ] `tasks/phase-39-deployment-observability-finetuning/39-03-observability-stack-and-rag-trace-logs.md`
 - [ ] `tasks/phase-39-deployment-observability-finetuning/39-04-finetuning-synthetic-data-research-track.md`
 - [ ] `tasks/phase-39-deployment-observability-finetuning/39-05-phase-39-release-sync.md`
@@ -303,6 +303,15 @@ Phase 39 `v0.39.0` - Deployment / observability / fine-tuning track：
 - Observability path 已選定 Loki + Grafana；OpenSearch 保留為替代路線。Log / trace scope 包含 API log、worker log、RAG trace 與 eval metrics，並明確避免預設記錄 raw document text、prompt body、bearer token 或 secret。
 - Fine-tuning / synthetic data / embedding tuning 僅作 research track，可產生 dataset card、experiment report 或 notebook skeleton；不執行長時間 training、不下載大型模型、不改 main runtime default。
 - Release Impact：Version bump required: no。此 ticket 是 Phase 39 contract 文件，不新增 K8s manifest、observability runtime、notebook、dependency、backend / frontend runtime 或版本更新。
+
+39-02 K8s Manifest Baseline Status：
+
+- 已完成。`infra/k8s/docurag-baseline.yaml` 已新增 `docurag` namespace、ConfigMap、Secret template、backend API、frontend、worker placeholder、Qdrant、Redis 與 NATS baseline manifests。
+- Backend / frontend / worker manifests 均包含 image tag、env config、readinessProbe、livenessProbe、resource requests / limits；worker 因目前 skeleton 無 inbound traffic，文件明確註記無 Service 與 deferred reason。
+- `infra/k8s/hpa-optional.yaml` 僅作 optional API HPA shape，不宣稱 production autoscaling 或大規模壓測完成。
+- 文件已補充 local YAML lint、cluster dry-run、rollout / rollback、config checksum、readiness gate、failed rollout triage 與 boundary。
+- Validation 已通過：offline YAML lint（15 個 K8s YAML documents，均有 `apiVersion` / `kind` / `metadata.name`）、ticket `rg` 與 `git diff --check` / `git diff --cached --check`。`kubectl apply --dry-run=client --validate=false -f .\infra\k8s` 已嘗試，但本機無 Kubernetes API context，kubectl v1.34.1 在 API discovery 階段連 `localhost:8080` 失敗。
+- Release Impact：Version bump required: no。此 ticket 是 deployment artifact baseline，sample image tag 維持目前 `0.38.0`，版本同步留到 `39-05`。
 
 Phase 31-39 guardrails：
 

@@ -1,0 +1,525 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: docurag
+  labels:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/part-of: docurag-agentops
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: docurag-config
+  namespace: docurag
+  labels:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/part-of: docurag-agentops
+data:
+  DOCURAG_APP_NAME: "DocuRAG AgentOps Backend"
+  DOCURAG_VERSION: "0.38.0"
+  DOCURAG_ENVIRONMENT: "k8s"
+  DOCURAG_DATA_DIR: "/app/data"
+  DOCURAG_AUTH_MODE: "demo"
+  DOCURAG_REPOSITORY_PROVIDER: "local_json"
+  DOCURAG_OCR_PROVIDER: "paddleocr"
+  DOCURAG_LLM_PROVIDER: "ollama"
+  DOCURAG_LLM_BASE_URL: "http://ollama.local:11434"
+  DOCURAG_LLM_MODEL: "qwen3.5:4b"
+  DOCURAG_VLM_PROVIDER: "ollama"
+  DOCURAG_VLM_BASE_URL: "http://ollama.local:11434"
+  DOCURAG_RAG_RETRIEVAL_PROVIDER: "hybrid_rerank"
+  DOCURAG_EMBEDDING_PROVIDER: "ollama"
+  DOCURAG_EMBEDDING_BASE_URL: "http://ollama.local:11434"
+  DOCURAG_RERANK_PROVIDER: "fastembed"
+  DOCURAG_QDRANT_URL: "http://docurag-qdrant:6333"
+  DOCURAG_REDIS_URL: "redis://docurag-redis:6379/0"
+  DOCURAG_NATS_URL: "nats://docurag-nats:4222"
+  DOCURAG_CORS_ORIGINS: '["http://docurag-frontend","http://docurag-frontend.docurag.svc.cluster.local"]'
+  VITE_API_BASE_URL: "http://docurag-api:8000"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: docurag-secret-template
+  namespace: docurag
+  labels:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/part-of: docurag-agentops
+  annotations:
+    docurag.io/template-only: "true"
+type: Opaque
+stringData:
+  DOCURAG_AUTH_DEMO_SECRET: "CHANGE_ME_LOCAL_TEMPLATE_ONLY"
+  DOCURAG_AUTH_FORMAL_SECRET: "CHANGE_ME_LOCAL_TEMPLATE_ONLY"
+  DOCURAG_DATABASE_URL: ""
+  DOCURAG_LLM_API_KEY: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docurag-api
+  namespace: docurag
+  labels:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: docurag-agentops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: docurag-agentops
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: docurag-agentops
+        app.kubernetes.io/component: api
+        app.kubernetes.io/part-of: docurag-agentops
+      annotations:
+        docurag.io/config-checksum: "replace-with-configmap-secret-checksum"
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/serenityouo/docurag-agentops-backend:0.38.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: docurag-config
+            - secretRef:
+                name: docurag-secret-template
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          volumeMounts:
+            - name: docurag-data
+              mountPath: /app/data
+      volumes:
+        - name: docurag-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docurag-api
+  namespace: docurag
+  labels:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: docurag-agentops
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/component: api
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docurag-frontend
+  namespace: docurag
+  labels:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: docurag-agentops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: docurag-agentops
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: docurag-agentops
+        app.kubernetes.io/component: frontend
+        app.kubernetes.io/part-of: docurag-agentops
+      annotations:
+        docurag.io/config-checksum: "replace-with-frontend-config-checksum"
+    spec:
+      containers:
+        - name: frontend
+          image: ghcr.io/serenityouo/docurag-agentops-frontend:0.38.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            - name: VITE_API_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: docurag-config
+                  key: VITE_API_BASE_URL
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docurag-frontend
+  namespace: docurag
+  labels:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: docurag-agentops
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/component: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docurag-worker
+  namespace: docurag
+  labels:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/part-of: docurag-agentops
+  annotations:
+    docurag.io/deferred-reason: "Phase 33 worker skeleton is demo-safe; long-running production worker loop is out of scope."
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: docurag-agentops
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: docurag-agentops
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/part-of: docurag-agentops
+      annotations:
+        docurag.io/config-checksum: "replace-with-configmap-secret-checksum"
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/serenityouo/docurag-agentops-backend:0.38.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - -c
+          args:
+            - |
+              import time
+              print("DocuRAG worker skeleton placeholder; replace with a scoped worker loop ticket.", flush=True)
+              time.sleep(3600)
+          envFrom:
+            - configMapRef:
+                name: docurag-config
+            - secretRef:
+                name: docurag-secret-template
+          readinessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "from pathlib import Path; raise SystemExit(0 if Path('/app/workers').is_dir() else 1)"
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "from pathlib import Path; raise SystemExit(0 if Path('/app/workers').is_dir() else 1)"
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docurag-qdrant
+  namespace: docurag
+  labels:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/component: qdrant
+    app.kubernetes.io/part-of: docurag-agentops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: docurag-agentops
+      app.kubernetes.io/component: qdrant
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: docurag-agentops
+        app.kubernetes.io/component: qdrant
+        app.kubernetes.io/part-of: docurag-agentops
+    spec:
+      containers:
+        - name: qdrant
+          image: qdrant/qdrant:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 6333
+            - name: grpc
+              containerPort: 6334
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          volumeMounts:
+            - name: qdrant-storage
+              mountPath: /qdrant/storage
+      volumes:
+        - name: qdrant-storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docurag-qdrant
+  namespace: docurag
+  labels:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/component: qdrant
+    app.kubernetes.io/part-of: docurag-agentops
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/component: qdrant
+  ports:
+    - name: http
+      port: 6333
+      targetPort: http
+    - name: grpc
+      port: 6334
+      targetPort: grpc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docurag-redis
+  namespace: docurag
+  labels:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/component: redis
+    app.kubernetes.io/part-of: docurag-agentops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: docurag-agentops
+      app.kubernetes.io/component: redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: docurag-agentops
+        app.kubernetes.io/component: redis
+        app.kubernetes.io/part-of: docurag-agentops
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: redis
+              containerPort: 6379
+          readinessProbe:
+            tcpSocket:
+              port: redis
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            tcpSocket:
+              port: redis
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docurag-redis
+  namespace: docurag
+  labels:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/component: redis
+    app.kubernetes.io/part-of: docurag-agentops
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/component: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docurag-nats
+  namespace: docurag
+  labels:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/component: nats
+    app.kubernetes.io/part-of: docurag-agentops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: docurag-agentops
+      app.kubernetes.io/component: nats
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: docurag-agentops
+        app.kubernetes.io/component: nats
+        app.kubernetes.io/part-of: docurag-agentops
+    spec:
+      containers:
+        - name: nats
+          image: nats:2-alpine
+          imagePullPolicy: IfNotPresent
+          args:
+            - -js
+            - -m
+            - "8222"
+          ports:
+            - name: client
+              containerPort: 4222
+            - name: monitor
+              containerPort: 8222
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: monitor
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: monitor
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docurag-nats
+  namespace: docurag
+  labels:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/component: nats
+    app.kubernetes.io/part-of: docurag-agentops
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: docurag-agentops
+    app.kubernetes.io/component: nats
+  ports:
+    - name: client
+      port: 4222
+      targetPort: client
+    - name: monitor
+      port: 8222
+      targetPort: monitor
