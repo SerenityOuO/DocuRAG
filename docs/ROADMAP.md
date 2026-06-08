@@ -586,7 +586,7 @@ Planning ticket：
 
 Status：
 
-- 已完成 Phase 40 planning 與 `40-02` Embedding / SFT experiment evidence。`40-03`、`40-04` 與 `40-05` 尚未實作，不 bump version、不新增 runtime，也不宣稱 Phase 40 已完成。
+- 已完成 Phase 40 planning、`40-02` Embedding / SFT experiment evidence 與 `40-03` inference hardware benchmark evidence。`40-04` 與 `40-05` 尚未實作，不 bump version、不新增 runtime，也不宣稱 Phase 40 已完成。
 
 ### Phase 40 - JD Evidence Hardening
 
@@ -612,6 +612,12 @@ Expected Outcome：
 - 已完成 Phase 40 research-only experiment evidence。`fine-tuning/phase40-experiment-evidence.md` 現在整理 SFT JSONL、embedding positive / negative pairs、reranker pairwise samples、invoice / contract / report synthetic data coverage、before / after eval table、Hit Rate@K / MRR@K / Recall@K / parser field accuracy、skip reason 與 privacy / leakage / overfit risk notes。
 - 新增 `sample-data/fine-tuning/phase40-before-after-eval.csv` 作為可重跑實驗後填寫的 tiny before / after template；目前明確標示 `training_not_run_research_only`、`embedding_runtime_not_run` 與 `reranker_runtime_not_run`，不宣稱已完成 training result。
 - Release Impact：Version bump required: no。版本同步留到 `40-05`；不下載大型模型、不執行 training、不新增 dependency、不接 production runtime，也不改 OCR、parser、RAG、Agent、embedding 或 reranker behavior。
+- Validation：ticket `rg` 與 `git diff --check` 通過。
+
+40-03 Inference Hardware Benchmark Evidence Status：
+- 已完成 Phase 40 inference hardware benchmark evidence。`docs/inference-hardware-benchmark-evidence.md` 現在整理 vLLM / Ollama / OpenAI-compatible provider matrix、request shape、p50 / p95 latency、time to first token、tokens/sec、prompt / completion tokens、VRAM peak、KV cache estimated bytes、TOPS / NPU interpretation、vLLM command template、metrics endpoint note 與 skip reason。
+- Report 明確說明 TOPS 不是 tokens/sec，NPU 需要真實 runtime / profiler 才能宣稱實測結果；目前只提供 local benchmark evidence template 與 skip-safe rows。
+- Release Impact：Version bump required: no。版本同步留到 `40-05`；不新增 production inference gateway、multi-GPU serving、autoscaling、model registry、NPU profiler、default provider change、RAG prompt change、Agent planner change、VLM parser change 或 OCR pipeline change。
 - Validation：ticket `rg` 與 `git diff --check` 通過。
 
 Phase 40 Guardrails：

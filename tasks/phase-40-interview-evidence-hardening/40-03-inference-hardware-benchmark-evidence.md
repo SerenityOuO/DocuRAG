@@ -37,16 +37,24 @@
 
 ## Acceptance Criteria
 
-- [ ] 有一份 inference hardware benchmark report 或 template。
-- [ ] Report 包含 latency、tokens/sec、VRAM、KV cache estimate 與 provider fallback / skip reason。
-- [ ] Report 包含 p50 / p95 latency、time to first token、prompt tokens、completion tokens、VRAM peak 與 KV cache estimated bytes 欄位。
-- [ ] vLLM / Ollama / OpenAI-compatible provider matrix 有 success、unavailable 或 skipped 狀態，不留空白。
-- [ ] vLLM path 至少提供可重跑 command template、metrics endpoint note 或明確 skip reason。
-- [ ] TOPS / NPU 評估方式有清楚說明，不假裝已實測沒有的硬體。
-- [ ] Benchmark script 或手動 validation 步驟可被後續重跑。
-- [ ] 文件明確標示 benchmark 是 local evidence，不是 production capacity guarantee。
+- [x] 有一份 inference hardware benchmark report 或 template。
+- [x] Report 包含 latency、tokens/sec、VRAM、KV cache estimate 與 provider fallback / skip reason。
+- [x] Report 包含 p50 / p95 latency、time to first token、prompt tokens、completion tokens、VRAM peak 與 KV cache estimated bytes 欄位。
+- [x] vLLM / Ollama / OpenAI-compatible provider matrix 有 success、unavailable 或 skipped 狀態，不留空白。
+- [x] vLLM path 至少提供可重跑 command template、metrics endpoint note 或明確 skip reason。
+- [x] TOPS / NPU 評估方式有清楚說明，不假裝已實測沒有的硬體。
+- [x] Benchmark script 或手動 validation 步驟可被後續重跑。
+- [x] 文件明確標示 benchmark 是 local evidence，不是 production capacity guarantee。
 
 ## Validation
 
 - `rg -n "inference benchmark|KV cache|TOPS|NPU|VRAM|tokens/sec|latency|p50|p95|time to first token|throughput|vLLM|Ollama|OpenAI-compatible|skip reason|metrics endpoint" docs scripts README_DEV.md TODO.md tasks/phase-40-interview-evidence-hardening`
 - `git diff --check`
+
+## Status
+
+- Completed. Added `docs/inference-hardware-benchmark-evidence.md`.
+- Report covers environment, provider matrix, request shape, metrics table, KV cache estimate, TOPS / NPU interpretation, vLLM command template, metrics endpoint note and honesty boundary.
+- Metrics table keeps p50 / p95 latency, time to first token, tokens/sec, prompt tokens, completion tokens, VRAM peak, KV cache estimated bytes, provider fallback and skip reason fields.
+- Release Impact: Version bump required: no. Version sync remains deferred to `40-05`.
+- Validation passed: ticket `rg` and `git diff --check`.
